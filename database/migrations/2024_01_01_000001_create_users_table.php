@@ -18,6 +18,7 @@ return new class extends Migration
             $table->string('phone_number', 100)->nullable();
             $table->string('password');
             $table->enum('role', ['owner', 'admin', 'pm', 'karyawan']);
+            $table->rememberToken();
             $table->timestamps();
         });
     }
