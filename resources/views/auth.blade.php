@@ -12,7 +12,7 @@
     <main class="w-full max-w-md px-4 py-10">
         <!-- Logo -->
         <div class="flex justify-center mb-8">
-            <img src="{{ Vite::asset('resources/images/brand.svg') }}" alt="Berkah Bermanfaat" class="h-24 md:h-28 w-auto">
+            <img src="{{ asset('images/brand.svg') }}" alt="Berkah Bermanfaat" class="h-24 md:h-28 w-auto">
         </div>
 
         @if ($errors->has('username') || $errors->has('password') || session('auth_error'))
