@@ -18,6 +18,7 @@ use App\Models\ExtraService;
 use App\Models\Invoice;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Cache;
 
 class OrderController extends Controller
 {
@@ -133,17 +134,19 @@ class OrderController extends Controller
             ->paginate(15)
             ->appends($request->except('page'));
 
-        // Calculate statistics
-        $stats = [
-            'total_orders' => Order::count(),
-            'total_qty' => OrderItem::sum('qty'),
-            'total_bill' => Invoice::sum('total_bill'),
-            'remaining_due' => Invoice::sum('amount_due'),
-            'pending' => Order::where('production_status', 'pending')->count(),
-            'wip' => Order::where('production_status', 'wip')->count(),
-            'finished' => Order::where('production_status', 'finished')->count(),
-            'cancelled' => Order::where('production_status', 'cancelled')->count(),
-        ];
+        // Calculate statistics - Cache for 5 minutes
+        $stats = Cache::remember('order_statistics', 300, function () {
+            return [
+                'total_orders' => Order::count(),
+                'total_qty' => OrderItem::sum('qty'),
+                'total_bill' => Invoice::sum('total_bill'),
+                'remaining_due' => Invoice::sum('amount_due'),
+                'pending' => Order::where('production_status', 'pending')->count(),
+                'wip' => Order::where('production_status', 'wip')->count(),
+                'finished' => Order::where('production_status', 'finished')->count(),
+                'cancelled' => Order::where('production_status', 'cancelled')->count(),
+            ];
+        });
 
         return view('pages.admin.orders.index', compact('orders', 'stats', 'dateRange', 'startDate', 'endDate'));
     }
@@ -155,15 +158,15 @@ class OrderController extends Controller
     {
         $data = [
             'customers' => Customer::orderBy('customer_name')->get(),
-            'sales' => Sale::orderBy('sales_name')->get(),
-            'productCategories' => ProductCategory::orderBy('product_name')->get(),
-            'materialCategories' => MaterialCategory::orderBy('material_name')->get(),
-            'materialTextures' => MaterialTexture::orderBy('texture_name')->get(),
-            'materialSleeves' => MaterialSleeve::orderBy('sleeve_name')->get(),
-            'materialSizes' => MaterialSize::orderBy('size_name')->get(),
-            'services' => Service::orderBy('service_name')->get(),
-            'shippings' => Shipping::orderBy('shipping_name')->get(),
-            'provinces' => \App\Models\Province::orderBy('province_name')->get(),
+            'sales' => Cache::remember('sales_list', 86400, fn() => Sale::orderBy('sales_name')->get()),
+            'productCategories' => Cache::remember('product_categories', 86400, fn() => ProductCategory::orderBy('product_name')->get()),
+            'materialCategories' => Cache::remember('material_categories', 86400, fn() => MaterialCategory::orderBy('material_name')->get()),
+            'materialTextures' => Cache::remember('material_textures', 86400, fn() => MaterialTexture::orderBy('texture_name')->get()),
+            'materialSleeves' => Cache::remember('material_sleeves', 86400, fn() => MaterialSleeve::orderBy('sleeve_name')->get()),
+            'materialSizes' => Cache::remember('material_sizes', 86400, fn() => MaterialSize::orderBy('size_name')->get()),
+            'services' => Cache::remember('services', 86400, fn() => Service::orderBy('service_name')->get()),
+            'shippings' => Cache::remember('shippings', 86400, fn() => Shipping::orderBy('shipping_name')->get()),
+            'provinces' => Cache::remember('provinces', 86400 * 7, fn() => \App\Models\Province::orderBy('province_name')->get()),
         ];
 
         return view('pages.admin.orders.create', $data);
@@ -348,6 +351,9 @@ class OrderController extends Controller
 
             DB::commit();
 
+            // Clear cache after order created
+            Cache::forget('order_statistics');
+
             return redirect()->route('admin.orders.index', ['date_range' => 'this_month'])
                 ->with('message', 'Order and invoice created successfully.')
                 ->with('alert-type', 'success');
@@ -391,14 +397,14 @@ class OrderController extends Controller
         $data = [
             'order' => $order->load(['orderItems.designVariant', 'orderItems.size', 'orderItems.sleeve', 'extraServices']),
             'customers' => Customer::orderBy('customer_name')->get(),
-            'sales' => Sale::orderBy('sales_name')->get(),
-            'productCategories' => ProductCategory::orderBy('product_name')->get(),
-            'materialCategories' => MaterialCategory::orderBy('material_name')->get(),
-            'materialTextures' => MaterialTexture::orderBy('texture_name')->get(),
-            'materialSleeves' => MaterialSleeve::orderBy('sleeve_name')->get(),
-            'materialSizes' => MaterialSize::orderBy('size_name')->get(),
-            'services' => Service::orderBy('service_name')->get(),
-            'shippings' => Shipping::orderBy('shipping_name')->get(),
+            'sales' => Cache::remember('sales_list', 86400, fn() => Sale::orderBy('sales_name')->get()),
+            'productCategories' => Cache::remember('product_categories', 86400, fn() => ProductCategory::orderBy('product_name')->get()),
+            'materialCategories' => Cache::remember('material_categories', 86400, fn() => MaterialCategory::orderBy('material_name')->get()),
+            'materialTextures' => Cache::remember('material_textures', 86400, fn() => MaterialTexture::orderBy('texture_name')->get()),
+            'materialSleeves' => Cache::remember('material_sleeves', 86400, fn() => MaterialSleeve::orderBy('sleeve_name')->get()),
+            'materialSizes' => Cache::remember('material_sizes', 86400, fn() => MaterialSize::orderBy('size_name')->get()),
+            'services' => Cache::remember('services', 86400, fn() => Service::orderBy('service_name')->get()),
+            'shippings' => Cache::remember('shippings', 86400, fn() => Shipping::orderBy('shipping_name')->get()),
         ];
 
         return view('pages.admin.orders.edit', $data);
@@ -533,6 +539,9 @@ class OrderController extends Controller
 
             DB::commit();
 
+            // Clear cache after order updated
+            Cache::forget('order_statistics');
+
             return redirect()->route('admin.orders.index', ['date_range' => 'this_month'])
                 ->with('message', 'Order updated successfully.')
                 ->with('alert-type', 'success');
@@ -573,6 +582,9 @@ class OrderController extends Controller
     public function destroy(Order $order)
     {
         $order->delete();
+
+        // Clear cache after order deleted
+        Cache::forget('order_statistics');
 
         return redirect()->route('admin.orders.index', ['date_range' => 'this_month'])
             ->with('message', 'Order deleted successfully.')

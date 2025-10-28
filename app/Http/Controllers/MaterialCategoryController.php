@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\MaterialCategory;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 
 class MaterialCategoryController extends Controller
 {
@@ -17,6 +18,9 @@ class MaterialCategoryController extends Controller
         ]);
 
         MaterialCategory::create($validated);
+
+        // Clear cache after material category created
+        Cache::forget('material_categories');
 
         return redirect()->to(route('owner.manage-data.products.index') . '#material-categories')
             ->with('message', 'Material added successfully.')
@@ -35,6 +39,9 @@ class MaterialCategoryController extends Controller
 
         $materialCategory->update(array_filter($validated));
 
+        // Clear cache after material category updated
+        Cache::forget('material_categories');
+
         return redirect()->to(route('owner.manage-data.products.index') . '#material-categories')
             ->with('message', 'Material updated successfully.')
             ->with('alert-type', 'success');
@@ -43,6 +50,9 @@ class MaterialCategoryController extends Controller
     public function destroy(MaterialCategory $materialCategory)
     {
         $materialCategory->delete();
+
+        // Clear cache after material category deleted
+        Cache::forget('material_categories');
 
         return redirect()->to(route('owner.manage-data.products.index') . '#material-categories')
             ->with('message', 'Material Category deleted successfully.')
