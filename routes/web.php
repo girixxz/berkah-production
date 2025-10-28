@@ -78,6 +78,8 @@ Route::middleware(['auth'])->group(function () {
             // Users & Sales
             Route::prefix('users-sales')->name('users-sales.')->group(function () {
                 Route::get('/', [ManageUsersSalesController::class, 'index'])->name('index');
+                Route::get('/fetch-users', [ManageUsersSalesController::class, 'fetchUsers'])->name('fetch-users');
+                Route::get('/fetch-sales', [ManageUsersSalesController::class, 'fetchSales'])->name('fetch-sales');
                 Route::resource('users', UserController::class)->except(['index', 'create', 'show', 'edit']);
                 Route::resource('sales', SalesController::class)->except(['index', 'create', 'show', 'edit']);
             });

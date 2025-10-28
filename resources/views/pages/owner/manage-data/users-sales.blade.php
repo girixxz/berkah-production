@@ -1,7 +1,6 @@
 @extends('layouts.app')
 @section('title', 'Manage Users & Sales')
 @section('content')
-
     <x-nav-locate :items="['Menu', 'Manage Data', 'Users & Sales']" />
 
     {{-- Root Alpine State --}}
@@ -11,6 +10,81 @@
         editSales: {},
         searchUser: '',
         searchSales: '',
+        showDeleteUserConfirm: null,
+        showDeleteSalesConfirm: null,
+    
+        // Add User Validation
+        addUserForm: {
+            fullname: '',
+            username: '',
+            phone_number: '',
+            role: 'owner',
+            password: '',
+            password_confirmation: ''
+        },
+        addUserErrors: {},
+    
+        // Add Sales Validation
+        addSalesForm: {
+            sales_name: '',
+            phone: ''
+        },
+        addSalesErrors: {},
+    
+        validateAddUser() {
+            this.addUserErrors = {};
+    
+            if (!this.addUserForm.fullname) {
+                this.addUserErrors.fullname = 'Fullname is required';
+            } else if (this.addUserForm.fullname.length > 255) {
+                this.addUserErrors.fullname = 'Fullname must not exceed 255 characters';
+            }
+    
+            if (!this.addUserForm.username) {
+                this.addUserErrors.username = 'Username is required';
+            } else if (this.addUserForm.username.length > 255) {
+                this.addUserErrors.username = 'Username must not exceed 255 characters';
+            }
+    
+            if (this.addUserForm.phone_number && this.addUserForm.phone_number.length > 100) {
+                this.addUserErrors.phone_number = 'Phone must not exceed 100 characters';
+            }
+    
+            if (!this.addUserForm.role) {
+                this.addUserErrors.role = 'Role is required';
+            }
+    
+            if (!this.addUserForm.password) {
+                this.addUserErrors.password = 'Password is required';
+            } else if (this.addUserForm.password.length < 6) {
+                this.addUserErrors.password = 'Password must be at least 6 characters';
+            }
+    
+            if (!this.addUserForm.password_confirmation) {
+                this.addUserErrors.password_confirmation = 'Confirm Password is required';
+            } else if (this.addUserForm.password !== this.addUserForm.password_confirmation) {
+                this.addUserErrors.password_confirmation = 'Passwords do not match';
+            }
+    
+            return Object.keys(this.addUserErrors).length === 0;
+        },
+    
+        validateAddSales() {
+            this.addSalesErrors = {};
+    
+            if (!this.addSalesForm.sales_name) {
+                this.addSalesErrors.sales_name = 'Sales Name is required';
+            } else if (this.addSalesForm.sales_name.length > 100) {
+                this.addSalesErrors.sales_name = 'Sales Name must not exceed 100 characters';
+            }
+    
+            if (this.addSalesForm.phone && this.addSalesForm.phone.length > 100) {
+                this.addSalesErrors.phone = 'Phone must not exceed 100 characters';
+            }
+    
+            return Object.keys(this.addSalesErrors).length === 0;
+        },
+    
         init() {
             this.$watch('openModal', value => {
                 if (value) {
@@ -20,6 +94,25 @@
                             modalEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
                         }
                     }, 100);
+                }
+    
+                // Reset form saat modal dibuka
+                if (value === 'addUser') {
+                    this.addUserForm = {
+                        fullname: '',
+                        username: '',
+                        phone_number: '',
+                        role: 'owner',
+                        password: '',
+                        password_confirmation: ''
+                    };
+                    this.addUserErrors = {};
+                } else if (value === 'addSales') {
+                    this.addSalesForm = {
+                        sales_name: '',
+                        phone: ''
+                    };
+                    this.addSalesErrors = {};
                 }
             });
         }
@@ -64,14 +157,15 @@
                                 <th class="py-2 px-4 text-right rounded-r-md">Action</th>
                             </tr>
                         </thead>
-                        <tbody>
+                        <tbody id="users-tbody">
                             @forelse ($users as $user)
                                 <tr class="border-t border-gray-200"
                                     x-show="
                                         '{{ strtolower($user->fullname) }} {{ strtolower($user->username) }} {{ strtolower($user->phone_number) }} {{ strtolower($user->role) }}'
                                         .includes(searchUser.toLowerCase())
                                     ">
-                                    <td class="py-2 px-4">{{ $loop->iteration }}</td>
+                                    <td class="py-2 px-4">
+                                        {{ ($users->currentPage() - 1) * $users->perPage() + $loop->iteration }}</td>
                                     <td class="py-2 px-4">
                                         <div class="flex items-center gap-3">
                                             @php
@@ -166,23 +260,18 @@
                                                     </button>
 
                                                     {{-- Delete --}}
-                                                    <form
-                                                        action="{{ route('owner.manage-data.users-sales.users.destroy', $user) }}"
-                                                        method="POST" class="inline w-full"
-                                                        onsubmit="return confirm('Are you sure you want to delete this user?')">
-                                                        @csrf
-                                                        @method('DELETE')
-                                                        <button type="submit"
-                                                            class="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100 flex items-center gap-2">
-                                                            <svg class="w-4 h-4" fill="none" stroke="currentColor"
-                                                                viewBox="0 0 24 24">
-                                                                <path stroke-linecap="round" stroke-linejoin="round"
-                                                                    stroke-width="2"
-                                                                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                                            </svg>
-                                                            Delete
-                                                        </button>
-                                                    </form>
+                                                    <button
+                                                        @click="showDeleteUserConfirm = {{ $user->id }}; open = false"
+                                                        type="button"
+                                                        class="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100 flex items-center gap-2">
+                                                        <svg class="w-4 h-4" fill="none" stroke="currentColor"
+                                                            viewBox="0 0 24 24">
+                                                            <path stroke-linecap="round" stroke-linejoin="round"
+                                                                stroke-width="2"
+                                                                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                                        </svg>
+                                                        Delete
+                                                    </button>
                                                 </div>
                                             </div>
                                         </div>
@@ -199,6 +288,13 @@
                     </table>
                 </div>
             </div>
+
+            {{-- Pagination Users --}}
+            @if ($users->hasPages())
+                <div class="mt-4" id="users-pagination-container">
+                    <x-custom-pagination :paginator="$users" />
+                </div>
+            @endif
         </section>
 
         {{-- ===================== SALES ===================== --}}
@@ -238,14 +334,16 @@
                                 <th class="py-2 px-4 text-right">Action</th>
                             </tr>
                         </thead>
-                        <tbody>
+                        <tbody id="sales-tbody">
                             @forelse ($sales as $sale)
                                 <tr class="border-t border-gray-200"
                                     x-show="
                                         '{{ strtolower($sale->sales_name) }} {{ strtolower($sale->phone ?? '') }}'
                                         .includes(searchSales.toLowerCase())
                                     ">
-                                    <td class="py-2 px-4">{{ $loop->iteration }}</td>
+                                    <td class="py-2 px-4">
+                                        {{ ($sales->currentPage() - 1) * $sales->perPage() + $loop->iteration }}
+                                    </td>
                                     <td class="py-2 px-4">{{ $sale->sales_name }}</td>
                                     <td class="py-2 px-4">{{ $sale->phone ?? '-' }}</td>
 
@@ -318,23 +416,18 @@
                                                     </button>
 
                                                     {{-- Delete --}}
-                                                    <form
-                                                        action="{{ route('owner.manage-data.users-sales.sales.destroy', $sale) }}"
-                                                        method="POST" class="inline w-full"
-                                                        onsubmit="return confirm('Are you sure you want to delete this sales?')">
-                                                        @csrf
-                                                        @method('DELETE')
-                                                        <button type="submit"
-                                                            class="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100 flex items-center gap-2">
-                                                            <svg class="w-4 h-4" fill="none" stroke="currentColor"
-                                                                viewBox="0 0 24 24">
-                                                                <path stroke-linecap="round" stroke-linejoin="round"
-                                                                    stroke-width="2"
-                                                                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                                            </svg>
-                                                            Delete
-                                                        </button>
-                                                    </form>
+                                                    <button
+                                                        @click="showDeleteSalesConfirm = {{ $sale->id }}; open = false"
+                                                        type="button"
+                                                        class="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100 flex items-center gap-2">
+                                                        <svg class="w-4 h-4" fill="none" stroke="currentColor"
+                                                            viewBox="0 0 24 24">
+                                                            <path stroke-linecap="round" stroke-linejoin="round"
+                                                                stroke-width="2"
+                                                                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                                        </svg>
+                                                        Delete
+                                                    </button>
                                                 </div>
                                             </div>
                                         </div>
@@ -352,6 +445,13 @@
                     </table>
                 </div>
             </div>
+
+            {{-- Pagination Sales --}}
+            @if ($sales->hasPages())
+                <div class="mt-4" id="sales-pagination-container">
+                    <x-custom-pagination :paginator="$sales" />
+                </div>
+            @endif
         </section>
 
         {{-- ===================== MODALS ===================== --}}
@@ -364,38 +464,50 @@
                     <button @click="openModal=null" class="text-gray-400 hover:text-gray-600 cursor-pointer">✕</button>
                 </div>
                 <form action="{{ route('owner.manage-data.users-sales.users.store') }}" method="POST"
-                    class="px-6 py-4 space-y-4">
+                    @submit="if (!validateAddUser()) $event.preventDefault()" class="px-6 py-4 space-y-4">
                     @csrf
                     {{-- Full Name --}}
                     <div>
-                        <label class="block text-sm font-medium text-gray-700">Fullname</label>
+                        <label class="block text-sm font-medium text-gray-700">Fullname <span
+                                class="text-red-500">*</span></label>
                         <div class="relative">
-                            <input type="text" name="fullname" value="{{ old('fullname') }}"
-                                class="mt-1 w-full rounded-md px-4 py-2 text-sm border {{ $errors->addUser->has('fullname') ? 'border-red-500 focus:border-red-500 focus:ring-red-200' : 'border-gray-200 focus:border-primary focus:ring-primary/20' }} focus:outline-none focus:ring-2 text-gray-700">
+                            <input type="text" name="fullname" x-model="addUserForm.fullname"
+                                @blur="validateAddUser()"
+                                :class="addUserErrors.fullname || {{ $errors->addUser->has('fullname') ? 'true' : 'false' }} ?
+                                    'border-red-500 focus:border-red-500 focus:ring-red-200' :
+                                    'border-gray-200 focus:border-primary focus:ring-primary/20'"
+                                class="mt-1 w-full rounded-md px-4 py-2 text-sm border focus:outline-none focus:ring-2 text-gray-700">
                             @if ($errors->addUser->has('fullname'))
                                 <span class="absolute right-3 top-1/2 -translate-y-1/2 text-red-500 pointer-events-none">
-
                                     <x-icons.danger />
                                 </span>
                             @endif
                         </div>
+                        <p x-show="addUserErrors.fullname" x-text="addUserErrors.fullname"
+                            class="mt-1 text-sm text-red-600"></p>
                         @error('fullname', 'addUser')
                             <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                         @enderror
                     </div>
                     {{-- Username --}}
                     <div>
-                        <label class="block text-sm font-medium text-gray-700">Username</label>
+                        <label class="block text-sm font-medium text-gray-700">Username <span
+                                class="text-red-500">*</span></label>
                         <div class="relative">
-                            <input type="text" name="username" value="{{ old('username') }}"
-                                class="mt-1 w-full rounded-md px-4 py-2 text-sm border {{ $errors->addUser->has('username') ? 'border-red-500 focus:border-red-500 focus:ring-red-200' : 'border-gray-200 focus:border-primary focus:ring-primary/20' }} focus:outline-none focus:ring-2 text-gray-700">
+                            <input type="text" name="username" x-model="addUserForm.username"
+                                @blur="validateAddUser()"
+                                :class="addUserErrors.username || {{ $errors->addUser->has('username') ? 'true' : 'false' }} ?
+                                    'border-red-500 focus:border-red-500 focus:ring-red-200' :
+                                    'border-gray-200 focus:border-primary focus:ring-primary/20'"
+                                class="mt-1 w-full rounded-md px-4 py-2 text-sm border focus:outline-none focus:ring-2 text-gray-700">
                             @if ($errors->addUser->has('username'))
                                 <span class="absolute right-3 top-1/2 -translate-y-1/2 text-red-500 pointer-events-none">
-
                                     <x-icons.danger />
                                 </span>
                             @endif
                         </div>
+                        <p x-show="addUserErrors.username" x-text="addUserErrors.username"
+                            class="mt-1 text-sm text-red-600"></p>
                         @error('username', 'addUser')
                             <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                         @enderror
@@ -403,43 +515,61 @@
                     {{-- Phone --}}
                     <div>
                         <label class="block text-sm font-medium text-gray-700">Phone (optional)</label>
-                        <input type="text" name="phone_number"
-                            class="mt-1 w-full rounded-md border border-gray-200 px-4 py-2 text-sm text-gray-500 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20" />
+                        <input type="tel" name="phone_number" x-model="addUserForm.phone_number"
+                            @blur="validateAddUser()" placeholder="e.g., 081234567890"
+                            :class="addUserErrors.phone_number ? 'border-red-500' : 'border-gray-200'"
+                            class="mt-1 w-full rounded-md border px-4 py-2 text-sm text-gray-500 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20" />
+                        <p x-show="addUserErrors.phone_number" x-text="addUserErrors.phone_number"
+                            class="mt-1 text-sm text-red-600"></p>
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-700">Roles</label>
-                        <select name="role"
-                            class="mt-1 w-full rounded-md border border-gray-200 px-4 py-2 text-sm
-                            text-gray-500 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20">
+                        <label class="block text-sm font-medium text-gray-700">Roles <span
+                                class="text-red-500">*</span></label>
+                        <select name="role" x-model="addUserForm.role" @change="validateAddUser()"
+                            class="mt-1 w-full rounded-md border border-gray-200 px-4 py-2 text-sm text-gray-500 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20">
                             <option value="owner">Owner</option>
                             <option value="admin">Admin</option>
                             <option value="pm">Project Manager</option>
                             <option value="karyawan">Karyawan</option>
                         </select>
+                        <p x-show="addUserErrors.role" x-text="addUserErrors.role" class="mt-1 text-sm text-red-600"></p>
                     </div>
                     {{-- Password --}}
                     <div>
-                        <label class="block text-sm font-medium text-gray-700">Password</label>
+                        <label class="block text-sm font-medium text-gray-700">Password <span
+                                class="text-red-500">*</span></label>
                         <div class="relative">
-                            <input type="password" name="password" value="{{ old('password') }}"
-                                class="mt-1 w-full rounded-md px-4 py-2 text-sm border {{ $errors->addUser->has('password') ? 'border-red-500 focus:border-red-500 focus:ring-red-200' : 'border-gray-200 focus:border-primary focus:ring-primary/20' }} focus:outline-none focus:ring-2 text-gray-700">
+                            <input type="password" name="password" x-model="addUserForm.password"
+                                @blur="validateAddUser()"
+                                :class="addUserErrors.password || {{ $errors->addUser->has('password') ? 'true' : 'false' }} ?
+                                    'border-red-500 focus:border-red-500 focus:ring-red-200' :
+                                    'border-gray-200 focus:border-primary focus:ring-primary/20'"
+                                class="mt-1 w-full rounded-md px-4 py-2 text-sm border focus:outline-none focus:ring-2 text-gray-700">
                             @if ($errors->addUser->has('password'))
                                 <span class="absolute right-3 top-1/2 -translate-y-1/2 text-red-500 pointer-events-none">
-
                                     <x-icons.danger />
                                 </span>
                             @endif
                         </div>
+                        <p x-show="addUserErrors.password" x-text="addUserErrors.password"
+                            class="mt-1 text-sm text-red-600"></p>
                         @error('password', 'addUser')
                             <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                         @enderror
                     </div>
                     {{-- Confirm Password --}}
                     <div>
-                        <label class="block text-sm font-medium text-gray-700">Confirm Password</label>
-                        <input type="password" name="password_confirmation" value="{{ old('password_confirmation') }}"
-                            class="mt-1 w-full rounded-md px-4 py-2 text-sm border {{ $errors->addUser->has('password_confirmation') ? 'border-red-500 focus:border-red-500 focus:ring-red-200' : 'border-gray-200 focus:border-primary focus:ring-primary/20' }} focus:outline-none focus:ring-2 text-gray-700">
-
+                        <label class="block text-sm font-medium text-gray-700">Confirm Password <span
+                                class="text-red-500">*</span></label>
+                        <input type="password" name="password_confirmation" x-model="addUserForm.password_confirmation"
+                            @blur="validateAddUser()"
+                            :class="addUserErrors.password_confirmation ||
+                                {{ $errors->addUser->has('password_confirmation') ? 'true' : 'false' }} ?
+                                'border-red-500 focus:border-red-500 focus:ring-red-200' :
+                                'border-gray-200 focus:border-primary focus:ring-primary/20'"
+                            class="mt-1 w-full rounded-md px-4 py-2 text-sm border focus:outline-none focus:ring-2 text-gray-700">
+                        <p x-show="addUserErrors.password_confirmation" x-text="addUserErrors.password_confirmation"
+                            class="mt-1 text-sm text-red-600"></p>
                         @error('password_confirmation', 'addUser')
                             <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                         @enderror
@@ -469,8 +599,9 @@
 
                     {{-- Full Name --}}
                     <div>
-                        <label class="block text-sm font-medium text-gray-700">Full Name</label>
-                        <input type="text" name="fullname" x-model="editUser.fullname"
+                        <label class="block text-sm font-medium text-gray-700">Full Name <span
+                                class="text-red-500">*</span></label>
+                        <input type="text" name="fullname" x-model="editUser.fullname" required maxlength="255"
                             class="mt-1 w-full rounded-md px-4 py-2 text-sm border {{ $errors->editUser->has('fullname') ? 'border-red-500 focus:border-red-500 focus:ring-red-200' : 'border-gray-200 focus:border-primary focus:ring-primary/20' }} focus:outline-none focus:ring-2 text-gray-700">
 
                         @error('fullname', 'editUser')
@@ -479,9 +610,10 @@
                     </div>
                     {{-- Username --}}
                     <div>
-                        <label class="block text-sm font-medium text-gray-700">Username</label>
+                        <label class="block text-sm font-medium text-gray-700">Username <span
+                                class="text-red-500">*</span></label>
                         <div class="relative">
-                            <input type="text" name="username" x-model="editUser.username"
+                            <input type="text" name="username" x-model="editUser.username" required maxlength="255"
                                 class="mt-1 w-full rounded-md px-4 py-2 text-sm border {{ $errors->editUser->has('username') ? 'border-red-500 focus:border-red-500 focus:ring-red-200' : 'border-gray-200 focus:border-primary focus:ring-primary/20' }} focus:outline-none focus:ring-2 text-gray-700">
                             @if ($errors->editUser->has('username'))
                                 <span class="absolute right-3 top-1/2 -translate-y-1/2 text-red-500 pointer-events-none">
@@ -497,14 +629,16 @@
                     {{-- Phone --}}
                     <div>
                         <label class="block text-sm font-medium text-gray-700">Phone</label>
-                        <input type="text" name="phone_number" x-model="editUser.phone_number"
+                        <input type="tel" name="phone_number" x-model="editUser.phone_number" maxlength="100"
+                            pattern="[0-9+\-\s()]+" placeholder="e.g., 081234567890"
                             class="mt-1 w-full rounded-md border border-gray-200 px-4 py-2 text-sm 
                            text-gray-700 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20">
                     </div>
                     {{-- Role --}}
                     <div>
-                        <label class="block text-sm font-medium text-gray-700">Role</label>
-                        <select name="role" x-model="editUser.role"
+                        <label class="block text-sm font-medium text-gray-700">Role <span
+                                class="text-red-500">*</span></label>
+                        <select name="role" x-model="editUser.role" required
                             class="mt-1 w-full rounded-md border border-gray-200 px-4 py-2 text-sm 
                            text-gray-700 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20">
                             <option value="owner">Owner</option>
@@ -518,7 +652,7 @@
                         <label class="block text-sm font-medium text-gray-700">Password (leave blank to keep
                             current)</label>
                         <div class="relative">
-                            <input type="password" name="password"
+                            <input type="password" name="password" minlength="6"
                                 class="mt-1 w-full rounded-md px-4 py-2 text-sm border {{ $errors->editUser->has('password') ? 'border-red-500 focus:border-red-500 focus:ring-red-200' : 'border-gray-200 focus:border-primary focus:ring-primary/20' }} focus:outline-none focus:ring-2 text-gray-700">
                             @if ($errors->editUser->has('password'))
                                 <span class="absolute right-3 top-1/2 -translate-y-1/2 text-red-500 pointer-events-none">
@@ -531,10 +665,10 @@
                             <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                         @enderror
                     </div>
-                    {{-- Password --}}
+                    {{-- Confirm Password --}}
                     <div>
                         <label class="block text-sm font-medium text-gray-700">Confirm Password</label>
-                        <input type="password" name="password_confirmation"
+                        <input type="password" name="password_confirmation" minlength="6"
                             class="mt-1 w-full rounded-md px-4 py-2 text-sm border {{ $errors->editUser->has('password_confirmation') ? 'border-red-500 focus:border-red-500 focus:ring-red-200' : 'border-gray-200 focus:border-primary focus:ring-primary/20' }} focus:outline-none focus:ring-2 text-gray-700">
 
                         @error('password_confirmation', 'editUser')
@@ -562,29 +696,40 @@
                 </div>
 
                 <form action="{{ route('owner.manage-data.users-sales.sales.store') }}" method="POST"
-                    class="px-6 py-4 space-y-4">
+                    @submit="if (!validateAddSales()) $event.preventDefault()" class="px-6 py-4 space-y-4">
                     @csrf
                     <div class="relative">
-                        <label class="block text-sm font-medium text-gray-700">Sales Name</label>
-                        <input type="text" name="sales_name" value="{{ old('sales_name') }}"
-                            class="mt-1 w-full rounded-md px-4 py-2 text-sm pr-10 border {{ $errors->addSales->has('sales_name') ? 'border-red-500 focus:border-red-500 focus:ring-red-200' : 'border-gray-200 focus:border-primary focus:ring-primary/20' }} focus:outline-none focus:ring-2 text-gray-700">
+                        <label class="block text-sm font-medium text-gray-700">Sales Name <span
+                                class="text-red-500">*</span></label>
+                        <input type="text" name="sales_name" x-model="addSalesForm.sales_name"
+                            @blur="validateAddSales()"
+                            :class="addSalesErrors.sales_name ||
+                                {{ $errors->addSales->has('sales_name') ? 'true' : 'false' }} ?
+                                'border-red-500 focus:border-red-500 focus:ring-red-200' :
+                                'border-gray-200 focus:border-primary focus:ring-primary/20'"
+                            class="mt-1 w-full rounded-md px-4 py-2 text-sm pr-10 border focus:outline-none focus:ring-2 text-gray-700">
 
                         {{-- Error icon di dalam input --}}
                         @if ($errors->addSales->has('sales_name'))
                             <span class="absolute right-3 top-[42px] -translate-y-1/2 text-red-500 pointer-events-none">
-
                                 <x-icons.danger />
                             </span>
                         @endif
 
+                        <p x-show="addSalesErrors.sales_name" x-text="addSalesErrors.sales_name"
+                            class="mt-1 text-sm text-red-600"></p>
                         @error('sales_name', 'addSales')
                             <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                         @enderror
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-gray-700">Phone (optional)</label>
-                        <input type="text" name="phone" value="{{ old('phone') }}"
-                            class="mt-1 w-full rounded-md border border-gray-200 px-4 py-2 text-sm text-gray-700 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20">
+                        <input type="tel" name="phone" x-model="addSalesForm.phone" @blur="validateAddSales()"
+                            placeholder="e.g., 081234567890"
+                            :class="addSalesErrors.phone ? 'border-red-500' : 'border-gray-200'"
+                            class="mt-1 w-full rounded-md border px-4 py-2 text-sm text-gray-700 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20">
+                        <p x-show="addSalesErrors.phone" x-text="addSalesErrors.phone" class="mt-1 text-sm text-red-600">
+                        </p>
                     </div>
 
                     <div class="flex justify-end gap-3 pt-4">
@@ -612,9 +757,10 @@
                     @method('PUT')
 
                     <div class="relative">
-                        <label class="block text-sm font-medium text-gray-700">Sales Name</label>
+                        <label class="block text-sm font-medium text-gray-700">Sales Name <span
+                                class="text-red-500">*</span></label>
                         <input type="text" name="sales_name" value="{{ old('sales_name') }}"
-                            x-model="editSales.sales_name"
+                            x-model="editSales.sales_name" required maxlength="100"
                             class="mt-1 w-full rounded-md px-4 py-2 text-sm pr-10 border {{ $errors->editSales->has('sales_name') ? 'border-red-500 focus:border-red-500 focus:ring-red-200' : 'border-gray-200 focus:border-primary focus:ring-primary/20' }} focus:outline-none focus:ring-2 text-gray-700">
 
                         {{-- Error icon di dalam input --}}
@@ -631,7 +777,8 @@
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-gray-700">Phone</label>
-                        <input type="text" name="phone" x-model="editSales.phone"
+                        <input type="tel" name="phone" x-model="editSales.phone" maxlength="100"
+                            pattern="[0-9+\-\s()]+" placeholder="e.g., 081234567890"
                             class="mt-1 w-full rounded-md border border-gray-200 px-4 py-2 text-sm text-gray-700 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20">
                     </div>
 
@@ -644,6 +791,196 @@
                 </form>
             </div>
         </div>
+
+        {{-- ================= DELETE USER CONFIRMATION MODAL ================= --}}
+        <div x-show="showDeleteUserConfirm !== null" x-cloak
+            class="fixed inset-0 z-50 overflow-y-auto flex items-center justify-center"
+            style="background-color: rgba(0, 0, 0, 0.5);">
+            <div @click.away="showDeleteUserConfirm = null"
+                class="relative bg-white rounded-lg shadow-xl max-w-md w-full mx-4 p-6">
+                {{-- Icon --}}
+                <div class="flex items-center justify-center w-12 h-12 mx-auto mb-4 bg-red-100 rounded-full">
+                    <svg class="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                    </svg>
+                </div>
+
+                {{-- Title --}}
+                <h3 class="text-lg font-semibold text-gray-900 text-center mb-2">
+                    Delete User?
+                </h3>
+
+                {{-- Message --}}
+                <p class="text-sm text-gray-600 text-center mb-6">
+                    Are you sure you want to delete this user? This action cannot be undone and all user data will be
+                    permanently removed.
+                </p>
+
+                {{-- Actions --}}
+                <div class="flex gap-3">
+                    <button type="button" @click="showDeleteUserConfirm = null"
+                        class="flex-1 px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">
+                        Cancel
+                    </button>
+                    <form :action="'{{ route('owner.manage-data.users-sales.index') }}/users/' + showDeleteUserConfirm"
+                        method="POST" class="flex-1">
+                        @csrf
+                        @method('DELETE')
+                        <button type="submit"
+                            class="w-full px-4 py-2 bg-red-600 text-white rounded-md text-sm font-medium hover:bg-red-700 transition-colors">
+                            Yes, Delete
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        {{-- ================= DELETE SALES CONFIRMATION MODAL ================= --}}
+        <div x-show="showDeleteSalesConfirm !== null" x-cloak
+            class="fixed inset-0 z-50 overflow-y-auto flex items-center justify-center"
+            style="background-color: rgba(0, 0, 0, 0.5);">
+            <div @click.away="showDeleteSalesConfirm = null"
+                class="relative bg-white rounded-lg shadow-xl max-w-md w-full mx-4 p-6">
+                {{-- Icon --}}
+                <div class="flex items-center justify-center w-12 h-12 mx-auto mb-4 bg-red-100 rounded-full">
+                    <svg class="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                    </svg>
+                </div>
+
+                {{-- Title --}}
+                <h3 class="text-lg font-semibold text-gray-900 text-center mb-2">
+                    Delete Sales?
+                </h3>
+
+                {{-- Message --}}
+                <p class="text-sm text-gray-600 text-center mb-6">
+                    Are you sure you want to delete this sales? This action cannot be undone and all sales data will be
+                    permanently removed.
+                </p>
+
+                {{-- Actions --}}
+                <div class="flex gap-3">
+                    <button type="button" @click="showDeleteSalesConfirm = null"
+                        class="flex-1 px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">
+                        Cancel
+                    </button>
+                    <form :action="'{{ route('owner.manage-data.users-sales.index') }}/sales/' + showDeleteSalesConfirm"
+                        method="POST" class="flex-1">
+                        @csrf
+                        @method('DELETE')
+                        <button type="submit"
+                            class="w-full px-4 py-2 bg-red-600 text-white rounded-md text-sm font-medium hover:bg-red-700 transition-colors">
+                            Yes, Delete
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
     </div>
+
+    {{-- AJAX Pagination Script --}}
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Intercept all pagination link clicks
+            document.addEventListener('click', function(e) {
+                const link = e.target.closest('a[href*="users_page"], a[href*="sales_page"]');
+                if (!link || link.closest('form')) return;
+
+                e.preventDefault();
+                const url = new URL(link.href);
+
+                if (url.searchParams.has('users_page')) {
+                    fetchUsers(url.href);
+                } else if (url.searchParams.has('sales_page')) {
+                    fetchSales(url.href);
+                }
+
+                window.history.pushState({}, '', url.href);
+            });
+
+            async function fetchUsers(url) {
+                const tbody = document.getElementById('users-tbody');
+                const paginationContainer = document.getElementById('users-pagination-container');
+
+                if (!tbody) return;
+
+                tbody.style.opacity = '0.5';
+                tbody.style.pointerEvents = 'none';
+
+                try {
+                    const response = await fetch(url, {
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest'
+                        }
+                    });
+
+                    const html = await response.text();
+                    const parser = new DOMParser();
+                    const doc = parser.parseFromString(html, 'text/html');
+
+                    const newTbody = doc.querySelector('#users-tbody');
+                    const newPagination = doc.querySelector('#users-pagination-container');
+
+                    if (newTbody) tbody.innerHTML = newTbody.innerHTML;
+                    if (newPagination && paginationContainer) {
+                        paginationContainer.innerHTML = newPagination.innerHTML;
+                    }
+
+                    if (window.Alpine) {
+                        Alpine.initTree(tbody);
+                        if (paginationContainer) Alpine.initTree(paginationContainer);
+                    }
+                } catch (error) {
+                    console.error('Error:', error);
+                } finally {
+                    tbody.style.opacity = '1';
+                    tbody.style.pointerEvents = 'auto';
+                }
+            }
+
+            async function fetchSales(url) {
+                const tbody = document.getElementById('sales-tbody');
+                const paginationContainer = document.getElementById('sales-pagination-container');
+
+                if (!tbody) return;
+
+                tbody.style.opacity = '0.5';
+                tbody.style.pointerEvents = 'none';
+
+                try {
+                    const response = await fetch(url, {
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest'
+                        }
+                    });
+
+                    const html = await response.text();
+                    const parser = new DOMParser();
+                    const doc = parser.parseFromString(html, 'text/html');
+
+                    const newTbody = doc.querySelector('#sales-tbody');
+                    const newPagination = doc.querySelector('#sales-pagination-container');
+
+                    if (newTbody) tbody.innerHTML = newTbody.innerHTML;
+                    if (newPagination && paginationContainer) {
+                        paginationContainer.innerHTML = newPagination.innerHTML;
+                    }
+
+                    if (window.Alpine) {
+                        Alpine.initTree(tbody);
+                        if (paginationContainer) Alpine.initTree(paginationContainer);
+                    }
+                } catch (error) {
+                    console.error('Error:', error);
+                } finally {
+                    tbody.style.opacity = '1';
+                    tbody.style.pointerEvents = 'auto';
+                }
+            }
+        });
+    </script>
 
 @endsection
