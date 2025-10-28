@@ -10,4 +10,12 @@ export default defineConfig({
             refresh: true,
         }),
     ],
+    server: {
+        host: "127.0.0.1", // Force IPv4 untuk menghindari CORS issue
+        port: 5173,
+        strictPort: false,
+        hmr: {
+            host: "localhost",
+        },
+    },
 });
