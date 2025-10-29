@@ -24,7 +24,7 @@ class CustomerController extends Controller
             ->withCount('orders')
             ->withSum('orders', 'total_qty')
             ->orderBy('created_at', 'desc')
-            ->get();
+            ->paginate(15, ['*'], 'customer_page');
 
         // Fetch provinces from API
         $provinces = $this->getProvinces();
@@ -37,39 +37,44 @@ class CustomerController extends Controller
      */
     public function store(Request $request)
     {
-        session()->flash('openModal', 'addCustomer');
+        try {
+            $validated = $request->validateWithBag('addCustomer', [
+                'customer_name' => 'required|string|max:100',
+                'phone' => 'required|string|max:20',
+                'province_id' => 'required|string',
+                'city_id' => 'required|string',
+                'district_id' => 'required|string',
+                'village_id' => 'required|string',
+                'address' => 'required|string|max:255',
+            ], [
+                'customer_name.required' => 'Customer name is required.',
+                'phone.required' => 'Phone number is required.',
+                'province_id.required' => 'Province is required.',
+                'city_id.required' => 'City is required.',
+                'district_id.required' => 'District is required.',
+                'village_id.required' => 'Village is required.',
+                'address.required' => 'Address is required.',
+            ]);
 
-        $validated = $request->validateWithBag('addCustomer', [
-            'customer_name' => 'required|string|max:100',
-            'phone' => 'required|string|max:20',
-            'province_id' => 'required|string',
-            'city_id' => 'required|string',
-            'district_id' => 'required|string',
-            'village_id' => 'required|string',
-            'address' => 'required|string|max:255',
-        ], [
-            'customer_name.required' => 'Customer name is required.',
-            'phone.required' => 'Phone number is required.',
-            'province_id.required' => 'Province is required.',
-            'city_id.required' => 'City is required.',
-            'district_id.required' => 'District is required.',
-            'village_id.required' => 'Village is required.',
-            'address.required' => 'Address is required.',
-        ]);
+            $customer = Customer::create($validated);
 
-        $customer = Customer::create($validated);
+            // Check if request is from create order page
+            if ($request->has('from_create_order') && $request->from_create_order == '1') {
+                return redirect()->route('admin.orders.create')
+                    ->with('message', 'Customer added successfully.')
+                    ->with('alert-type', 'success')
+                    ->with('select_customer_id', $customer->id);
+            }
 
-        // Check if request is from create order page
-        if ($request->has('from_create_order') && $request->from_create_order == '1') {
-            return redirect()->route('admin.orders.create')
+            // Success - modal will close automatically (no session flash on success)
+            return redirect()->route('admin.customers.index')
                 ->with('message', 'Customer added successfully.')
-                ->with('alert-type', 'success')
-                ->with('select_customer_id', $customer->id);
+                ->with('alert-type', 'success');
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            // Error - flash openModal biar modal tetap terbuka
+            session()->flash('openModal', 'addCustomer');
+            throw $e;
         }
-
-        return redirect()->route('admin.customers.index')
-            ->with('message', 'Customer added successfully.')
-            ->with('alert-type', 'success');
     }
 
     /**
@@ -77,32 +82,37 @@ class CustomerController extends Controller
      */
     public function update(Request $request, Customer $customer)
     {
-        session()->flash('openModal', 'editCustomer');
-        session()->flash('editCustomerId', $customer->id);
+        try {
+            $validated = $request->validateWithBag('editCustomer', [
+                'customer_name' => 'required|string|max:100',
+                'phone' => 'required|string|max:20',
+                'province_id' => 'required|string',
+                'city_id' => 'required|string',
+                'district_id' => 'required|string',
+                'village_id' => 'required|string',
+                'address' => 'required|string|max:255',
+            ], [
+                'customer_name.required' => 'Customer name is required.',
+                'phone.required' => 'Phone number is required.',
+                'province_id.required' => 'Province is required.',
+                'city_id.required' => 'City is required.',
+                'district_id.required' => 'District is required.',
+                'village_id.required' => 'Village is required.',
+                'address.required' => 'Address is required.',
+            ]);
 
-        $validated = $request->validateWithBag('editCustomer', [
-            'customer_name' => 'required|string|max:100',
-            'phone' => 'required|string|max:20',
-            'province_id' => 'required|string',
-            'city_id' => 'required|string',
-            'district_id' => 'required|string',
-            'village_id' => 'required|string',
-            'address' => 'required|string|max:255',
-        ], [
-            'customer_name.required' => 'Customer name is required.',
-            'phone.required' => 'Phone number is required.',
-            'province_id.required' => 'Province is required.',
-            'city_id.required' => 'City is required.',
-            'district_id.required' => 'District is required.',
-            'village_id.required' => 'Village is required.',
-            'address.required' => 'Address is required.',
-        ]);
+            $customer->update($validated);
 
-        $customer->update($validated);
-
-        return redirect()->route('admin.customers.index')
-            ->with('message', 'Customer updated successfully.')
-            ->with('alert-type', 'success');
+            // Success - modal will close automatically (no session flash on success)
+            return redirect()->route('admin.customers.index')
+                ->with('message', 'Customer updated successfully.')
+                ->with('alert-type', 'success');
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            // Error - flash openModal dan customerId biar modal tetap terbuka
+            session()->flash('openModal', 'editCustomer');
+            session()->flash('editCustomerId', $customer->id);
+            throw $e;
+        }
     }
 
     /**
