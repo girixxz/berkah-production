@@ -5,13 +5,109 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Order;
 use Illuminate\Http\Request;
+use Barryvdh\DomPDF\Facade\Pdf;
 
 class OrderController extends Controller
 {
     public function index()
     {
-        $orders = Order::with(['customer', 'sales'])->latest()->get();
-        return view('pages.admin.orders.index', compact('orders'));
+        // Get all orders with relationships
+        $orders = Order::with(['customer', 'sales', 'invoice'])->latest()->get();
+        
+        // Calculate statistics
+        $stats = [
+            'total_orders' => $orders->count(),
+            'total_qty' => $orders->sum('total_qty'),
+            'total_revenue' => $orders->sum('grand_total'),
+            'total_bill' => $orders->sum(function($order) {
+                return $order->invoice->total_bill ?? 0;
+            }),
+            'remaining_due' => $orders->sum(function($order) {
+                return $order->invoice->amount_due ?? 0;
+            }),
+            'pending' => $orders->where('production_status', 'pending')->count(),
+            'wip' => $orders->where('production_status', 'wip')->count(),
+            'finished' => $orders->where('production_status', 'finished')->count(),
+            'cancelled' => $orders->where('production_status', 'cancelled')->count(),
+        ];
+        
+        return view('pages.admin.orders.index', compact('orders', 'stats'));
+    }
+
+    public function show(Order $order)
+    {
+        // Load all necessary relationships for the detail view
+        $order->load([
+            'customer.village.district.city.province',
+            'sale',
+            'productCategory',
+            'materialCategory',
+            'materialTexture',
+            'shipping',
+            'invoice.payments',
+            'orderItems.designVariant',
+            'orderItems.sleeve',
+            'orderItems.size',
+            'extraServices.service',
+            'designVariants.orderItems.sleeve',
+            'designVariants.orderItems.size',
+        ]);
+
+        // Group order items by design variant and sleeve for display
+        $designVariants = [];
+        foreach ($order->orderItems as $item) {
+            $designName = $item->designVariant->design_name ?? 'Default';
+            $sleeveId = $item->sleeve_id;
+            $sleeveName = $item->sleeve->sleeve_name ?? 'Unknown';
+
+            if (!isset($designVariants[$designName])) {
+                $designVariants[$designName] = [];
+            }
+
+            if (!isset($designVariants[$designName][$sleeveId])) {
+                $designVariants[$designName][$sleeveId] = [
+                    'sleeve_name' => $sleeveName,
+                    'base_price' => $item->unit_price,
+                    'sleeve' => $item->sleeve,
+                    'items' => []
+                ];
+            }
+
+            $designVariants[$designName][$sleeveId]['items'][] = $item;
+        }
+
+        return view('pages.admin.orders.show', compact('order', 'designVariants'));
+    }
+
+    public function downloadInvoice(Order $order)
+    {
+        // Load all necessary relationships for PDF
+        $order->load([
+            'customer.village.district.city.province',
+            'sale',
+            'productCategory',
+            'materialCategory',
+            'materialTexture',
+            'shipping',
+            'invoice',
+            'orderItems.designVariant',
+            'orderItems.sleeve',
+            'orderItems.size',
+            'extraServices.service',
+            'designVariants.orderItems.sleeve',
+            'designVariants.orderItems.size',
+        ]);
+
+        // Generate PDF from template
+        $pdf = Pdf::loadView('pages.admin.orders.invoice-pdf', compact('order'));
+        
+        // Set paper size and orientation
+        $pdf->setPaper('a4', 'portrait');
+        
+        // Download with filename
+        $filename = 'Invoice-' . $order->invoice->invoice_no . '.pdf';
+        
+        return $pdf->download($filename);
     }
 
     public function update(Request $request, Order $order)

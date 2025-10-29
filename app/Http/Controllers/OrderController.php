@@ -19,6 +19,7 @@ use App\Models\Invoice;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Cache;
+use Barryvdh\DomPDF\Facade\Pdf;
 
 class OrderController extends Controller
 {
@@ -589,5 +590,27 @@ class OrderController extends Controller
         return redirect()->route('admin.orders.index', ['date_range' => 'this_month'])
             ->with('message', 'Order deleted successfully.')
             ->with('alert-type', 'success');
+    }
+
+    /**
+     * Download invoice PDF for the specified order.
+     */
+    public function downloadInvoice(Order $order)
+    {
+        $order->load([
+            'invoice',
+            'customer.village.district.city.province',
+            'sale',
+            'orderItems.designVariant',
+            'orderItems.size',
+            'orderItems.sleeve',
+            'extraServices.service'
+        ]);
+
+        $pdf = Pdf::loadView('pages.admin.orders.invoice-pdf', [
+            'order' => $order
+        ]);
+
+        return $pdf->download('invoice-' . $order->invoice->invoice_no . '.pdf');
     }
 }

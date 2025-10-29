@@ -93,6 +93,7 @@ Route::middleware(['auth'])->group(function () {
         // Orders
         Route::resource('orders', OrderController::class);
         Route::patch('orders/{order}/cancel', [OrderController::class, 'cancel'])->name('orders.cancel');
+        Route::get('orders/{order}/invoice/download', [OrderController::class, 'downloadInvoice'])->name('orders.invoice.download');
 
         // Payments
         Route::post('payments', [\App\Http\Controllers\PaymentController::class, 'store'])->name('payments.store');
