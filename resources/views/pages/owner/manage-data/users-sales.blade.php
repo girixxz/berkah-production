@@ -119,7 +119,7 @@
     }" class="grid grid-cols-1 md:grid-cols-2 gap-6">
 
         {{-- ===================== USERS ===================== --}}
-        <section class="bg-white border border-gray-200 rounded-lg p-5">
+        <section id="users-section" class="bg-white border border-gray-200 rounded-lg p-5">
             {{-- Header --}}
             <div class="flex flex-col gap-3 md:flex-row md:items-center">
                 <h2 class="text-xl font-semibold text-gray-900">Users</h2>
@@ -298,7 +298,7 @@
         </section>
 
         {{-- ===================== SALES ===================== --}}
-        <section class="bg-white border border-gray-200 rounded-lg p-5">
+        <section id="sales-section" class="bg-white border border-gray-200 rounded-lg p-5">
             {{-- Header --}}
             <div class="flex flex-col gap-3 md:flex-row md:items-center">
                 <h2 class="text-xl font-semibold text-gray-900">Sales</h2>
@@ -884,101 +884,51 @@
     {{-- AJAX Pagination Script --}}
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            // Intercept all pagination link clicks
-            document.addEventListener('click', function(e) {
-                const link = e.target.closest('a[href*="users_page"], a[href*="sales_page"]');
-                if (!link || link.closest('form')) return;
+            // Setup pagination for users and sales
+            setupPagination('users-pagination-container', 'users-section');
+            setupPagination('sales-pagination-container', 'sales-section');
 
-                e.preventDefault();
-                const url = new URL(link.href);
+            function setupPagination(containerId, sectionId) {
+                const container = document.getElementById(containerId);
+                if (!container) return;
 
-                if (url.searchParams.has('users_page')) {
-                    fetchUsers(url.href);
-                } else if (url.searchParams.has('sales_page')) {
-                    fetchSales(url.href);
-                }
+                container.addEventListener('click', function(e) {
+                    const link = e.target.closest('a[href*="page="]');
+                    if (!link) return;
 
-                window.history.pushState({}, '', url.href);
-            });
+                    e.preventDefault();
+                    const url = link.getAttribute('href');
 
-            async function fetchUsers(url) {
-                const tbody = document.getElementById('users-tbody');
-                const paginationContainer = document.getElementById('users-pagination-container');
+                    fetch(url, {
+                            headers: {
+                                'X-Requested-With': 'XMLHttpRequest'
+                            }
+                        })
+                        .then(response => response.text())
+                        .then(html => {
+                            const parser = new DOMParser();
+                            const doc = parser.parseFromString(html, 'text/html');
 
-                if (!tbody) return;
+                            // Update the section content
+                            const newSection = doc.getElementById(sectionId);
+                            const currentSection = document.getElementById(sectionId);
+                            if (newSection && currentSection) {
+                                currentSection.innerHTML = newSection.innerHTML;
+                            }
 
-                tbody.style.opacity = '0.5';
-                tbody.style.pointerEvents = 'none';
+                            // Scroll to section
+                            currentSection.scrollIntoView({
+                                behavior: 'smooth',
+                                block: 'start'
+                            });
 
-                try {
-                    const response = await fetch(url, {
-                        headers: {
-                            'X-Requested-With': 'XMLHttpRequest'
-                        }
-                    });
-
-                    const html = await response.text();
-                    const parser = new DOMParser();
-                    const doc = parser.parseFromString(html, 'text/html');
-
-                    const newTbody = doc.querySelector('#users-tbody');
-                    const newPagination = doc.querySelector('#users-pagination-container');
-
-                    if (newTbody) tbody.innerHTML = newTbody.innerHTML;
-                    if (newPagination && paginationContainer) {
-                        paginationContainer.innerHTML = newPagination.innerHTML;
-                    }
-
-                    if (window.Alpine) {
-                        Alpine.initTree(tbody);
-                        if (paginationContainer) Alpine.initTree(paginationContainer);
-                    }
-                } catch (error) {
-                    console.error('Error:', error);
-                } finally {
-                    tbody.style.opacity = '1';
-                    tbody.style.pointerEvents = 'auto';
-                }
-            }
-
-            async function fetchSales(url) {
-                const tbody = document.getElementById('sales-tbody');
-                const paginationContainer = document.getElementById('sales-pagination-container');
-
-                if (!tbody) return;
-
-                tbody.style.opacity = '0.5';
-                tbody.style.pointerEvents = 'none';
-
-                try {
-                    const response = await fetch(url, {
-                        headers: {
-                            'X-Requested-With': 'XMLHttpRequest'
-                        }
-                    });
-
-                    const html = await response.text();
-                    const parser = new DOMParser();
-                    const doc = parser.parseFromString(html, 'text/html');
-
-                    const newTbody = doc.querySelector('#sales-tbody');
-                    const newPagination = doc.querySelector('#sales-pagination-container');
-
-                    if (newTbody) tbody.innerHTML = newTbody.innerHTML;
-                    if (newPagination && paginationContainer) {
-                        paginationContainer.innerHTML = newPagination.innerHTML;
-                    }
-
-                    if (window.Alpine) {
-                        Alpine.initTree(tbody);
-                        if (paginationContainer) Alpine.initTree(paginationContainer);
-                    }
-                } catch (error) {
-                    console.error('Error:', error);
-                } finally {
-                    tbody.style.opacity = '1';
-                    tbody.style.pointerEvents = 'auto';
-                }
+                            // Re-setup pagination for this section after update
+                            setupPagination(containerId, sectionId);
+                        })
+                        .catch(error => {
+                            console.error('Error loading pagination:', error);
+                        });
+                });
             }
         });
     </script>
