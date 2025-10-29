@@ -53,6 +53,11 @@ Route::middleware(['auth'])->group(function () {
         // Revenue
         Route::get('revenue', fn() => view('pages.owner.revenue'))->name('revenue');
 
+        // Payment History - Owner can see and approve/reject
+        Route::get('payment-history', [\App\Http\Controllers\PaymentHistoryController::class, 'index'])->name('payment-history');
+        Route::patch('payments/{payment}/approve', [\App\Http\Controllers\PaymentController::class, 'approve'])->name('payments.approve');
+        Route::patch('payments/{payment}/reject', [\App\Http\Controllers\PaymentController::class, 'reject'])->name('payments.reject');
+
         // Manage Data
         Route::prefix('manage-data')->name('manage-data.')->group(function () {
             // Products

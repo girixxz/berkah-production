@@ -20,6 +20,8 @@ return new class extends Migration
             $table->enum('payment_type', ['dp', 'repayment', 'full_payment']);
             $table->decimal('amount', 12, 2);
             
+            $table->enum('status', ['pending', 'approved', 'rejected'])->default('pending');
+            
             $table->text('notes')->nullable();
             $table->text('img_url')->nullable();
             

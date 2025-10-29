@@ -21,6 +21,19 @@
         showDateCustomRange: false,
         showImageModal: false,
         selectedImage: '',
+        showActionConfirm: null,
+        actionType: '',
+        init() {
+            // Check for toast message from session
+            @if (session('message')) setTimeout(() => {
+                    window.dispatchEvent(new CustomEvent('show-toast', {
+                        detail: { 
+                            message: '{{ session('message') }}', 
+                            type: '{{ session('alert-type', 'success') }}'
+                        }
+                    }));
+                }, 300); @endif
+        },
         getDateLabel() {
             if (this.dateRange === 'last_month') return 'Bulan Lalu';
             if (this.dateRange === 'last_7_days') return '1 Minggu Yang Lalu';
@@ -129,25 +142,44 @@
             <div class="flex flex-col lg:flex-row gap-4 items-start lg:items-center justify-between">
                 {{-- Left: Filter Buttons --}}
                 <div class="flex flex-wrap gap-2">
-                    <a href="{{ route('admin.payment-history', ['filter' => 'default'] + request()->except('filter')) }}"
+                    <a href="{{ route($role === 'owner' ? 'owner.payment-history' : 'admin.payment-history', ['filter' => 'default'] + request()->except('filter')) }}"
                         :class="activeFilter === 'default' ? 'bg-primary text-white' :
                             'bg-gray-100 text-gray-700 hover:bg-gray-200'"
                         class="px-4 py-2 rounded-md text-sm font-medium transition-colors">
-                        Default
+                        All
                     </a>
-                    <a href="{{ route('admin.payment-history', ['filter' => 'dp'] + request()->except('filter')) }}"
+                    <a href="{{ route($role === 'owner' ? 'owner.payment-history' : 'admin.payment-history', ['filter' => 'pending'] + request()->except('filter')) }}"
+                        :class="activeFilter === 'pending' ? 'bg-primary text-white' :
+                            'bg-gray-100 text-gray-700 hover:bg-gray-200'"
+                        class="px-4 py-2 rounded-md text-sm font-medium transition-colors">
+                        Pending
+                    </a>
+                    <a href="{{ route($role === 'owner' ? 'owner.payment-history' : 'admin.payment-history', ['filter' => 'approved'] + request()->except('filter')) }}"
+                        :class="activeFilter === 'approved' ? 'bg-primary text-white' :
+                            'bg-gray-100 text-gray-700 hover:bg-gray-200'"
+                        class="px-4 py-2 rounded-md text-sm font-medium transition-colors">
+                        Approved
+                    </a>
+                    <a href="{{ route($role === 'owner' ? 'owner.payment-history' : 'admin.payment-history', ['filter' => 'rejected'] + request()->except('filter')) }}"
+                        :class="activeFilter === 'rejected' ? 'bg-primary text-white' :
+                            'bg-gray-100 text-gray-700 hover:bg-gray-200'"
+                        class="px-4 py-2 rounded-md text-sm font-medium transition-colors">
+                        Rejected
+                    </a>
+                    <div class="border-l border-gray-300 mx-1"></div>
+                    <a href="{{ route($role === 'owner' ? 'owner.payment-history' : 'admin.payment-history', ['filter' => 'dp'] + request()->except('filter')) }}"
                         :class="activeFilter === 'dp' ? 'bg-primary text-white' :
                             'bg-gray-100 text-gray-700 hover:bg-gray-200'"
                         class="px-4 py-2 rounded-md text-sm font-medium transition-colors">
                         DP
                     </a>
-                    <a href="{{ route('admin.payment-history', ['filter' => 'repayment'] + request()->except('filter')) }}"
+                    <a href="{{ route($role === 'owner' ? 'owner.payment-history' : 'admin.payment-history', ['filter' => 'repayment'] + request()->except('filter')) }}"
                         :class="activeFilter === 'repayment' ? 'bg-primary text-white' :
                             'bg-gray-100 text-gray-700 hover:bg-gray-200'"
                         class="px-4 py-2 rounded-md text-sm font-medium transition-colors">
                         Repayment
                     </a>
-                    <a href="{{ route('admin.payment-history', ['filter' => 'full_payment'] + request()->except('filter')) }}"
+                    <a href="{{ route($role === 'owner' ? 'owner.payment-history' : 'admin.payment-history', ['filter' => 'full_payment'] + request()->except('filter')) }}"
                         :class="activeFilter === 'full_payment' ? 'bg-primary text-white' :
                             'bg-gray-100 text-gray-700 hover:bg-gray-200'"
                         class="px-4 py-2 rounded-md text-sm font-medium transition-colors">
@@ -158,8 +190,9 @@
                 {{-- Right: Search & Date Filter --}}
                 <div class="flex flex-col sm:flex-row gap-2 w-full lg:w-auto">
                     {{-- Search --}}
-                    <form method="GET" action="{{ route('admin.payment-history') }}" class="flex-1 lg:w-64"
-                        x-ref="searchForm">
+                    <form method="GET"
+                        action="{{ route($role === 'owner' ? 'owner.payment-history' : 'admin.payment-history') }}"
+                        class="flex-1 lg:w-64" x-ref="searchForm">
                         <input type="hidden" name="filter" value="{{ request('filter', 'default') }}">
                         @if (request('start_date'))
                             <input type="hidden" name="start_date" value="{{ request('start_date') }}">
@@ -193,7 +226,9 @@
                         </button>
 
                         {{-- Hidden Form for Date Presets --}}
-                        <form x-ref="dateForm" method="GET" action="{{ route('admin.payment-history') }}" class="hidden">
+                        <form x-ref="dateForm" method="GET"
+                            action="{{ route($role === 'owner' ? 'owner.payment-history' : 'admin.payment-history') }}"
+                            class="hidden">
                             <input type="hidden" name="filter" :value="activeFilter">
                             <input type="hidden" name="search" :value="searchQuery">
                             <input type="hidden" name="date_range" :value="dateRange">
@@ -237,8 +272,8 @@
 
                             {{-- Custom Range Form --}}
                             <form x-show="showDateCustomRange" method="GET"
-                                action="{{ route('admin.payment-history') }}" class="p-4"
-                                @submit="dateRange = 'custom'">
+                                action="{{ route($role === 'owner' ? 'owner.payment-history' : 'admin.payment-history') }}"
+                                class="p-4" @submit="dateRange = 'custom'">
                                 <input type="hidden" name="filter" :value="activeFilter">
                                 <input type="hidden" name="search" :value="searchQuery">
                                 <input type="hidden" name="date_range" value="custom">
@@ -264,7 +299,7 @@
                                             Back
                                         </button>
                                     </div>
-                                    <a href="{{ route('admin.payment-history', ['filter' => request('filter', 'default')]) }}"
+                                    <a href="{{ route($role === 'owner' ? 'owner.payment-history' : 'admin.payment-history', ['filter' => request('filter', 'default')]) }}"
                                         class="block w-full px-4 py-2 bg-gray-100 text-gray-700 rounded-md text-sm font-medium hover:bg-gray-200 text-center">
                                         Reset Filter
                                     </a>
@@ -288,8 +323,12 @@
                             <th class="py-3 px-4 text-left font-medium">Payment Method</th>
                             <th class="py-3 px-4 text-left font-medium">Payment Type</th>
                             <th class="py-3 px-4 text-left font-medium">Amount</th>
+                            <th class="py-3 px-4 text-left font-medium">Status</th>
                             <th class="py-3 px-4 text-left font-medium">Notes</th>
                             <th class="py-3 px-4 text-center font-medium">Attachment</th>
+                            @if ($role === 'owner')
+                                <th class="py-3 px-4 text-center font-medium">Action</th>
+                            @endif
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-200">
@@ -317,7 +356,8 @@
                                         <p class="font-medium text-gray-900">{{ $payment->invoice->invoice_no ?? '-' }}
                                         </p>
                                         <p class="text-xs text-gray-500">
-                                            ({{ $payment->invoice->order->productCategory->product_name ?? '-' }})</p>
+                                            ({{ $payment->invoice->order->productCategory->product_name ?? '-' }})
+                                        </p>
                                     </div>
                                 </td>
 
@@ -356,6 +396,21 @@
                                         {{ number_format($payment->amount, 0, ',', '.') }}</span>
                                 </td>
 
+                                {{-- Status --}}
+                                <td class="py-3 px-4">
+                                    @php
+                                        $statusClasses = [
+                                            'pending' => 'bg-yellow-100 text-yellow-800',
+                                            'approved' => 'bg-green-100 text-green-800',
+                                            'rejected' => 'bg-red-100 text-red-800',
+                                        ];
+                                        $statusClass = $statusClasses[$payment->status] ?? 'bg-gray-100 text-gray-800';
+                                    @endphp
+                                    <span class="px-2 py-1 rounded-full text-xs font-medium {{ $statusClass }}">
+                                        {{ strtoupper($payment->status) }}
+                                    </span>
+                                </td>
+
                                 {{-- Notes --}}
                                 <td class="py-3 px-4">
                                     <span class="text-gray-700 text-xs">{{ $payment->notes ?? '-' }}</span>
@@ -377,10 +432,46 @@
                                         <span class="text-gray-400 text-xs">-</span>
                                     @endif
                                 </td>
+
+                                {{-- Action (Owner Only) --}}
+                                @if ($role === 'owner')
+                                    <td class="py-3 px-4">
+                                        <div class="flex justify-center gap-2">
+                                            @if ($payment->status === 'pending')
+                                                {{-- Approve Button --}}
+                                                <button type="button"
+                                                    @click="showActionConfirm = {{ $payment->id }}; actionType = 'approve'"
+                                                    class="inline-flex items-center gap-1 px-3 py-1 bg-green-100 text-green-700 rounded-md hover:bg-green-200 text-xs font-medium cursor-pointer">
+                                                    <svg class="w-4 h-4" fill="none" stroke="currentColor"
+                                                        viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round"
+                                                            stroke-width="2" d="M5 13l4 4L19 7" />
+                                                    </svg>
+                                                    Approve
+                                                </button>
+
+                                                {{-- Reject Button --}}
+                                                <button type="button"
+                                                    @click="showActionConfirm = {{ $payment->id }}; actionType = 'reject'"
+                                                    class="inline-flex items-center gap-1 px-3 py-1 bg-red-100 text-red-700 rounded-md hover:bg-red-200 text-xs font-medium cursor-pointer">
+                                                    <svg class="w-4 h-4" fill="none" stroke="currentColor"
+                                                        viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round"
+                                                            stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                                                    </svg>
+                                                    Reject
+                                                </button>
+                                            @else
+                                                <span class="text-gray-400 text-xs">-</span>
+                                            @endif
+                                        </div>
+                                    </td>
+                                @endif
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="8" class="py-8 text-center text-gray-400">
+                                <td colspan="{{ $role === 'owner' ? '10' : '9' }}"
+                                    class="py-8 text-center text-gray-400">
                                     <svg class="w-16 h-16 mx-auto mb-3 opacity-50" fill="none" stroke="currentColor"
                                         viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -453,6 +544,66 @@
                 </div>
             </div>
         </div>
+
+        {{-- ================= ACTION CONFIRMATION MODAL (OWNER ONLY) ================= --}}
+        @if ($role === 'owner')
+            <div x-show="showActionConfirm !== null" x-cloak
+                class="fixed inset-0 z-50 overflow-y-auto flex items-center justify-center"
+                style="background-color: rgba(0, 0, 0, 0.5);">
+                <div @click.away="showActionConfirm = null; actionType = ''"
+                    class="relative bg-white rounded-lg shadow-xl max-w-md w-full mx-4 p-6">
+                    {{-- Icon --}}
+                    <div class="flex items-center justify-center w-12 h-12 mx-auto mb-4 rounded-full"
+                        :class="actionType === 'approve' ? 'bg-green-100' : 'bg-red-100'">
+                        <svg class="w-6 h-6" :class="actionType === 'approve' ? 'text-green-600' : 'text-red-600'"
+                            fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path x-show="actionType === 'approve'" stroke-linecap="round" stroke-linejoin="round"
+                                stroke-width="2" d="M5 13l4 4L19 7" />
+                            <path x-show="actionType === 'reject'" stroke-linecap="round" stroke-linejoin="round"
+                                stroke-width="2"
+                                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                        </svg>
+                    </div>
+
+                    {{-- Title --}}
+                    <h3 class="text-lg font-semibold text-gray-900 text-center mb-2">
+                        <span x-text="actionType === 'approve' ? 'Approve Payment?' : 'Reject Payment?'"></span>
+                    </h3>
+
+                    {{-- Message --}}
+                    <p class="text-sm text-gray-600 text-center mb-6">
+                        <span x-show="actionType === 'approve'">
+                            Are you sure you want to approve this payment? If this is the first approved payment, the
+                            order will be moved to <span class="font-semibold text-blue-600">WIP</span> status.
+                        </span>
+                        <span x-show="actionType === 'reject'">
+                            Are you sure you want to reject this payment? This action cannot be undone.
+                        </span>
+                    </p>
+
+                    {{-- Actions --}}
+                    <div class="flex gap-3">
+                        <button type="button" @click="showActionConfirm = null; actionType = ''"
+                            class="flex-1 px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">
+                            Cancel
+                        </button>
+                        <form
+                            :action="actionType === 'approve' ? '{{ url('owner/payments') }}/' + showActionConfirm +
+                                '/approve' : '{{ url('owner/payments') }}/' + showActionConfirm + '/reject'"
+                            method="POST" class="flex-1">
+                            @csrf
+                            @method('PATCH')
+                            <button type="submit"
+                                class="w-full px-4 py-2 rounded-md text-sm font-medium transition-colors"
+                                :class="actionType === 'approve' ? 'bg-green-600 text-white hover:bg-green-700' :
+                                    'bg-red-600 text-white hover:bg-red-700'">
+                                <span x-text="actionType === 'approve' ? 'Yes, Approve' : 'Yes, Reject'"></span>
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        @endif
 
     </div>
 @endsection

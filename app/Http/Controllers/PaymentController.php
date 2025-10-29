@@ -102,6 +102,7 @@ class PaymentController extends Controller
                 'payment_method' => $validated['payment_method'],
                 'payment_type' => $validated['payment_type'],
                 'amount' => $validated['amount'],
+                'status' => 'pending', // Default status
                 'notes' => $validated['notes'] ?? null,
                 'img_url' => $imageUrl, // Store as single string
                 'paid_at' => now(),
@@ -128,29 +129,8 @@ class PaymentController extends Controller
                 'status' => $status,
             ]);
 
-            // Update order production status to WIP after first payment
-            $order = $invoice->order;
-            if ($order && $order->production_status === 'pending' && $invoice->payments()->count() >= 1) {
-                $order->update([
-                    'production_status' => 'wip'
-                ]);
-
-                // Auto-create order_stages for all production stages when order becomes WIP
-                $productionStages = ProductionStage::all();
-                foreach ($productionStages as $stage) {
-                    OrderStage::firstOrCreate(
-                        [
-                            'order_id' => $order->id,
-                            'stage_id' => $stage->id,
-                        ],
-                        [
-                            'start_date' => null,
-                            'deadline' => null,
-                            'status' => 'pending',
-                        ]
-                    );
-                }
-            }
+            // TIDAK langsung update order ke WIP - harus menunggu owner approve payment dulu
+            // Logic WIP akan dipindah ke approve method
 
             DB::commit();
 
@@ -251,6 +231,102 @@ class PaymentController extends Controller
             
             return redirect()->back()
                 ->with('message', 'Failed to delete payment: ' . $e->getMessage())
+                ->with('alert-type', 'error');
+        }
+    }
+
+    /**
+     * Approve payment (Owner only)
+     */
+    public function approve(Payment $payment)
+    {
+        DB::beginTransaction();
+
+        try {
+            // Check if payment already processed
+            if ($payment->status !== 'pending') {
+                return redirect()->back()
+                    ->with('message', 'Payment has already been ' . $payment->status)
+                    ->with('alert-type', 'warning');
+            }
+
+            // Update payment status
+            $payment->update(['status' => 'approved']);
+
+            // Get invoice and order
+            $invoice = $payment->invoice;
+            $order = $invoice->order;
+
+            // Check if this is the first approved payment for this order
+            $approvedPaymentsCount = $invoice->payments()->where('status', 'approved')->count();
+
+            // If this is the first approved payment and order is still pending, change to WIP
+            if ($approvedPaymentsCount === 1 && $order && $order->production_status === 'pending') {
+                $order->update([
+                    'production_status' => 'wip'
+                ]);
+
+                // Auto-create order_stages for all production stages when order becomes WIP
+                $productionStages = ProductionStage::all();
+                foreach ($productionStages as $stage) {
+                    OrderStage::firstOrCreate(
+                        [
+                            'order_id' => $order->id,
+                            'stage_id' => $stage->id,
+                        ],
+                        [
+                            'start_date' => null,
+                            'deadline' => null,
+                            'status' => 'pending',
+                        ]
+                    );
+                }
+            }
+
+            DB::commit();
+
+            return redirect()->back()
+                ->with('message', 'Payment approved successfully' . ($approvedPaymentsCount === 1 ? ' and order moved to WIP' : ''))
+                ->with('alert-type', 'success');
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            
+            return redirect()->back()
+                ->with('message', 'Failed to approve payment: ' . $e->getMessage())
+                ->with('alert-type', 'error');
+        }
+    }
+
+    /**
+     * Reject payment (Owner only)
+     */
+    public function reject(Payment $payment)
+    {
+        DB::beginTransaction();
+
+        try {
+            // Check if payment already processed
+            if ($payment->status !== 'pending') {
+                return redirect()->back()
+                    ->with('message', 'Payment has already been ' . $payment->status)
+                    ->with('alert-type', 'warning');
+            }
+
+            // Update payment status
+            $payment->update(['status' => 'rejected']);
+
+            DB::commit();
+
+            return redirect()->back()
+                ->with('message', 'Payment rejected successfully')
+                ->with('alert-type', 'success');
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            
+            return redirect()->back()
+                ->with('message', 'Failed to reject payment: ' . $e->getMessage())
                 ->with('alert-type', 'error');
         }
     }

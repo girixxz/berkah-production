@@ -26,8 +26,12 @@ class PaymentHistoryController extends Controller
 
         $query = Payment::with(['invoice.order.customer', 'invoice.order.productCategory']);
 
-        // Apply payment type filter
-        if ($filter !== 'default') {
+        // Apply payment type filter or status filter
+        if ($filter === 'pending' || $filter === 'approved' || $filter === 'rejected') {
+            // Status filter
+            $query->where('status', $filter);
+        } elseif ($filter !== 'default') {
+            // Payment type filter
             $query->where('payment_type', $filter);
         }
 
