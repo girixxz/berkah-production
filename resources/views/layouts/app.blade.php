@@ -9,9 +9,7 @@
 
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 
-    {{-- Alpine.js - FIXED: gunakan HTTPS explicit --}}
-    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
-
+    {{-- Alpine.js sudah di-bundle dalam app.js (self-hosted) --}}
     {{-- penting buat sembunyiin elemen x-cloak saat load --}}
     <style>
         [x-cloak] {

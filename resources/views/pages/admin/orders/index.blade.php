@@ -911,7 +911,7 @@
 
 @push('styles')
     <style>
-        /* Flowbite Pagination with Custom Primary Color #56ba9f */
+        /* Custom Pagination Styling with Primary Color #56ba9f */
 
         /* Active page - Primary Green Background with HIGH specificity */
         nav[aria-label="Pagination Navigation"] ul li span.pagination-active-page {
