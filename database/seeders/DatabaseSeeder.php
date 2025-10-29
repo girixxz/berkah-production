@@ -15,8 +15,8 @@ class DatabaseSeeder extends Seeder
         $this->call([
             UserSeeder::class,
             SaleSeeder::class,
-            LocationSeeder::class,
-            CustomerSeeder::class,
+            // LocationSeeder::class, // No longer needed - using API
+            // CustomerSeeder::class, // Deleted - customers will be added manually via UI
             ProductSeeder::class,
             // OrderSeeder::class,
             ProductionStageSeeder::class,

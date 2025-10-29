@@ -3,11 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Models\Customer;
-use App\Models\Province;
-use App\Models\City;
-use App\Models\District;
-use App\Models\Village;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 
 class CustomerController extends Controller
 {
@@ -18,7 +16,7 @@ class CustomerController extends Controller
     {
         $search = $request->input('search');
 
-        $customers = Customer::with(['province', 'city', 'district', 'village', 'orders'])
+        $customers = Customer::with(['orders'])
             ->when($search, function ($query, $search) {
                 return $query->where('customer_name', 'like', "%{$search}%")
                     ->orWhere('phone', 'like', "%{$search}%");
@@ -28,7 +26,8 @@ class CustomerController extends Controller
             ->orderBy('created_at', 'desc')
             ->get();
 
-        $provinces = Province::orderBy('province_name')->get();
+        // Fetch provinces from API
+        $provinces = $this->getProvinces();
 
         return view('pages.admin.customers', compact('customers', 'provinces'));
     }
@@ -43,10 +42,10 @@ class CustomerController extends Controller
         $validated = $request->validateWithBag('addCustomer', [
             'customer_name' => 'required|string|max:100',
             'phone' => 'required|string|max:20',
-            'province_id' => 'required|exists:provinces,id',
-            'city_id' => 'required|exists:cities,id',
-            'district_id' => 'required|exists:districts,id',
-            'village_id' => 'required|exists:villages,id',
+            'province_id' => 'required|string',
+            'city_id' => 'required|string',
+            'district_id' => 'required|string',
+            'village_id' => 'required|string',
             'address' => 'required|string|max:255',
         ], [
             'customer_name.required' => 'Customer name is required.',
@@ -84,10 +83,10 @@ class CustomerController extends Controller
         $validated = $request->validateWithBag('editCustomer', [
             'customer_name' => 'required|string|max:100',
             'phone' => 'required|string|max:20',
-            'province_id' => 'required|exists:provinces,id',
-            'city_id' => 'required|exists:cities,id',
-            'district_id' => 'required|exists:districts,id',
-            'village_id' => 'required|exists:villages,id',
+            'province_id' => 'required|string',
+            'city_id' => 'required|string',
+            'district_id' => 'required|string',
+            'village_id' => 'required|string',
             'address' => 'required|string|max:255',
         ], [
             'customer_name.required' => 'Customer name is required.',
@@ -123,11 +122,28 @@ class CustomerController extends Controller
      */
     public function getCities($provinceId)
     {
-        $cities = City::where('province_id', $provinceId)
-            ->orderBy('city_name')
-            ->get();
+        try {
+            $response = Http::get("https://www.emsifa.com/api-wilayah-indonesia/api/regencies/{$provinceId}.json");
 
-        return response()->json($cities);
+            if ($response->successful()) {
+                $data = $response->json();
+                
+                // Transform to match expected format
+                $cities = collect($data)->map(function ($item) {
+                    return [
+                        'id' => $item['id'],
+                        'city_name' => $item['name']
+                    ];
+                });
+
+                return response()->json($cities);
+            }
+
+            return response()->json([]);
+        } catch (\Exception $e) {
+            Log::error('Error fetching cities from API: ' . $e->getMessage());
+            return response()->json([]);
+        }
     }
 
     /**
@@ -135,11 +151,28 @@ class CustomerController extends Controller
      */
     public function getDistricts($cityId)
     {
-        $districts = District::where('city_id', $cityId)
-            ->orderBy('district_name')
-            ->get();
+        try {
+            $response = Http::get("https://www.emsifa.com/api-wilayah-indonesia/api/districts/{$cityId}.json");
 
-        return response()->json($districts);
+            if ($response->successful()) {
+                $data = $response->json();
+                
+                // Transform to match expected format
+                $districts = collect($data)->map(function ($item) {
+                    return [
+                        'id' => $item['id'],
+                        'district_name' => $item['name']
+                    ];
+                });
+
+                return response()->json($districts);
+            }
+
+            return response()->json([]);
+        } catch (\Exception $e) {
+            Log::error('Error fetching districts from API: ' . $e->getMessage());
+            return response()->json([]);
+        }
     }
 
     /**
@@ -147,10 +180,54 @@ class CustomerController extends Controller
      */
     public function getVillages($districtId)
     {
-        $villages = Village::where('district_id', $districtId)
-            ->orderBy('village_name')
-            ->get();
+        try {
+            $response = Http::get("https://www.emsifa.com/api-wilayah-indonesia/api/villages/{$districtId}.json");
 
-        return response()->json($villages);
+            if ($response->successful()) {
+                $data = $response->json();
+                
+                // Transform to match expected format
+                $villages = collect($data)->map(function ($item) {
+                    return [
+                        'id' => $item['id'],
+                        'village_name' => $item['name']
+                    ];
+                });
+
+                return response()->json($villages);
+            }
+
+            return response()->json([]);
+        } catch (\Exception $e) {
+            Log::error('Error fetching villages from API: ' . $e->getMessage());
+            return response()->json([]);
+        }
+    }
+
+    /**
+     * Get provinces from API
+     */
+    private function getProvinces()
+    {
+        try {
+            $response = Http::get("https://www.emsifa.com/api-wilayah-indonesia/api/provinces.json");
+
+            if ($response->successful()) {
+                $data = $response->json();
+                
+                // Transform to match expected format with object-like access
+                return collect($data)->map(function ($item) {
+                    return (object) [
+                        'id' => $item['id'],
+                        'province_name' => $item['name']
+                    ];
+                });
+            }
+
+            return collect([]);
+        } catch (\Exception $e) {
+            Log::error('Error fetching provinces from API: ' . $e->getMessage());
+            return collect([]);
+        }
     }
 }

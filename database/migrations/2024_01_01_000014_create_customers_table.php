@@ -15,10 +15,11 @@ return new class extends Migration
             $table->id();
             $table->string('customer_name', 100);
             $table->string('phone', 20);
-            $table->foreignId('province_id')->nullable()->constrained('provinces')->onDelete('set null');
-            $table->foreignId('city_id')->nullable()->constrained('cities')->onDelete('set null');
-            $table->foreignId('district_id')->nullable()->constrained('districts')->onDelete('set null');
-            $table->foreignId('village_id')->nullable()->constrained('villages')->onDelete('set null');
+            // Location IDs from API (emsifa/api-wilayah-indonesia)
+            $table->string('province_id', 10)->nullable();
+            $table->string('city_id', 10)->nullable();
+            $table->string('district_id', 10)->nullable();
+            $table->string('village_id', 20)->nullable();
             $table->text('address')->nullable();
             $table->timestamps();
         });
