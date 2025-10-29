@@ -15,7 +15,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
 </head>
 
-<body class="min-h-screen bg-gray-light flex items-center justify-center">
+<body class="h-screen bg-gray-light flex items-center justify-center">
     <main class="w-full max-w-md px-4 py-10">
         <!-- Logo -->
         <div class="flex justify-center mb-8">
