@@ -15,15 +15,15 @@ use App\Models\Service;
 
 class ManageProductsController extends Controller
 {
-    public function index(Request $request)
+    public function index()
     {
-        $productCategories = ProductCategory::all();
-        $materialCategories = MaterialCategory::all();
-        $materialTextures = MaterialTexture::all();
-        $materialSleeves = MaterialSleeve::all();
-        $materialSizes = MaterialSize::all();
-        $services = Service::all();
-        $materialShippings = Shipping::all();
+        $productCategories = ProductCategory::paginate(5, ['*'], 'product_page');
+        $materialCategories = MaterialCategory::paginate(5, ['*'], 'material_page');
+        $materialTextures = MaterialTexture::paginate(5, ['*'], 'texture_page');
+        $materialSleeves = MaterialSleeve::paginate(5, ['*'], 'sleeve_page');
+        $materialSizes = MaterialSize::paginate(5, ['*'], 'size_page');
+        $services = Service::paginate(5, ['*'], 'service_page');
+        $shippings = Shipping::paginate(5, ['*'], 'shipping_page');
 
         return view('pages.owner.manage-data.products', compact(
             'productCategories',
@@ -32,7 +32,7 @@ class ManageProductsController extends Controller
             'materialSleeves',
             'materialSizes',
             'services',
-            'materialShippings'
+            'shippings'
         ));
     }
 }

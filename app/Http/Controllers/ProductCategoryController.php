@@ -10,9 +10,6 @@ class ProductCategoryController extends Controller
 
     public function store(Request $request)
     {
-        // simpan state modal
-        session()->flash('openModal', 'addProduct');
-
         $validated = $request->validateWithBag('addProduct', [
             'product_name' => 'required|max:255|unique:product_categories,product_name',
         ]);
@@ -27,10 +24,6 @@ class ProductCategoryController extends Controller
 
     public function update(Request $request, ProductCategory $productCategory)
     {
-        // supaya modal edit tetap kebuka kalau error
-        session()->flash('openModal', 'editProduct');
-        session()->flash('editProductId',  $productCategory->id);
-
         $validated = $request->validateWithBag('editProduct', [
             'product_name' => 'required|max:255|unique:product_categories,product_name,' . $productCategory->id,
         ]);

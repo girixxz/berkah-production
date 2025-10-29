@@ -10,9 +10,6 @@ class ShippingController extends Controller
 
     public function store(Request $request)
     {
-        // simpan state modal
-        session()->flash('openModal', 'addShipping');
-
         $validated = $request->validateWithBag('addShipping', [
             'shipping_name' => 'required|max:255|unique:shippings,shipping_name',
         ]);
@@ -26,10 +23,6 @@ class ShippingController extends Controller
 
     public function update(Request $request, Shipping $shipping)
     {
-        // supaya modal edit tetap kebuka kalau error
-        session()->flash('openModal', 'editShipping');
-        session()->flash('editShippingId',  $shipping->id);
-
         $validated = $request->validateWithBag('editShipping', [
             'shipping_name' => 'required|max:255|unique:shippings,shipping_name,' . $shipping->id,
         ]);

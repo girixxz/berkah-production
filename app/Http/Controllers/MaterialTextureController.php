@@ -10,9 +10,6 @@ class MaterialTextureController extends Controller
 
     public function store(Request $request)
     {
-        // simpan state modal
-        session()->flash('openModal', 'addTexture');
-
         $validated = $request->validateWithBag('addTexture', [
             'texture_name' => 'required|max:255|unique:material_textures,texture_name',
         ]);
@@ -26,10 +23,6 @@ class MaterialTextureController extends Controller
 
     public function update(Request $request, MaterialTexture $material_texture)
     {
-        // supaya modal edit tetap kebuka kalau error
-        session()->flash('openModal', 'editTexture');
-        session()->flash('editTextureId',  $material_texture->id);
-
         $validated = $request->validateWithBag('editTexture', [
             'texture_name' => 'required|max:255|unique:material_textures,texture_name,' . $material_texture->id,
         ]);

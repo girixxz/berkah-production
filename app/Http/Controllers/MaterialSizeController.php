@@ -10,9 +10,6 @@ class MaterialSizeController extends Controller
 
     public function store(Request $request)
     {
-        // simpan state modal
-        session()->flash('openModal', 'addSize');
-
         $validated = $request->validateWithBag('addSize', [
             'size_name' => 'required|max:255|unique:material_sizes,size_name',
             'extra_price' => 'required|numeric|min:0',
@@ -27,10 +24,6 @@ class MaterialSizeController extends Controller
 
     public function update(Request $request, MaterialSize $materialSize)
     {
-        // supaya modal edit tetap kebuka kalau error
-        session()->flash('openModal', 'editSize');
-        session()->flash('editSizeId',  $materialSize->id);
-
         $validated = $request->validateWithBag('editSize', [
             'size_name' => 'required|max:255|unique:material_sizes,size_name,' . $materialSize->id,
             'extra_price' => 'required|numeric|min:0',

@@ -10,9 +10,6 @@ class MaterialCategoryController extends Controller
 {
     public function store(Request $request)
     {
-        // simpan state modal
-        session()->flash('openModal', 'addMaterial');
-
         $validated = $request->validateWithBag('addMaterial', [
             'material_name' => 'required|max:255|unique:material_categories,material_name',
         ]);
@@ -29,10 +26,6 @@ class MaterialCategoryController extends Controller
 
     public function update(Request $request, MaterialCategory $materialCategory)
     {
-        // supaya modal edit tetap kebuka kalau error
-        session()->flash('openModal', 'editMaterial');
-        session()->flash('editMaterialId', $materialCategory->id);
-
         $validated = $request->validateWithBag('editMaterial', [
             'material_name' => 'required|max:255|unique:material_categories,material_name,' . $materialCategory->id,
         ]);

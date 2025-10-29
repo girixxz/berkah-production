@@ -9,8 +9,6 @@ class ServiceController extends Controller
 {
     public function store(Request $request)
     {
-        session()->flash('openModal', 'addService');
-
         $validated = $request->validateWithBag('addService', [
             'service_name' => 'required|string|max:100|unique:services,service_name',
         ]);
@@ -25,9 +23,6 @@ class ServiceController extends Controller
 
     public function update(Request $request, Service $service)
     {
-        session()->flash('openModal', 'editService');
-        session()->flash('editServiceId', $service->id);
-
         $validated = $request->validateWithBag('editService', [
             'service_name' => 'required|string|max:100|unique:services,service_name,' . $service->id,
         ]);
