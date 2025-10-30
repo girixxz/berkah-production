@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Controllers\Controller;
 use App\Models\Sale;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 
 class SalesController extends Controller
 {
@@ -17,6 +18,9 @@ class SalesController extends Controller
             ]);
 
             Sale::create($validated);
+
+            // Clear cache
+            Cache::forget('sales_list');
 
             // Success - jangan flash openModal, biar modal tertutup
             return redirect(route('owner.manage-data.users-sales.index') . '#sales')
@@ -39,6 +43,9 @@ class SalesController extends Controller
 
             $sale->update($validated);
 
+            // Clear cache
+            Cache::forget('sales_list');
+
             // Success - jangan flash openModal, biar modal tertutup
             return redirect(route('owner.manage-data.users-sales.index') . '#sales')
                 ->with('message', 'Sales updated successfully.')
@@ -54,6 +61,9 @@ class SalesController extends Controller
     public function destroy(Sale $sale)
     {
         $sale->delete();
+
+        // Clear cache
+        Cache::forget('sales_list');
 
         return redirect()->route('owner.manage-data.users-sales.index')
             ->with('message', 'Sales deleted successfully.')

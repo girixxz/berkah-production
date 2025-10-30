@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\MaterialTexture;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 
 class MaterialTextureController extends Controller
 {
@@ -15,6 +16,9 @@ class MaterialTextureController extends Controller
         ]);
 
         MaterialTexture::create($validated);
+
+        // Clear cache
+        Cache::forget('material_textures');
 
         return redirect()->to(route('owner.manage-data.products.index') . '#material-textures')
             ->with('message', 'Material Texture added successfully.')
@@ -29,6 +33,9 @@ class MaterialTextureController extends Controller
 
         $material_texture->update(array_filter($validated));
 
+        // Clear cache
+        Cache::forget('material_textures');
+
         return redirect()->to(route('owner.manage-data.products.index') . '#material-textures')
             ->with('message', 'Material Texture updated successfully.')
             ->with('alert-type', 'success');
@@ -37,6 +44,9 @@ class MaterialTextureController extends Controller
     public function destroy(MaterialTexture $material_texture)
     {
         $material_texture->delete();
+
+        // Clear cache
+        Cache::forget('material_textures');
 
         return redirect()->to(route('owner.manage-data.products.index') . '#material-textures')
             ->with('message', 'Material Texture deleted successfully.')

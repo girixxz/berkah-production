@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\MaterialSleeve;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 
 class MaterialSleeveController extends Controller
 {
@@ -14,6 +15,9 @@ class MaterialSleeveController extends Controller
         ]);
 
         MaterialSleeve::create($validated);
+
+        // Clear cache
+        Cache::forget('material_sleeves');
 
         return redirect()
             ->to(url()->previous() . '#material-sleeves')
@@ -29,6 +33,9 @@ class MaterialSleeveController extends Controller
 
         $materialSleeve->update(array_filter($validated));
 
+        // Clear cache
+        Cache::forget('material_sleeves');
+
         return redirect()->to(route('owner.manage-data.products.index') . '#material-sleeves')
             ->with('message', 'Material Sleeve updated successfully.')
             ->with('alert-type', 'success');
@@ -37,6 +44,9 @@ class MaterialSleeveController extends Controller
     public function destroy(MaterialSleeve $materialSleeve)
     {
         $materialSleeve->delete();
+
+        // Clear cache
+        Cache::forget('material_sleeves');
 
         return redirect()
             ->to(url()->previous() . '#material-sleeves')

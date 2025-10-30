@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\ProductCategory;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 
 class ProductCategoryController extends Controller
 {
@@ -15,6 +16,9 @@ class ProductCategoryController extends Controller
         ]);
 
         ProductCategory::create($validated);
+
+        // Clear cache
+        Cache::forget('product_categories');
 
         return redirect()->to(
             route('owner.manage-data.products.index') . '#product-categories'
@@ -30,6 +34,9 @@ class ProductCategoryController extends Controller
 
         $productCategory->update(array_filter($validated));
 
+        // Clear cache
+        Cache::forget('product_categories');
+
         return redirect()->to(route('owner.manage-data.products.index') . '#product-categories')
             ->with('message', 'Product updated successfully.')
             ->with('alert-type', 'success');
@@ -38,6 +45,9 @@ class ProductCategoryController extends Controller
     public function destroy(ProductCategory $productCategory)
     {
         $productCategory->delete();
+
+        // Clear cache
+        Cache::forget('product_categories');
 
         return redirect()->to(route('owner.manage-data.products.index') . '#product-categories')
             ->with('message', 'Product Category deleted successfully.')

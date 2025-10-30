@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\MaterialSize;
+use Illuminate\Support\Facades\Cache;
 
 class MaterialSizeController extends Controller
 {
@@ -16,6 +17,9 @@ class MaterialSizeController extends Controller
         ]);
 
         MaterialSize::create($validated);
+
+        // Clear cache
+        Cache::forget('material_sizes');
 
         return redirect()->to(route('owner.manage-data.products.index') . '#material-sizes')
             ->with('message', 'Material Size added successfully.')
@@ -31,6 +35,9 @@ class MaterialSizeController extends Controller
 
         $materialSize->update($validated);
 
+        // Clear cache
+        Cache::forget('material_sizes');
+
         return redirect()->to(route('owner.manage-data.products.index') . '#material-sizes')
             ->with('message', 'Material Size updated successfully.')
             ->with('alert-type', 'success');
@@ -39,6 +46,9 @@ class MaterialSizeController extends Controller
     public function destroy(MaterialSize $materialSize)
     {
         $materialSize->delete();
+
+        // Clear cache
+        Cache::forget('material_sizes');
 
         return redirect()->to(route('owner.manage-data.products.index') . '#material-sizes')
             ->with('message', 'Material Size deleted successfully.')

@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\Shipping;
+use Illuminate\Support\Facades\Cache;
 
 class ShippingController extends Controller
 {
@@ -15,6 +16,9 @@ class ShippingController extends Controller
         ]);
 
         Shipping::create($validated);
+
+        // Clear cache
+        Cache::forget('shippings');
 
         return redirect()->to(route('owner.manage-data.products.index') . '#shippings')
             ->with('message', 'Shipping added successfully.')
@@ -29,6 +33,9 @@ class ShippingController extends Controller
 
         $shipping->update(array_filter($validated));
 
+        // Clear cache
+        Cache::forget('shippings');
+
         return redirect()->to(route('owner.manage-data.products.index') . '#shippings')
             ->with('message', 'Shipping updated successfully.')
             ->with('alert-type', 'success');
@@ -37,6 +44,9 @@ class ShippingController extends Controller
     public function destroy(Shipping $shipping)
     {
         $shipping->delete();
+
+        // Clear cache
+        Cache::forget('shippings');
 
         return redirect()->to(route('owner.manage-data.products.index') . '#shippings')
             ->with('message', 'Shipping deleted successfully.')

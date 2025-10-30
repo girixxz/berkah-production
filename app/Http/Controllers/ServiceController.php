@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Service;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 
 class ServiceController extends Controller
 {
@@ -14,6 +15,9 @@ class ServiceController extends Controller
         ]);
 
         Service::create($validated);
+
+        // Clear cache
+        Cache::forget('services');
 
         return redirect()
             ->to(url()->previous() . '#services')
@@ -29,6 +33,9 @@ class ServiceController extends Controller
 
         $service->update($validated);
 
+        // Clear cache
+        Cache::forget('services');
+
         return redirect()
             ->to(url()->previous() . '#services')
             ->with('message', 'Service updated successfully.')
@@ -38,6 +45,9 @@ class ServiceController extends Controller
     public function destroy(Service $service)
     {
         $service->delete();
+
+        // Clear cache
+        Cache::forget('services');
 
         return redirect()
             ->to(url()->previous() . '#services')
