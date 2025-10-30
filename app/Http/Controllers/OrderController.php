@@ -175,7 +175,7 @@ class OrderController extends Controller
             'materialSizes' => Cache::remember('material_sizes', 86400, fn() => MaterialSize::orderBy('size_name')->get()),
             'services' => Cache::remember('services', 86400, fn() => Service::orderBy('service_name')->get()),
             'shippings' => Cache::remember('shippings', 86400, fn() => Shipping::orderBy('shipping_name')->get()),
-            'provinces' => Cache::remember('provinces', 86400 * 7, fn() => \App\Models\Province::orderBy('province_name')->get()),
+            'provinces' => $this->getProvinces(),
         ];
 
         return view('pages.admin.orders.create', $data);
@@ -620,5 +620,32 @@ class OrderController extends Controller
         ]);
 
         return $pdf->download('invoice-' . $order->invoice->invoice_no . '.pdf');
+    }
+
+    /**
+     * Get provinces from API
+     */
+    private function getProvinces()
+    {
+        try {
+            $response = \Illuminate\Support\Facades\Http::get("https://www.emsifa.com/api-wilayah-indonesia/api/provinces.json");
+
+            if ($response->successful()) {
+                $data = $response->json();
+                
+                // Transform to match expected format with object-like access
+                return collect($data)->map(function ($item) {
+                    return (object) [
+                        'id' => $item['id'],
+                        'province_name' => $item['name']
+                    ];
+                });
+            }
+
+            return collect([]);
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error('Error fetching provinces from API: ' . $e->getMessage());
+            return collect([]);
+        }
     }
 }

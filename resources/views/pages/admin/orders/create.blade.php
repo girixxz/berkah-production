@@ -697,7 +697,17 @@
 
     {{-- ===================== MODAL ADD CUSTOMER (Outside main form) ===================== --}}
     <div x-data="{
-        openModal: @if ($errors->addCustomer->any()) 'addCustomer' @else '' @endif,
+        openModal: '{{ session('openModal') }}',
+        addCustomerForm: {
+            customer_name: '{{ old('customer_name') }}',
+            phone: '{{ old('phone') }}',
+            province_id: '{{ old('province_id') }}',
+            city_id: '{{ old('city_id') }}',
+            district_id: '{{ old('district_id') }}',
+            village_id: '{{ old('village_id') }}',
+            address: '{{ old('address') }}'
+        },
+        addCustomerErrors: {},
         addProvince: '{{ old('province_id') }}',
         addCity: '{{ old('city_id') }}',
         addDistrict: '{{ old('district_id') }}',
@@ -708,10 +718,10 @@
     
         async init() {
             // Restore Add Customer state from old input
-            const oldProvince = '{{ old('province_id') }}' ? parseInt('{{ old('province_id') }}') : '';
-            const oldCity = '{{ old('city_id') }}' ? parseInt('{{ old('city_id') }}') : '';
-            const oldDistrict = '{{ old('district_id') }}' ? parseInt('{{ old('district_id') }}') : '';
-            const oldVillage = '{{ old('village_id') }}' ? parseInt('{{ old('village_id') }}') : '';
+            const oldProvince = '{{ old('province_id') }}' ? '{{ old('province_id') }}' : '';
+            const oldCity = '{{ old('city_id') }}' ? '{{ old('city_id') }}' : '';
+            const oldDistrict = '{{ old('district_id') }}' ? '{{ old('district_id') }}' : '';
+            const oldVillage = '{{ old('village_id') }}' ? '{{ old('village_id') }}' : '';
     
             if (oldProvince) {
                 this.addProvince = oldProvince;
@@ -736,6 +746,46 @@
             }
         },
     
+        validateAddCustomer() {
+            this.addCustomerErrors = {};
+    
+            if (!this.addCustomerForm.customer_name?.trim()) {
+                this.addCustomerErrors.customer_name = 'Customer name is required';
+            } else if (this.addCustomerForm.customer_name.length > 100) {
+                this.addCustomerErrors.customer_name = 'Customer name must not exceed 100 characters';
+            }
+    
+            if (!this.addCustomerForm.phone?.trim()) {
+                this.addCustomerErrors.phone = 'Phone is required';
+            } else if (this.addCustomerForm.phone.length > 20) {
+                this.addCustomerErrors.phone = 'Phone must not exceed 20 characters';
+            }
+    
+            if (!this.addProvince) {
+                this.addCustomerErrors.province_id = 'Province is required';
+            }
+    
+            if (!this.addCity) {
+                this.addCustomerErrors.city_id = 'City is required';
+            }
+    
+            if (!this.addDistrict) {
+                this.addCustomerErrors.district_id = 'District is required';
+            }
+    
+            if (!this.addVillage) {
+                this.addCustomerErrors.village_id = 'Village is required';
+            }
+    
+            if (!this.addCustomerForm.address?.trim()) {
+                this.addCustomerErrors.address = 'Address is required';
+            } else if (this.addCustomerForm.address.length > 255) {
+                this.addCustomerErrors.address = 'Address must not exceed 255 characters';
+            }
+    
+            return Object.keys(this.addCustomerErrors).length === 0;
+        },
+    
         async fetchCities(provinceId) {
             if (!provinceId) {
                 this.addCities = [];
@@ -750,6 +800,12 @@
                 const response = await fetch(`/admin/customers/api/cities/${provinceId}`);
                 const data = await response.json();
                 this.addCities = data;
+                // Reset dependent fields
+                this.addDistricts = [];
+                this.addVillages = [];
+                this.addCity = '';
+                this.addDistrict = '';
+                this.addVillage = '';
             } catch (error) {
                 console.error('Error fetching cities:', error);
             }
@@ -767,6 +823,10 @@
                 const response = await fetch(`/admin/customers/api/districts/${cityId}`);
                 const data = await response.json();
                 this.addDistricts = data;
+                // Reset dependent fields
+                this.addVillages = [];
+                this.addDistrict = '';
+                this.addVillage = '';
             } catch (error) {
                 console.error('Error fetching districts:', error);
             }
@@ -802,7 +862,8 @@
                     </div>
 
                     {{-- Form --}}
-                    <form action="{{ route('admin.customers.store') }}" method="POST">
+                    <form action="{{ route('admin.customers.store') }}" method="POST"
+                        @submit="if (!validateAddCustomer()) $event.preventDefault()">
                         @csrf
                         <input type="hidden" name="from_create_order" value="1">
                         <div class="p-5 space-y-4 max-h-[70vh] overflow-y-auto">
@@ -812,13 +873,13 @@
                                     Customer Name <span class="text-red-600">*</span>
                                 </label>
                                 <input type="text" name="customer_name" value="{{ old('customer_name') }}"
-                                    @class([
-                                        'w-full rounded-md px-4 py-2 text-sm border focus:outline-none focus:ring-2 text-gray-700',
-                                        'border-red-500 focus:border-red-500 focus:ring-red-200' => $errors->addCustomer->has(
-                                            'customer_name'),
-                                        'border-gray-200 focus:border-primary focus:ring-primary/20' => !$errors->addCustomer->has(
-                                            'customer_name'),
-                                    ]) />
+                                    x-model="addCustomerForm.customer_name" @blur="validateAddCustomer()"
+                                    :class="addCustomerErrors.customer_name ||
+                                        {{ $errors->addCustomer->has('customer_name') ? 'true' : 'false' }} ?
+                                        'w-full rounded-md px-4 py-2 text-sm border border-red-500 focus:border-red-500 focus:outline-none focus:ring-2 focus:ring-red-200 text-gray-700' :
+                                        'w-full rounded-md px-4 py-2 text-sm border border-gray-200 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 text-gray-700'" />
+                                <p x-show="addCustomerErrors.customer_name" x-text="addCustomerErrors.customer_name"
+                                    class="mt-1 text-sm text-red-600"></p>
                                 @error('customer_name', 'addCustomer')
                                     <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                                 @enderror
@@ -830,13 +891,13 @@
                                     Phone <span class="text-red-600">*</span>
                                 </label>
                                 <input type="text" name="phone" value="{{ old('phone') }}"
-                                    @class([
-                                        'w-full rounded-md px-4 py-2 text-sm border focus:outline-none focus:ring-2 text-gray-700',
-                                        'border-red-500 focus:border-red-500 focus:ring-red-200' => $errors->addCustomer->has(
-                                            'phone'),
-                                        'border-gray-200 focus:border-primary focus:ring-primary/20' => !$errors->addCustomer->has(
-                                            'phone'),
-                                    ]) />
+                                    x-model="addCustomerForm.phone" @blur="validateAddCustomer()"
+                                    :class="addCustomerErrors.phone ||
+                                        {{ $errors->addCustomer->has('phone') ? 'true' : 'false' }} ?
+                                        'w-full rounded-md px-4 py-2 text-sm border border-red-500 focus:border-red-500 focus:outline-none focus:ring-2 focus:ring-red-200 text-gray-700' :
+                                        'w-full rounded-md px-4 py-2 text-sm border border-gray-200 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 text-gray-700'" />
+                                <p x-show="addCustomerErrors.phone" x-text="addCustomerErrors.phone"
+                                    class="mt-1 text-sm text-red-600"></p>
                                 @error('phone', 'addCustomer')
                                     <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                                 @enderror
@@ -844,15 +905,16 @@
 
                             {{-- Province --}}
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-1">Province</label>
-                                <select x-model="addProvince" name="province_id" @change="fetchCities(addProvince)"
-                                    @class([
-                                        'w-full rounded-md px-4 py-2 text-sm border focus:outline-none focus:ring-2 text-gray-700',
-                                        'border-red-500 focus:border-red-500 focus:ring-red-200' => $errors->addCustomer->has(
-                                            'province_id'),
-                                        'border-gray-200 focus:border-primary focus:ring-primary/20' => !$errors->addCustomer->has(
-                                            'province_id'),
-                                    ])>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">
+                                    Province <span class="text-red-600">*</span>
+                                </label>
+                                <select x-model="addProvince" name="province_id"
+                                    @change="addCustomerForm.province_id = addProvince; fetchCities(addProvince)"
+                                    @blur="validateAddCustomer()"
+                                    :class="addCustomerErrors.province_id ||
+                                        {{ $errors->addCustomer->has('province_id') ? 'true' : 'false' }} ?
+                                        'w-full rounded-md px-4 py-2 text-sm border border-red-500 focus:border-red-500 focus:outline-none focus:ring-2 focus:ring-red-200 text-gray-700' :
+                                        'w-full rounded-md px-4 py-2 text-sm border border-gray-200 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 text-gray-700'">
                                     <option value="">Select Province</option>
                                     @foreach ($provinces as $province)
                                         <option value="{{ $province->id }}"
@@ -861,6 +923,8 @@
                                         </option>
                                     @endforeach
                                 </select>
+                                <p x-show="addCustomerErrors.province_id" x-text="addCustomerErrors.province_id"
+                                    class="mt-1 text-sm text-red-600"></p>
                                 @error('province_id', 'addCustomer')
                                     <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                                 @enderror
@@ -868,20 +932,23 @@
 
                             {{-- City --}}
                             <div x-show="addProvince" x-transition>
-                                <label class="block text-sm font-medium text-gray-700 mb-1">City</label>
-                                <select x-model="addCity" name="city_id" @change="fetchDistricts(addCity)"
-                                    @class([
-                                        'w-full rounded-md px-4 py-2 text-sm border focus:outline-none focus:ring-2 text-gray-700',
-                                        'border-red-500 focus:border-red-500 focus:ring-red-200' => $errors->addCustomer->has(
-                                            'city_id'),
-                                        'border-gray-200 focus:border-primary focus:ring-primary/20' => !$errors->addCustomer->has(
-                                            'city_id'),
-                                    ])>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">
+                                    City <span class="text-red-600">*</span>
+                                </label>
+                                <select x-model="addCity" name="city_id"
+                                    @change="addCustomerForm.city_id = addCity; fetchDistricts(addCity)"
+                                    @blur="validateAddCustomer()"
+                                    :class="addCustomerErrors.city_id ||
+                                        {{ $errors->addCustomer->has('city_id') ? 'true' : 'false' }} ?
+                                        'w-full rounded-md px-4 py-2 text-sm border border-red-500 focus:border-red-500 focus:outline-none focus:ring-2 focus:ring-red-200 text-gray-700' :
+                                        'w-full rounded-md px-4 py-2 text-sm border border-gray-200 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 text-gray-700'">
                                     <option value="">Select City</option>
                                     <template x-for="city in addCities" :key="city.id">
                                         <option :value="city.id" x-text="city.city_name"></option>
                                     </template>
                                 </select>
+                                <p x-show="addCustomerErrors.city_id" x-text="addCustomerErrors.city_id"
+                                    class="mt-1 text-sm text-red-600"></p>
                                 @error('city_id', 'addCustomer')
                                     <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                                 @enderror
@@ -889,20 +956,23 @@
 
                             {{-- District --}}
                             <div x-show="addCity" x-transition>
-                                <label class="block text-sm font-medium text-gray-700 mb-1">District</label>
-                                <select x-model="addDistrict" name="district_id" @change="fetchVillages(addDistrict)"
-                                    @class([
-                                        'w-full rounded-md px-4 py-2 text-sm border focus:outline-none focus:ring-2 text-gray-700',
-                                        'border-red-500 focus:border-red-500 focus:ring-red-200' => $errors->addCustomer->has(
-                                            'district_id'),
-                                        'border-gray-200 focus:border-primary focus:ring-primary/20' => !$errors->addCustomer->has(
-                                            'district_id'),
-                                    ])>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">
+                                    District <span class="text-red-600">*</span>
+                                </label>
+                                <select x-model="addDistrict" name="district_id"
+                                    @change="addCustomerForm.district_id = addDistrict; fetchVillages(addDistrict)"
+                                    @blur="validateAddCustomer()"
+                                    :class="addCustomerErrors.district_id ||
+                                        {{ $errors->addCustomer->has('district_id') ? 'true' : 'false' }} ?
+                                        'w-full rounded-md px-4 py-2 text-sm border border-red-500 focus:border-red-500 focus:outline-none focus:ring-2 focus:ring-red-200 text-gray-700' :
+                                        'w-full rounded-md px-4 py-2 text-sm border border-gray-200 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 text-gray-700'">
                                     <option value="">Select District</option>
                                     <template x-for="district in addDistricts" :key="district.id">
                                         <option :value="district.id" x-text="district.district_name"></option>
                                     </template>
                                 </select>
+                                <p x-show="addCustomerErrors.district_id" x-text="addCustomerErrors.district_id"
+                                    class="mt-1 text-sm text-red-600"></p>
                                 @error('district_id', 'addCustomer')
                                     <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                                 @enderror
@@ -910,19 +980,22 @@
 
                             {{-- Village --}}
                             <div x-show="addDistrict" x-transition>
-                                <label class="block text-sm font-medium text-gray-700 mb-1">Village</label>
-                                <select x-model="addVillage" name="village_id" @class([
-                                    'w-full rounded-md px-4 py-2 text-sm border focus:outline-none focus:ring-2 text-gray-700',
-                                    'border-red-500 focus:border-red-500 focus:ring-red-200' => $errors->addCustomer->has(
-                                        'village_id'),
-                                    'border-gray-200 focus:border-primary focus:ring-primary/20' => !$errors->addCustomer->has(
-                                        'village_id'),
-                                ])>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">
+                                    Village <span class="text-red-600">*</span>
+                                </label>
+                                <select x-model="addVillage" name="village_id"
+                                    @change="addCustomerForm.village_id = addVillage" @blur="validateAddCustomer()"
+                                    :class="addCustomerErrors.village_id ||
+                                        {{ $errors->addCustomer->has('village_id') ? 'true' : 'false' }} ?
+                                        'w-full rounded-md px-4 py-2 text-sm border border-red-500 focus:border-red-500 focus:outline-none focus:ring-2 focus:ring-red-200 text-gray-700' :
+                                        'w-full rounded-md px-4 py-2 text-sm border border-gray-200 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 text-gray-700'">
                                     <option value="">Select Village</option>
                                     <template x-for="village in addVillages" :key="village.id">
                                         <option :value="village.id" x-text="village.village_name"></option>
                                     </template>
                                 </select>
+                                <p x-show="addCustomerErrors.village_id" x-text="addCustomerErrors.village_id"
+                                    class="mt-1 text-sm text-red-600"></p>
                                 @error('village_id', 'addCustomer')
                                     <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                                 @enderror
@@ -930,14 +1003,16 @@
 
                             {{-- Address --}}
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-1">Address Detail</label>
-                                <textarea name="address" rows="3" @class([
-                                    'w-full rounded-md px-4 py-2 text-sm border focus:outline-none focus:ring-2 text-gray-700',
-                                    'border-red-500 focus:border-red-500 focus:ring-red-200' => $errors->addCustomer->has(
-                                        'address'),
-                                    'border-gray-200 focus:border-primary focus:ring-primary/20' => !$errors->addCustomer->has(
-                                        'address'),
-                                ])>{{ old('address') }}</textarea>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">
+                                    Address Detail <span class="text-red-600">*</span>
+                                </label>
+                                <textarea name="address" rows="3" x-model="addCustomerForm.address" @blur="validateAddCustomer()"
+                                    :class="addCustomerErrors.address ||
+                                        {{ $errors->addCustomer->has('address') ? 'true' : 'false' }} ?
+                                        'w-full rounded-md px-4 py-2 text-sm border border-red-500 focus:border-red-500 focus:outline-none focus:ring-2 focus:ring-red-200 text-gray-700' :
+                                        'w-full rounded-md px-4 py-2 text-sm border border-gray-200 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 text-gray-700'">{{ old('address') }}</textarea>
+                                <p x-show="addCustomerErrors.address" x-text="addCustomerErrors.address"
+                                    class="mt-1 text-sm text-red-600"></p>
                                 @error('address', 'addCustomer')
                                     <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                                 @enderror
