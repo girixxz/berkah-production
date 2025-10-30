@@ -95,7 +95,7 @@ class PaymentHistoryController extends Controller
         
         $stats = [
             'total_transactions' => (clone $statsQuery)->count(),
-            'total_amount' => (clone $statsQuery)->sum('amount'),
+            'total_balance' => (clone $statsQuery)->where('status', 'approved')->sum('amount'), // Only approved
             'pending' => (clone $statsQuery)->where('status', 'pending')->count(),
             'approved' => (clone $statsQuery)->where('status', 'approved')->count(),
             'rejected' => (clone $statsQuery)->where('status', 'rejected')->count(),

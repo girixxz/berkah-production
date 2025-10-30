@@ -410,6 +410,7 @@
                                 <th class="py-3 px-4 text-left">Payment Type</th>
                                 <th class="py-3 px-4 text-left">Payment Method</th>
                                 <th class="py-3 px-4 text-left">Amount</th>
+                                <th class="py-3 px-4 text-left">Status</th>
                                 <th class="py-3 px-4 text-left">Notes</th>
                                 <th class="py-3 px-4 text-left rounded-r-lg">Attachment</th>
                             </tr>
@@ -424,6 +425,13 @@
                                     ];
                                     $paymentClass =
                                         $paymentTypeClasses[$payment->payment_type] ?? 'bg-gray-100 text-gray-800';
+
+                                    $statusClasses = [
+                                        'pending' => 'bg-yellow-100 text-yellow-800',
+                                        'approved' => 'bg-green-100 text-green-800',
+                                        'rejected' => 'bg-red-100 text-red-800',
+                                    ];
+                                    $statusClass = $statusClasses[$payment->status] ?? 'bg-gray-100 text-gray-800';
                                 @endphp
                                 <tr class="border-t border-gray-200 hover:bg-gray-50">
                                     <td class="py-3 px-4">{{ $index + 1 }}</td>
@@ -435,6 +443,11 @@
                                     <td class="py-3 px-4 capitalize">{{ $payment->payment_method }}</td>
                                     <td class="py-3 px-4 font-medium">Rp
                                         {{ number_format($payment->amount, 0, ',', '.') }}</td>
+                                    <td class="py-3 px-4">
+                                        <span class="px-2 py-1 rounded text-xs font-medium {{ $statusClass }}">
+                                            {{ strtoupper($payment->status) }}
+                                        </span>
+                                    </td>
                                     <td class="py-3 px-4 text-gray-600">{{ $payment->notes ?? '-' }}</td>
                                     <td class="py-3 px-4">
                                         @if ($payment->img_url)

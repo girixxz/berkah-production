@@ -54,8 +54,9 @@ class PaymentController extends Controller
         try {
             $invoice = Invoice::with(['payments', 'order'])->findOrFail($validated['invoice_id']);
 
-            // Check if payment amount exceeds remaining due
-            $currentPaid = $invoice->payments->sum('amount');
+            // Check if payment amount exceeds remaining due (hitung dari APPROVED + PENDING payments)
+            // Karena pending payment masih bisa di-approve, jadi harus dihitung juga untuk validasi
+            $currentPaid = $invoice->payments->whereIn('status', ['approved', 'pending'])->sum('amount');
             $remainingDue = $invoice->total_bill - $currentPaid;
             
             if ($validated['amount'] > $remainingDue) {
@@ -111,8 +112,8 @@ class PaymentController extends Controller
             // Refresh invoice to get updated payments relationship
             $invoice->refresh();
 
-            // Update invoice - recalculate from all payments
-            $totalPaid = $invoice->payments()->sum('amount');
+            // Update invoice - recalculate ONLY from APPROVED payments
+            $totalPaid = $invoice->payments()->where('status', 'approved')->sum('amount');
             $amountDue = $invoice->total_bill - $totalPaid;
 
             // Determine invoice status based on enum: 'unpaid', 'dp', 'paid'
@@ -202,8 +203,8 @@ class PaymentController extends Controller
 
             $payment->delete();
 
-            // Recalculate invoice
-            $totalPaid = $invoice->payments()->sum('amount');
+            // Recalculate invoice - ONLY from APPROVED payments
+            $totalPaid = $invoice->payments()->where('status', 'approved')->sum('amount');
             $amountDue = $invoice->total_bill - $totalPaid;
 
             // Determine invoice status based on enum: 'unpaid', 'dp', 'paid'
@@ -256,6 +257,24 @@ class PaymentController extends Controller
             // Get invoice and order
             $invoice = $payment->invoice;
             $order = $invoice->order;
+
+            // Recalculate invoice with newly approved payment
+            $totalPaid = $invoice->payments()->where('status', 'approved')->sum('amount');
+            $amountDue = $invoice->total_bill - $totalPaid;
+
+            // Determine invoice status
+            $invoiceStatus = 'unpaid';
+            if ($totalPaid >= $invoice->total_bill) {
+                $invoiceStatus = 'paid';
+            } elseif ($totalPaid > 0) {
+                $invoiceStatus = 'dp';
+            }
+
+            $invoice->update([
+                'amount_paid' => $totalPaid,
+                'amount_due' => max(0, $amountDue),
+                'status' => $invoiceStatus,
+            ]);
 
             // Check if this is the first approved payment for this order
             $approvedPaymentsCount = $invoice->payments()->where('status', 'approved')->count();
@@ -315,6 +334,25 @@ class PaymentController extends Controller
 
             // Update payment status
             $payment->update(['status' => 'rejected']);
+
+            // Recalculate invoice (rejected payment tidak dihitung)
+            $invoice = $payment->invoice;
+            $totalPaid = $invoice->payments()->where('status', 'approved')->sum('amount');
+            $amountDue = $invoice->total_bill - $totalPaid;
+
+            // Determine invoice status
+            $invoiceStatus = 'unpaid';
+            if ($totalPaid >= $invoice->total_bill) {
+                $invoiceStatus = 'paid';
+            } elseif ($totalPaid > 0) {
+                $invoiceStatus = 'dp';
+            }
+
+            $invoice->update([
+                'amount_paid' => $totalPaid,
+                'amount_due' => max(0, $amountDue),
+                'status' => $invoiceStatus,
+            ]);
 
             DB::commit();
 

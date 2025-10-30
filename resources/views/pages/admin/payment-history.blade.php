@@ -119,23 +119,6 @@
                 </div>
             </div>
 
-            {{-- Total Amount --}}
-            <div class="bg-white border border-gray-200 rounded-lg p-4">
-                <div class="flex items-center justify-between">
-                    <div>
-                        <p class="text-sm text-gray-500">Total Amount</p>
-                        <p class="text-2xl font-bold text-gray-900 mt-1">Rp
-                            {{ number_format($stats['total_amount'], 0, ',', '.') }}</p>
-                    </div>
-                    <div class="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
-                        <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                    </div>
-                </div>
-            </div>
-
             {{-- Pending --}}
             <div class="bg-white border border-gray-200 rounded-lg p-4">
                 <div class="flex items-center justify-between">
@@ -179,6 +162,24 @@
                         <svg class="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                 d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                    </div>
+                </div>
+            </div>
+
+
+            {{-- Total Balance (Only Approved) --}}
+            <div class="bg-white border border-gray-200 rounded-lg p-4">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm text-gray-500">Total Balance</p>
+                        <p class="text-2xl font-bold text-gray-900 mt-1">Rp
+                            {{ number_format($stats['total_balance'], 0, ',', '.') }}</p>
+                    </div>
+                    <div class="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
+                        <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                         </svg>
                     </div>
                 </div>
@@ -398,8 +399,7 @@
                                 <th class="py-3 px-4 text-left font-medium rounded-l-lg">Paid At</th>
                                 <th class="py-3 px-4 text-left font-medium">Customer</th>
                                 <th class="py-3 px-4 text-left font-medium">Order</th>
-                                <th class="py-3 px-4 text-left font-medium">Payment Method</th>
-                                <th class="py-3 px-4 text-left font-medium">Payment Type</th>
+                                <th class="py-3 px-4 text-left font-medium">Payment Model</th>
                                 <th class="py-3 px-4 text-left font-medium">Amount</th>
                                 <th class="py-3 px-4 text-left font-medium">Status</th>
                                 <th class="py-3 px-4 text-left font-medium">Notes</th>
@@ -440,33 +440,31 @@
                                         </div>
                                     </td>
 
-                                    {{-- Payment Method --}}
+                                    {{-- Payment Model (Method + Type) --}}
                                     <td class="py-3 px-4">
-                                        @php
-                                            $methodClass =
-                                                $payment->payment_method === 'tranfer'
-                                                    ? 'bg-blue-100 text-blue-800'
-                                                    : 'bg-green-100 text-green-800';
-                                        @endphp
-                                        <span class="px-2 py-1 rounded-full text-xs font-medium {{ $methodClass }}">
-                                            {{ strtoupper($payment->payment_method) }}
-                                        </span>
-                                    </td>
-
-                                    {{-- Payment Type --}}
-                                    <td class="py-3 px-4">
-                                        @php
-                                            $typeClasses = [
-                                                'dp' => 'bg-yellow-100 text-yellow-800',
-                                                'repayment' => 'bg-purple-100 text-purple-800',
-                                                'full_payment' => 'bg-green-100 text-green-800',
-                                            ];
-                                            $typeClass =
-                                                $typeClasses[$payment->payment_type] ?? 'bg-gray-100 text-gray-800';
-                                        @endphp
-                                        <span class="px-2 py-1 rounded-full text-xs font-medium {{ $typeClass }}">
-                                            {{ strtoupper(str_replace('_', ' ', $payment->payment_type)) }}
-                                        </span>
+                                        <div class="flex flex-col gap-1">
+                                            @php
+                                                $methodClass =
+                                                    $payment->payment_method === 'tranfer'
+                                                        ? 'bg-blue-100 text-blue-800'
+                                                        : 'bg-green-100 text-green-800';
+                                                $typeClasses = [
+                                                    'dp' => 'bg-yellow-100 text-yellow-800',
+                                                    'repayment' => 'bg-purple-100 text-purple-800',
+                                                    'full_payment' => 'bg-green-100 text-green-800',
+                                                ];
+                                                $typeClass =
+                                                    $typeClasses[$payment->payment_type] ?? 'bg-gray-100 text-gray-800';
+                                            @endphp
+                                            <span
+                                                class="px-2 py-0.5 rounded-full text-xs font-medium {{ $methodClass }} inline-block w-fit">
+                                                {{ strtoupper($payment->payment_method) }}
+                                            </span>
+                                            <span
+                                                class="px-2 py-0.5 rounded-full text-xs font-medium {{ $typeClass }} inline-block w-fit">
+                                                {{ strtoupper(str_replace('_', ' ', $payment->payment_type)) }}
+                                            </span>
+                                        </div>
                                     </td>
 
                                     {{-- Amount --}}
@@ -551,7 +549,7 @@
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="{{ $role === 'owner' ? '10' : '9' }}"
+                                    <td colspan="{{ $role === 'owner' ? '9' : '8' }}"
                                         class="py-8 text-center text-gray-400">
                                         <svg class="w-16 h-16 mx-auto mb-3 opacity-50" fill="none"
                                             stroke="currentColor" viewBox="0 0 24 24">
