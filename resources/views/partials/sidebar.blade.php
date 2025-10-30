@@ -122,7 +122,9 @@
                         </x-sidebar-menu.main-menu>
                     </li>
                     <li>
-                        <x-sidebar-menu.main-menu href="{{ route('admin.payment-history') }}" :pattern="'admin.payment-history'">
+                        <x-sidebar-menu.main-menu
+                            href="{{ route($role === 'owner' ? 'owner.payment-history' : 'admin.payment-history') }}"
+                            :pattern="$role === 'owner' ? 'owner.payment-history' : 'admin.payment-history'">
                             <x-icons.payment-history class="text-current" />
                             <span class="ml-2">Payment History</span>
                         </x-sidebar-menu.main-menu>

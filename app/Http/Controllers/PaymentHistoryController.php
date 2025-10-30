@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Payment;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Auth;
 
 class PaymentHistoryController extends Controller
 {
@@ -15,14 +16,6 @@ class PaymentHistoryController extends Controller
         $startDate = $request->input('start_date');
         $endDate = $request->input('end_date');
         $dateRange = $request->input('date_range');
-
-        // Default to this month if no date filter
-        if (!$dateRange && !$startDate && !$endDate) {
-            $dateRange = 'this_month';
-            $today = now();
-            $startDate = $today->copy()->startOfMonth()->format('Y-m-d');
-            $endDate = $today->copy()->endOfMonth()->format('Y-m-d');
-        }
 
         $query = Payment::with(['invoice.order.customer', 'invoice.order.productCategory']);
 
@@ -70,6 +63,18 @@ class PaymentHistoryController extends Controller
             }
         }
 
+        // Set default to this month if no date parameters at all
+        if (!$dateRange && !$startDate && !$endDate) {
+            $role = Auth::user()->role;
+            $routeName = $role === 'owner' ? 'owner.payment-history' : 'admin.payment-history';
+            
+            return redirect()->route($routeName, [
+                'filter' => $filter,
+                'search' => $search,
+                'date_range' => 'this_month',
+            ]);
+        }
+
         if ($startDate && $endDate) {
             $query->whereBetween('paid_at', [
                 Carbon::parse($startDate)->startOfDay(),
@@ -77,17 +82,29 @@ class PaymentHistoryController extends Controller
             ]);
         }
 
-        // Get statistics
-        $statsQuery = clone $query;
-        $allPayments = $statsQuery->get();
+        // Calculate statistics based on the same filters (no cache, real-time)
+        $statsQuery = Payment::query();
+        
+        // Apply same date filter to stats
+        if ($startDate && $endDate) {
+            $statsQuery->whereBetween('paid_at', [
+                Carbon::parse($startDate)->startOfDay(),
+                Carbon::parse($endDate)->endOfDay()
+            ]);
+        }
         
         $stats = [
-            'total_transactions' => $allPayments->count(),
-            'total_amount' => $allPayments->sum('amount'),
+            'total_transactions' => (clone $statsQuery)->count(),
+            'total_amount' => (clone $statsQuery)->sum('amount'),
+            'pending' => (clone $statsQuery)->where('status', 'pending')->count(),
+            'approved' => (clone $statsQuery)->where('status', 'approved')->count(),
+            'rejected' => (clone $statsQuery)->where('status', 'rejected')->count(),
         ];
 
         // Get paginated payments
-        $payments = $query->orderBy('paid_at', 'desc')->paginate(15)->appends($request->except('page'));
+        $payments = $query->orderBy('paid_at', 'desc')
+            ->paginate(15)
+            ->appends($request->except('page'));
 
         return view('pages.admin.payment-history', compact('payments', 'stats', 'startDate', 'endDate', 'dateRange'));
     }
