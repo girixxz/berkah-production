@@ -135,19 +135,27 @@ class OrderController extends Controller
             ->paginate(15)
             ->appends($request->except('page'));
 
-        // Calculate statistics - Cache for 5 minutes
-        $stats = Cache::remember('order_statistics', 300, function () {
-            return [
-                'total_orders' => Order::count(),
-                'total_qty' => OrderItem::sum('qty'),
-                'total_bill' => Invoice::sum('total_bill'),
-                'remaining_due' => Invoice::sum('amount_due'),
-                'pending' => Order::where('production_status', 'pending')->count(),
-                'wip' => Order::where('production_status', 'wip')->count(),
-                'finished' => Order::where('production_status', 'finished')->count(),
-                'cancelled' => Order::where('production_status', 'cancelled')->count(),
-            ];
-        });
+        // Calculate statistics based on the same filters (no cache, real-time)
+        $statsQuery = Order::query();
+        
+        // Apply same date filter to stats
+        if ($startDate) {
+            $statsQuery->whereDate('order_date', '>=', $startDate);
+        }
+        if ($endDate) {
+            $statsQuery->whereDate('order_date', '<=', $endDate);
+        }
+
+        $stats = [
+            'total_orders' => (clone $statsQuery)->count(),
+            'total_qty' => (clone $statsQuery)->join('order_items', 'orders.id', '=', 'order_items.order_id')->sum('order_items.qty'),
+            'total_bill' => (clone $statsQuery)->join('invoices', 'orders.id', '=', 'invoices.order_id')->sum('invoices.total_bill'),
+            'remaining_due' => (clone $statsQuery)->join('invoices', 'orders.id', '=', 'invoices.order_id')->sum('invoices.amount_due'),
+            'pending' => (clone $statsQuery)->where('production_status', 'pending')->count(),
+            'wip' => (clone $statsQuery)->where('production_status', 'wip')->count(),
+            'finished' => (clone $statsQuery)->where('production_status', 'finished')->count(),
+            'cancelled' => (clone $statsQuery)->where('production_status', 'cancelled')->count(),
+        ];
 
         return view('pages.admin.orders.index', compact('orders', 'stats', 'dateRange', 'startDate', 'endDate'));
     }
