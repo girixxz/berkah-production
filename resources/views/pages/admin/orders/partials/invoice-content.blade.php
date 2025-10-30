@@ -152,6 +152,9 @@
                     $additional = $order->extraServices->sum('price');
                     $discount = $order->discount ?? 0;
                     $total = $subtotal + $additional - $discount;
+                    $approvedPayments = $order->invoice->payments->where('status', 'approved')->sortBy('paid_at');
+                    $totalPaid = $approvedPayments->sum('amount');
+                    $remainingDue = $total - $totalPaid;
                 @endphp
 
                 <div class="flex justify-between items-center py-2 px-3 bg-white">
@@ -173,6 +176,33 @@
                     <span class="text-sm font-extrabold" style="color: #ffffff;">Total Price</span>
                     <span class="text-sm font-extrabold" style="color: #ffffff;">Rp
                         {{ number_format($total, 0, ',', '.') }}</span>
+                </div>
+
+                @if ($approvedPayments->count() > 0)
+                    {{-- Payment Activity Header --}}
+                    <div class="py-2 px-3 bg-gray-100">
+                        <span class="text-xs font-semibold text-gray-600">PAYMENT ACTIVITY</span>
+                    </div>
+
+                    @foreach ($approvedPayments as $index => $payment)
+                        <div class="flex justify-between items-center py-2 px-3 bg-white">
+                            <span class="text-xs text-gray-600">
+                                Payment #{{ $index + 1 }}
+                                ({{ \Carbon\Carbon::parse($payment->paid_at)->format('d/m/Y') }})
+                            </span>
+                            <span class="text-xs font-semibold text-gray-900">
+                                - Rp {{ number_format($payment->amount, 0, ',', '.') }}
+                            </span>
+                        </div>
+                    @endforeach
+                @endif
+
+                {{-- Remaining Due --}}
+                <div class="flex justify-between items-center py-2.5 px-3 bg-yellow-50">
+                    <span class="text-sm font-extrabold text-yellow-800">Remaining Due</span>
+                    <span class="text-sm font-extrabold text-yellow-800">
+                        Rp {{ number_format($remainingDue, 0, ',', '.') }}
+                    </span>
                 </div>
             </div>
         </div>

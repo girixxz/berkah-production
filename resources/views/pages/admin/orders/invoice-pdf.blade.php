@@ -498,6 +498,44 @@
                     <td style="padding: 10px; font-size: 10pt; font-weight: 700; color: #ffffff; text-align: right;">
                         Rp {{ number_format($total, 0, ',', '.') }}</td>
                 </tr>
+
+                @php
+                    $approvedPayments = $order->invoice->payments->where('status', 'approved')->sortBy('paid_at');
+                    $totalPaid = $approvedPayments->sum('amount');
+                    $remainingDue = $total - $totalPaid;
+                @endphp
+
+                @if ($approvedPayments->count() > 0)
+                    <!-- Payment Activity Header -->
+                    <tr style="background-color: #f5f5f5;">
+                        <td colspan="2"
+                            style="padding: 8px 10px; font-size: 8.5pt; font-weight: 600; color: #555; border-bottom: 1px solid #e8e8e8;">
+                            PAYMENT ACTIVITY
+                        </td>
+                    </tr>
+
+                    @foreach ($approvedPayments as $index => $payment)
+                        <tr>
+                            <td
+                                style="padding: 6px 10px; font-size: 8.5pt; color: #666; border-bottom: 1px solid #e8e8e8;">
+                                Payment #{{ $index + 1 }}
+                                ({{ \Carbon\Carbon::parse($payment->paid_at)->format('d/m/Y') }})
+                            </td>
+                            <td
+                                style="padding: 6px 10px; font-size: 8.5pt; font-weight: 600; color: #333; text-align: right; border-bottom: 1px solid #e8e8e8;">
+                                - Rp {{ number_format($payment->amount, 0, ',', '.') }}
+                            </td>
+                        </tr>
+                    @endforeach
+                @endif
+
+                <!-- Remaining Due -->
+                <tr style="background-color: #fef3c7;">
+                    <td style="padding: 10px; font-size: 10pt; font-weight: 700; color: #92400e;">Remaining Due</td>
+                    <td style="padding: 10px; font-size: 10pt; font-weight: 700; color: #92400e; text-align: right;">
+                        Rp {{ number_format($remainingDue, 0, ',', '.') }}
+                    </td>
+                </tr>
             </table>
         </div>
 
