@@ -551,31 +551,24 @@
                                                     dropdownStyle: {},
                                                     checkPosition() {
                                                         const button = this.$refs.button;
-                                                        const dropdown = this.$refs.dropdown;
                                                         const rect = button.getBoundingClientRect();
                                                         const spaceBelow = window.innerHeight - rect.bottom;
                                                         const spaceAbove = rect.top;
+                                                        const dropUp = spaceBelow < 200 && spaceAbove > spaceBelow;
                                                 
-                                                        // Get dropdown height (estimate or actual)
-                                                        const dropdownHeight = dropdown ? dropdown.offsetHeight : 150;
-                                                        const dropUp = spaceBelow < (dropdownHeight + 20) && spaceAbove > spaceBelow;
-                                                
-                                                        // Position fixed dropdown
                                                         if (dropUp) {
                                                             this.dropdownStyle = {
                                                                 position: 'fixed',
-                                                                bottom: (window.innerHeight - rect.top + 8) + 'px',
+                                                                top: (rect.top - 160) + 'px',
                                                                 left: (rect.right - 180) + 'px',
-                                                                width: '180px',
-                                                                top: 'auto'
+                                                                width: '180px'
                                                             };
                                                         } else {
                                                             this.dropdownStyle = {
                                                                 position: 'fixed',
                                                                 top: (rect.bottom + 8) + 'px',
                                                                 left: (rect.right - 180) + 'px',
-                                                                width: '180px',
-                                                                bottom: 'auto'
+                                                                width: '180px'
                                                             };
                                                         }
                                                     }
