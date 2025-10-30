@@ -188,7 +188,7 @@ class OrderController extends Controller
     {
         // Load all relationships
         $order->load([
-            'customer.village.district',
+            'customer',
             'sale',
             'productCategory',
             'materialCategory',
@@ -200,6 +200,9 @@ class OrderController extends Controller
             'orderItems.sleeve',
             'extraServices.service'
         ]);
+
+        // Fetch location names from API for customer
+        $locationData = $this->getCustomerLocationNames($order->customer);
 
         // Group order items by design variant and sleeve
         $designVariants = [];
@@ -229,7 +232,8 @@ class OrderController extends Controller
 
         return view('pages.admin.orders.show', [
             'order' => $order,
-            'designVariants' => $designVariants
+            'designVariants' => $designVariants,
+            'locationData' => $locationData
         ]);
     }
 
@@ -647,5 +651,60 @@ class OrderController extends Controller
             \Illuminate\Support\Facades\Log::error('Error fetching provinces from API: ' . $e->getMessage());
             return collect([]);
         }
+    }
+
+    /**
+     * Get location names for customer from API
+     */
+    private function getCustomerLocationNames($customer)
+    {
+        $locationData = [
+            'province_name' => '-',
+            'city_name' => '-',
+            'district_name' => '-',
+            'village_name' => '-'
+        ];
+
+        try {
+            // Fetch village data (includes district info)
+            if ($customer->village_id) {
+                $villageResponse = \Illuminate\Support\Facades\Http::get("https://www.emsifa.com/api-wilayah-indonesia/api/village/{$customer->village_id}.json");
+                if ($villageResponse->successful()) {
+                    $villageData = $villageResponse->json();
+                    $locationData['village_name'] = $villageData['name'] ?? '-';
+                }
+            }
+
+            // Fetch district data
+            if ($customer->district_id) {
+                $districtResponse = \Illuminate\Support\Facades\Http::get("https://www.emsifa.com/api-wilayah-indonesia/api/district/{$customer->district_id}.json");
+                if ($districtResponse->successful()) {
+                    $districtData = $districtResponse->json();
+                    $locationData['district_name'] = $districtData['name'] ?? '-';
+                }
+            }
+
+            // Fetch city data
+            if ($customer->city_id) {
+                $cityResponse = \Illuminate\Support\Facades\Http::get("https://www.emsifa.com/api-wilayah-indonesia/api/regency/{$customer->city_id}.json");
+                if ($cityResponse->successful()) {
+                    $cityData = $cityResponse->json();
+                    $locationData['city_name'] = $cityData['name'] ?? '-';
+                }
+            }
+
+            // Fetch province data
+            if ($customer->province_id) {
+                $provinceResponse = \Illuminate\Support\Facades\Http::get("https://www.emsifa.com/api-wilayah-indonesia/api/province/{$customer->province_id}.json");
+                if ($provinceResponse->successful()) {
+                    $provinceData = $provinceResponse->json();
+                    $locationData['province_name'] = $provinceData['name'] ?? '-';
+                }
+            }
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error('Error fetching location data: ' . $e->getMessage());
+        }
+
+        return $locationData;
     }
 }

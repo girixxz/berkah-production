@@ -189,13 +189,19 @@
                     </div>
                     <div>
                         <p class="text-sm text-gray-500">Village</p>
-                        <p class="text-sm font-medium text-gray-900">{{ $order->customer->village->village_name ?? '-' }}
-                        </p>
+                        <p class="text-sm font-medium text-gray-900">{{ $locationData['village_name'] }}</p>
                     </div>
                     <div>
                         <p class="text-sm text-gray-500">District</p>
-                        <p class="text-sm font-medium text-gray-900">
-                            {{ $order->customer->village->district->district_name ?? '-' }}</p>
+                        <p class="text-sm font-medium text-gray-900">{{ $locationData['district_name'] }}</p>
+                    </div>
+                    <div>
+                        <p class="text-sm text-gray-500">City</p>
+                        <p class="text-sm font-medium text-gray-900">{{ $locationData['city_name'] }}</p>
+                    </div>
+                    <div>
+                        <p class="text-sm text-gray-500">Province</p>
+                        <p class="text-sm font-medium text-gray-900">{{ $locationData['province_name'] }}</p>
                     </div>
                 </div>
             </div>
