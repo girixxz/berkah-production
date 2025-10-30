@@ -33,10 +33,10 @@
             <div class="flex-1 space-y-0.5 text-xs">
                 <p class="font-semibold text-gray-900">{{ $order->customer->customer_name }}</p>
                 <p class="text-gray-600">{{ $order->customer->address }}</p>
-                <p class="text-gray-600">{{ $order->customer->village->village_name ?? '-' }},
-                    {{ $order->customer->village->district->district_name ?? '-' }}</p>
-                <p class="text-gray-600">{{ $order->customer->village->district->city->city_name ?? '-' }},
-                    {{ $order->customer->village->district->city->province->province_name ?? '-' }}</p>
+                <p class="text-gray-600">{{ $locationData['village_name'] ?? '-' }},
+                    {{ $locationData['district_name'] ?? '-' }}</p>
+                <p class="text-gray-600">{{ $locationData['city_name'] ?? '-' }},
+                    {{ $locationData['province_name'] ?? '-' }}</p>
                 <p class="text-gray-600">{{ $order->customer->phone }}</p>
             </div>
 

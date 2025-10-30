@@ -611,7 +611,7 @@ class OrderController extends Controller
     {
         $order->load([
             'invoice',
-            'customer.village.district.city.province',
+            'customer',
             'sale',
             'orderItems.designVariant',
             'orderItems.size',
@@ -619,8 +619,12 @@ class OrderController extends Controller
             'extraServices.service'
         ]);
 
+        // Get customer location from API
+        $locationData = $this->getCustomerLocationNames($order->customer);
+
         $pdf = Pdf::loadView('pages.admin.orders.invoice-pdf', [
-            'order' => $order
+            'order' => $order,
+            'locationData' => $locationData
         ]);
 
         return $pdf->download('invoice-' . $order->invoice->invoice_no . '.pdf');

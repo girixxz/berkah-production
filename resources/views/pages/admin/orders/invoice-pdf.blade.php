@@ -336,10 +336,12 @@
         <div style="width: 48%; float: left; font-size: 9pt; line-height: 1.4;">
             <p style="font-weight: 600; margin-bottom: 3px; color: #333;">{{ $order->customer->customer_name }}</p>
             <p style="color: #666; margin: 0 0 2px 0;">{{ $order->customer->address }}</p>
-            <p style="color: #666; margin: 0 0 2px 0;">{{ $order->customer->village->village_name ?? '-' }},
-                {{ $order->customer->village->district->district_name ?? '-' }},
-                {{ $order->customer->village->district->city->city_name ?? '-' }},
-                {{ $order->customer->village->district->city->province->province_name ?? '-' }}</p>
+            <p style="color: #666; margin: 0 0 2px 0;">
+                {{ $locationData['village_name'] ?? '-' }},
+                {{ $locationData['district_name'] ?? '-' }},
+                {{ $locationData['city_name'] ?? '-' }},
+                {{ $locationData['province_name'] ?? '-' }}
+            </p>
             <p style="color: #666; margin: 0;">{{ $order->customer->phone }}</p>
         </div>
 
