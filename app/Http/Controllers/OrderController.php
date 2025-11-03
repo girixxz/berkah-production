@@ -129,9 +129,27 @@ class OrderController extends Controller
             $query->whereDate('order_date', '<=', $endDate);
         }
 
-        $orders = $query->orderBy('created_at', 'desc')
-            ->paginate(15)
-            ->appends($request->except('page'));
+        // Sort by wip_date (DESC) if filter is 'wip', finished_date if 'finished', cancelled_date if 'cancelled', otherwise by created_at
+        if ($filter === 'wip') {
+            $orders = $query->orderBy('wip_date', 'desc')
+                ->orderBy('created_at', 'desc')
+                ->paginate(15)
+                ->appends($request->except('page'));
+        } elseif ($filter === 'finished') {
+            $orders = $query->orderBy('finished_date', 'desc')
+                ->orderBy('created_at', 'desc')
+                ->paginate(15)
+                ->appends($request->except('page'));
+        } elseif ($filter === 'cancelled') {
+            $orders = $query->orderBy('cancelled_date', 'desc')
+                ->orderBy('created_at', 'desc')
+                ->paginate(15)
+                ->appends($request->except('page'));
+        } else {
+            $orders = $query->orderBy('created_at', 'desc')
+                ->paginate(15)
+                ->appends($request->except('page'));
+        }
 
         // Calculate statistics based on the same filters (no cache, real-time)
         $statsQuery = Order::query();
@@ -578,7 +596,8 @@ class OrderController extends Controller
         }
 
         $order->update([
-            'production_status' => 'cancelled'
+            'production_status' => 'cancelled',
+            'cancelled_date' => now()
         ]);
 
         return redirect()->route('admin.orders.index', ['date_range' => 'this_month'])
@@ -602,6 +621,13 @@ class OrderController extends Controller
             return redirect()->back()
                 ->with('message', 'Order is already shipped.')
                 ->with('alert-type', 'warning');
+        }
+
+        // Check if remaining due is 0 (payment completed)
+        if ($order->invoice && $order->invoice->amount_due > 0) {
+            return redirect()->back()
+                ->with('message', 'Cannot move to shipping. Remaining payment is Rp ' . number_format($order->invoice->amount_due, 0, ',', '.') . '. Please complete payment first.')
+                ->with('alert-type', 'error');
         }
 
         // Update shipping status and date

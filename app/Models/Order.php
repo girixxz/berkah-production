@@ -28,13 +28,17 @@ class Order extends Model
         'discount',
         'grand_total',
         'production_status',
+        'wip_date',
         'finished_date',
+        'cancelled_date',
     ];
 
     protected $casts = [
         'order_date' => 'datetime',
         'deadline' => 'datetime',
+        'wip_date' => 'datetime',
         'finished_date' => 'datetime',
+        'cancelled_date' => 'datetime',
         'shipping_date' => 'datetime',
         'subtotal' => 'decimal:2',
         'discount' => 'decimal:2',
@@ -161,7 +165,8 @@ class Order extends Model
         if (!$allDone && $this->production_status === 'finished') {
             $this->update([
                 'production_status' => 'wip',
-                'finished_date' => null
+                'finished_date' => null,
+                // wip_date tetap dipertahankan (tidak di-reset) karena order sudah pernah WIP
             ]);
             return true;
         }

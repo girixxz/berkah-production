@@ -282,7 +282,8 @@ class PaymentController extends Controller
             // If this is the first approved payment and order is still pending, change to WIP
             if ($approvedPaymentsCount === 1 && $order && $order->production_status === 'pending') {
                 $order->update([
-                    'production_status' => 'wip'
+                    'production_status' => 'wip',
+                    'wip_date' => now()
                 ]);
 
                 // Auto-create order_stages for all production stages when order becomes WIP

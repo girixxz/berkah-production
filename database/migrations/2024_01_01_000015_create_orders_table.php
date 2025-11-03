@@ -43,7 +43,9 @@ return new class extends Migration
             
             // Production Status
             $table->enum('production_status', ['pending', 'wip', 'finished', 'cancelled'])->default('pending');
+            $table->timestamp('wip_date')->nullable();
             $table->timestamp('finished_date')->nullable();
+            $table->timestamp('cancelled_date')->nullable();
             
             $table->timestamps();
         });

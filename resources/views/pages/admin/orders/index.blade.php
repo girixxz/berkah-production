@@ -669,13 +669,19 @@
 
                                                     {{-- Move to Shippings (Only for finished orders that haven't been shipped) --}}
                                                     @if ($order->production_status === 'finished' && $order->shipping_status === 'pending')
+                                                        @php
+                                                            $hasRemainingDue =
+                                                                $order->invoice && $order->invoice->amount_due > 0;
+                                                        @endphp
                                                         <form
                                                             action="{{ route('admin.orders.move-to-shipping', $order->id) }}"
-                                                            method="POST" class="w-full">
+                                                            method="POST" class="w-full"
+                                                            @if ($hasRemainingDue) onsubmit="return false;" @endif>
                                                             @csrf
                                                             @method('PATCH')
                                                             <button type="submit"
-                                                                class="w-full text-left px-4 py-2 text-sm text-green-600 hover:bg-green-50 flex items-center gap-2">
+                                                                @if ($hasRemainingDue) disabled title="Complete payment first (Remaining: Rp {{ number_format($order->invoice->amount_due, 0, ',', '.') }})" @endif
+                                                                class="w-full text-left px-4 py-2 text-sm flex items-center gap-2 {{ $hasRemainingDue ? 'text-gray-400 cursor-not-allowed' : 'text-green-600 hover:bg-green-50' }}">
                                                                 <svg class="w-4 h-4" fill="none" stroke="currentColor"
                                                                     viewBox="0 0 24 24">
                                                                     <path stroke-linecap="round" stroke-linejoin="round"
@@ -683,6 +689,14 @@
                                                                         d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
                                                                 </svg>
                                                                 Move to Shippings
+                                                                @if ($hasRemainingDue)
+                                                                    <svg class="w-4 h-4 ml-auto" fill="none"
+                                                                        stroke="currentColor" viewBox="0 0 24 24">
+                                                                        <path stroke-linecap="round"
+                                                                            stroke-linejoin="round" stroke-width="2"
+                                                                            d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                                                                    </svg>
+                                                                @endif
                                                             </button>
                                                         </form>
                                                     @endif
@@ -885,13 +899,19 @@
 
                                                     {{-- Move to Shippings (Only for finished orders that haven't been shipped) --}}
                                                     @if ($order->production_status === 'finished' && $order->shipping_status === 'pending')
+                                                        @php
+                                                            $hasRemainingDue =
+                                                                $order->invoice && $order->invoice->amount_due > 0;
+                                                        @endphp
                                                         <form
                                                             action="{{ route('admin.orders.move-to-shipping', $order->id) }}"
-                                                            method="POST" class="w-full">
+                                                            method="POST" class="w-full"
+                                                            @if ($hasRemainingDue) onsubmit="return false;" @endif>
                                                             @csrf
                                                             @method('PATCH')
                                                             <button type="submit"
-                                                                class="w-full text-left px-4 py-2 text-sm text-green-600 hover:bg-green-50 flex items-center gap-2">
+                                                                @if ($hasRemainingDue) disabled title="Complete payment first (Remaining: Rp {{ number_format($order->invoice->amount_due, 0, ',', '.') }})" @endif
+                                                                class="w-full text-left px-4 py-2 text-sm flex items-center gap-2 {{ $hasRemainingDue ? 'text-gray-400 cursor-not-allowed' : 'text-green-600 hover:bg-green-50' }}">
                                                                 <svg class="w-4 h-4" fill="none" stroke="currentColor"
                                                                     viewBox="0 0 24 24">
                                                                     <path stroke-linecap="round" stroke-linejoin="round"
@@ -899,6 +919,14 @@
                                                                         d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
                                                                 </svg>
                                                                 Move to Shippings
+                                                                @if ($hasRemainingDue)
+                                                                    <svg class="w-4 h-4 ml-auto" fill="none"
+                                                                        stroke="currentColor" viewBox="0 0 24 24">
+                                                                        <path stroke-linecap="round"
+                                                                            stroke-linejoin="round" stroke-width="2"
+                                                                            d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                                                                    </svg>
+                                                                @endif
                                                             </button>
                                                         </form>
                                                     @endif
