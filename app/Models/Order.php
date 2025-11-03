@@ -20,7 +20,7 @@ class Order extends Model
         'material_category_id',
         'material_texture_id',
         'notes',
-        'shipping_id',
+        'shipping_type',
         'total_qty',
         'subtotal',
         'discount',
@@ -82,14 +82,6 @@ class Order extends Model
     public function materialTexture(): BelongsTo
     {
         return $this->belongsTo(MaterialTexture::class, 'material_texture_id');
-    }
-
-    /**
-     * Get the shipping method for this order
-     */
-    public function shipping(): BelongsTo
-    {
-        return $this->belongsTo(Shipping::class, 'shipping_id');
     }
 
     /**

@@ -11,7 +11,6 @@ use App\Http\Controllers\MaterialTextureController;
 use App\Http\Controllers\MaterialSleeveController;
 use App\Http\Controllers\MaterialSizeController;
 use App\Http\Controllers\ServiceController;
-use App\Http\Controllers\ShippingController;
 
 use App\Http\Controllers\Main\ManageUsersSalesController;
 use App\Http\Controllers\UserController;
@@ -72,7 +71,6 @@ Route::middleware(['auth'])->group(function () {
                     ]);
                 Route::resource('material-sizes', MaterialSizeController::class)->except(['index', 'create', 'show', 'edit']);
                 Route::resource('services', ServiceController::class)->except(['index', 'create', 'show', 'edit']);
-                Route::resource('shippings', ShippingController::class)->except(['index', 'create', 'show', 'edit']);
             });
 
             // Work Order

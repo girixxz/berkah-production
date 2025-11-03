@@ -31,7 +31,7 @@ return new class extends Migration
             $table->text('notes')->nullable();
             
             // Shipping
-            $table->foreignId('shipping_id')->constrained('shippings')->onDelete('cascade');
+            $table->enum('shipping_type', ['pickup', 'delivery']);
             
             // Totals
             $table->integer('total_qty')->default(0);

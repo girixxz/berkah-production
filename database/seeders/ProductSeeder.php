@@ -8,7 +8,6 @@ use App\Models\MaterialTexture;
 use App\Models\MaterialSleeve;
 use App\Models\MaterialSize;
 use App\Models\Service;
-use App\Models\Shipping;
 use Illuminate\Database\Seeder;
 
 class ProductSeeder extends Seeder
@@ -104,26 +103,6 @@ class ProductSeeder extends Seeder
 
         foreach ($services as $service) {
             Service::create($service);
-        }
-
-        // Shippings
-        $shippings = [
-            ['shipping_name' => 'JNE Regular'],
-            ['shipping_name' => 'JNE YES'],
-            ['shipping_name' => 'JNE OKE'],
-            ['shipping_name' => 'JNT Express'],
-            ['shipping_name' => 'JNT Cargo'],
-            ['shipping_name' => 'SiCepat BEST'],
-            ['shipping_name' => 'SiCepat HALU'],
-            ['shipping_name' => 'Anteraja Regular'],
-            ['shipping_name' => 'Anteraja Next Day'],
-            ['shipping_name' => 'Ninja Xpress Standard'],
-            ['shipping_name' => 'ID Express'],
-            ['shipping_name' => 'Ambil Sendiri'],
-        ];
-
-        foreach ($shippings as $shipping) {
-            Shipping::create($shipping);
         }
     }
 }
