@@ -230,7 +230,9 @@
                 </div>
                 <div>
                     <p class="text-sm text-gray-500">Shipping</p>
-                    <p class="text-sm font-medium text-gray-900">{{ $order->shipping->shipping_name ?? '-' }}</p>
+                    <p class="text-sm font-medium text-gray-900">
+                        {{ $order->shipping_type === 'pickup' ? 'Pickup' : 'Delivery' }}
+                    </p>
                 </div>
                 @if ($order->notes)
                     <div class="md:col-span-2">

@@ -603,12 +603,28 @@
                     </button>
                 </div>
 
-                {{-- Shipping --}}
+                {{-- Shipping Type --}}
                 <div class="relative flex flex-col gap-2 md:gap-3">
-                    <label class="text-sm text-gray-600 md:w-24">Shipping</label>
+                    <label class="text-sm text-gray-600 md:w-24">Shipping <span class="text-red-500">*</span></label>
 
-                    <x-select-form name="shipping_id" label="Shipping" placeholder="-- Select Shipping --"
-                        :options="$shippings" display="shipping_name" :old="old('shipping_id')" />
+                    <div class="flex flex-row gap-4">
+                        <label class="flex items-center gap-2 cursor-pointer">
+                            <input type="radio" name="shipping_type" value="pickup"
+                                {{ old('shipping_type', 'pickup') === 'pickup' ? 'checked' : '' }}
+                                class="w-4 h-4 text-primary border-gray-300 focus:ring-primary">
+                            <span class="text-sm text-gray-700">Pickup</span>
+                        </label>
+                        <label class="flex items-center gap-2 cursor-pointer">
+                            <input type="radio" name="shipping_type" value="delivery"
+                                {{ old('shipping_type') === 'delivery' ? 'checked' : '' }}
+                                class="w-4 h-4 text-primary border-gray-300 focus:ring-primary">
+                            <span class="text-sm text-gray-700">Delivery</span>
+                        </label>
+                    </div>
+
+                    @error('shipping_type')
+                        <span class="text-red-500 text-xs">{{ $message }}</span>
+                    @enderror
                 </div>
 
             </div>

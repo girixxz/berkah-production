@@ -10,7 +10,6 @@ use App\Models\MaterialCategory;
 use App\Models\MaterialTexture;
 use App\Models\MaterialSleeve;
 use App\Models\MaterialSize;
-use App\Models\Shipping;
 use App\Models\Service;
 use App\Models\DesignVariant;
 use App\Models\OrderItem;
@@ -40,7 +39,6 @@ class OrderController extends Controller
             'productCategory',
             'materialCategory',
             'materialTexture',
-            'shipping',
             'invoice'
         ]);
 
@@ -174,7 +172,6 @@ class OrderController extends Controller
             'materialSleeves' => Cache::remember('material_sleeves', 86400, fn() => MaterialSleeve::orderBy('sleeve_name')->get()),
             'materialSizes' => Cache::remember('material_sizes', 86400, fn() => MaterialSize::orderBy('size_name')->get()),
             'services' => Cache::remember('services', 86400, fn() => Service::orderBy('service_name')->get()),
-            'shippings' => Cache::remember('shippings', 86400, fn() => Shipping::orderBy('shipping_name')->get()),
             'provinces' => $this->getProvinces(),
         ];
 
@@ -193,7 +190,6 @@ class OrderController extends Controller
             'productCategory',
             'materialCategory',
             'materialTexture',
-            'shipping',
             'invoice.payments',
             'orderItems.designVariant',
             'orderItems.size',
@@ -253,7 +249,7 @@ class OrderController extends Controller
             'product_color' => 'required|string|max:100',
             'material_category_id' => 'required|exists:material_categories,id',
             'material_texture_id' => 'required|exists:material_textures,id',
-            'shipping_id' => 'required|exists:shippings,id',
+            'shipping_type' => 'required|in:pickup,delivery',
             'notes' => 'nullable|string',
             'total_qty' => 'required|integer|min:1',
             'subtotal' => 'required|numeric|min:0',
@@ -280,7 +276,8 @@ class OrderController extends Controller
             'product_color.required' => 'Product color is required.',
             'material_category_id.required' => 'Material category is required.',
             'material_texture_id.required' => 'Material texture is required.',
-            'shipping_id.required' => 'Shipping option is required.',
+            'shipping_type.required' => 'Shipping type is required.',
+            'shipping_type.in' => 'Shipping type must be either pickup or delivery.',
             'designs.required' => 'At least one design variant is required.',
             'designs.*.items.required' => 'At least one item is required for each design.',
             'additionals.*.service_id.required_with' => 'Service selection is required.',
@@ -303,7 +300,7 @@ class OrderController extends Controller
                 'product_color' => $validated['product_color'],
                 'material_category_id' => $validated['material_category_id'],
                 'material_texture_id' => $validated['material_texture_id'],
-                'shipping_id' => $validated['shipping_id'],
+                'shipping_type' => $validated['shipping_type'],
                 'notes' => $validated['notes'],
                 'total_qty' => $validated['total_qty'],
                 'subtotal' => $validated['subtotal'],
@@ -417,7 +414,6 @@ class OrderController extends Controller
             'materialSleeves' => Cache::remember('material_sleeves', 86400, fn() => MaterialSleeve::orderBy('sleeve_name')->get()),
             'materialSizes' => Cache::remember('material_sizes', 86400, fn() => MaterialSize::orderBy('size_name')->get()),
             'services' => Cache::remember('services', 86400, fn() => Service::orderBy('service_name')->get()),
-            'shippings' => Cache::remember('shippings', 86400, fn() => Shipping::orderBy('shipping_name')->get()),
         ];
 
         return view('pages.admin.orders.edit', $data);
@@ -439,7 +435,7 @@ class OrderController extends Controller
             'product_color' => 'required|string|max:100',
             'material_category_id' => 'required|exists:material_categories,id',
             'material_texture_id' => 'required|exists:material_textures,id',
-            'shipping_id' => 'required|exists:shippings,id',
+            'shipping_type' => 'required|in:pickup,delivery',
             'notes' => 'nullable|string',
             'total_qty' => 'required|integer|min:1',
             'subtotal' => 'required|numeric|min:0',
@@ -466,7 +462,8 @@ class OrderController extends Controller
             'product_color.required' => 'Product color is required.',
             'material_category_id.required' => 'Material category is required.',
             'material_texture_id.required' => 'Material texture is required.',
-            'shipping_id.required' => 'Shipping option is required.',
+            'shipping_type.required' => 'Shipping type is required.',
+            'shipping_type.in' => 'Shipping type must be either pickup or delivery.',
             'designs.required' => 'At least one design variant is required.',
             'designs.*.items.required' => 'At least one item is required for each design.',
             'additionals.*.service_id.required_with' => 'Service selection is required.',
@@ -489,7 +486,7 @@ class OrderController extends Controller
                 'product_color' => $validated['product_color'],
                 'material_category_id' => $validated['material_category_id'],
                 'material_texture_id' => $validated['material_texture_id'],
-                'shipping_id' => $validated['shipping_id'],
+                'shipping_type' => $validated['shipping_type'],
                 'notes' => $validated['notes'],
                 'total_qty' => $validated['total_qty'],
                 'subtotal' => $validated['subtotal'],
