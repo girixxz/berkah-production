@@ -103,14 +103,14 @@
             {{-- ================= SECTION 1: STATISTICS CARDS ================= --}}
             <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 {{-- Total Shipped --}}
-                <div class="bg-white border border-gray-200 rounded-lg p-4">
+                <div class="bg-gradient-to-br from-blue-50 to-blue-100 border border-blue-200 rounded-lg p-4">
                     <div class="flex items-center justify-between">
                         <div>
-                            <p class="text-sm text-gray-500">Total Shipped</p>
-                            <p class="text-2xl font-bold text-gray-900 mt-1">{{ number_format($stats['total_shipped']) }}</p>
+                            <p class="text-sm text-blue-600 font-medium">Total Shipped</p>
+                            <p class="text-2xl font-bold text-blue-900 mt-1">{{ number_format($stats['total_shipped']) }}</p>
                         </div>
-                        <div class="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                            <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <div class="w-12 h-12 bg-blue-200/50 rounded-lg flex items-center justify-center">
+                            <svg class="w-6 h-6 text-blue-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                     d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
                             </svg>
@@ -119,14 +119,14 @@
                 </div>
 
                 {{-- Pickup --}}
-                <div class="bg-white border border-gray-200 rounded-lg p-4">
+                <div class="bg-gradient-to-br from-purple-50 to-purple-100 border border-purple-200 rounded-lg p-4">
                     <div class="flex items-center justify-between">
                         <div>
-                            <p class="text-sm text-gray-500">Pickup</p>
-                            <p class="text-2xl font-bold text-gray-900 mt-1">{{ number_format($stats['pickup']) }}</p>
+                            <p class="text-sm text-purple-600 font-medium">Pickup</p>
+                            <p class="text-2xl font-bold text-purple-900 mt-1">{{ number_format($stats['pickup']) }}</p>
                         </div>
-                        <div class="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
-                            <svg class="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <div class="w-12 h-12 bg-purple-200/50 rounded-lg flex items-center justify-center">
+                            <svg class="w-6 h-6 text-purple-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                     d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
                             </svg>
@@ -135,14 +135,14 @@
                 </div>
 
                 {{-- Delivery --}}
-                <div class="bg-white border border-gray-200 rounded-lg p-4">
+                <div class="bg-gradient-to-br from-green-50 to-green-100 border border-green-200 rounded-lg p-4">
                     <div class="flex items-center justify-between">
                         <div>
-                            <p class="text-sm text-gray-500">Delivery</p>
-                            <p class="text-2xl font-bold text-gray-900 mt-1">{{ number_format($stats['delivery']) }}</p>
+                            <p class="text-sm text-green-600 font-medium">Delivery</p>
+                            <p class="text-2xl font-bold text-green-900 mt-1">{{ number_format($stats['delivery']) }}</p>
                         </div>
-                        <div class="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
-                            <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <div class="w-12 h-12 bg-green-200/50 rounded-lg flex items-center justify-center">
+                            <svg class="w-6 h-6 text-green-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                     d="M13 10V3L4 14h7v7l9-11h-7z" />
                             </svg>
