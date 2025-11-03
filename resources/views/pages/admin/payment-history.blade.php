@@ -420,47 +420,53 @@
                                 {{-- Customer --}}
                                 <td class="py-3 px-4">
                                     <div>
-                                        <p class="font-medium text-gray-900">
+                                        <p class="text-gray-700">
                                             {{ $payment->invoice->order->customer->customer_name ?? '-' }}</p>
                                         <p class="text-xs text-gray-500">
                                             {{ $payment->invoice->order->customer->phone ?? '-' }}</p>
                                     </div>
                                 </td>
 
-                                {{-- Order (Invoice + Product) --}}
+                                {{-- Order (Invoice + Product + Priority) --}}
                                 <td class="py-3 px-4">
-                                    <div>
-                                        <p class="font-medium text-gray-900">
+                                    <div class="flex items-center gap-1.5 flex-wrap">
+                                        <span class="font-medium text-gray-900">
                                             {{ $payment->invoice->invoice_no ?? '-' }}
-                                        </p>
-                                        <p class="text-xs text-gray-500">
-                                            ({{ $payment->invoice->order->productCategory->product_name ?? '-' }})
-                                        </p>
+                                        </span>
+                                        @if ($payment->invoice->order->productCategory)
+                                            <span
+                                                class="px-1.5 py-0.5 text-[10px] font-semibold text-green-700 bg-green-100 rounded">
+                                                {{ strtoupper($payment->invoice->order->productCategory->product_name) }}
+                                            </span>
+                                        @endif
+                                        @if (isset($payment->invoice->order->priority) && strtolower($payment->invoice->order->priority) === 'high')
+                                            <span class="text-[10px] font-semibold text-red-600 italic">(HIGH)</span>
+                                        @endif
                                     </div>
                                 </td>
 
                                 {{-- Payment Model (Method + Type) --}}
                                 <td class="py-3 px-4">
-                                    <div class="flex flex-col gap-1">
+                                    <div class="flex items-center gap-1.5 flex-wrap">
                                         @php
                                             $methodClass =
                                                 $payment->payment_method === 'tranfer'
                                                     ? 'bg-blue-100 text-blue-800'
-                                                    : 'bg-green-100 text-green-800';
+                                                    : 'bg-purple-100 text-purple-800';
                                             $typeClasses = [
                                                 'dp' => 'bg-yellow-100 text-yellow-800',
-                                                'repayment' => 'bg-purple-100 text-purple-800',
+                                                'repayment' => 'bg-orange-100 text-orange-800',
                                                 'full_payment' => 'bg-green-100 text-green-800',
                                             ];
                                             $typeClass =
                                                 $typeClasses[$payment->payment_type] ?? 'bg-gray-100 text-gray-800';
                                         @endphp
                                         <span
-                                            class="px-2 py-0.5 rounded-full text-xs font-medium {{ $methodClass }} inline-block w-fit">
+                                            class="px-1.5 py-0.5 rounded-full text-[10px] font-medium {{ $methodClass }} inline-block w-fit">
                                             {{ strtoupper($payment->payment_method) }}
                                         </span>
                                         <span
-                                            class="px-2 py-0.5 rounded-full text-xs font-medium {{ $typeClass }} inline-block w-fit">
+                                            class="px-1.5 py-0.5 rounded-full text-[10px] font-medium {{ $typeClass }} inline-block w-fit">
                                             {{ strtoupper(str_replace('_', ' ', $payment->payment_type)) }}
                                         </span>
                                     </div>
@@ -468,7 +474,7 @@
 
                                 {{-- Amount --}}
                                 <td class="py-3 px-4">
-                                    <span class="font-medium text-gray-900">Rp
+                                    <span class="text-gray-700">Rp
                                         {{ number_format($payment->amount, 0, ',', '.') }}</span>
                                 </td>
 
