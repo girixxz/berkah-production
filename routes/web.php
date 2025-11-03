@@ -113,6 +113,9 @@ Route::middleware(['auth'])->group(function () {
         // Customers
         Route::resource('customers', CustomerController::class)->except(['show']);
         
+        // Task Manage (View Only for Admin)
+        Route::get('manage-task', [ManageTaskController::class, 'index'])->name('manage-task');
+        
         // API for cascading dropdowns
         Route::get('customers/api/cities/{provinceId}', [CustomerController::class, 'getCities'])->name('customers.api.cities');
         Route::get('customers/api/districts/{cityId}', [CustomerController::class, 'getDistricts'])->name('customers.api.districts');

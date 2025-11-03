@@ -6,6 +6,7 @@ use App\Models\Order;
 use App\Models\OrderStage;
 use App\Models\ProductionStage;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
 class ManageTaskController extends Controller
@@ -20,6 +21,9 @@ class ManageTaskController extends Controller
         $startDate = $request->input('start_date');
         $endDate = $request->input('end_date');
         $dateRange = $request->input('date_range');
+
+        // Check if user is admin (view only mode)
+        $isViewOnly = Auth::check() && Auth::user()->role === 'admin';
 
         // Get all production stages
         $productionStages = ProductionStage::orderBy('id')->get();
@@ -83,7 +87,8 @@ class ManageTaskController extends Controller
         
         // Set default to this month if no date parameters at all
         if (!$dateRange && !$startDate && !$endDate) {
-            $redirect = redirect()->route('pm.manage-task', [
+            $routeName = $isViewOnly ? 'admin.manage-task' : 'pm.manage-task';
+            $redirect = redirect()->route($routeName, [
                 'filter' => $filter,
                 'search' => $search,
                 'date_range' => 'this_month',
@@ -123,7 +128,7 @@ class ManageTaskController extends Controller
             'order_finished' => Order::where('production_status', 'finished')->count(),
         ];
 
-        return view('pages.pm.manage-task', compact('orders', 'stats', 'productionStages', 'dateRange', 'startDate', 'endDate'));
+        return view('pages.pm.manage-task', compact('orders', 'stats', 'productionStages', 'dateRange', 'startDate', 'endDate', 'isViewOnly'));
     }
 
     /**

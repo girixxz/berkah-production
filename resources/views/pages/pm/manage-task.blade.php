@@ -5,10 +5,11 @@
 @section('content')
     @php
         $role = auth()->user()?->role;
-        $root = $role === 'owner' ? 'Admin' : 'Menu';
+        $root = $role === 'owner' ? 'Admin' : ($role === 'admin' ? 'Admin' : 'Menu');
+        $routeName = $role === 'admin' ? 'admin.manage-task' : 'pm.manage-task';
     @endphp
 
-    <x-nav-locate :items="[$root, 'Manage Task']" />
+    <x-nav-locate :items="[$root, 'Task Manage']" />
 
     {{-- Root Alpine State --}}
     <div x-data="{
@@ -207,6 +208,22 @@
         }
     }" class="space-y-6">
 
+        {{-- ================= VIEW ONLY NOTICE FOR ADMIN ================= --}}
+        @if ($isViewOnly)
+            <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4 flex items-start gap-3">
+                <svg class="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd"
+                        d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
+                        clip-rule="evenodd" />
+                </svg>
+                <div>
+                    <h4 class="text-sm font-semibold text-yellow-800">View Only Mode</h4>
+                    <p class="text-sm text-yellow-700 mt-1">You are viewing this page in read-only mode. All editing features
+                        are disabled.</p>
+                </div>
+            </div>
+        @endif
+
         {{-- ================= SECTION 1: STATISTICS CARDS ================= --}}
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {{-- Total Orders --}}
@@ -266,19 +283,19 @@
             <div class="flex flex-col xl:flex-row xl:items-center gap-4">
                 {{-- Left: Filter Buttons --}}
                 <div class="grid grid-cols-3 md:flex md:flex-wrap gap-2">
-                    <a href="{{ route('pm.manage-task', ['filter' => 'default'] + request()->except('filter')) }}"
+                    <a href="{{ route($routeName, ['filter' => 'default'] + request()->except('filter')) }}"
                         :class="activeFilter === 'default' ? 'bg-primary text-white' :
                             'bg-gray-100 text-gray-700 hover:bg-gray-200'"
                         class="px-4 py-2 rounded-md text-sm font-medium transition-colors text-center">
                         Default
                     </a>
-                    <a href="{{ route('pm.manage-task', ['filter' => 'wip'] + request()->except('filter')) }}"
+                    <a href="{{ route($routeName, ['filter' => 'wip'] + request()->except('filter')) }}"
                         :class="activeFilter === 'wip' ? 'bg-primary text-white' :
                             'bg-gray-100 text-gray-700 hover:bg-gray-200'"
                         class="px-4 py-2 rounded-md text-sm font-medium transition-colors text-center">
                         WIP
                     </a>
-                    <a href="{{ route('pm.manage-task', ['filter' => 'finished'] + request()->except('filter')) }}"
+                    <a href="{{ route($routeName, ['filter' => 'finished'] + request()->except('filter')) }}"
                         :class="activeFilter === 'finished' ? 'bg-primary text-white' :
                             'bg-gray-100 text-gray-700 hover:bg-gray-200'"
                         class="px-4 py-2 rounded-md text-sm font-medium transition-colors text-center">
@@ -289,7 +306,7 @@
                 {{-- Right: Search & Date Filter --}}
                 <div class="flex gap-2 items-center xl:flex-1 xl:ml-auto xl:min-w-0">
                     {{-- Search --}}
-                    <form method="GET" action="{{ route('pm.manage-task') }}" class="flex-1 xl:min-w-[180px]"
+                    <form method="GET" action="{{ route($routeName) }}" class="flex-1 xl:min-w-[180px]"
                         x-ref="searchForm">
                         <input type="hidden" name="filter" value="{{ request('filter', 'default') }}">
                         @if (request('start_date'))
@@ -324,7 +341,7 @@
                         </button>
 
                         {{-- Hidden Form for Date Presets --}}
-                        <form x-ref="dateForm" method="GET" action="{{ route('pm.manage-task') }}" class="hidden">
+                        <form x-ref="dateForm" method="GET" action="{{ route($routeName) }}" class="hidden">
                             <input type="hidden" name="filter" :value="activeFilter">
                             <input type="hidden" name="search" :value="searchQuery">
                             <input type="hidden" name="date_range" :value="dateRange">
@@ -367,7 +384,7 @@
                             </div>
 
                             {{-- Custom Range Form --}}
-                            <form x-show="showDateCustomRange" method="GET" action="{{ route('pm.manage-task') }}"
+                            <form x-show="showDateCustomRange" method="GET" action="{{ route($routeName) }}"
                                 class="p-4" @submit="dateRange = 'custom'">
                                 <input type="hidden" name="filter" :value="activeFilter">
                                 <input type="hidden" name="search" :value="searchQuery">
@@ -394,7 +411,7 @@
                                             Back
                                         </button>
                                     </div>
-                                    <a href="{{ route('pm.manage-task', ['filter' => request('filter', 'default')]) }}"
+                                    <a href="{{ route($routeName, ['filter' => request('filter', 'default')]) }}"
                                         class="block w-full px-4 py-2 bg-gray-100 text-gray-700 rounded-md text-sm font-medium hover:bg-gray-200 text-center">
                                         Reset Filter
                                     </a>
@@ -582,14 +599,19 @@
                                                 window.addEventListener('resize', closeOnScroll);
                                             }
                                         })">
-                                        <button x-ref="button" @click="checkPosition(); open = !open" type="button"
-                                            class="cursor-pointer inline-flex items-center justify-center w-8 h-8 rounded-md hover:bg-gray-100"
-                                            title="Actions">
-                                            <svg class="w-5 h-5 text-gray-600" fill="currentColor" viewBox="0 0 20 20">
-                                                <path
-                                                    d="M6 10a2 2 0 11-4 0 2 2 0 014 0zM12 10a2 2 0 11-4 0 2 2 0 014 0zM16 12a2 2 0 100-4 2 2 0 000 4z" />
-                                            </svg>
-                                        </button>
+                                        @if (!$isViewOnly)
+                                            <button x-ref="button" @click="checkPosition(); open = !open" type="button"
+                                                class="cursor-pointer inline-flex items-center justify-center w-8 h-8 rounded-md hover:bg-gray-100"
+                                                title="Actions">
+                                                <svg class="w-5 h-5 text-gray-600" fill="currentColor"
+                                                    viewBox="0 0 20 20">
+                                                    <path
+                                                        d="M6 10a2 2 0 11-4 0 2 2 0 014 0zM12 10a2 2 0 11-4 0 2 2 0 014 0zM16 12a2 2 0 100-4 2 2 0 000 4z" />
+                                                </svg>
+                                            </button>
+                                        @else
+                                            <span class="text-xs text-gray-400 italic px-2">View Only</span>
+                                        @endif
 
                                         {{-- Dropdown Menu with Fixed Position --}}
                                         <div x-show="open" @click.away="open = false" x-cloak x-ref="dropdown"
@@ -822,21 +844,21 @@
                                         {{-- Status Buttons - PENDING, IN PROGRESS, and DONE --}}
                                         <div class="flex gap-2">
                                             <button type="button" @click="updateStageStatus(stage.id, 'pending')"
-                                                :disabled="isUpdatingStatus"
+                                                :disabled="isUpdatingStatus || {{ $isViewOnly ? 'true' : 'false' }}"
                                                 :class="stage.status === 'pending' ? 'bg-gray-200 border-gray-300' :
                                                     'bg-white hover:bg-gray-100'"
                                                 class="px-3 py-1.5 border border-gray-300 rounded-md text-xs font-medium text-gray-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
                                                 Pending
                                             </button>
                                             <button type="button" @click="updateStageStatus(stage.id, 'in_progress')"
-                                                :disabled="isUpdatingStatus"
+                                                :disabled="isUpdatingStatus || {{ $isViewOnly ? 'true' : 'false' }}"
                                                 :class="stage.status === 'in_progress' ? 'bg-blue-100 border-blue-300' :
                                                     'bg-white hover:bg-blue-50'"
                                                 class="px-3 py-1.5 border border-gray-300 rounded-md text-xs font-medium text-gray-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
                                                 In Progress
                                             </button>
                                             <button type="button" @click="updateStageStatus(stage.id, 'done')"
-                                                :disabled="isUpdatingStatus"
+                                                :disabled="isUpdatingStatus || {{ $isViewOnly ? 'true' : 'false' }}"
                                                 :class="stage.status === 'done' ? 'bg-green-100 border-green-300' :
                                                     'bg-white hover:bg-green-50'"
                                                 class="px-3 py-1.5 border border-gray-300 rounded-md text-xs font-medium text-gray-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">

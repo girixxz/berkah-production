@@ -141,12 +141,14 @@
         @endif
 
         {{-- ================= PM MENU ================= --}}
-        @if (in_array($role, ['owner', 'pm']))
+        @if (in_array($role, ['owner', 'pm', 'admin']))
             <div class="mb-4">
                 @if ($role === 'owner')
                     <p class="px-4 text-xs font-semibold text-gray-dark uppercase mb-2">PRODUCT MANAGER</p>
                 @elseif ($role === 'pm')
                     <p class="px-4 text-xs font-semibold text-gray-dark uppercase mb-2">MENU</p>
+                @elseif ($role === 'admin')
+                    <p class="px-4 text-xs font-semibold text-gray-dark uppercase mb-2">PRODUCT MANAGER</p>
                 @endif
 
                 <ul class="space-y-2">
@@ -160,9 +162,11 @@
                         </li>
                     @endif
                     <li>
-                        <x-sidebar-menu.main-menu href="{{ route('pm.manage-task') }}" :pattern="'pm.manage-task'">
+                        <x-sidebar-menu.main-menu
+                            href="{{ route($role === 'admin' ? 'admin.manage-task' : 'pm.manage-task') }}"
+                            :pattern="$role === 'admin' ? 'admin.manage-task' : 'pm.manage-task'">
                             <x-icons.manage-task class="text-current" />
-                            <span class="ml-2">Manage Task</span>
+                            <span class="ml-2">Task Manage</span>
                         </x-sidebar-menu.main-menu>
                     </li>
                 </ul>
