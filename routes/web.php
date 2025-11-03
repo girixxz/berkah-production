@@ -104,7 +104,9 @@ Route::middleware(['auth'])->group(function () {
         Route::delete('payments/{payment}', [\App\Http\Controllers\PaymentController::class, 'destroy'])->name('payments.destroy');
         Route::get('invoices/{invoice}/payments', [\App\Http\Controllers\PaymentController::class, 'getPaymentsByInvoice'])->name('invoices.payments');
 
-        Route::get('delivery-orders', fn() => view('pages.admin.delivery-orders'))->name('delivery-orders');
+        // Shipping Orders
+        Route::get('shipping-orders', [\App\Http\Controllers\ShippingOrderController::class, 'index'])->name('shipping-orders');
+        
         Route::get('work-orders', fn() => view('pages.admin.work-orders'))->name('work-orders');
         Route::get('payment-history', [\App\Http\Controllers\PaymentHistoryController::class, 'index'])->name('payment-history');
 

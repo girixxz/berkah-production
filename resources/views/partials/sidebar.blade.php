@@ -108,11 +108,11 @@
                             <span class="ml-2">Orders</span>
                         </x-sidebar-menu.main-menu>
                     </li>
-                    <!-- Delivery Orders -->
+                    <!-- Shipping Orders -->
                     <li>
-                        <x-sidebar-menu.main-menu href="{{ route('admin.delivery-orders') }}" :pattern="'admin.delivery-orders'">
+                        <x-sidebar-menu.main-menu href="{{ route('admin.shipping-orders') }}" :pattern="'admin.shipping-orders'">
                             <x-icons.delivery-orders class="text-current" />
-                            <span class="ml-2">Delivery Orders</span>
+                            <span class="ml-2">Shipping Orders</span>
                         </x-sidebar-menu.main-menu>
                     </li>
                     <li>
