@@ -430,7 +430,7 @@
                                 {{-- Customer --}}
                                 <td class="py-3 px-3">
                                     <div>
-                                        <p class="font-medium text-gray-900 whitespace-nowrap">
+                                        <p class="text-gray-700 whitespace-nowrap">
                                             {{ $order->customer->customer_name ?? '-' }}</p>
                                         <p class="text-[10px] text-gray-500">
                                             {{ $order->customer->phone ?? '-' }}</p>
@@ -439,14 +439,19 @@
 
                                 {{-- Order (Invoice + Product + Priority) --}}
                                 <td class="py-3 px-3">
-                                    <div class="max-w-[200px]">
-                                        <p class="font-medium text-gray-900 text-[11px]">
+                                    <div class="flex items-center gap-1.5 flex-wrap max-w-[200px]">
+                                        <span class="font-medium text-gray-900 text-[11px]">
                                             {{ $order->invoice->invoice_no ?? '-' }}
-                                            {{ $order->productCategory->product_name ?? '-' }}
-                                            @if ($order->priority === 'high')
-                                                <span class="text-red-600 font-semibold">(HIGH)</span>
-                                            @endif
-                                        </p>
+                                        </span>
+                                        @if ($order->productCategory)
+                                            <span
+                                                class="px-1.5 py-0.5 text-[10px] font-semibold text-green-700 bg-green-100 rounded">
+                                                {{ strtoupper($order->productCategory->product_name) }}
+                                            </span>
+                                        @endif
+                                        @if ($order->priority === 'high')
+                                            <span class="text-[10px] font-semibold text-red-600 italic">(HIGH)</span>
+                                        @endif
                                     </div>
                                 </td>
 
