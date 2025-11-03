@@ -462,6 +462,7 @@
                                     <th class="py-3 px-4 text-left font-medium">Remaining</th>
                                     <th class="py-3 px-4 text-left font-medium">Status</th>
                                     <th class="py-3 px-4 text-left font-medium">Finished Date</th>
+                                    <th class="py-3 px-4 text-left font-medium">Shipping Status</th>
                                     <th class="py-3 px-4 text-center font-medium rounded-r-lg">Action</th>
                                 </tr>
                                 {{-- Other Filters: Default Columns --}}
@@ -549,6 +550,23 @@
                                         <td class="py-3 px-4">
                                             <span
                                                 class="text-gray-700">{{ $order->finished_date ? \Carbon\Carbon::parse($order->finished_date)->format('d M Y H:i') : '-' }}</span>
+                                        </td>
+
+                                        {{-- Shipping Status --}}
+                                        <td class="py-3 px-4">
+                                            @php
+                                                $shippingStatusClasses = [
+                                                    'pending' => 'bg-orange-100 text-orange-800',
+                                                    'shipped' => 'bg-blue-100 text-blue-800',
+                                                ];
+                                                $shippingStatusClass =
+                                                    $shippingStatusClasses[$order->shipping_status] ??
+                                                    'bg-gray-100 text-gray-800';
+                                            @endphp
+                                            <span
+                                                class="px-2 py-1 rounded-full text-xs font-medium {{ $shippingStatusClass }}">
+                                                {{ strtoupper($order->shipping_status) }}
+                                            </span>
                                         </td>
 
                                         {{-- Action --}}
@@ -649,6 +667,26 @@
                                                                 </svg>
                                                                 Add Payment
                                                             </button>
+                                                        @endif
+
+                                                        {{-- Move to Shippings (Only for finished orders that haven't been shipped) --}}
+                                                        @if ($order->production_status === 'finished' && $order->shipping_status === 'pending')
+                                                            <form
+                                                                action="{{ route('admin.orders.move-to-shipping', $order->id) }}"
+                                                                method="POST" class="w-full">
+                                                                @csrf
+                                                                @method('PATCH')
+                                                                <button type="submit"
+                                                                    class="w-full text-left px-4 py-2 text-sm text-green-600 hover:bg-green-50 flex items-center gap-2">
+                                                                    <svg class="w-4 h-4" fill="none"
+                                                                        stroke="currentColor" viewBox="0 0 24 24">
+                                                                        <path stroke-linecap="round"
+                                                                            stroke-linejoin="round" stroke-width="2"
+                                                                            d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
+                                                                    </svg>
+                                                                    Move to Shippings
+                                                                </button>
+                                                            </form>
                                                         @endif
 
                                                         {{-- Cancel (Hidden for cancelled) --}}
@@ -848,6 +886,26 @@
                                                             </button>
                                                         @endif
 
+                                                        {{-- Move to Shippings (Only for finished orders that haven't been shipped) --}}
+                                                        @if ($order->production_status === 'finished' && $order->shipping_status === 'pending')
+                                                            <form
+                                                                action="{{ route('admin.orders.move-to-shipping', $order->id) }}"
+                                                                method="POST" class="w-full">
+                                                                @csrf
+                                                                @method('PATCH')
+                                                                <button type="submit"
+                                                                    class="w-full text-left px-4 py-2 text-sm text-green-600 hover:bg-green-50 flex items-center gap-2">
+                                                                    <svg class="w-4 h-4" fill="none"
+                                                                        stroke="currentColor" viewBox="0 0 24 24">
+                                                                        <path stroke-linecap="round"
+                                                                            stroke-linejoin="round" stroke-width="2"
+                                                                            d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
+                                                                    </svg>
+                                                                    Move to Shippings
+                                                                </button>
+                                                            </form>
+                                                        @endif
+
                                                         {{-- Cancel (Hidden for cancelled) --}}
                                                         @if ($order->production_status !== 'cancelled')
                                                             <button type="button"
@@ -870,7 +928,7 @@
                                 @empty
                                     {{-- Empty State for Finished Filter --}}
                                     <tr x-show="activeFilter === 'finished'">
-                                        <td colspan="9" class="py-8 text-center text-gray-400">
+                                        <td colspan="10" class="py-8 text-center text-gray-400">
                                             <svg class="w-16 h-16 mx-auto mb-3 opacity-50" fill="none"
                                                 stroke="currentColor" viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"

@@ -96,6 +96,7 @@ Route::middleware(['auth'])->group(function () {
         // Orders
         Route::resource('orders', OrderController::class);
         Route::patch('orders/{order}/cancel', [OrderController::class, 'cancel'])->name('orders.cancel');
+        Route::patch('orders/{order}/move-to-shipping', [OrderController::class, 'moveToShipping'])->name('orders.move-to-shipping');
         Route::get('orders/{order}/invoice/download', [OrderController::class, 'downloadInvoice'])->name('orders.invoice.download');
 
         // Payments

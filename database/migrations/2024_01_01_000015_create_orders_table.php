@@ -32,6 +32,8 @@ return new class extends Migration
             
             // Shipping
             $table->enum('shipping_type', ['pickup', 'delivery']);
+            $table->enum('shipping_status', ['pending', 'shipped'])->default('pending');
+            $table->timestamp('shipping_date')->nullable();
 
             // Totals
             $table->integer('total_qty')->default(0);

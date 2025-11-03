@@ -587,6 +587,35 @@ class OrderController extends Controller
     }
 
     /**
+     * Move order to shipping
+     */
+    public function moveToShipping(Order $order)
+    {
+        // Check if order is finished and not yet shipped
+        if ($order->production_status !== 'finished') {
+            return redirect()->back()
+                ->with('message', 'Only finished orders can be moved to shipping.')
+                ->with('alert-type', 'warning');
+        }
+
+        if ($order->shipping_status === 'shipped') {
+            return redirect()->back()
+                ->with('message', 'Order is already shipped.')
+                ->with('alert-type', 'warning');
+        }
+
+        // Update shipping status and date
+        $order->update([
+            'shipping_status' => 'shipped',
+            'shipping_date' => now()
+        ]);
+
+        return redirect()->back()
+            ->with('message', 'Order moved to shipping successfully.')
+            ->with('alert-type', 'success');
+    }
+
+    /**
      * Remove the specified resource from storage.
      */
     public function destroy(Order $order)
