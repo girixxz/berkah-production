@@ -482,13 +482,22 @@
                             @forelse ($orders as $order)
                                 {{-- Finished Filter: Different Row Structure --}}
                                 <tr x-show="activeFilter === 'finished'" class="hover:bg-gray-50">
-                                    {{-- Invoice No with Priority --}}
+                                    {{-- Invoice No with Shipping Type and Priority --}}
                                     <td class="py-3 px-4">
-                                        <div class="flex items-center gap-2">
+                                        <div class="flex items-center gap-1.5 flex-wrap">
                                             <span
                                                 class="font-medium text-gray-900">{{ $order->invoice->invoice_no ?? '-' }}</span>
+                                            @if ($order->shipping_type)
+                                                @if (strtolower($order->shipping_type) === 'pickup')
+                                                    <span
+                                                        class="px-1.5 py-0.5 text-[10px] font-semibold text-green-700 bg-green-100 rounded">PICKUP</span>
+                                                @elseif (strtolower($order->shipping_type) === 'delivery')
+                                                    <span
+                                                        class="px-1.5 py-0.5 text-[10px] font-semibold text-blue-700 bg-blue-100 rounded">DELIVERY</span>
+                                                @endif
+                                            @endif
                                             @if (isset($order->priority) && strtolower($order->priority) === 'high')
-                                                <span class="text-xs text-red-600 italic font-medium">(HIGH)</span>
+                                                <span class="text-[10px] font-semibold text-red-600 italic">(HIGH)</span>
                                             @endif
                                         </div>
                                     </td>
@@ -496,7 +505,7 @@
                                     {{-- Customer --}}
                                     <td class="py-3 px-4">
                                         <div>
-                                            <p class="font-medium text-gray-900">
+                                            <p class="text-gray-700">
                                                 {{ $order->customer->customer_name ?? '-' }}
                                             </p>
                                             <p class="text-xs text-gray-500">{{ $order->customer->phone ?? '-' }}</p>
@@ -511,19 +520,18 @@
 
                                     {{-- QTY --}}
                                     <td class="py-3 px-4">
-                                        <span
-                                            class="font-medium text-gray-900">{{ $order->orderItems->sum('qty') }}</span>
+                                        <span class="text-gray-700">{{ $order->orderItems->sum('qty') }}</span>
                                     </td>
 
                                     {{-- Total Bill --}}
                                     <td class="py-3 px-4">
-                                        <span class="font-medium text-gray-900">Rp
+                                        <span class="text-gray-700">Rp
                                             {{ number_format($order->invoice->total_bill ?? 0, 0, ',', '.') }}</span>
                                     </td>
 
                                     {{-- Remaining --}}
                                     <td class="py-3 px-4">
-                                        <span class="font-medium text-orange-600">Rp
+                                        <span class="font-medium text-red-600">Rp
                                             {{ number_format($order->invoice->amount_due ?? 0, 0, ',', '.') }}</span>
                                     </td>
 
@@ -701,8 +709,8 @@
                                                         </form>
                                                     @endif
 
-                                                    {{-- Cancel (Hidden for cancelled) --}}
-                                                    @if ($order->production_status !== 'cancelled')
+                                                    {{-- Cancel (Hidden for cancelled and finished) --}}
+                                                    @if ($order->production_status !== 'cancelled' && $order->production_status !== 'finished')
                                                         <button type="button"
                                                             @click="showCancelConfirm = {{ $order->id }}; open = false"
                                                             class="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2">
@@ -723,13 +731,22 @@
 
                                 {{-- Other Filters: Default Row Structure --}}
                                 <tr x-show="activeFilter !== 'finished'" class="hover:bg-gray-50">
-                                    {{-- Invoice No with Priority --}}
+                                    {{-- Invoice No with Shipping Type and Priority --}}
                                     <td class="py-3 px-4">
-                                        <div class="flex items-center gap-2">
+                                        <div class="flex items-center gap-1.5 flex-wrap">
                                             <span
                                                 class="font-medium text-gray-900">{{ $order->invoice->invoice_no ?? '-' }}</span>
+                                            @if ($order->shipping_type)
+                                                @if (strtolower($order->shipping_type) === 'pickup')
+                                                    <span
+                                                        class="px-1.5 py-0.5 text-[10px] font-semibold text-green-700 bg-green-100 rounded">PICKUP</span>
+                                                @elseif (strtolower($order->shipping_type) === 'delivery')
+                                                    <span
+                                                        class="px-1.5 py-0.5 text-[10px] font-semibold text-blue-700 bg-blue-100 rounded">DELIVERY</span>
+                                                @endif
+                                            @endif
                                             @if (isset($order->priority) && strtolower($order->priority) === 'high')
-                                                <span class="text-xs text-red-600 italic font-medium">(HIGH)</span>
+                                                <span class="text-[10px] font-semibold text-red-600 italic">(HIGH)</span>
                                             @endif
                                         </div>
                                     </td>
@@ -737,7 +754,7 @@
                                     {{-- Customer --}}
                                     <td class="py-3 px-4">
                                         <div>
-                                            <p class="font-medium text-gray-900">
+                                            <p class="text-gray-700">
                                                 {{ $order->customer->customer_name ?? '-' }}
                                             </p>
                                             <p class="text-xs text-gray-500">{{ $order->customer->phone ?? '-' }}</p>
@@ -752,19 +769,18 @@
 
                                     {{-- QTY --}}
                                     <td class="py-3 px-4">
-                                        <span
-                                            class="font-medium text-gray-900">{{ $order->orderItems->sum('qty') }}</span>
+                                        <span class="text-gray-700">{{ $order->orderItems->sum('qty') }}</span>
                                     </td>
 
                                     {{-- Total Bill --}}
                                     <td class="py-3 px-4">
-                                        <span class="font-medium text-gray-900">Rp
+                                        <span class="text-gray-700">Rp
                                             {{ number_format($order->invoice->total_bill ?? 0, 0, ',', '.') }}</span>
                                     </td>
 
                                     {{-- Remaining --}}
                                     <td class="py-3 px-4">
-                                        <span class="font-medium text-orange-600">Rp
+                                        <span class="font-medium text-red-600">Rp
                                             {{ number_format($order->invoice->amount_due ?? 0, 0, ',', '.') }}</span>
                                     </td>
 
@@ -931,8 +947,8 @@
                                                         </form>
                                                     @endif
 
-                                                    {{-- Cancel (Hidden for cancelled) --}}
-                                                    @if ($order->production_status !== 'cancelled')
+                                                    {{-- Cancel (Hidden for cancelled and finished) --}}
+                                                    @if ($order->production_status !== 'cancelled' && $order->production_status !== 'finished')
                                                         <button type="button"
                                                             @click="showCancelConfirm = {{ $order->id }}; open = false"
                                                             class="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2">
@@ -1092,7 +1108,7 @@
                                 <p class="text-sm font-semibold text-gray-900"
                                     x-text="selectedOrderForPayment?.invoice_no || '-'"></p>
                                 <p class="text-xs text-gray-500 mt-2">Remaining Due</p>
-                                <p class="text-sm font-semibold text-orange-600"
+                                <p class="text-sm font-semibold text-red-600"
                                     x-text="'Rp ' + Math.floor(selectedOrderForPayment?.remaining_due || 0).toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.')">
                                 </p>
                             </div>
