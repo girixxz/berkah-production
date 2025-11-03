@@ -342,11 +342,11 @@
                                 <tr class="hover:bg-gray-50">
                                     {{-- Invoice No with Priority --}}
                                     <td class="py-3 px-4">
-                                        <div class="flex items-center gap-2">
+                                        <div class="flex items-center gap-1.5 flex-wrap">
                                             <span
                                                 class="font-medium text-gray-900">{{ $order->invoice->invoice_no ?? '-' }}</span>
                                             @if (isset($order->priority) && strtolower($order->priority) === 'high')
-                                                <span class="text-xs text-red-600 italic font-medium">(HIGH)</span>
+                                                <span class="text-[10px] font-semibold text-red-600 italic">(HIGH)</span>
                                             @endif
                                         </div>
                                     </td>
@@ -354,7 +354,7 @@
                                     {{-- Customer --}}
                                     <td class="py-3 px-4">
                                         <div>
-                                            <p class="font-medium text-gray-900">
+                                            <p class="text-gray-700">
                                                 {{ $order->customer->customer_name ?? '-' }}
                                             </p>
                                             <p class="text-xs text-gray-500">{{ $order->customer->phone ?? '-' }}</p>
@@ -369,8 +369,7 @@
 
                                     {{-- QTY --}}
                                     <td class="py-3 px-4">
-                                        <span
-                                            class="font-medium text-gray-900">{{ $order->orderItems->sum('qty') }}</span>
+                                        <span class="text-gray-700">{{ $order->orderItems->sum('qty') }}</span>
                                     </td>
 
                                     {{-- Finished Date --}}
