@@ -391,185 +391,180 @@
             </div>
 
             {{-- ================= SECTION 3: TABLE ================= --}}
-            <div class="bg-white border border-gray-200 rounded-lg p-5 mt-6">
-                <div class="overflow-x-auto">
-                    <table class="min-w-full text-sm">
-                        <thead class="bg-primary-light text-gray-600">
-                            <tr>
-                                <th class="py-3 px-4 text-left font-medium rounded-l-lg">Paid At</th>
-                                <th class="py-3 px-4 text-left font-medium">Customer</th>
-                                <th class="py-3 px-4 text-left font-medium">Order</th>
-                                <th class="py-3 px-4 text-left font-medium">Payment Model</th>
-                                <th class="py-3 px-4 text-left font-medium">Amount</th>
-                                <th class="py-3 px-4 text-left font-medium">Status</th>
-                                <th class="py-3 px-4 text-left font-medium">Notes</th>
-                                <th class="py-3 px-4 text-center font-medium">Attachment</th>
+            <div class="overflow-x-auto mt-4">
+                <table class="min-w-full text-sm">
+                    <thead class="bg-primary-light text-gray-600">
+                        <tr>
+                            <th class="py-3 px-4 text-left font-medium rounded-l-lg">Paid At</th>
+                            <th class="py-3 px-4 text-left font-medium">Customer</th>
+                            <th class="py-3 px-4 text-left font-medium">Order</th>
+                            <th class="py-3 px-4 text-left font-medium">Payment Model</th>
+                            <th class="py-3 px-4 text-left font-medium">Amount</th>
+                            <th class="py-3 px-4 text-left font-medium">Status</th>
+                            <th class="py-3 px-4 text-left font-medium">Notes</th>
+                            <th class="py-3 px-4 text-center font-medium">Attachment</th>
+                            @if ($role === 'owner')
+                                <th class="py-3 px-4 text-center font-medium rounded-r-lg">Action</th>
+                            @endif
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-200">
+                        @forelse ($payments as $payment)
+                            <tr class="hover:bg-gray-50">
+                                {{-- Paid At --}}
+                                <td class="py-3 px-4">
+                                    <span
+                                        class="text-gray-700">{{ \Carbon\Carbon::parse($payment->paid_at)->format('d M Y H:i') }}</span>
+                                </td>
+
+                                {{-- Customer --}}
+                                <td class="py-3 px-4">
+                                    <div>
+                                        <p class="font-medium text-gray-900">
+                                            {{ $payment->invoice->order->customer->customer_name ?? '-' }}</p>
+                                        <p class="text-xs text-gray-500">
+                                            {{ $payment->invoice->order->customer->phone ?? '-' }}</p>
+                                    </div>
+                                </td>
+
+                                {{-- Order (Invoice + Product) --}}
+                                <td class="py-3 px-4">
+                                    <div>
+                                        <p class="font-medium text-gray-900">
+                                            {{ $payment->invoice->invoice_no ?? '-' }}
+                                        </p>
+                                        <p class="text-xs text-gray-500">
+                                            ({{ $payment->invoice->order->productCategory->product_name ?? '-' }})
+                                        </p>
+                                    </div>
+                                </td>
+
+                                {{-- Payment Model (Method + Type) --}}
+                                <td class="py-3 px-4">
+                                    <div class="flex flex-col gap-1">
+                                        @php
+                                            $methodClass =
+                                                $payment->payment_method === 'tranfer'
+                                                    ? 'bg-blue-100 text-blue-800'
+                                                    : 'bg-green-100 text-green-800';
+                                            $typeClasses = [
+                                                'dp' => 'bg-yellow-100 text-yellow-800',
+                                                'repayment' => 'bg-purple-100 text-purple-800',
+                                                'full_payment' => 'bg-green-100 text-green-800',
+                                            ];
+                                            $typeClass =
+                                                $typeClasses[$payment->payment_type] ?? 'bg-gray-100 text-gray-800';
+                                        @endphp
+                                        <span
+                                            class="px-2 py-0.5 rounded-full text-xs font-medium {{ $methodClass }} inline-block w-fit">
+                                            {{ strtoupper($payment->payment_method) }}
+                                        </span>
+                                        <span
+                                            class="px-2 py-0.5 rounded-full text-xs font-medium {{ $typeClass }} inline-block w-fit">
+                                            {{ strtoupper(str_replace('_', ' ', $payment->payment_type)) }}
+                                        </span>
+                                    </div>
+                                </td>
+
+                                {{-- Amount --}}
+                                <td class="py-3 px-4">
+                                    <span class="font-medium text-gray-900">Rp
+                                        {{ number_format($payment->amount, 0, ',', '.') }}</span>
+                                </td>
+
+                                {{-- Status --}}
+                                <td class="py-3 px-4">
+                                    @php
+                                        $statusClasses = [
+                                            'pending' => 'bg-yellow-100 text-yellow-800',
+                                            'approved' => 'bg-green-100 text-green-800',
+                                            'rejected' => 'bg-red-100 text-red-800',
+                                        ];
+                                        $statusClass = $statusClasses[$payment->status] ?? 'bg-gray-100 text-gray-800';
+                                    @endphp
+                                    <span class="px-2 py-1 rounded-full text-xs font-medium {{ $statusClass }}">
+                                        {{ strtoupper($payment->status) }}
+                                    </span>
+                                </td>
+
+                                {{-- Notes --}}
+                                <td class="py-3 px-4">
+                                    <span class="text-gray-700 text-xs">{{ $payment->notes ?? '-' }}</span>
+                                </td>
+
+                                {{-- Attachment --}}
+                                <td class="py-3 px-4 text-center">
+                                    @if ($payment->img_url)
+                                        <button @click="selectedImage = '{{ $payment->img_url }}'; showImageModal = true"
+                                            class="inline-flex items-center gap-1 px-3 py-1 bg-blue-100 text-blue-700 rounded-md hover:bg-blue-200 text-xs font-medium cursor-pointer">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor"
+                                                viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                    d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                            </svg>
+                                            View
+                                        </button>
+                                    @else
+                                        <span class="text-gray-400 text-xs">-</span>
+                                    @endif
+                                </td>
+
+                                {{-- Action (Owner Only) --}}
                                 @if ($role === 'owner')
-                                    <th class="py-3 px-4 text-center font-medium rounded-r-lg">Action</th>
+                                    <td class="py-3 px-4">
+                                        <div class="flex justify-center gap-2">
+                                            @if ($payment->status === 'pending')
+                                                {{-- Approve Button --}}
+                                                <button type="button"
+                                                    @click="showActionConfirm = {{ $payment->id }}; actionType = 'approve'"
+                                                    class="inline-flex items-center gap-1 px-3 py-1 bg-green-100 text-green-700 rounded-md hover:bg-green-200 text-xs font-medium cursor-pointer">
+                                                    <svg class="w-4 h-4" fill="none" stroke="currentColor"
+                                                        viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round"
+                                                            stroke-width="2" d="M5 13l4 4L19 7" />
+                                                    </svg>
+                                                    Approve
+                                                </button>
+
+                                                {{-- Reject Button --}}
+                                                <button type="button"
+                                                    @click="showActionConfirm = {{ $payment->id }}; actionType = 'reject'"
+                                                    class="inline-flex items-center gap-1 px-3 py-1 bg-red-100 text-red-700 rounded-md hover:bg-red-200 text-xs font-medium cursor-pointer">
+                                                    <svg class="w-4 h-4" fill="none" stroke="currentColor"
+                                                        viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round"
+                                                            stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                                                    </svg>
+                                                    Reject
+                                                </button>
+                                            @else
+                                                <span class="text-gray-400 text-xs">-</span>
+                                            @endif
+                                        </div>
+                                    </td>
                                 @endif
                             </tr>
-                        </thead>
-                        <tbody class="divide-y divide-gray-200">
-                            @forelse ($payments as $payment)
-                                <tr class="hover:bg-gray-50">
-                                    {{-- Paid At --}}
-                                    <td class="py-3 px-4">
-                                        <span
-                                            class="text-gray-700">{{ \Carbon\Carbon::parse($payment->paid_at)->format('d M Y H:i') }}</span>
-                                    </td>
+                        @empty
+                            <tr>
+                                <td colspan="{{ $role === 'owner' ? '9' : '8' }}" class="py-8 text-center text-gray-400">
+                                    <svg class="w-16 h-16 mx-auto mb-3 opacity-50" fill="none" stroke="currentColor"
+                                        viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                                    </svg>
+                                    <p class="text-sm">No payments found</p>
+                                </td>
+                            </tr>
+                        @endforelse
+                    </tbody>
+                </table>
+            </div>
 
-                                    {{-- Customer --}}
-                                    <td class="py-3 px-4">
-                                        <div>
-                                            <p class="font-medium text-gray-900">
-                                                {{ $payment->invoice->order->customer->customer_name ?? '-' }}</p>
-                                            <p class="text-xs text-gray-500">
-                                                {{ $payment->invoice->order->customer->phone ?? '-' }}</p>
-                                        </div>
-                                    </td>
-
-                                    {{-- Order (Invoice + Product) --}}
-                                    <td class="py-3 px-4">
-                                        <div>
-                                            <p class="font-medium text-gray-900">
-                                                {{ $payment->invoice->invoice_no ?? '-' }}
-                                            </p>
-                                            <p class="text-xs text-gray-500">
-                                                ({{ $payment->invoice->order->productCategory->product_name ?? '-' }})
-                                            </p>
-                                        </div>
-                                    </td>
-
-                                    {{-- Payment Model (Method + Type) --}}
-                                    <td class="py-3 px-4">
-                                        <div class="flex flex-col gap-1">
-                                            @php
-                                                $methodClass =
-                                                    $payment->payment_method === 'tranfer'
-                                                        ? 'bg-blue-100 text-blue-800'
-                                                        : 'bg-green-100 text-green-800';
-                                                $typeClasses = [
-                                                    'dp' => 'bg-yellow-100 text-yellow-800',
-                                                    'repayment' => 'bg-purple-100 text-purple-800',
-                                                    'full_payment' => 'bg-green-100 text-green-800',
-                                                ];
-                                                $typeClass =
-                                                    $typeClasses[$payment->payment_type] ?? 'bg-gray-100 text-gray-800';
-                                            @endphp
-                                            <span
-                                                class="px-2 py-0.5 rounded-full text-xs font-medium {{ $methodClass }} inline-block w-fit">
-                                                {{ strtoupper($payment->payment_method) }}
-                                            </span>
-                                            <span
-                                                class="px-2 py-0.5 rounded-full text-xs font-medium {{ $typeClass }} inline-block w-fit">
-                                                {{ strtoupper(str_replace('_', ' ', $payment->payment_type)) }}
-                                            </span>
-                                        </div>
-                                    </td>
-
-                                    {{-- Amount --}}
-                                    <td class="py-3 px-4">
-                                        <span class="font-medium text-gray-900">Rp
-                                            {{ number_format($payment->amount, 0, ',', '.') }}</span>
-                                    </td>
-
-                                    {{-- Status --}}
-                                    <td class="py-3 px-4">
-                                        @php
-                                            $statusClasses = [
-                                                'pending' => 'bg-yellow-100 text-yellow-800',
-                                                'approved' => 'bg-green-100 text-green-800',
-                                                'rejected' => 'bg-red-100 text-red-800',
-                                            ];
-                                            $statusClass =
-                                                $statusClasses[$payment->status] ?? 'bg-gray-100 text-gray-800';
-                                        @endphp
-                                        <span class="px-2 py-1 rounded-full text-xs font-medium {{ $statusClass }}">
-                                            {{ strtoupper($payment->status) }}
-                                        </span>
-                                    </td>
-
-                                    {{-- Notes --}}
-                                    <td class="py-3 px-4">
-                                        <span class="text-gray-700 text-xs">{{ $payment->notes ?? '-' }}</span>
-                                    </td>
-
-                                    {{-- Attachment --}}
-                                    <td class="py-3 px-4 text-center">
-                                        @if ($payment->img_url)
-                                            <button
-                                                @click="selectedImage = '{{ $payment->img_url }}'; showImageModal = true"
-                                                class="inline-flex items-center gap-1 px-3 py-1 bg-blue-100 text-blue-700 rounded-md hover:bg-blue-200 text-xs font-medium cursor-pointer">
-                                                <svg class="w-4 h-4" fill="none" stroke="currentColor"
-                                                    viewBox="0 0 24 24">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                        d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                                                </svg>
-                                                View
-                                            </button>
-                                        @else
-                                            <span class="text-gray-400 text-xs">-</span>
-                                        @endif
-                                    </td>
-
-                                    {{-- Action (Owner Only) --}}
-                                    @if ($role === 'owner')
-                                        <td class="py-3 px-4">
-                                            <div class="flex justify-center gap-2">
-                                                @if ($payment->status === 'pending')
-                                                    {{-- Approve Button --}}
-                                                    <button type="button"
-                                                        @click="showActionConfirm = {{ $payment->id }}; actionType = 'approve'"
-                                                        class="inline-flex items-center gap-1 px-3 py-1 bg-green-100 text-green-700 rounded-md hover:bg-green-200 text-xs font-medium cursor-pointer">
-                                                        <svg class="w-4 h-4" fill="none" stroke="currentColor"
-                                                            viewBox="0 0 24 24">
-                                                            <path stroke-linecap="round" stroke-linejoin="round"
-                                                                stroke-width="2" d="M5 13l4 4L19 7" />
-                                                        </svg>
-                                                        Approve
-                                                    </button>
-
-                                                    {{-- Reject Button --}}
-                                                    <button type="button"
-                                                        @click="showActionConfirm = {{ $payment->id }}; actionType = 'reject'"
-                                                        class="inline-flex items-center gap-1 px-3 py-1 bg-red-100 text-red-700 rounded-md hover:bg-red-200 text-xs font-medium cursor-pointer">
-                                                        <svg class="w-4 h-4" fill="none" stroke="currentColor"
-                                                            viewBox="0 0 24 24">
-                                                            <path stroke-linecap="round" stroke-linejoin="round"
-                                                                stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                                                        </svg>
-                                                        Reject
-                                                    </button>
-                                                @else
-                                                    <span class="text-gray-400 text-xs">-</span>
-                                                @endif
-                                            </div>
-                                        </td>
-                                    @endif
-                                </tr>
-                            @empty
-                                <tr>
-                                    <td colspan="{{ $role === 'owner' ? '9' : '8' }}"
-                                        class="py-8 text-center text-gray-400">
-                                        <svg class="w-16 h-16 mx-auto mb-3 opacity-50" fill="none"
-                                            stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                                        </svg>
-                                        <p class="text-sm">No payments found</p>
-                                    </td>
-                                </tr>
-                            @endforelse
-                        </tbody>
-                    </table>
-                </div>
-
-                {{-- Pagination --}}
-                <div id="pagination-section" class="mt-5">
-                    @if ($payments->hasPages())
-                        <x-custom-pagination :paginator="$payments" />
-                    @endif
-                </div>
+            {{-- Pagination --}}
+            <div id="pagination-section" class="mt-5">
+                @if ($payments->hasPages())
+                    <x-custom-pagination :paginator="$payments" />
+                @endif
             </div>
 
             {{-- ================= IMAGE MODAL ================= --}}

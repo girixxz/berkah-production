@@ -323,7 +323,7 @@
                 </div>
 
                 {{-- ================= SECTION 3: TABLE ================= --}}
-                <div class="overflow-x-auto mt-6">
+                <div class="overflow-x-auto mt-4">
                     <table class="min-w-full text-sm">
                         <thead class="bg-primary-light text-gray-600">
                             <tr>

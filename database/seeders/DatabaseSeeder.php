@@ -16,10 +16,10 @@ class DatabaseSeeder extends Seeder
             UserSeeder::class,
             SaleSeeder::class,
             // LocationSeeder::class, // No longer needed - using API
-            // CustomerSeeder::class, // Deleted - customers will be added manually via UI
             ProductSeeder::class,
-            // OrderSeeder::class,
             ProductionStageSeeder::class,
+            CustomerSeeder::class,
+            OrderSeeder::class,
         ]);
     }
 }
