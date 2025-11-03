@@ -481,6 +481,14 @@
                         </thead>
                         <tbody class="">
                             @forelse ($orders as $order)
+                                @php
+                                    // Calculate pending transactions for this order
+                                    $pendingPayments = $order->invoice
+                                        ? $order->invoice->payments()->where('status', 'pending')->get()
+                                        : collect();
+                                    $pendingCount = $pendingPayments->count();
+                                    $pendingAmount = $pendingPayments->sum('amount');
+                                @endphp
                                 {{-- Finished Filter: Different Row Structure --}}
                                 <tr x-show="activeFilter === 'finished'" class="hover:bg-gray-50">
                                     {{-- Invoice No with Shipping Type and Priority --}}
@@ -664,7 +672,7 @@
                                                     {{-- Add Payment (Hidden if no invoice, fully paid, or cancelled) --}}
                                                     @if ($order->invoice && $order->invoice->amount_due > 0 && $order->production_status !== 'cancelled')
                                                         <button type="button"
-                                                            @click="selectedOrderForPayment = {{ json_encode(['id' => $order->id, 'invoice_no' => $order->invoice->invoice_no ?? 'N/A', 'invoice_id' => $order->invoice->id ?? null, 'remaining_due' => $order->invoice->amount_due ?? 0]) }}; showAddPaymentModal = true; paymentErrors = {}; open = false"
+                                                            @click="selectedOrderForPayment = {{ json_encode(['id' => $order->id, 'invoice_no' => $order->invoice->invoice_no ?? 'N/A', 'invoice_id' => $order->invoice->id ?? null, 'remaining_due' => $order->invoice->amount_due ?? 0, 'pending_transaction' => $pendingCount, 'pending_amount' => $pendingAmount]) }}; showAddPaymentModal = true; paymentErrors = {}; open = false"
                                                             class="w-full text-left px-4 py-2 text-sm text-blue-600 hover:bg-blue-50 flex items-center gap-2">
                                                             <svg class="w-4 h-4" fill="none" stroke="currentColor"
                                                                 viewBox="0 0 24 24">
@@ -897,7 +905,7 @@
                                                     {{-- Add Payment (Hidden if no invoice, fully paid, or cancelled) --}}
                                                     @if ($order->invoice && $order->invoice->amount_due > 0 && $order->production_status !== 'cancelled')
                                                         <button type="button"
-                                                            @click="selectedOrderForPayment = {{ json_encode(['id' => $order->id, 'invoice_no' => $order->invoice->invoice_no ?? 'N/A', 'invoice_id' => $order->invoice->id ?? null, 'remaining_due' => $order->invoice->amount_due ?? 0]) }}; showAddPaymentModal = true; paymentErrors = {}; open = false"
+                                                            @click="selectedOrderForPayment = {{ json_encode(['id' => $order->id, 'invoice_no' => $order->invoice->invoice_no ?? 'N/A', 'invoice_id' => $order->invoice->id ?? null, 'remaining_due' => $order->invoice->amount_due ?? 0, 'pending_transaction' => $pendingCount, 'pending_amount' => $pendingAmount]) }}; showAddPaymentModal = true; paymentErrors = {}; open = false"
                                                             class="w-full text-left px-4 py-2 text-sm text-blue-600 hover:bg-blue-50 flex items-center gap-2">
                                                             <svg class="w-4 h-4" fill="none" stroke="currentColor"
                                                                 viewBox="0 0 24 24">
@@ -1139,14 +1147,37 @@
 
                         <div class="p-5 space-y-4 max-h-[70vh] overflow-y-auto">
                             {{-- Invoice Info --}}
-                            <div class="bg-gray-50 border border-gray-200 rounded-md p-3">
-                                <p class="text-xs text-gray-500">Invoice No</p>
-                                <p class="text-sm font-semibold text-gray-900"
-                                    x-text="selectedOrderForPayment?.invoice_no || '-'"></p>
-                                <p class="text-xs text-gray-500 mt-2">Remaining Due</p>
-                                <p class="text-sm font-semibold text-red-600"
-                                    x-text="'Rp ' + Math.floor(selectedOrderForPayment?.remaining_due || 0).toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.')">
-                                </p>
+                            <div class="bg-gray-50 border border-gray-200 rounded-md p-3 space-y-3">
+                                {{-- Row 1: Invoice No & Remaining Due --}}
+                                <div class="flex items-start justify-between gap-4">
+                                    <div class="flex-1">
+                                        <p class="text-xs text-gray-500">Invoice No</p>
+                                        <p class="text-sm font-semibold text-gray-900"
+                                            x-text="selectedOrderForPayment?.invoice_no || '-'"></p>
+                                    </div>
+                                    <div class="flex-1 text-right">
+                                        <p class="text-xs text-gray-500">Remaining Due</p>
+                                        <p class="text-sm font-semibold text-red-600"
+                                            x-text="'Rp ' + Math.floor(selectedOrderForPayment?.remaining_due || 0).toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.')">
+                                        </p>
+                                    </div>
+                                </div>
+
+                                {{-- Row 2: Pending Transaction & Pending Amount --}}
+                                <div class="flex items-start justify-between gap-4 pt-2 border-t border-gray-300">
+                                    <div class="flex-1">
+                                        <p class="text-xs text-gray-500">Pending Transaction</p>
+                                        <p class="text-sm font-semibold text-gray-900"
+                                            x-text="(selectedOrderForPayment?.pending_transaction || 0) + ' Transaction(s)'">
+                                        </p>
+                                    </div>
+                                    <div class="flex-1 text-right">
+                                        <p class="text-xs text-gray-500">Pending Amount</p>
+                                        <p class="text-sm font-semibold text-orange-600"
+                                            x-text="'Rp ' + Math.floor(selectedOrderForPayment?.pending_amount || 0).toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.')">
+                                        </p>
+                                    </div>
+                                </div>
                             </div>
 
                             {{-- Payment Method --}}
@@ -1159,7 +1190,7 @@
                                         'border-red-500 focus:border-red-500 focus:ring-red-200' :
                                         'border-gray-200 focus:border-primary focus:ring-primary/20'"
                                     class="w-full rounded-md px-4 py-2 text-sm border focus:outline-none focus:ring-2 text-gray-700">
-                                    <option value="">Select Method</option>
+                                    <option value="">-- Select Method --</option>
                                     <option value="tranfer">Transfer</option>
                                     <option value="cash">Cash</option>
                                 </select>
@@ -1173,11 +1204,18 @@
                                     Payment Type <span class="text-red-600">*</span>
                                 </label>
                                 <select name="payment_type"
+                                    @change="
+                                        const selectedType = $event.target.value;
+                                        if (selectedType === 'repayment' || selectedType === 'full_payment') {
+                                            const remainingDue = selectedOrderForPayment?.remaining_due || 0;
+                                            paymentAmount = Math.floor(remainingDue).toLocaleString('id-ID');
+                                        }
+                                    "
                                     :class="paymentErrors.payment_type ?
                                         'border-red-500 focus:border-red-500 focus:ring-red-200' :
                                         'border-gray-200 focus:border-primary focus:ring-primary/20'"
                                     class="w-full rounded-md px-4 py-2 text-sm border focus:outline-none focus:ring-2 text-gray-700">
-                                    <option value="">Select Type</option>
+                                    <option value="">-- Select Type --</option>
                                     <option value="dp">DP (Down Payment)</option>
                                     <option value="repayment">Repayment</option>
                                     <option value="full_payment">Full Payment</option>
