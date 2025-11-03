@@ -26,11 +26,13 @@ class Order extends Model
         'discount',
         'grand_total',
         'production_status',
+        'finished_date',
     ];
 
     protected $casts = [
         'order_date' => 'datetime',
         'deadline' => 'datetime',
+        'finished_date' => 'datetime',
         'subtotal' => 'decimal:2',
         'discount' => 'decimal:2',
         'grand_total' => 'decimal:2',
@@ -145,13 +147,19 @@ class Order extends Model
         
         // If all stages are done and current status is wip, update to finished
         if ($allDone && $this->production_status === 'wip') {
-            $this->update(['production_status' => 'finished']);
+            $this->update([
+                'production_status' => 'finished',
+                'finished_date' => now()
+            ]);
             return true;
         }
         
         // If not all stages are done but current status is finished, revert back to wip
         if (!$allDone && $this->production_status === 'finished') {
-            $this->update(['production_status' => 'wip']);
+            $this->update([
+                'production_status' => 'wip',
+                'finished_date' => null
+            ]);
             return true;
         }
         

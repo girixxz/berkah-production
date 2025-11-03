@@ -88,32 +88,57 @@
                 .then(res => res.json())
                 .then(data => {
                     if (data.success) {
-                        // Update local data without reload
+                        // Update local data in modal
                         const stageIndex = this.editStageData.orderStages.findIndex(s => s.id === orderStageId);
                         if (stageIndex !== -1) {
                             this.editStageData.orderStages[stageIndex].status = newStatus;
                         }
     
-                        // Show toast
+                        // Show toast notification
                         window.dispatchEvent(new CustomEvent('show-toast', {
                             detail: { message: data.message, type: 'success' }
                         }));
     
                         this.isUpdatingStatus = false;
     
-                        // Reload page after short delay to update table
-                        setTimeout(() => {
-                            window.location.reload();
-                        }, 1000);
+                        // Refresh table data in background without closing modal
+                        this.refreshTableData();
                     } else {
-                        alert(data.message || 'Failed to update status');
+                        window.dispatchEvent(new CustomEvent('show-toast', {
+                            detail: { message: data.message || 'Failed to update status', type: 'error' }
+                        }));
                         this.isUpdatingStatus = false;
                     }
                 })
                 .catch(err => {
-                    alert('Network error. Please try again.');
+                    window.dispatchEvent(new CustomEvent('show-toast', {
+                        detail: { message: 'Network error. Please try again.', type: 'error' }
+                    }));
                     this.isUpdatingStatus = false;
                     console.error(err);
+                });
+        },
+        refreshTableData() {
+            // Refresh table content without closing modal
+            const currentUrl = window.location.href;
+            fetch(currentUrl, {
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                })
+                .then(res => res.text())
+                .then(html => {
+                    const parser = new DOMParser();
+                    const doc = parser.parseFromString(html, 'text/html');
+                    const newTableBody = doc.querySelector('tbody');
+                    const currentTableBody = document.querySelector('tbody');
+    
+                    if (newTableBody && currentTableBody) {
+                        currentTableBody.innerHTML = newTableBody.innerHTML;
+                    }
+                })
+                .catch(err => {
+                    console.error('Failed to refresh table:', err);
                 });
         },
         getDateLabel() {

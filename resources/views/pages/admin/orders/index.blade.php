@@ -452,7 +452,20 @@
                     <div class="overflow-x-auto">
                         <table class="min-w-full text-sm">
                             <thead class="bg-primary-light text-gray-600">
-                                <tr>
+                                {{-- Finished Filter: Different Columns --}}
+                                <tr x-show="activeFilter === 'finished'">
+                                    <th class="py-3 px-4 text-left font-medium rounded-l-lg">No Invoice</th>
+                                    <th class="py-3 px-4 text-left font-medium">Customer</th>
+                                    <th class="py-3 px-4 text-left font-medium">Product</th>
+                                    <th class="py-3 px-4 text-left font-medium">QTY</th>
+                                    <th class="py-3 px-4 text-left font-medium">Total Bill</th>
+                                    <th class="py-3 px-4 text-left font-medium">Remaining</th>
+                                    <th class="py-3 px-4 text-left font-medium">Status</th>
+                                    <th class="py-3 px-4 text-left font-medium">Finished Date</th>
+                                    <th class="py-3 px-4 text-center font-medium rounded-r-lg">Action</th>
+                                </tr>
+                                {{-- Other Filters: Default Columns --}}
+                                <tr x-show="activeFilter !== 'finished'">
                                     <th class="py-3 px-4 text-left font-medium rounded-l-lg">No Invoice</th>
                                     <th class="py-3 px-4 text-left font-medium">Customer</th>
                                     <th class="py-3 px-4 text-left font-medium">Product</th>
@@ -465,9 +478,201 @@
                                     <th class="py-3 px-4 text-center font-medium rounded-r-lg">Action</th>
                                 </tr>
                             </thead>
-                            <tbody class="divide-y divide-gray-200">
+                            <tbody class="">
                                 @forelse ($orders as $order)
-                                    <tr class="hover:bg-gray-50">
+                                    {{-- Finished Filter: Different Row Structure --}}
+                                    <tr x-show="activeFilter === 'finished'" class="hover:bg-gray-50">
+                                        {{-- Invoice No with Priority --}}
+                                        <td class="py-3 px-4">
+                                            <div class="flex items-center gap-2">
+                                                <span
+                                                    class="font-medium text-gray-900">{{ $order->invoice->invoice_no ?? '-' }}</span>
+                                                @if (isset($order->priority) && strtolower($order->priority) === 'high')
+                                                    <span class="text-xs text-red-600 italic font-medium">(HIGH)</span>
+                                                @endif
+                                            </div>
+                                        </td>
+
+                                        {{-- Customer --}}
+                                        <td class="py-3 px-4">
+                                            <div>
+                                                <p class="font-medium text-gray-900">
+                                                    {{ $order->customer->customer_name ?? '-' }}
+                                                </p>
+                                                <p class="text-xs text-gray-500">{{ $order->customer->phone ?? '-' }}</p>
+                                            </div>
+                                        </td>
+
+                                        {{-- Product --}}
+                                        <td class="py-3 px-4">
+                                            <span
+                                                class="text-gray-700">{{ $order->productCategory->product_name ?? '-' }}</span>
+                                        </td>
+
+                                        {{-- QTY --}}
+                                        <td class="py-3 px-4">
+                                            <span
+                                                class="font-medium text-gray-900">{{ $order->orderItems->sum('qty') }}</span>
+                                        </td>
+
+                                        {{-- Total Bill --}}
+                                        <td class="py-3 px-4">
+                                            <span class="font-medium text-gray-900">Rp
+                                                {{ number_format($order->invoice->total_bill ?? 0, 0, ',', '.') }}</span>
+                                        </td>
+
+                                        {{-- Remaining --}}
+                                        <td class="py-3 px-4">
+                                            <span class="font-medium text-orange-600">Rp
+                                                {{ number_format($order->invoice->amount_due ?? 0, 0, ',', '.') }}</span>
+                                        </td>
+
+                                        {{-- Status --}}
+                                        <td class="py-3 px-4">
+                                            @php
+                                                $statusClasses = [
+                                                    'pending' => 'bg-yellow-100 text-yellow-800',
+                                                    'wip' => 'bg-blue-100 text-blue-800',
+                                                    'finished' => 'bg-green-100 text-green-800',
+                                                    'cancelled' => 'bg-red-100 text-red-800',
+                                                ];
+                                                $statusClass =
+                                                    $statusClasses[$order->production_status] ??
+                                                    'bg-gray-100 text-gray-800';
+                                            @endphp
+                                            <span class="px-2 py-1 rounded-full text-xs font-medium {{ $statusClass }}">
+                                                {{ strtoupper($order->production_status) }}
+                                            </span>
+                                        </td>
+
+                                        {{-- Finished Date --}}
+                                        <td class="py-3 px-4">
+                                            <span
+                                                class="text-gray-700">{{ $order->finished_date ? \Carbon\Carbon::parse($order->finished_date)->format('d M Y H:i') : '-' }}</span>
+                                        </td>
+
+                                        {{-- Action --}}
+                                        <td class="py-3 px-4">
+                                            <div class="flex justify-center">
+                                                <div class="relative inline-block text-left" x-data="{
+                                                    open: false,
+                                                    dropdownStyle: {},
+                                                    checkPosition() {
+                                                        const button = this.$refs.button;
+                                                        const rect = button.getBoundingClientRect();
+                                                        const spaceBelow = window.innerHeight - rect.bottom;
+                                                        const spaceAbove = rect.top;
+                                                        const dropUp = spaceBelow < 200 && spaceAbove > spaceBelow;
+                                                
+                                                        if (dropUp) {
+                                                            this.dropdownStyle = {
+                                                                position: 'fixed',
+                                                                top: (rect.top - 160) + 'px',
+                                                                left: (rect.right - 180) + 'px',
+                                                                width: '180px'
+                                                            };
+                                                        } else {
+                                                            this.dropdownStyle = {
+                                                                position: 'fixed',
+                                                                top: (rect.bottom + 8) + 'px',
+                                                                left: (rect.right - 180) + 'px',
+                                                                width: '180px'
+                                                            };
+                                                        }
+                                                    }
+                                                }"
+                                                    x-init="$watch('open', value => {
+                                                        if (value) {
+                                                            const scrollContainer = $el.closest('.overflow-x-auto');
+                                                            const mainContent = document.querySelector('main');
+                                                            const closeOnScroll = () => { open = false; };
+                                                    
+                                                            scrollContainer?.addEventListener('scroll', closeOnScroll);
+                                                            mainContent?.addEventListener('scroll', closeOnScroll);
+                                                            window.addEventListener('resize', closeOnScroll);
+                                                        }
+                                                    })">
+                                                    {{-- Three Dot Button HORIZONTAL --}}
+                                                    <button x-ref="button" @click="checkPosition(); open = !open"
+                                                        type="button"
+                                                        class="cursor-pointer inline-flex items-center justify-center w-8 h-8 rounded-md border border-gray-300 text-gray-600 hover:bg-gray-100"
+                                                        title="Actions">
+                                                        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                                            <path
+                                                                d="M6 10a2 2 0 11-4 0 2 2 0 014 0zM12 10a2 2 0 11-4 0 2 2 0 014 0zM16 12a2 2 0 100-4 2 2 0 000 4z" />
+                                                        </svg>
+                                                    </button>
+
+                                                    {{-- Dropdown Menu with Fixed Position --}}
+                                                    <div x-show="open" @click.away="open = false" x-cloak
+                                                        x-ref="dropdown" :style="dropdownStyle"
+                                                        class="bg-white border border-gray-200 rounded-md shadow-lg z-50 py-1">
+                                                        {{-- View Detail --}}
+                                                        <a href="{{ route('admin.orders.show', $order->id) }}"
+                                                            class="px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2">
+                                                            <svg class="w-4 h-4" fill="none" stroke="currentColor"
+                                                                viewBox="0 0 24 24">
+                                                                <path stroke-linecap="round" stroke-linejoin="round"
+                                                                    stroke-width="2"
+                                                                    d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                                                <path stroke-linecap="round" stroke-linejoin="round"
+                                                                    stroke-width="2"
+                                                                    d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                                            </svg>
+                                                            View Detail
+                                                        </a>
+
+                                                        {{-- Edit (Hidden for finished/cancelled) --}}
+                                                        @if ($order->production_status !== 'finished' && $order->production_status !== 'cancelled')
+                                                            <a href="{{ route('admin.orders.edit', $order->id) }}"
+                                                                class="px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2">
+                                                                <svg class="w-4 h-4" fill="none" stroke="currentColor"
+                                                                    viewBox="0 0 24 24">
+                                                                    <path stroke-linecap="round" stroke-linejoin="round"
+                                                                        stroke-width="2"
+                                                                        d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                                                </svg>
+                                                                Edit
+                                                            </a>
+                                                        @endif
+
+                                                        {{-- Add Payment (Hidden if no invoice, fully paid, or cancelled) --}}
+                                                        @if ($order->invoice && $order->invoice->amount_due > 0 && $order->production_status !== 'cancelled')
+                                                            <button type="button"
+                                                                @click="selectedOrderForPayment = {{ json_encode(['id' => $order->id, 'invoice_no' => $order->invoice->invoice_no ?? 'N/A', 'invoice_id' => $order->invoice->id ?? null, 'remaining_due' => $order->invoice->amount_due ?? 0]) }}; showAddPaymentModal = true; paymentErrors = {}; open = false"
+                                                                class="w-full text-left px-4 py-2 text-sm text-blue-600 hover:bg-blue-50 flex items-center gap-2">
+                                                                <svg class="w-4 h-4" fill="none" stroke="currentColor"
+                                                                    viewBox="0 0 24 24">
+                                                                    <path stroke-linecap="round" stroke-linejoin="round"
+                                                                        stroke-width="2"
+                                                                        d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
+                                                                </svg>
+                                                                Add Payment
+                                                            </button>
+                                                        @endif
+
+                                                        {{-- Cancel (Hidden for cancelled) --}}
+                                                        @if ($order->production_status !== 'cancelled')
+                                                            <button type="button"
+                                                                @click="showCancelConfirm = {{ $order->id }}; open = false"
+                                                                class="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2">
+                                                                <svg class="w-4 h-4" fill="none" stroke="currentColor"
+                                                                    viewBox="0 0 24 24">
+                                                                    <path stroke-linecap="round" stroke-linejoin="round"
+                                                                        stroke-width="2"
+                                                                        d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                                                </svg>
+                                                                Cancel Order
+                                                            </button>
+                                                        @endif
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </td>
+                                    </tr>
+
+                                    {{-- Other Filters: Default Row Structure --}}
+                                    <tr x-show="activeFilter !== 'finished'" class="hover:bg-gray-50">
                                         {{-- Invoice No with Priority --}}
                                         <td class="py-3 px-4">
                                             <div class="flex items-center gap-2">
@@ -663,7 +868,19 @@
                                         </td>
                                     </tr>
                                 @empty
-                                    <tr>
+                                    {{-- Empty State for Finished Filter --}}
+                                    <tr x-show="activeFilter === 'finished'">
+                                        <td colspan="9" class="py-8 text-center text-gray-400">
+                                            <svg class="w-16 h-16 mx-auto mb-3 opacity-50" fill="none"
+                                                stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                    d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+                                            </svg>
+                                            <p class="text-sm">No orders found</p>
+                                        </td>
+                                    </tr>
+                                    {{-- Empty State for Other Filters --}}
+                                    <tr x-show="activeFilter !== 'finished'">
                                         <td colspan="10" class="py-8 text-center text-gray-400">
                                             <svg class="w-16 h-16 mx-auto mb-3 opacity-50" fill="none"
                                                 stroke="currentColor" viewBox="0 0 24 24">

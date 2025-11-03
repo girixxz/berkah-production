@@ -32,7 +32,7 @@ return new class extends Migration
             
             // Shipping
             $table->enum('shipping_type', ['pickup', 'delivery']);
-            
+
             // Totals
             $table->integer('total_qty')->default(0);
             $table->decimal('subtotal', 12, 2)->default(0);
@@ -41,6 +41,7 @@ return new class extends Migration
             
             // Production Status
             $table->enum('production_status', ['pending', 'wip', 'finished', 'cancelled'])->default('pending');
+            $table->timestamp('finished_date')->nullable();
             
             $table->timestamps();
         });
