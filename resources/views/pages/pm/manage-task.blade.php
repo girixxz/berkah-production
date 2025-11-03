@@ -208,17 +208,16 @@
     }" class="space-y-6">
 
         {{-- ================= SECTION 1: STATISTICS CARDS ================= --}}
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {{-- Total Orders --}}
-            <div class="bg-white border border-gray-200 rounded-lg p-4">
+            <div class="bg-gradient-to-br from-blue-50 to-blue-100 border border-blue-200 rounded-lg p-4">
                 <div class="flex items-center justify-between">
                     <div>
-                        <p class="text-sm text-gray-500">Total Orders</p>
-                        <p class="text-2xl font-bold text-gray-900 mt-1">{{ number_format($stats['total_orders']) }}
-                        </p>
+                        <p class="text-sm text-blue-600 font-medium">Total Orders</p>
+                        <p class="text-2xl font-bold text-blue-900 mt-1">{{ number_format($stats['total_orders']) }}</p>
                     </div>
-                    <div class="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                        <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <div class="w-12 h-12 bg-blue-200/50 rounded-lg flex items-center justify-center">
+                        <svg class="w-6 h-6 text-blue-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                 d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
                         </svg>
@@ -226,15 +225,33 @@
                 </div>
             </div>
 
-            {{-- Order Finished --}}
-            <div class="bg-white border border-gray-200 rounded-lg p-4">
+            {{-- Order WIP --}}
+            <div class="bg-gradient-to-br from-purple-50 to-purple-100 border border-purple-200 rounded-lg p-4">
                 <div class="flex items-center justify-between">
                     <div>
-                        <p class="text-sm text-gray-500">Order Finished</p>
-                        <p class="text-2xl font-bold text-gray-900 mt-1">{{ number_format($stats['order_finished']) }}</p>
+                        <p class="text-sm text-purple-600 font-medium">Order WIP</p>
+                        <p class="text-2xl font-bold text-purple-900 mt-1">{{ number_format($stats['order_wip']) }}</p>
                     </div>
-                    <div class="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
-                        <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <div class="w-12 h-12 bg-purple-200/50 rounded-lg flex items-center justify-center">
+                        <svg class="w-6 h-6 text-purple-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                        </svg>
+                    </div>
+                </div>
+            </div>
+
+            {{-- Order Finished --}}
+            <div class="bg-gradient-to-br from-green-50 to-green-100 border border-green-200 rounded-lg p-4">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm text-green-600 font-medium">Order Finished</p>
+                        <p class="text-2xl font-bold text-green-900 mt-1">{{ number_format($stats['order_finished']) }}</p>
+                    </div>
+                    <div class="w-12 h-12 bg-green-200/50 rounded-lg flex items-center justify-center">
+                        <svg class="w-6 h-6 text-green-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                 d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                         </svg>
@@ -243,35 +260,37 @@
             </div>
         </div>
 
-        {{-- ================= SECTION 2: FILTER & ACTIONS ================= --}}
-        <div class="bg-white border border-gray-200 rounded-lg p-5">
-            <div class="flex flex-col lg:flex-row gap-4 items-start lg:items-center justify-between">
+        {{-- ================= SECTION 2: FILTER, SEARCH & TABLE ================= --}}
+        <div class="bg-white border border-gray-200 rounded-lg p-5 mt-6">
+            {{-- Filter & Search Section --}}
+            <div class="flex flex-col xl:flex-row xl:items-center gap-4">
                 {{-- Left: Filter Buttons --}}
-                <div class="flex flex-wrap gap-2">
+                <div class="grid grid-cols-3 md:flex md:flex-wrap gap-2">
                     <a href="{{ route('pm.manage-task', ['filter' => 'default'] + request()->except('filter')) }}"
                         :class="activeFilter === 'default' ? 'bg-primary text-white' :
                             'bg-gray-100 text-gray-700 hover:bg-gray-200'"
-                        class="px-4 py-2 rounded-md text-sm font-medium transition-colors">
+                        class="px-4 py-2 rounded-md text-sm font-medium transition-colors text-center">
                         Default
                     </a>
                     <a href="{{ route('pm.manage-task', ['filter' => 'wip'] + request()->except('filter')) }}"
                         :class="activeFilter === 'wip' ? 'bg-primary text-white' :
                             'bg-gray-100 text-gray-700 hover:bg-gray-200'"
-                        class="px-4 py-2 rounded-md text-sm font-medium transition-colors">
+                        class="px-4 py-2 rounded-md text-sm font-medium transition-colors text-center">
                         WIP
                     </a>
                     <a href="{{ route('pm.manage-task', ['filter' => 'finished'] + request()->except('filter')) }}"
                         :class="activeFilter === 'finished' ? 'bg-primary text-white' :
                             'bg-gray-100 text-gray-700 hover:bg-gray-200'"
-                        class="px-4 py-2 rounded-md text-sm font-medium transition-colors">
+                        class="px-4 py-2 rounded-md text-sm font-medium transition-colors text-center">
                         Finished
                     </a>
                 </div>
 
                 {{-- Right: Search & Date Filter --}}
-                <div class="flex flex-col sm:flex-row gap-2 w-full lg:w-auto">
+                <div class="flex gap-2 items-center xl:flex-1 xl:ml-auto xl:min-w-0">
                     {{-- Search --}}
-                    <form method="GET" action="{{ route('pm.manage-task') }}" class="flex-1 lg:w-64" x-ref="searchForm">
+                    <form method="GET" action="{{ route('pm.manage-task') }}" class="flex-1 xl:min-w-[180px]"
+                        x-ref="searchForm">
                         <input type="hidden" name="filter" value="{{ request('filter', 'default') }}">
                         @if (request('start_date'))
                             <input type="hidden" name="start_date" value="{{ request('start_date') }}">
@@ -292,16 +311,16 @@
                     </form>
 
                     {{-- Date Filter --}}
-                    <div class="relative">
+                    <div class="relative flex-shrink-0">
                         <button type="button" @click="showDateFilter = !showDateFilter"
                             :class="dateRange ? 'border-primary bg-primary/5 text-primary' :
                                 'border-gray-300 text-gray-700 bg-white'"
-                            class="px-4 py-2 border rounded-md text-sm font-medium hover:bg-gray-50 flex items-center gap-2">
+                            class="px-3 lg:px-4 py-2 border rounded-md text-sm font-medium hover:bg-gray-50 flex items-center gap-2">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                     d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                             </svg>
-                            <span x-text="getDateLabel()"></span>
+                            <span x-text="getDateLabel()" class="hidden lg:inline whitespace-nowrap"></span>
                         </button>
 
                         {{-- Hidden Form for Date Presets --}}
@@ -385,15 +404,12 @@
                     </div>
                 </div>
             </div>
-        </div>
-
-        {{-- ================= SECTION 3: TABLE ================= --}}
-        <div class="bg-white border border-gray-200 rounded-lg p-5">
-            <div class="overflow-x-auto">
+            {{-- Table Section --}}
+            <div class="overflow-x-auto mt-4">
                 <table class="min-w-full text-xs">
-                    <thead class="bg-gray-100 text-gray-600">
+                    <thead class="bg-primary-light text-gray-600">
                         <tr>
-                            <th class="py-3 px-3 text-left font-medium whitespace-nowrap">Customer</th>
+                            <th class="py-3 px-3 text-left font-medium whitespace-nowrap rounded-l-lg">Customer</th>
                             <th class="py-3 px-3 text-left font-medium whitespace-nowrap">Order</th>
                             <th class="py-3 px-3 text-center font-medium whitespace-nowrap">Date In</th>
                             <th class="py-3 px-3 text-center font-medium whitespace-nowrap">Date Out</th>
@@ -401,7 +417,7 @@
                                 <th class="py-3 px-3 text-center font-medium whitespace-nowrap">{{ $stage->stage_name }}
                                 </th>
                             @endforeach
-                            <th class="py-3 px-3 text-center font-medium whitespace-nowrap">Action</th>
+                            <th class="py-3 px-3 text-center font-medium whitespace-nowrap rounded-r-lg">Action</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-200">
@@ -621,26 +637,10 @@
             </div>
 
             {{-- Pagination --}}
-            <div id="pagination-section" class="mt-5 pt-5 border-t border-gray-200">
-                <div class="flex flex-col sm:flex-row justify-between items-center gap-4">
-                    <div class="flex-1 flex justify-start text-sm text-gray-600">
-                        @if ($orders->total() > 0)
-                            Showing {{ $orders->firstItem() }} to {{ $orders->lastItem() }} of
-                            {{ $orders->total() }} results
-                        @else
-                            No results found
-                        @endif
-                    </div>
-                    <div class="flex items-center">
-                        @if ($orders->hasPages())
-                            {{ $orders->links() }}
-                        @else
-                            <div class="pagination">
-                                <span class="px-3 py-2 text-sm text-gray-500 bg-gray-50 rounded-md">Page 1 of 1</span>
-                            </div>
-                        @endif
-                    </div>
-                </div>
+            <div id="pagination-section" class="mt-5">
+                @if ($orders->hasPages())
+                    <x-custom-pagination :paginator="$orders" />
+                @endif
             </div>
         </div>
 
@@ -857,37 +857,3 @@
 
     </div>
 @endsection
-
-@push('styles')
-    <style>
-        /* Pagination styling */
-        nav[aria-label="Pagination Navigation"] ul li span.pagination-active-page {
-            background-color: #56ba9f !important;
-            border-color: #56ba9f !important;
-            color: white !important;
-        }
-
-        nav[aria-label="Pagination Navigation"] ul li span.pagination-active-page:hover {
-            background-color: #489984 !important;
-            border-color: #489984 !important;
-            color: white !important;
-        }
-
-        nav[aria-label="Pagination Navigation"] ul li span,
-        nav[aria-label="Pagination Navigation"] ul li a {
-            min-width: 2rem;
-            font-weight: 500;
-        }
-
-        nav[aria-label="Pagination Navigation"] ul li a:hover {
-            background-color: #f3f4f6 !important;
-            color: #111827 !important;
-        }
-
-        span[aria-current="page"] {
-            background-color: #56ba9f !important;
-            border-color: #56ba9f !important;
-            color: white !important;
-        }
-    </style>
-@endpush

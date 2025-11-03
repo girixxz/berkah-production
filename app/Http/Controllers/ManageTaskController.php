@@ -119,6 +119,7 @@ class ManageTaskController extends Controller
         // Calculate statistics
         $stats = [
             'total_orders' => Order::whereIn('production_status', ['wip', 'finished'])->count(),
+            'order_wip' => Order::where('production_status', 'wip')->count(),
             'order_finished' => Order::where('production_status', 'finished')->count(),
         ];
 
