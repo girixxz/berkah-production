@@ -186,11 +186,27 @@ class ManageTaskController extends Controller
         try {
             $orderStage = OrderStage::findOrFail($validated['order_stage_id']);
             $orderStage->update(['status' => $validated['status']]);
+            
+            // Auto-check if all stages are done and update order production status
+            $order = $orderStage->order;
+            $order->refresh(); // Refresh to get latest stage data
+            $statusChanged = $order->checkAndUpdateProductionStatus();
+            
+            $message = 'Stage status updated successfully';
+            if ($statusChanged) {
+                if ($order->production_status === 'finished') {
+                    $message .= '. All stages completed - Order marked as Finished!';
+                } else if ($order->production_status === 'wip') {
+                    $message .= '. Order status reverted to WIP';
+                }
+            }
 
             return response()->json([
                 'success' => true,
-                'message' => 'Stage status updated successfully',
-                'data' => $orderStage->load('productionStage')
+                'message' => $message,
+                'data' => $orderStage->load('productionStage'),
+                'production_status_changed' => $statusChanged,
+                'new_production_status' => $order->production_status,
             ]);
         } catch (\Exception $e) {
             return response()->json([

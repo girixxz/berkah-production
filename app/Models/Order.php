@@ -123,4 +123,38 @@ class Order extends Model
     {
         return $this->hasMany(OrderStage::class, 'order_id');
     }
+
+    /**
+     * Check if all order stages are completed and auto-update production status
+     * Returns true if status was changed, false otherwise
+     */
+    public function checkAndUpdateProductionStatus(): bool
+    {
+        // Get all order stages for this order
+        $orderStages = $this->orderStages()->get();
+        
+        // If no stages exist, don't change status
+        if ($orderStages->isEmpty()) {
+            return false;
+        }
+        
+        // Check if all stages are done
+        $allDone = $orderStages->every(function ($stage) {
+            return $stage->status === 'done';
+        });
+        
+        // If all stages are done and current status is wip, update to finished
+        if ($allDone && $this->production_status === 'wip') {
+            $this->update(['production_status' => 'finished']);
+            return true;
+        }
+        
+        // If not all stages are done but current status is finished, revert back to wip
+        if (!$allDone && $this->production_status === 'finished') {
+            $this->update(['production_status' => 'wip']);
+            return true;
+        }
+        
+        return false;
+    }
 }

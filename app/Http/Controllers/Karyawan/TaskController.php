@@ -70,10 +70,22 @@ class TaskController extends Controller
             
             // Update status to done
             $orderStage->update(['status' => 'done']);
+            
+            // Auto-check if all stages are done and update order production status
+            $order = $orderStage->order;
+            $order->refresh(); // Refresh to get latest stage data
+            $statusChanged = $order->checkAndUpdateProductionStatus();
+            
+            $message = 'Task marked as done successfully!';
+            if ($statusChanged && $order->production_status === 'finished') {
+                $message = '🎉 All tasks completed! Order has been marked as Finished.';
+            }
 
             return response()->json([
                 'success' => true,
-                'message' => 'Task marked as done successfully!',
+                'message' => $message,
+                'production_status_changed' => $statusChanged,
+                'new_production_status' => $order->production_status,
             ]);
         } catch (\Exception $e) {
             return response()->json([
