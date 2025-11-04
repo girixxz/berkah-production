@@ -115,7 +115,7 @@
                         </x-sidebar-menu.main-menu>
                     </li>
                     <li>
-                        <x-sidebar-menu.main-menu href="{{ route('admin.work-orders') }}" :pattern="'admin.work-orders'">
+                        <x-sidebar-menu.main-menu href="{{ route('admin.work-orders.index') }}" :pattern="'admin.work-orders.*'">
                             <x-icons.work-orders class="text-current" />
                             <span class="ml-2">Work Orders</span>
                         </x-sidebar-menu.main-menu>

@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class DesignVariant extends Model
 {
@@ -27,5 +28,21 @@ class DesignVariant extends Model
     public function orderItems(): HasMany
     {
         return $this->hasMany(OrderItem::class, 'design_variant_id');
+    }
+
+    /**
+     * Get the work order for this design variant
+     */
+    public function workOrder(): HasOne
+    {
+        return $this->hasOne(WorkOrder::class, 'design_variant_id');
+    }
+
+    /**
+     * Get the order item for this design variant (first one)
+     */
+    public function orderItem(): HasOne
+    {
+        return $this->hasOne(OrderItem::class, 'design_variant_id');
     }
 }

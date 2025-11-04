@@ -18,8 +18,10 @@ class DatabaseSeeder extends Seeder
             // LocationSeeder::class, // No longer needed - using API
             ProductSeeder::class,
             ProductionStageSeeder::class,
+            WorkOrderDataSeeder::class, // Work Order Master Data
             CustomerSeeder::class,
             OrderSeeder::class,
+            WorkOrderDataSeeder::class
         ]);
     }
 }

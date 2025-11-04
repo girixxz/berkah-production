@@ -28,6 +28,7 @@ class Order extends Model
         'discount',
         'grand_total',
         'production_status',
+        'work_order_status',
         'wip_date',
         'finished_date',
         'cancelled_date',
@@ -131,6 +132,14 @@ class Order extends Model
     public function orderStages(): HasMany
     {
         return $this->hasMany(OrderStage::class, 'order_id');
+    }
+
+    /**
+     * Get all work orders for this order
+     */
+    public function workOrders(): HasMany
+    {
+        return $this->hasMany(WorkOrder::class, 'order_id');
     }
 
     /**

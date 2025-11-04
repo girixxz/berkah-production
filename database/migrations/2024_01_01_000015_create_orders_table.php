@@ -46,7 +46,9 @@ return new class extends Migration
             $table->timestamp('wip_date')->nullable();
             $table->timestamp('finished_date')->nullable();
             $table->timestamp('cancelled_date')->nullable();
-            
+
+            $table->enum('work_order_status', ['pending', 'created'])->default('pending');
+
             $table->timestamps();
         });
     }

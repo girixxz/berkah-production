@@ -134,7 +134,17 @@ Route::middleware(['auth'])->group(function () {
         // Shipping Orders
         Route::get('shipping-orders', [\App\Http\Controllers\ShippingOrderController::class, 'index'])->name('shipping-orders');
         
-        Route::get('work-orders', fn() => view('pages.admin.work-orders'))->name('work-orders');
+        // Work Orders
+        Route::get('work-orders', [\App\Http\Controllers\WorkOrderController::class, 'index'])->name('work-orders.index');
+        Route::get('work-orders/{order}/manage', [\App\Http\Controllers\WorkOrderController::class, 'manage'])->name('work-orders.manage');
+        Route::post('work-orders', [\App\Http\Controllers\WorkOrderController::class, 'store'])
+            ->middleware('throttle:10,1')
+            ->name('work-orders.store');
+        Route::put('work-orders/{workOrder}', [\App\Http\Controllers\WorkOrderController::class, 'update'])
+            ->middleware('throttle:10,1')
+            ->name('work-orders.update');
+        Route::get('work-orders/{order}/finalize', [\App\Http\Controllers\WorkOrderController::class, 'finalize'])->name('work-orders.finalize');
+        
         Route::get('payment-history', [\App\Http\Controllers\PaymentHistoryController::class, 'index'])->name('payment-history');
 
         // Customers
