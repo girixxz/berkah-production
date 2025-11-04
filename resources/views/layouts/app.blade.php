@@ -5,6 +5,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <meta name="csrf-token" content="{{ csrf_token() }}">
+    <meta name="turbo-cache-control" content="no-cache">
     <title>@yield('title')</title>
 
     @vite(['resources/css/app.css', 'resources/js/app.js'])
@@ -14,6 +15,13 @@
     <style>
         [x-cloak] {
             display: none !important
+        }
+
+        /* Prevent white flash on page load */
+        html,
+        body {
+            background-color: #f9fafb;
+            /* Same as bg-gray-light/bg-gray-50 */
         }
     </style>
 </head>
@@ -97,10 +105,10 @@
     </div>
 
     {{-- MAIN - konten akan otomatis adjust sesuai lebar sidebar di LG+ --}}
-    <div class="flex-1 flex flex-col overflow-hidden transition-all duration-300 ease-out">
+    <div x-cloak class="flex-1 flex flex-col overflow-hidden" data-turbo-permanent>
         @include('partials.navbar')
 
-        <main class="flex-1 overflow-y-auto p-6">
+        <main id="main-content" class="flex-1 overflow-y-auto p-6">
             @yield('content')
         </main>
     </div>
