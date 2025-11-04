@@ -21,24 +21,63 @@
 {{-- tambahkan x-data + listener event toggle --}}
 
 <body x-data="{
-    sidebarOpen: window.matchMedia('(min-width: 1024px)').matches,
+    sidebarOpen: false,
+    userPreference: null, // null = auto, true = force open, false = force close
+
     init() {
+        // Load user preference dari localStorage
+        const saved = localStorage.getItem('sidebarUserPreference');
+        if (saved !== null) {
+            this.userPreference = saved === 'true';
+        }
+
+        // Set initial state
+        const isLgOrLarger = window.matchMedia('(min-width: 1024px)').matches;
+        if (this.userPreference !== null) {
+            // Respect user preference (hanya di lg+)
+            this.sidebarOpen = isLgOrLarger && this.userPreference;
+        } else {
+            // Auto behavior: buka di lg+, tutup di mobile
+            this.sidebarOpen = isLgOrLarger;
+        }
+
         // Listen untuk perubahan ukuran layar
         window.addEventListener('resize', () => {
             const isLgOrLarger = window.matchMedia('(min-width: 1024px)').matches;
-            // Auto tutup sidebar jika di mobile/tablet, auto buka jika di LG+
-            this.sidebarOpen = isLgOrLarger;
+
+            if (!isLgOrLarger) {
+                // Di mobile/tablet: selalu tutup saat resize
+                this.sidebarOpen = false;
+            } else {
+                // Di lg+: respect user preference
+                if (this.userPreference !== null) {
+                    this.sidebarOpen = this.userPreference;
+                } else {
+                    this.sidebarOpen = true; // Default buka di lg+
+                }
+            }
         });
+    },
+
+    toggleSidebar() {
+        this.sidebarOpen = !this.sidebarOpen;
+
+        // Save preference hanya untuk lg+ screen
+        const isLgOrLarger = window.matchMedia('(min-width: 1024px)').matches;
+        if (isLgOrLarger) {
+            this.userPreference = this.sidebarOpen;
+            localStorage.setItem('sidebarUserPreference', this.sidebarOpen);
+        }
     }
-}" @sidebar-toggle.window="sidebarOpen = !sidebarOpen" class="h-screen flex bg-gray-light">
+}" @sidebar-toggle.window="toggleSidebar()" class="h-screen flex bg-gray-light">
 
     {{-- SIDEBAR WRAPPER + OVERLAY --}}
     {{-- Di mobile/tablet: sidebar overlay (fixed), di LG+: sidebar push konten (flex) --}}
-    <div class="hidden lg:block relative z-40 flex-shrink-0 overflow-hidden transition-all duration-300 ease-out"
-        x-bind:class="sidebarOpen ? 'w-64' : 'w-0'">
+    <div x-cloak class="hidden lg:block relative z-40 flex-shrink-0 overflow-hidden"
+        :class="sidebarOpen ? 'w-64' : 'w-0'" :style="sidebarOpen ? '' : 'transition: width 0ms'">
         {{-- container sidebar untuk LG+ --}}
-        <div class="fixed inset-y-0 left-0 w-64 transform transition-transform duration-300 ease-out"
-            x-bind:class="sidebarOpen ? 'translate-x-0' : '-translate-x-full'">
+        <div class="fixed inset-y-0 left-0 w-64 transform" :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full'"
+            :style="sidebarOpen ? 'transition: transform 300ms ease-out' : 'transition: none'">
             @include('partials.sidebar')
         </div>
     </div>
@@ -50,8 +89,9 @@
             @click="$dispatch('sidebar-toggle')" aria-hidden="true"></div>
 
         {{-- container sidebar mobile/tablet: overlay --}}
-        <div class="fixed inset-y-0 left-0 w-64 transform transition-transform duration-300 ease-out z-50"
-            x-bind:class="sidebarOpen ? 'translate-x-0' : '-translate-x-full'">
+        <div x-cloak class="fixed inset-y-0 left-0 w-64 transform z-50"
+            :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full'"
+            :style="sidebarOpen ? 'transition: transform 300ms ease-out' : 'transition: none'">
             @include('partials.sidebar')
         </div>
     </div>
