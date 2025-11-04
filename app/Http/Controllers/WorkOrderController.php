@@ -122,13 +122,23 @@ class WorkOrderController extends Controller
         $order = Order::with([
             'customer',
             'productCategory',
+            'materialCategory',
+            'materialTexture',
             'invoice',
-            'designVariants.workOrder.cutting',
-            'designVariants.workOrder.printing',
+            'designVariants.workOrder.cutting.cuttingPattern',
+            'designVariants.workOrder.cutting.chainCloth',
+            'designVariants.workOrder.cutting.ribSize',
+            'designVariants.workOrder.printing.printInk',
+            'designVariants.workOrder.printing.finishing',
             'designVariants.workOrder.printingPlacement',
-            'designVariants.workOrder.sewing',
-            'designVariants.workOrder.packing',
-            'orderItems'
+            'designVariants.workOrder.sewing.neckOverdeck',
+            'designVariants.workOrder.sewing.underarmOverdeck',
+            'designVariants.workOrder.sewing.sideSplit',
+            'designVariants.workOrder.sewing.sewingLabel',
+            'designVariants.workOrder.packing.plasticPacking',
+            'designVariants.workOrder.packing.sticker',
+            'orderItems.size',
+            'orderItems.sleeve'
         ])->findOrFail($orderId);
 
         // Check if order is in WIP status

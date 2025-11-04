@@ -11,6 +11,16 @@ class MaterialSleeve extends Model
         'sleeve_name',
     ];
 
+    protected $appends = ['name'];
+
+    /**
+     * Accessor for name attribute (maps to sleeve_name column)
+     */
+    public function getNameAttribute(): ?string
+    {
+        return $this->sleeve_name;
+    }
+
     /**
      * Get all order items using this sleeve type
      */

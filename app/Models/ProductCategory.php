@@ -11,6 +11,16 @@ class ProductCategory extends Model
         'product_name',
     ];
 
+    protected $appends = ['name'];
+
+    /**
+     * Accessor for name attribute (maps to product_name column)
+     */
+    public function getNameAttribute(): ?string
+    {
+        return $this->product_name;
+    }
+
     /**
      * Get all orders for this product category
      */

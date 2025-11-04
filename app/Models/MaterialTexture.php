@@ -11,6 +11,16 @@ class MaterialTexture extends Model
         'texture_name',
     ];
 
+    protected $appends = ['name'];
+
+    /**
+     * Accessor for name attribute (maps to texture_name column)
+     */
+    public function getNameAttribute(): ?string
+    {
+        return $this->texture_name;
+    }
+
     /**
      * Get all orders using this material texture
      */

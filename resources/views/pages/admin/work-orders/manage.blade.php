@@ -13,7 +13,9 @@
     {{-- Alpine Root State --}}
     <div x-data="{
         openModal: false,
+        showModal: false,
         selectedDesign: null,
+        showData: null,
         mockupPreview: null,
         isDragging: false,
         errors: {},
@@ -275,6 +277,17 @@
             this.isSubmitting = false;
             this.resetFormData();
         },
+        openShowModal(design) {
+            console.log('Opening show modal for design:', design);
+            console.log('Product Category:', design.product_category);
+            console.log('Order items:', design.order_items);
+            this.showData = design;
+            this.showModal = true;
+        },
+        closeShowModal() {
+            this.showModal = false;
+            this.showData = null;
+        },
         isAllDesignsCompleted() {
             const designs = {{ Js::from($order->designVariants) }};
             return designs.every(design => design.work_order && design.work_order.status === 'created');
@@ -513,7 +526,132 @@
                                         </button>
 
                                         {{-- Show (Aktif) --}}
-                                        <button @click="alert('Show WO Detail coming soon!'); open = false"
+                                        @php
+                                            // Get order items for this design
+                                            $designOrderItems = $order->orderItems->where(
+                                                'design_variant_id',
+                                                $design->id,
+                                            );
+
+                                            // Get unique sleeves and sizes from order items
+                                            $usedSleeves = $designOrderItems
+                                                ->pluck('sleeve.name')
+                                                ->unique()
+                                                ->filter()
+                                                ->values()
+                                                ->toArray();
+                                            $usedSizes = $designOrderItems
+                                                ->pluck('size.name')
+                                                ->unique()
+                                                ->filter()
+                                                ->values()
+                                                ->toArray();
+
+                                            // Get all sleeves and sizes from database
+                                            $allSleeves = \App\Models\MaterialSleeve::all()->pluck('name')->toArray();
+                                            $allSizes = \App\Models\MaterialSize::all()->pluck('name')->toArray();
+
+                                            // Fill sleeves to minimum 4
+                                            $displaySleeves = $usedSleeves;
+                                            if (count($displaySleeves) < 4) {
+                                                $remainingSleeves = array_diff($allSleeves, $usedSleeves);
+                                                $neededCount = 4 - count($displaySleeves);
+                                                $displaySleeves = array_merge(
+                                                    $displaySleeves,
+                                                    array_slice($remainingSleeves, 0, $neededCount),
+                                                );
+                                            }
+
+                                            // Fill sizes to minimum 6
+                                            $displaySizes = $usedSizes;
+                                            if (count($displaySizes) < 6) {
+                                                $remainingSizes = array_diff($allSizes, $usedSizes);
+                                                $neededCount = 6 - count($displaySizes);
+                                                $displaySizes = array_merge(
+                                                    $displaySizes,
+                                                    array_slice($remainingSizes, 0, $neededCount),
+                                                );
+                                            }
+
+                                            // Prepare order items data
+                                            $orderItemsData = $designOrderItems
+                                                ->map(
+                                                    fn($item) => [
+                                                        'size_name' => $item->size->name ?? '-',
+                                                        'sleeve_name' => $item->sleeve->name ?? '-',
+                                                        'qty' => $item->qty ?? 0,
+                                                    ],
+                                                )
+                                                ->values();
+                                        @endphp
+                                        <button
+                                            @click="openShowModal({
+                                                id: {{ $design->id }},
+                                                design_name: {{ Js::from($design->design_name) }},
+                                                product_category: {{ Js::from($order->productCategory->name ?? '-') }},
+                                                material_category: {{ Js::from($order->materialCategory->name ?? '-') }},
+                                                material_texture: {{ Js::from($order->materialTexture->name ?? '-') }},
+                                                sleeves: {{ Js::from($displaySleeves) }},
+                                                sizes: {{ Js::from($displaySizes) }},
+                                                order_items: {{ Js::from($orderItemsData) }},
+                                                work_order: {{ Js::from([
+                                                    'id' => $design->workOrder->id ?? null,
+                                                    'mockup_img_url' => $design->workOrder->mockup_img_url ?? null,
+                                                    'status' => $design->workOrder->status ?? null,
+                                                    'cutting' => $design->workOrder->cutting
+                                                        ? [
+                                                            'cutting_pattern_id' => $design->workOrder->cutting->cutting_pattern_id,
+                                                            'cutting_pattern_name' => $design->workOrder->cutting->cuttingPattern->name ?? '-',
+                                                            'chain_cloth_id' => $design->workOrder->cutting->chain_cloth_id,
+                                                            'chain_cloth_name' => $design->workOrder->cutting->chainCloth->name ?? '-',
+                                                            'rib_size_id' => $design->workOrder->cutting->rib_size_id,
+                                                            'rib_size_name' => $design->workOrder->cutting->ribSize->name ?? '-',
+                                                            'custom_size_chart_img_url' => $design->workOrder->cutting->custom_size_chart_img_url,
+                                                            'notes' => $design->workOrder->cutting->notes,
+                                                        ]
+                                                        : null,
+                                                    'printing' => $design->workOrder->printing
+                                                        ? [
+                                                            'print_ink_id' => $design->workOrder->printing->print_ink_id,
+                                                            'print_ink_name' => $design->workOrder->printing->printInk->name ?? '-',
+                                                            'finishing_id' => $design->workOrder->printing->finishing_id,
+                                                            'finishing_name' => $design->workOrder->printing->finishing->name ?? '-',
+                                                            'detail_img_url' => $design->workOrder->printing->detail_img_url,
+                                                            'notes' => $design->workOrder->printing->notes,
+                                                        ]
+                                                        : null,
+                                                    'printing_placement' => $design->workOrder->printingPlacement
+                                                        ? [
+                                                            'detail_img_url' => $design->workOrder->printingPlacement->detail_img_url,
+                                                            'notes' => $design->workOrder->printingPlacement->notes,
+                                                        ]
+                                                        : null,
+                                                    'sewing' => $design->workOrder->sewing
+                                                        ? [
+                                                            'neck_overdeck_id' => $design->workOrder->sewing->neck_overdeck_id,
+                                                            'neck_overdeck_name' => $design->workOrder->sewing->neckOverdeck->name ?? '-',
+                                                            'underarm_overdeck_id' => $design->workOrder->sewing->underarm_overdeck_id,
+                                                            'underarm_overdeck_name' => $design->workOrder->sewing->underarmOverdeck->name ?? '-',
+                                                            'side_split_id' => $design->workOrder->sewing->side_split_id,
+                                                            'side_split_name' => $design->workOrder->sewing->sideSplit->name ?? '-',
+                                                            'sewing_label_id' => $design->workOrder->sewing->sewing_label_id,
+                                                            'sewing_label_name' => $design->workOrder->sewing->sewingLabel->name ?? '-',
+                                                            'detail_img_url' => $design->workOrder->sewing->detail_img_url,
+                                                            'notes' => $design->workOrder->sewing->notes,
+                                                        ]
+                                                        : null,
+                                                    'packing' => $design->workOrder->packing
+                                                        ? [
+                                                            'plastic_packing_id' => $design->workOrder->packing->plastic_packing_id,
+                                                            'plastic_packing_name' => $design->workOrder->packing->plasticPacking->name ?? '-',
+                                                            'sticker_id' => $design->workOrder->packing->sticker_id,
+                                                            'sticker_name' => $design->workOrder->packing->sticker->name ?? '-',
+                                                            'hangtag_img_url' => $design->workOrder->packing->hangtag_img_url,
+                                                            'notes' => $design->workOrder->packing->notes,
+                                                        ]
+                                                        : null,
+                                                ]) }}
+                                            }); open = false"
                                             class="w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2 text-left">
                                             <svg class="w-4 h-4" fill="none" stroke="currentColor"
                                                 viewBox="0 0 24 24">
@@ -1108,6 +1246,9 @@
                 </div>
             </div>
         </div>
+
+        {{-- Include Show Modal (Separated File) --}}
+        @include('pages.admin.work-orders.partials.show-modal')
 
     </div>
 

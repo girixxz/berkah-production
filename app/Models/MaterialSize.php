@@ -16,6 +16,16 @@ class MaterialSize extends Model
         'extra_price' => 'decimal:2',
     ];
 
+    protected $appends = ['name'];
+
+    /**
+     * Accessor for name attribute (maps to size_name column)
+     */
+    public function getNameAttribute(): ?string
+    {
+        return $this->size_name;
+    }
+
     /**
      * Get all order items using this size
      */

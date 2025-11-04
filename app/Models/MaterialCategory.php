@@ -11,6 +11,16 @@ class MaterialCategory extends Model
         'material_name',
     ];
 
+    protected $appends = ['name'];
+
+    /**
+     * Accessor for name attribute (maps to material_name column)
+     */
+    public function getNameAttribute(): ?string
+    {
+        return $this->material_name;
+    }
+
     /**
      * Get all orders using this material category
      */
