@@ -46,7 +46,11 @@
         Back to Orders
     </a>
 
-    <div class="space-y-6" x-data="orderDetail()">
+    <div class="space-y-6" x-data="{
+        ...orderDetail(),
+        showCancelConfirm: false,
+        showMoveToShippingConfirm: false
+    }">
         {{-- ================= SECTION 1: HEADER ================= --}}
         <div class="bg-white border border-gray-200 rounded-2xl p-4 md:p-6">
             <div class="flex justify-between gap-4">
@@ -102,34 +106,133 @@
                                 </svg>
                                 Show Invoice
                             </button>
-                            <a href="{{ route('admin.orders.edit', $order->id) }}"
-                                class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
-                                <svg class="w-4 h-4 inline-block mr-2" fill="none" stroke="currentColor"
-                                    viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                        d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                                </svg>
-                                Edit Order
-                            </a>
-                            <button @click="openPaymentModal = true; open = false"
-                                class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
-                                <svg class="w-4 h-4 inline-block mr-2" fill="none" stroke="currentColor"
-                                    viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                        d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                </svg>
-                                Add Payment
-                            </button>
-                            @if ($order->production_status !== 'cancelled')
-                                <button @click="cancelOrder"
+
+                            @php
+                                $isPending = $order->production_status === 'pending';
+                                $isWip = $order->production_status === 'wip';
+                                $isFinished = $order->production_status === 'finished';
+                                $isCancelled = $order->production_status === 'cancelled';
+                                $isShipped = $order->shipping_status === 'shipped';
+                                $hasRemainingDue = ($order->invoice->amount_due ?? 0) > 0;
+                            @endphp
+
+                            {{-- 1. STATUS == PENDING --}}
+                            @if ($isPending)
+                                <a href="{{ route('admin.orders.edit', $order->id) }}"
+                                    class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
+                                    <svg class="w-4 h-4 inline-block mr-2" fill="none" stroke="currentColor"
+                                        viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                    </svg>
+                                    Edit Order
+                                </a>
+                                <button @click="openPaymentModal = true; open = false"
+                                    class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
+                                    <svg class="w-4 h-4 inline-block mr-2" fill="none" stroke="currentColor"
+                                        viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                    </svg>
+                                    Add Payment
+                                </button>
+                                <button @click="showCancelConfirm = true; open = false"
                                     class="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50">
                                     <svg class="w-4 h-4 inline-block mr-2" fill="none" stroke="currentColor"
                                         viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                            d="M6 18L18 6M6 6l12 12" />
+                                            d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
                                     </svg>
                                     Cancel Order
                                 </button>
+                            @endif
+
+                            {{-- 2. STATUS == WIP --}}
+                            @if ($isWip)
+                                <a href="{{ route('admin.orders.edit', $order->id) }}"
+                                    class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
+                                    <svg class="w-4 h-4 inline-block mr-2" fill="none" stroke="currentColor"
+                                        viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                    </svg>
+                                    Edit Order
+                                </a>
+                                <button @click="openPaymentModal = true; open = false"
+                                    class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
+                                    <svg class="w-4 h-4 inline-block mr-2" fill="none" stroke="currentColor"
+                                        viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                    </svg>
+                                    Add Payment
+                                </button>
+                                <button @click="showCancelConfirm = true; open = false"
+                                    class="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50">
+                                    <svg class="w-4 h-4 inline-block mr-2" fill="none" stroke="currentColor"
+                                        viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                    </svg>
+                                    Cancel Order
+                                </button>
+                            @endif
+
+                            {{-- 3. STATUS == FINISHED, REMAINING > 0 --}}
+                            @if ($isFinished && $hasRemainingDue && !$isShipped)
+                                <button @click="openPaymentModal = true; open = false"
+                                    class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
+                                    <svg class="w-4 h-4 inline-block mr-2" fill="none" stroke="currentColor"
+                                        viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                    </svg>
+                                    Add Payment
+                                </button>
+                                {{-- Move to Shipping - Locked --}}
+                                <div
+                                    class="w-full text-left px-4 py-2 text-sm text-gray-400 cursor-not-allowed bg-gray-50 flex items-center justify-between">
+                                    <div class="flex items-center">
+                                        <svg class="w-4 h-4 inline-block mr-2" fill="none" stroke="currentColor"
+                                            viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
+                                        </svg>
+                                        Move to Shipping
+                                    </div>
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                                    </svg>
+                                </div>
+                                <p class="px-4 py-2 text-xs text-orange-600 bg-orange-50">
+                                    ⚠️ Complete payment first
+                                </p>
+                            @endif
+
+                            {{-- 4. STATUS == FINISHED, REMAINING == 0, SHIPPED == PENDING --}}
+                            @if ($isFinished && !$hasRemainingDue && !$isShipped)
+                                <button @click="showMoveToShippingConfirm = true; open = false"
+                                    class="w-full text-left px-4 py-2 text-sm text-green-600 hover:bg-green-50">
+                                    <svg class="w-4 h-4 inline-block mr-2" fill="none" stroke="currentColor"
+                                        viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
+                                    </svg>
+                                    Move to Shipping
+                                </button>
+                            @endif
+
+                            {{-- 5. STATUS == FINISHED, REMAINING == 0, SHIPPED == SHIPPED --}}
+                            @if ($isFinished && !$hasRemainingDue && $isShipped)
+                                <div class="px-4 py-6 text-center text-gray-400">
+                                    <svg class="w-10 h-10 mx-auto mb-2 opacity-50" fill="none" stroke="currentColor"
+                                        viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                    </svg>
+                                    <p class="text-xs">Order Completed</p>
+                                </div>
                             @endif
                         </div>
                     </div>
@@ -827,6 +930,94 @@
                 </div>
             </div>
         </div>
+
+        {{-- ================= CANCEL CONFIRMATION MODAL ================= --}}
+        <div x-show="showCancelConfirm" x-cloak
+            class="fixed inset-0 z-50 overflow-y-auto flex items-center justify-center"
+            style="background-color: rgba(0, 0, 0, 0.5);">
+            <div @click.away="showCancelConfirm = false"
+                class="relative bg-white rounded-lg shadow-xl max-w-md w-full mx-4 p-6">
+                {{-- Icon --}}
+                <div class="flex items-center justify-center w-12 h-12 mx-auto mb-4 bg-red-100 rounded-full">
+                    <svg class="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                    </svg>
+                </div>
+
+                {{-- Title --}}
+                <h3 class="text-lg font-semibold text-gray-900 text-center mb-2">
+                    Cancel Order?
+                </h3>
+
+                {{-- Message --}}
+                <p class="text-sm text-gray-600 text-center mb-6">
+                    Are you sure you want to cancel this order? This action cannot be undone and the order status will
+                    be changed to <span class="font-semibold text-red-600">Cancelled</span>.
+                </p>
+
+                {{-- Actions --}}
+                <div class="flex gap-3">
+                    <button type="button" @click="showCancelConfirm = false"
+                        class="flex-1 px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">
+                        No, Keep Order
+                    </button>
+                    <form action="{{ route('admin.orders.cancel', $order->id) }}" method="POST" class="flex-1">
+                        @csrf
+                        @method('PATCH')
+                        <button type="submit"
+                            class="w-full px-4 py-2 bg-red-600 text-white rounded-md text-sm font-medium hover:bg-red-700 transition-colors">
+                            Yes, Cancel Order
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        {{-- ================= MOVE TO SHIPPING CONFIRMATION MODAL ================= --}}
+        <div x-show="showMoveToShippingConfirm" x-cloak
+            class="fixed inset-0 z-50 overflow-y-auto flex items-center justify-center"
+            style="background-color: rgba(0, 0, 0, 0.5);">
+            <div @click.away="showMoveToShippingConfirm = false"
+                class="relative bg-white rounded-lg shadow-xl max-w-md w-full mx-4 p-6">
+                {{-- Icon --}}
+                <div class="flex items-center justify-center w-12 h-12 mx-auto mb-4 bg-green-100 rounded-full">
+                    <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
+                    </svg>
+                </div>
+
+                {{-- Title --}}
+                <h3 class="text-lg font-semibold text-gray-900 text-center mb-2">
+                    Move Order to Shippings?
+                </h3>
+
+                {{-- Message --}}
+                <p class="text-sm text-gray-600 text-center mb-6">
+                    Are you sure you want to move this finished order to the shipping page? The shipping status will be
+                    changed to <span class="font-semibold text-green-600">Shipped</span> and the order will be available on
+                    the Shippings page.
+                </p>
+
+                {{-- Actions --}}
+                <div class="flex gap-3">
+                    <button type="button" @click="showMoveToShippingConfirm = false"
+                        class="flex-1 px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">
+                        Cancel
+                    </button>
+                    <form action="{{ route('admin.orders.move-to-shipping', $order->id) }}" method="POST"
+                        class="flex-1">
+                        @csrf
+                        @method('PATCH')
+                        <button type="submit"
+                            class="w-full px-4 py-2 bg-green-600 text-white rounded-md text-sm font-medium hover:bg-green-700 transition-colors">
+                            Yes, Move to Shippings
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
     </div>
 
 @endsection
@@ -847,30 +1038,6 @@
 
                 printInvoice() {
                     window.print();
-                },
-
-                cancelOrder() {
-                    if (confirm('Are you sure you want to cancel this order? This action cannot be undone.')) {
-                        // Submit cancel form
-                        const form = document.createElement('form');
-                        form.method = 'POST';
-                        form.action = '{{ route('admin.orders.cancel', $order->id) }}';
-
-                        const csrfToken = document.createElement('input');
-                        csrfToken.type = 'hidden';
-                        csrfToken.name = '_token';
-                        csrfToken.value = '{{ csrf_token() }}';
-
-                        const methodField = document.createElement('input');
-                        methodField.type = 'hidden';
-                        methodField.name = '_method';
-                        methodField.value = 'PATCH';
-
-                        form.appendChild(csrfToken);
-                        form.appendChild(methodField);
-                        document.body.appendChild(form);
-                        form.submit();
-                    }
                 }
             }
         }
