@@ -36,130 +36,124 @@
     @endphp
 
     {{-- Nav Locate & Back Button --}}
-    <div class="flex flex-row items-center justify-between gap-4 mb-6">
-        <x-nav-locate :items="[$root, 'Orders', 'Order Detail']" />
-        <a href="{{ route('admin.orders.index') }}"
-            class="no-print inline-flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors whitespace-nowrap">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-            </svg>
-            Back to Orders
-        </a>
-    </div>
+    <x-nav-locate :items="[$root, 'Orders', 'Order Detail']" />
+
+    <a href="{{ route('admin.orders.index') }}"
+        class="mb-4 no-print inline-flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors whitespace-nowrap">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+        </svg>
+        Back to Orders
+    </a>
 
     <div class="space-y-6" x-data="orderDetail()">
         {{-- ================= SECTION 1: HEADER ================= --}}
         <div class="bg-white border border-gray-200 rounded-2xl p-4 md:p-6">
-            <div class="flex flex-col md:flex-row md:items-start md:justify-between gap-6">
-                {{-- Left Side --}}
-                <div class="flex flex-col gap-4">
-                    {{-- Kiri Atas: Invoice & Status --}}
-                    <div class="flex items-center gap-4">
-                        <h1 class="text-2xl font-bold text-gray-900">{{ $order->invoice->invoice_no }}</h1>
-                        @php
-                            $statusClasses = [
-                                'pending' => 'bg-yellow-100 text-yellow-800',
-                                'wip' => 'bg-blue-100 text-blue-800',
-                                'finished' => 'bg-green-100 text-green-800',
-                                'cancelled' => 'bg-red-100 text-red-800',
-                            ];
-                            $statusClass = $statusClasses[$order->production_status] ?? 'bg-gray-100 text-gray-800';
-                        @endphp
-                        <span class="px-4 py-2 rounded-full text-sm font-bold {{ $statusClass }}">
-                            {{ strtoupper(str_replace('_', ' ', $order->production_status)) }}
-                        </span>
-                    </div>
-
-                    {{-- Kiri Bawah: Order Date & Deadline --}}
-                    <div class="flex items-center gap-6 text-sm text-gray-600">
-                        <div class="flex items-center gap-2">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                            </svg>
-                            <span>Order Date: <span
-                                    class="font-medium text-gray-900">{{ \Carbon\Carbon::parse($order->order_date)->format('d M Y') }}</span></span>
-                        </div>
-                        <div class="flex items-center gap-2">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                            </svg>
-                            <span>Deadline: <span
-                                    class="font-medium text-gray-900">{{ $order->deadline ? \Carbon\Carbon::parse($order->deadline)->format('d M Y') : '-' }}</span></span>
-                        </div>
+            <div class="flex justify-between gap-4">
+                {{-- Invoice & Status --}}
+                <div class="flex items-center gap-2 md:gap-4 justify-between">
+                    <h1 class="text-md md:text-2xl font-bold text-gray-900">{{ $order->invoice->invoice_no }}</h1>
+                    @php
+                        $statusClasses = [
+                            'pending' => 'bg-yellow-100 text-yellow-800',
+                            'wip' => 'bg-blue-100 text-blue-800',
+                            'finished' => 'bg-green-100 text-green-800',
+                            'cancelled' => 'bg-red-100 text-red-800',
+                        ];
+                        $statusClass = $statusClasses[$order->production_status] ?? 'bg-gray-100 text-gray-800';
+                    @endphp
+                    <div class="px-3 py-2 rounded-full text-xs md:text-sm md:px-4 font-bold {{ $statusClass }}">
+                        {{ strtoupper(str_replace('_', ' ', $order->production_status)) }}
                     </div>
                 </div>
 
-                {{-- Right Side --}}
-                <div class="flex flex-col gap-4 items-end">
-                    {{-- Kanan Atas: Show Invoice & Dropdown --}}
-                    <div class="flex items-center gap-3">
-                        {{-- Show Invoice Button --}}
-                        <button @click="openInvoiceModal = true"
-                            class="px-4 py-2 rounded-md bg-primary text-white hover:bg-primary-dark flex items-center gap-2 text-sm font-medium">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                            </svg>
-                            Show Invoice
-                        </button>
-
-                        {{-- Dropdown Menu --}}
-                        <div class="relative" x-data="{ open: false }">
-                            <button @click="open = !open"
-                                class="p-2 rounded-md border border-gray-300 text-gray-700 hover:bg-gray-50">
-                                <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                                    <path
-                                        d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z" />
-                                </svg>
-                            </button>
-
-                            {{-- Dropdown Content --}}
-                            <div x-show="open" @click.away="open = false" x-cloak
-                                class="absolute right-0 mt-2 w-48 bg-white border border-gray-200 rounded-md shadow-lg z-20">
-                                <a href="{{ route('admin.orders.edit', $order->id) }}"
-                                    class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
-                                    <svg class="w-4 h-4 inline-block mr-2" fill="none" stroke="currentColor"
-                                        viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                            d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                                    </svg>
-                                    Edit Order
-                                </a>
-                                <button @click="openPaymentModal = true; open = false"
-                                    class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
-                                    <svg class="w-4 h-4 inline-block mr-2" fill="none" stroke="currentColor"
-                                        viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                            d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                    </svg>
-                                    Add Payment
-                                </button>
-                                @if ($order->production_status !== 'cancelled')
-                                    <button @click="cancelOrder"
-                                        class="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50">
-                                        <svg class="w-4 h-4 inline-block mr-2" fill="none" stroke="currentColor"
-                                            viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                d="M6 18L18 6M6 6l12 12" />
-                                        </svg>
-                                        Cancel Order
-                                    </button>
-                                @endif
-                            </div>
-                        </div>
-                    </div>
-
-                    {{-- Kanan Bawah: Sales --}}
-                    <div class="flex items-center gap-2 text-sm text-gray-600">
+                {{-- Action Buttons --}}
+                <div class="flex items-center gap-3">
+                    {{-- Show Invoice Button - Hidden on mobile, shown on md and up --}}
+                    <button @click="openInvoiceModal = true"
+                        class="hidden md:flex px-4 py-2 rounded-md bg-primary text-white hover:bg-primary-dark items-center gap-2 text-sm font-medium">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                                d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                         </svg>
-                        <span>Sales: <span
-                                class="font-medium text-gray-900">{{ $order->sale->sales_name ?? '-' }}</span></span>
+                        Show Invoice
+                    </button>
+
+                    {{-- Dropdown Menu --}}
+                    <div class="relative" x-data="{ open: false }">
+                        <button @click="open = !open"
+                            class="p-2 rounded-md border border-gray-300 text-gray-700 hover:bg-gray-50">
+                            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                                <path
+                                    d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z" />
+                            </svg>
+                        </button>
+
+                        {{-- Dropdown Content --}}
+                        <div x-show="open" @click.away="open = false" x-cloak
+                            class="absolute right-0 mt-2 w-48 bg-white border border-gray-200 rounded-md shadow-lg z-20">
+                            {{-- Show Invoice - Only visible on mobile (< md) --}}
+                            <button @click="openInvoiceModal = true; open = false"
+                                class="md:hidden w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 border-b border-gray-200">
+                                <svg class="w-4 h-4 inline-block mr-2" fill="none" stroke="currentColor"
+                                    viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                </svg>
+                                Show Invoice
+                            </button>
+                            <a href="{{ route('admin.orders.edit', $order->id) }}"
+                                class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
+                                <svg class="w-4 h-4 inline-block mr-2" fill="none" stroke="currentColor"
+                                    viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                </svg>
+                                Edit Order
+                            </a>
+                            <button @click="openPaymentModal = true; open = false"
+                                class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
+                                <svg class="w-4 h-4 inline-block mr-2" fill="none" stroke="currentColor"
+                                    viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                                Add Payment
+                            </button>
+                            @if ($order->production_status !== 'cancelled')
+                                <button @click="cancelOrder"
+                                    class="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50">
+                                    <svg class="w-4 h-4 inline-block mr-2" fill="none" stroke="currentColor"
+                                        viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M6 18L18 6M6 6l12 12" />
+                                    </svg>
+                                    Cancel Order
+                                </button>
+                            @endif
+                        </div>
                     </div>
+                </div>
+            </div>
+            {{-- Order Date & Deadline - Responsive Layout --}}
+            <div class="flex items-center justify-between sm:justify-start sm:gap-6 text-sm text-gray-600 mt-4">
+                <div class="flex items-center gap-2">
+                    <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                    <span class="hidden sm:inline text-gray-600">Order Date:</span>
+                    <span
+                        class="font-medium text-gray-900">{{ \Carbon\Carbon::parse($order->order_date)->format('d M Y') }}</span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <span class="hidden sm:inline text-gray-600">Deadline:</span>
+                    <span
+                        class="font-medium text-gray-900">{{ $order->deadline ? \Carbon\Carbon::parse($order->deadline)->format('d M Y') : '-' }}</span>
                 </div>
             </div>
         </div>
@@ -167,80 +161,82 @@
         {{-- ================= SECTION 2: CUSTOMER DATA ================= --}}
         <div class="bg-white border border-gray-200 rounded-2xl p-4 md:p-6">
             <h2 class="text-lg font-semibold text-gray-900 mb-4">Customer Information</h2>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div class="space-y-3">
-                    <div>
-                        <p class="text-sm text-gray-500">Customer Name</p>
-                        <p class="text-sm font-medium text-gray-900">{{ $order->customer->customer_name }}</p>
-                    </div>
-                    <div>
-                        <p class="text-sm text-gray-500">Phone</p>
-                        <p class="text-sm font-medium text-gray-900">{{ $order->customer->phone }}</p>
-                    </div>
-                    <div>
-                        <p class="text-sm text-gray-500">Sales Person</p>
-                        <p class="text-sm font-medium text-gray-900">{{ $order->sale->sales_name ?? '-' }}</p>
-                    </div>
+            <div class="grid grid-cols-2 md:grid-cols-3 gap-3">
+                <div>
+                    <p class="text-xs md:text-sm text-gray-500 mb-1">Name</p>
+                    <p class="text-sm md:text-base font-medium text-gray-900">{{ $order->customer->customer_name }}</p>
                 </div>
-                <div class="space-y-3">
-                    <div>
-                        <p class="text-sm text-gray-500">Address</p>
-                        <p class="text-sm font-medium text-gray-900">{{ $order->customer->address }}</p>
-                    </div>
-                    <div>
-                        <p class="text-sm text-gray-500">Village</p>
-                        <p class="text-sm font-medium text-gray-900">{{ $locationData['village_name'] }}</p>
-                    </div>
-                    <div>
-                        <p class="text-sm text-gray-500">District</p>
-                        <p class="text-sm font-medium text-gray-900">{{ $locationData['district_name'] }}</p>
-                    </div>
-                    <div>
-                        <p class="text-sm text-gray-500">City</p>
-                        <p class="text-sm font-medium text-gray-900">{{ $locationData['city_name'] }}</p>
-                    </div>
-                    <div>
-                        <p class="text-sm text-gray-500">Province</p>
-                        <p class="text-sm font-medium text-gray-900">{{ $locationData['province_name'] }}</p>
-                    </div>
+                <div>
+                    <p class="text-xs md:text-sm text-gray-500 mb-1">Phone</p>
+                    <p class="text-sm md:text-base font-medium text-gray-900">{{ $order->customer->phone }}</p>
+                </div>
+                <div>
+                    <p class="text-xs md:text-sm text-gray-500 mb-1">Sales</p>
+                    <p class="text-sm md:text-base font-medium text-gray-900">{{ $order->sale->sales_name ?? '-' }}</p>
+                </div>
+                <div>
+                    <p class="text-xs md:text-sm text-gray-500 mb-1">Province</p>
+                    <p class="text-sm md:text-base font-medium text-gray-900">{{ $locationData['province_name'] }}</p>
+                </div>
+                <div>
+                    <p class="text-xs md:text-sm text-gray-500 mb-1">City</p>
+                    <p class="text-sm md:text-base font-medium text-gray-900">{{ $locationData['city_name'] }}</p>
+                </div>
+                <div>
+                    <p class="text-xs md:text-sm text-gray-500 mb-1">District</p>
+                    <p class="text-sm md:text-base font-medium text-gray-900">{{ $locationData['district_name'] }}</p>
+                </div>
+                <div>
+                    <p class="text-xs md:text-sm text-gray-500 mb-1">Village</p>
+                    <p class="text-sm md:text-base font-medium text-gray-900">{{ $locationData['village_name'] }}</p>
+                </div>
+                <div class="col-span-2 md:col-span-2">
+                    <p class="text-xs md:text-sm text-gray-500 mb-1">Address</p>
+                    <p class="text-sm md:text-base font-medium text-gray-900">{{ $order->customer->address }}</p>
                 </div>
             </div>
         </div>
 
-        {{-- ================= SECTION 3: ORDER DETAILS ================= --}}
+        {{-- ================= SECTION 3: PRODUCT DETAILS ================= --}}
         <div class="bg-white border border-gray-200 rounded-2xl p-4 md:p-6">
-            <h2 class="text-lg font-semibold text-gray-900 mb-4">Order Details</h2>
+            <h2 class="text-lg font-semibold text-gray-900 mb-4">Detail Products</h2>
 
             {{-- Product Info --}}
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6 p-4 bg-gray-50 rounded-lg">
+            <div class="grid grid-cols-2 md:grid-cols-3 gap-3">
                 <div>
-                    <p class="text-sm text-gray-500">Product</p>
-                    <p class="text-sm font-medium text-gray-900">{{ $order->productCategory->product_name ?? '-' }}</p>
+                    <p class="text-xs md:text-sm text-gray-500 mb-1">Product</p>
+                    <p class="text-sm md:text-base font-medium text-gray-900">
+                        {{ $order->productCategory->product_name ?? '-' }}</p>
                 </div>
                 <div>
-                    <p class="text-sm text-gray-500">Material</p>
-                    <p class="text-sm font-medium text-gray-900">
+                    <p class="text-xs md:text-sm text-gray-500 mb-1">Material</p>
+                    <p class="text-sm md:text-base font-medium text-gray-900">
                         {{ $order->materialCategory->material_name ?? '-' }} -
                         {{ $order->materialTexture->texture_name ?? '-' }}
                     </p>
                 </div>
                 <div>
-                    <p class="text-sm text-gray-500">Color</p>
-                    <p class="text-sm font-medium text-gray-900">{{ $order->product_color ?? '-' }}</p>
+                    <p class="text-xs md:text-sm text-gray-500 mb-1">Color</p>
+                    <p class="text-sm md:text-base font-medium text-gray-900">{{ $order->product_color ?? '-' }}</p>
                 </div>
                 <div>
-                    <p class="text-sm text-gray-500">Shipping</p>
-                    <p class="text-sm font-medium text-gray-900">
+                    <p class="text-xs md:text-sm text-gray-500 mb-1">Shipping</p>
+                    <p class="text-sm md:text-base font-medium text-gray-900">
                         {{ $order->shipping_type === 'pickup' ? 'Pickup' : 'Delivery' }}
                     </p>
                 </div>
                 @if ($order->notes)
-                    <div class="md:col-span-2">
-                        <p class="text-sm text-gray-500">Notes</p>
-                        <p class="text-sm font-medium text-gray-900">{{ $order->notes }}</p>
+                    <div class="col-span-2 md:col-span-1">
+                        <p class="text-xs md:text-sm text-gray-500 mb-1">Notes</p>
+                        <p class="text-sm md:text-base font-medium text-gray-900">{{ $order->notes }}</p>
                     </div>
                 @endif
             </div>
+        </div>
+
+        {{-- ================= SECTION 4: ORDER ITEMS ================= --}}
+        <div class="bg-white border border-gray-200 rounded-2xl p-4 md:p-6">
+            <h2 class="text-lg font-semibold text-gray-900 mb-4">Detail Order Items</h2>
 
             {{-- Design Variants --}}
             @foreach ($designVariants as $designName => $variants)
@@ -318,7 +314,7 @@
                         @endforeach
                     </div>
                 @else
-                    <div class="p-3 bg-gray-50 rounded-lg text-center">
+                    <div class="p-3 bg-gray-50 rounded-lg text-start">
                         <span class="text-sm text-gray-500">-</span>
                     </div>
                 @endif
