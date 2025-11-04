@@ -215,9 +215,6 @@ class OrderController extends Controller
             'extraServices.service'
         ]);
 
-        // Fetch location names from API for customer
-        $locationData = $this->getCustomerLocationNames($order->customer);
-
         // Group order items by design variant and sleeve
         $designVariants = [];
         
@@ -246,9 +243,23 @@ class OrderController extends Controller
 
         return view('pages.admin.orders.show', [
             'order' => $order,
-            'designVariants' => $designVariants,
-            'locationData' => $locationData
+            'designVariants' => $designVariants
         ]);
+    }
+
+    /**
+     * Get customer location data via AJAX (with cache)
+     */
+    public function getCustomerLocation($customerId)
+    {
+        $customer = Customer::findOrFail($customerId);
+        
+        // Cache location data for 24 hours per customer
+        $locationData = Cache::remember("customer_location_{$customerId}", 86400, function () use ($customer) {
+            return $this->getCustomerLocationNames($customer);
+        });
+
+        return response()->json($locationData);
     }
 
     /**
@@ -671,8 +682,10 @@ class OrderController extends Controller
             'extraServices.service'
         ]);
 
-        // Get customer location from API
-        $locationData = $this->getCustomerLocationNames($order->customer);
+        // Get customer location from API with cache
+        $locationData = Cache::remember("customer_location_{$order->customer->id}", 86400, function () use ($order) {
+            return $this->getCustomerLocationNames($order->customer);
+        });
 
         $pdf = Pdf::loadView('pages.admin.orders.invoice-pdf', [
             'order' => $order,

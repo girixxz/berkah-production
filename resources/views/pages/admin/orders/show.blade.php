@@ -38,19 +38,40 @@
     {{-- Nav Locate & Back Button --}}
     <x-nav-locate :items="[$root, 'Orders', 'Order Detail']" />
 
-    <a href="{{ route('admin.orders.index') }}"
+    {{-- <a href="{{ route('admin.orders.index') }}"
         class="mb-4 no-print inline-flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors whitespace-nowrap">
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
         </svg>
         Back to Orders
-    </a>
+    </a> --}}
 
     <div class="space-y-6" x-data="{
         ...orderDetail(),
         showCancelConfirm: false,
-        showMoveToShippingConfirm: false
-    }">
+        showMoveToShippingConfirm: false,
+        locationData: {
+            province_name: 'Loading...',
+            city_name: 'Loading...',
+            district_name: 'Loading...',
+            village_name: 'Loading...'
+        },
+        async loadLocationData() {
+            try {
+                const response = await fetch('{{ route('admin.customers.location', $order->customer_id) }}');
+                const data = await response.json();
+                this.locationData = data;
+            } catch (error) {
+                console.error('Error loading location:', error);
+                this.locationData = {
+                    province_name: '-',
+                    city_name: '-',
+                    district_name: '-',
+                    village_name: '-'
+                };
+            }
+        }
+    }" x-init="loadLocationData()">
         {{-- ================= SECTION 1: HEADER ================= --}}
         <div class="bg-white border border-gray-200 rounded-2xl p-4 md:p-6">
             <div class="flex justify-between gap-4">
@@ -279,19 +300,19 @@
                 </div>
                 <div>
                     <p class="text-xs md:text-sm text-gray-500 mb-1">Province</p>
-                    <p class="text-sm md:text-base font-medium text-gray-900">{{ $locationData['province_name'] }}</p>
+                    <p class="text-sm md:text-base font-medium text-gray-900" x-text="locationData.province_name"></p>
                 </div>
                 <div>
                     <p class="text-xs md:text-sm text-gray-500 mb-1">City</p>
-                    <p class="text-sm md:text-base font-medium text-gray-900">{{ $locationData['city_name'] }}</p>
+                    <p class="text-sm md:text-base font-medium text-gray-900" x-text="locationData.city_name"></p>
                 </div>
                 <div>
                     <p class="text-xs md:text-sm text-gray-500 mb-1">District</p>
-                    <p class="text-sm md:text-base font-medium text-gray-900">{{ $locationData['district_name'] }}</p>
+                    <p class="text-sm md:text-base font-medium text-gray-900" x-text="locationData.district_name"></p>
                 </div>
                 <div>
                     <p class="text-xs md:text-sm text-gray-500 mb-1">Village</p>
-                    <p class="text-sm md:text-base font-medium text-gray-900">{{ $locationData['village_name'] }}</p>
+                    <p class="text-sm md:text-base font-medium text-gray-900" x-text="locationData.village_name"></p>
                 </div>
                 <div class="col-span-2 md:col-span-2">
                     <p class="text-xs md:text-sm text-gray-500 mb-1">Address</p>
