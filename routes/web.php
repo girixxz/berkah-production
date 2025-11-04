@@ -12,6 +12,19 @@ use App\Http\Controllers\MaterialSleeveController;
 use App\Http\Controllers\MaterialSizeController;
 use App\Http\Controllers\ServiceController;
 
+use App\Http\Controllers\Main\ManageWorkOrderDataController;
+use App\Http\Controllers\CuttingPatternController;
+use App\Http\Controllers\ChainClothController;
+use App\Http\Controllers\RibSizeController;
+use App\Http\Controllers\PrintInkController;
+use App\Http\Controllers\FinishingController;
+use App\Http\Controllers\NeckOverdeckController;
+use App\Http\Controllers\UnderarmOverdeckController;
+use App\Http\Controllers\SideSplitController;
+use App\Http\Controllers\SewingLabelController;
+use App\Http\Controllers\PlasticPackingController;
+use App\Http\Controllers\StickerController;
+
 use App\Http\Controllers\Main\ManageUsersSalesController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\SalesController;
@@ -74,8 +87,19 @@ Route::middleware(['auth'])->group(function () {
             });
 
             // Work Order
-            Route::prefix('work-order')->name('work-order.')->group(function () {
-                Route::get('/', [ManageProductsController::class, 'index'])->name('index');
+            Route::prefix('work-orders')->name('work-orders.')->group(function () {
+                Route::get('/', [ManageWorkOrderDataController::class, 'index'])->name('index');
+                Route::resource('cutting-patterns', CuttingPatternController::class)->except(['index', 'create', 'show', 'edit']);
+                Route::resource('chain-cloths', ChainClothController::class)->except(['index', 'create', 'show', 'edit']);
+                Route::resource('rib-sizes', RibSizeController::class)->except(['index', 'create', 'show', 'edit']);
+                Route::resource('print-inks', PrintInkController::class)->except(['index', 'create', 'show', 'edit']);
+                Route::resource('finishings', FinishingController::class)->except(['index', 'create', 'show', 'edit']);
+                Route::resource('neck-overdecks', NeckOverdeckController::class)->except(['index', 'create', 'show', 'edit']);
+                Route::resource('underarm-overdecks', UnderarmOverdeckController::class)->except(['index', 'create', 'show', 'edit']);
+                Route::resource('side-splits', SideSplitController::class)->except(['index', 'create', 'show', 'edit']);
+                Route::resource('sewing-labels', SewingLabelController::class)->except(['index', 'create', 'show', 'edit']);
+                Route::resource('plastic-packings', PlasticPackingController::class)->except(['index', 'create', 'show', 'edit']);
+                Route::resource('stickers', StickerController::class)->except(['index', 'create', 'show', 'edit']);
             });
 
             // Users & Sales

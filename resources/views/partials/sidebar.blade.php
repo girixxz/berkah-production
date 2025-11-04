@@ -34,7 +34,7 @@
 
                     <!-- Manage Data -->
                     <li x-data="{
-                        open: @js(request()->routeIs('owner.manage-data.products.*') || request()->is('owner/manage-data/products/*') || request()->routeIs('owner.manage-data.work-order.*') || request()->is('owner/manage-data/work-order/*') || request()->routeIs('owner.manage-data.users-sales.*') || request()->is('owner/manage-data/users-sales/*'))
+                        open: @js(request()->routeIs('owner.manage-data.products.*') || request()->is('owner/manage-data/products/*') || request()->routeIs('owner.manage-data.work-orders.*') || request()->is('owner/manage-data/work-orders/*') || request()->routeIs('owner.manage-data.users-sales.*') || request()->is('owner/manage-data/users-sales/*'))
                     }">
                         <button type="button" @click="open = !open"
                             class="flex items-center justify-between w-full pl-6 pr-4 py-3 hover:bg-gray-light focus:outline-none cursor-pointer">
@@ -43,8 +43,8 @@
                                     $mdActive =
                                         request()->routeIs('owner.manage-data.products.*') ||
                                         request()->is('owner/manage-data/products.*') ||
-                                        request()->routeIs('owner.manage-data.work-order.*') ||
-                                        request()->is('owner/manage-data/work-order.*') ||
+                                        request()->routeIs('owner.manage-data.work-orders.*') ||
+                                        request()->is('owner/manage-data/work-orders.*') ||
                                         request()->routeIs('owner.manage-data.users-sales.*') ||
                                         request()->is('owner/manage-data/users-sales.*');
                                 @endphp
@@ -63,10 +63,9 @@
                                 </x-sidebar-menu.sub-menu>
                             </li>
 
-                            {{-- Nanti sesuaikan setelah route-nya ada --}}
                             <li>
-                                <x-sidebar-menu.sub-menu href="{{ route('owner.manage-data.work-order.index') }}"
-                                    :pattern="['owner.manage-data.work-order.*', 'owner/manage-data/work-order/*']">
+                                <x-sidebar-menu.sub-menu href="{{ route('owner.manage-data.work-orders.index') }}"
+                                    :pattern="['owner.manage-data.work-orders.*', 'owner/manage-data/work-orders/*']">
                                     WO Data
                                 </x-sidebar-menu.sub-menu>
                             </li>
