@@ -501,23 +501,23 @@
             {{-- Payment Cards --}}
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
                 {{-- Total Bill --}}
-                <div class="bg-gradient-to-br from-blue-50 to-blue-100 border border-blue-200 rounded-lg p-4">
-                    <p class="text-sm text-blue-600 font-medium mb-1">Total Bill</p>
-                    <p class="text-2xl font-bold text-blue-900">Rp
+                <div class="bg-white border border-gray-200 rounded-lg p-4">
+                    <p class="text-sm text-gray-500 mb-1">Total Bill</p>
+                    <p class="text-2xl font-bold text-gray-900">Rp
                         {{ number_format($order->invoice->total_bill ?? 0, 0, ',', '.') }}</p>
                 </div>
 
                 {{-- Amount Paid --}}
-                <div class="bg-gradient-to-br from-green-50 to-green-100 border border-green-200 rounded-lg p-4">
-                    <p class="text-sm text-green-600 font-medium mb-1">Amount Paid</p>
-                    <p class="text-2xl font-bold text-green-900">Rp
+                <div class="bg-white border border-gray-200 rounded-lg p-4">
+                    <p class="text-sm text-gray-500 mb-1">Amount Paid</p>
+                    <p class="text-2xl font-bold text-green-600">Rp
                         {{ number_format($order->invoice->amount_paid ?? 0, 0, ',', '.') }}</p>
                 </div>
 
                 {{-- Remaining Due --}}
-                <div class="bg-gradient-to-br from-orange-50 to-orange-100 border border-orange-200 rounded-lg p-4">
-                    <p class="text-sm text-orange-600 font-medium mb-1">Remaining Due</p>
-                    <p class="text-2xl font-bold text-orange-900">Rp
+                <div class="bg-white border border-gray-200 rounded-lg p-4">
+                    <p class="text-sm text-gray-500 mb-1">Remaining Due</p>
+                    <p class="text-2xl font-bold text-orange-600">Rp
                         {{ number_format($order->invoice->amount_due ?? 0, 0, ',', '.') }}</p>
                 </div>
             </div>
