@@ -394,11 +394,20 @@ class WorkOrderController extends Controller
                 $packingData
             );
 
+            // ✅ AUTO-CHECK: Update order work_order_status if all designs completed
+            $statusUpdated = $this->checkAndUpdateOrderWorkOrderStatus($validated['order_id']);
+
             DB::commit();
+
+            // Prepare success message
+            $successMessage = 'Work order berhasil disimpan!';
+            if ($statusUpdated) {
+                $successMessage .= ' 🎉 Semua design telah selesai - Status order otomatis diupdate ke CREATED!';
+            }
 
             return redirect()
                 ->route('admin.work-orders.manage', ['order' => $validated['order_id']])
-                ->with('success', 'Work order berhasil disimpan!');
+                ->with('success', $successMessage);
 
         } catch (\Illuminate\Validation\ValidationException $e) {
             DB::rollBack();
@@ -463,6 +472,45 @@ class WorkOrderController extends Controller
             return redirect()
                 ->route('admin.work-orders.manage', $orderId)
                 ->with('error', 'Failed to finalize work orders: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Check if all design variants have completed work orders and auto-update order status.
+     * This is triggered every time a work order is created/updated.
+     * 
+     * @param int $orderId
+     * @return bool True if status was updated, false otherwise
+     */
+    private function checkAndUpdateOrderWorkOrderStatus($orderId)
+    {
+        try {
+            $order = Order::with('designVariants.workOrder')->findOrFail($orderId);
+
+            // Count total design variants
+            $totalDesigns = $order->designVariants->count();
+
+            // Count completed work orders (status = 'created')
+            $completedWorkOrders = $order->designVariants->filter(function ($design) {
+                return $design->workOrder && $design->workOrder->status === 'created';
+            })->count();
+
+            // If all designs have completed work orders, update order status
+            if ($totalDesigns > 0 && $completedWorkOrders === $totalDesigns) {
+                // Only update if current status is 'pending'
+                if ($order->work_order_status === 'pending') {
+                    $order->update(['work_order_status' => 'created']);
+                    
+                    Log::info("Order #{$orderId} work_order_status auto-updated to 'created' - All {$totalDesigns} designs completed");
+                    
+                    return true;
+                }
+            }
+
+            return false;
+        } catch (\Exception $e) {
+            Log::error("Failed to auto-update work_order_status for Order #{$orderId}: " . $e->getMessage());
+            return false;
         }
     }
 }

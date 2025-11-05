@@ -297,18 +297,14 @@
         closeShowModal() {
             this.showModal = false;
             this.showData = null;
-        },
-        isAllDesignsCompleted() {
-            const designs = {{ Js::from($order->designVariants) }};
-            return designs.every(design => design.work_order && design.work_order.status === 'created');
         }
     }" class="space-y-6">
 
         {{-- ================= SECTION 1: HEADER ================= --}}
         <div class="bg-white border border-gray-200 rounded-2xl p-4 md:p-6">
-            <div class="flex justify-between gap-4">
-                {{-- Invoice & Status --}}
-                <div class="flex items-center gap-2 md:gap-4 justify-between">
+            {{-- Invoice & Dates --}}
+            <div>
+                <div class="flex items-center justify-between md:justify-start gap-2 md:gap-4">
                     <h1 class="text-md md:text-2xl font-bold text-gray-900">{{ $order->invoice->invoice_no }}</h1>
                     @php
                         $statusClasses = [
@@ -316,44 +312,41 @@
                             'created' => 'bg-green-100 text-green-800',
                         ];
                         $statusClass = $statusClasses[$order->work_order_status] ?? 'bg-gray-100 text-gray-800';
+
+                        // Real-time check
+                        $totalDesigns = $order->designVariants->count();
+                        $completedDesigns = $order->designVariants
+                            ->filter(fn($d) => $d->workOrder && $d->workOrder->status === 'created')
+                            ->count();
+                        $allCompleted = $totalDesigns > 0 && $completedDesigns === $totalDesigns;
                     @endphp
-                    <div class="px-3 py-2 rounded-full text-xs md:text-sm md:px-4 font-bold {{ $statusClass }}">
-                        {{ strtoupper(str_replace('_', ' ', $order->work_order_status)) }}
+                    <div class="px-3 py-2 rounded-full text-xs md:text-sm md:px-4 font-bold {{ $statusClass }}"
+                        x-data="{ completed: {{ $allCompleted ? 'true' : 'false' }} }">
+                        <span x-show="!completed">⏳
+                            {{ strtoupper(str_replace('_', ' ', $order->work_order_status)) }}</span>
+                        <span x-show="completed">✅ CREATED</span>
                     </div>
                 </div>
-
-                {{-- Action Buttons --}}
-                <div class="flex items-center gap-3">
-                    {{-- Show Work Order Button - Icon only on mobile, full text on desktop --}}
-                    <button @click="openInvoiceModal = true"
-                        class="flex px-3 md:px-4 py-2 rounded-md bg-primary text-white hover:bg-primary-dark items-center gap-2 text-sm font-medium">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                {{-- Order Date & Deadline --}}
+                <div class="flex items-center justify-between sm:justify-start sm:gap-6 text-sm text-gray-600 mt-4">
+                    <div class="flex items-center gap-2">
+                        <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                         </svg>
-                        <span class="hidden md:inline">Show Work Order</span>
-                    </button>
-                </div>
-            </div>
-            {{-- Order Date & Deadline - Responsive Layout --}}
-            <div class="flex items-center justify-between sm:justify-start sm:gap-6 text-sm text-gray-600 mt-4">
-                <div class="flex items-center gap-2">
-                    <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                    </svg>
-                    <span class="hidden sm:inline text-gray-600">Order Date:</span>
-                    <span
-                        class="font-medium text-gray-900">{{ \Carbon\Carbon::parse($order->order_date)->format('d M Y') }}</span>
-                </div>
-                <div class="flex items-center gap-2">
-                    <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                    <span class="hidden sm:inline text-gray-600">Deadline:</span>
-                    <span
-                        class="font-medium text-gray-900">{{ $order->deadline ? \Carbon\Carbon::parse($order->deadline)->format('d M Y') : '-' }}</span>
+                        <span class="hidden sm:inline text-gray-600">Order Date:</span>
+                        <span
+                            class="font-medium text-gray-900">{{ \Carbon\Carbon::parse($order->order_date)->format('d M Y') }}</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        <span class="hidden sm:inline text-gray-600">Deadline:</span>
+                        <span
+                            class="font-medium text-gray-900">{{ $order->deadline ? \Carbon\Carbon::parse($order->deadline)->format('d M Y') : '-' }}</span>
+                    </div>
                 </div>
             </div>
         </div>
@@ -386,9 +379,9 @@
                         {{-- 2. Nama Design & Status (Kiri-Tengah) --}}
                         <div class="flex-1 min-w-0 flex flex-col justify-center gap-1">
                             <h3 class="text-base md:text-lg font-semibold text-gray-900">
-                                Variant Design {{ $index + 1 }}
+                                Variant {{ $index + 1 }}
                                 @if ($design->design_name)
-                                    <span class="text-gray-600">({{ $design->design_name }})</span>
+                                    <span class="text-gray-600 italic">( {{ $design->design_name }} )</span>
                                 @endif
                             </h3>
                             @if ($design->workOrder && $design->workOrder->status === 'created')
@@ -527,8 +520,7 @@
                                                 ]) }}
                                             }); open = false"
                                             class="w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2 text-left">
-                                            <svg class="w-4 h-4" fill="none" stroke="currentColor"
-                                                viewBox="0 0 24 24">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                                     d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                                             </svg>
@@ -597,6 +589,7 @@
                                         <button
                                             @click="openShowModal({
                                                 id: {{ $design->id }},
+                                                variant_index: {{ $index + 1 }},
                                                 design_name: {{ Js::from($design->design_name) }},
                                                 product_category: {{ Js::from($order->productCategory->name ?? '-') }},
                                                 material_category: {{ Js::from($order->materialCategory->name ?? '-') }},
@@ -723,33 +716,27 @@
             @endforeach
         </div>
 
-        {{-- Finalize Button --}}
-        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-            <div class="flex items-center justify-between">
-                <div>
-                    <h3 class="text-lg font-semibold text-gray-900">Finalize Work Orders</h3>
-                    <p class="text-sm text-gray-500 mt-1">
-                        Complete all designs to enable finalization and PDF generation
-                    </p>
-                </div>
-                <button :disabled="!isAllDesignsCompleted()"
-                    @click="if(isAllDesignsCompleted()) { 
-                            if(confirm('Are you sure you want to finalize all work orders? This will generate PDFs for all designs.')) {
-                                window.location.href = '{{ route('admin.work-orders.finalize', $order->id) }}';
-                            }
-                        }"
-                    :class="isAllDesignsCompleted() ?
-                        'bg-indigo-600 hover:bg-indigo-700 text-white cursor-pointer' :
-                        'bg-gray-300 text-gray-500 cursor-not-allowed'"
-                    class="px-6 py-3 text-sm font-medium rounded-lg transition-colors">
-                    <span class="flex items-center gap-2">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                        Finalize All Work Orders
+        {{-- Work Order Progress --}}
+        <div class="bg-white border border-gray-200 rounded-2xl p-4 md:p-6">
+            <div class="flex flex-col justify-center">
+                <h3 class="text-base md:text-lg font-semibold text-gray-900">Work Order Progress</h3>
+                <p class="text-xs md:text-sm text-gray-500 mt-1">
+                    @if ($order->work_order_status === 'created')
+                        ✅ All work orders completed!
+                    @else
+                        Complete all designs to update work order status
+                    @endif
+                </p>
+                <div class="mt-3 flex items-center gap-3">
+                    <div class="flex-1 bg-gray-200 rounded-full h-2.5">
+                        <div class="bg-primary h-2.5 rounded-full transition-all duration-500"
+                            style="width: {{ $totalDesigns > 0 ? ($completedDesigns / $totalDesigns) * 100 : 0 }}%">
+                        </div>
+                    </div>
+                    <span class="text-sm font-semibold text-gray-700 whitespace-nowrap">
+                        {{ $completedDesigns }} / {{ $totalDesigns }}
                     </span>
-                </button>
+                </div>
             </div>
         </div>
 
@@ -1261,6 +1248,8 @@
                 </div>
             </div>
         </div>
+
+
 
         {{-- Include Show Modal (Separated File) --}}
         @include('pages.admin.work-orders.partials.show-modal')

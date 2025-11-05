@@ -16,10 +16,9 @@
             <div class="px-6 py-4 border-b border-gray-200 bg-gray-50 flex-shrink-0">
                 <div class="flex items-center justify-between">
                     <div>
-                        <h3 class="text-lg font-semibold text-gray-900">
+                        <h3 class="text-md md:text-lg font-semibold text-gray-900">
                             Work Order Preview
                         </h3>
-                        <p class="mt-1 text-sm text-gray-500" x-text="showData?.design_name || '-'"></p>
                     </div>
                     <button @click="closeShowModal()" type="button"
                         class="text-gray-400 hover:text-gray-600 focus:outline-none">
@@ -29,6 +28,12 @@
                         </svg>
                     </button>
                 </div>
+                <p class="text-sm text-gray-500">
+                    <span>Variant </span><span x-text="showData?.variant_index || '1'"></span>
+                    <span class="italic" x-show="showData?.design_name"> ( </span><span class="italic"
+                        x-text="showData?.design_name || ''"></span><span class="italic" x-show="showData?.design_name">
+                        )</span>
+                </p>
             </div>
 
             {{-- Modal Content - A4 Print Preview --}}
@@ -169,7 +174,8 @@
                                                 <td class="border-x border-b border-black p-1.5 font-semibold"
                                                     x-text="size"></td>
                                                 <template x-if="showData.sleeves">
-                                                    <template x-for="sleeve in showData.sleeves" :key="sleeve">
+                                                    <template x-for="sleeve in showData.sleeves"
+                                                        :key="sleeve">
                                                         <td class="border-x border-b border-black p-1.5"
                                                             x-text="(() => {
                                                                 const item = showData.order_items?.find(i => i.size_name === size && i.sleeve_name === sleeve);
