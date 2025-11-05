@@ -167,6 +167,16 @@
                 reader.readAsDataURL(file);
             }
         },
+        handleImageUpload(event, targetField) {
+            const file = event.target.files[0];
+            if (file && file.type.startsWith('image/')) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    this.formData[targetField] = e.target.result;
+                };
+                reader.readAsDataURL(file);
+            }
+        },
         handleDrop(event) {
             event.preventDefault();
             this.isDragging = false;
@@ -911,6 +921,7 @@
                                         </div>
 
                                         <input type="file" name="custom_size_chart_img" accept="image/*"
+                                            @change="handleImageUpload($event, 'custom_size_chart_img_url')"
                                             class="w-full rounded-md px-4 py-2 text-sm border border-gray-200 focus:outline-none focus:ring-2 focus:border-primary focus:ring-primary/20 text-gray-700">
                                         <p class="mt-1 text-xs text-gray-500">Optional: Upload custom size chart</p>
                                     </div>
@@ -982,6 +993,7 @@
                                         </div>
 
                                         <input type="file" name="printing_detail_img" accept="image/*"
+                                            @change="handleImageUpload($event, 'printing_detail_img_url')"
                                             :class="errors.printing_detail_img ?
                                                 'border-red-500 focus:border-red-500 focus:ring-red-200' :
                                                 'border-gray-200 focus:border-primary focus:ring-primary/20'"
@@ -1021,6 +1033,7 @@
                                         </div>
 
                                         <input type="file" name="placement_detail_img" accept="image/*"
+                                            @change="handleImageUpload($event, 'placement_detail_img_url')"
                                             :class="{ 'border-red-500': errors.placement_detail_img }"
                                             class="w-full rounded-md px-4 py-2 text-sm border border-gray-200 focus:outline-none focus:ring-2 focus:border-primary focus:ring-primary/20 text-gray-700">
                                         <p x-show="errors.placement_detail_img" x-text="errors.placement_detail_img"
@@ -1130,6 +1143,7 @@
                                         </div>
 
                                         <input type="file" name="sewing_detail_img" accept="image/*"
+                                            @change="handleImageUpload($event, 'sewing_detail_img_url')"
                                             :class="{ 'border-red-500': errors.sewing_detail_img }"
                                             class="w-full rounded-md px-4 py-2 text-sm border border-gray-200 focus:outline-none focus:ring-2 focus:border-primary focus:ring-primary/20 text-gray-700">
                                         <p x-show="errors.sewing_detail_img" x-text="errors.sewing_detail_img"
@@ -1203,6 +1217,7 @@
                                         </div>
 
                                         <input type="file" name="hangtag_img" accept="image/*"
+                                            @change="handleImageUpload($event, 'hangtag_img_url')"
                                             :class="{ 'border-red-500': errors.hangtag_img }"
                                             class="w-full rounded-md px-4 py-2 text-sm border border-gray-200 focus:outline-none focus:ring-2 focus:border-primary focus:ring-primary/20 text-gray-700">
                                         <p x-show="errors.hangtag_img" x-text="errors.hangtag_img"
