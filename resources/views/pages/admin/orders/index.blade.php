@@ -1249,16 +1249,107 @@
                             </div>
 
                             {{-- Payment Proof Image --}}
-                            <div>
+                            <div x-data="{
+                                imagePreview: null,
+                                fileName: '',
+                                isDragging: false,
+                                handleFileChange(event) {
+                                    const file = event.target.files[0];
+                                    this.processFile(file);
+                                },
+                                processFile(file) {
+                                    if (file && file.type.startsWith('image/')) {
+                                        this.fileName = file.name;
+                                        const reader = new FileReader();
+                                        reader.onload = (e) => {
+                                            this.imagePreview = e.target.result;
+                                        };
+                                        reader.readAsDataURL(file);
+                                    } else {
+                                        this.imagePreview = null;
+                                        this.fileName = '';
+                                    }
+                                },
+                                handleDrop(event) {
+                                    this.isDragging = false;
+                                    const file = event.dataTransfer.files[0];
+                                    if (file) {
+                                        // Set file to input
+                                        const dataTransfer = new DataTransfer();
+                                        dataTransfer.items.add(file);
+                                        this.$refs.fileInput.files = dataTransfer.files;
+                                        this.processFile(file);
+                                    }
+                                },
+                                handleDragOver(event) {
+                                    event.preventDefault();
+                                    this.isDragging = true;
+                                },
+                                handleDragLeave() {
+                                    this.isDragging = false;
+                                }
+                            }">
                                 <label class="block text-sm font-medium text-gray-700 mb-1">
                                     Payment Proof <span class="text-red-600">*</span>
                                 </label>
-                                <input type="file" name="image" accept="image/jpeg,image/png,image/jpg"
-                                    :class="paymentErrors.image ?
-                                        'border-red-500 focus:border-red-500 focus:ring-red-200' :
-                                        'border-gray-200 focus:border-primary focus:ring-primary/20'"
-                                    class="w-full rounded-md px-4 py-2 text-sm border focus:outline-none focus:ring-2 text-gray-700">
-                                <p class="mt-1 text-xs text-gray-500">Max 10MB. Format: JPG, PNG, JPEG</p>
+
+                                {{-- Image Preview --}}
+                                <div x-show="imagePreview" x-cloak class="mb-3">
+                                    <div class="relative inline-block">
+                                        <img :src="imagePreview" alt="Preview"
+                                            class="w-full max-w-sm h-48 object-cover rounded-lg border-2 border-gray-200">
+                                        <button type="button" @click="imagePreview = null; fileName = ''; $refs.fileInput.value = ''"
+                                            class="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1.5 hover:bg-red-600 shadow-lg">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                    d="M6 18L18 6M6 6l12 12" />
+                                            </svg>
+                                        </button>
+                                    </div>
+                                </div>
+
+                                {{-- Drag & Drop Area --}}
+                                <div @drop.prevent="handleDrop($event)"
+                                    @dragover.prevent="handleDragOver($event)"
+                                    @dragleave="handleDragLeave()"
+                                    @click="$refs.fileInput.click()"
+                                    :class="{
+                                        'border-primary bg-primary/5': isDragging,
+                                        'border-red-500 bg-red-50': paymentErrors.image,
+                                        'border-gray-300 bg-gray-50': !isDragging && !paymentErrors.image
+                                    }"
+                                    class="border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-all hover:border-primary hover:bg-primary/5">
+                                    <input type="file" x-ref="fileInput" name="image" accept="image/jpeg,image/png,image/jpg"
+                                        @change="handleFileChange($event)"
+                                        class="hidden">
+                                    
+                                    {{-- Upload Icon --}}
+                                    <svg class="w-12 h-12 mx-auto mb-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                                    </svg>
+
+                                    {{-- Text Instructions --}}
+                                    <div class="space-y-1">
+                                        <p class="text-sm font-medium text-gray-700">
+                                            <span class="text-primary font-semibold">Click to upload</span> or drag and drop
+                                        </p>
+                                        <p class="text-xs text-gray-500">PNG, JPG, JPEG (Max 10MB)</p>
+                                    </div>
+
+                                    {{-- File Name Display --}}
+                                    <div x-show="fileName" x-cloak class="mt-3 pt-3 border-t border-gray-200">
+                                        <div class="flex items-center justify-center gap-2 text-sm text-gray-700">
+                                            <svg class="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                    d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                            </svg>
+                                            <span x-text="fileName" class="font-medium truncate max-w-xs"></span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <p class="mt-1 text-xs text-gray-500">Drag and drop your image here or click to browse</p>
                                 <p x-show="paymentErrors.image" x-cloak x-text="paymentErrors.image?.[0]"
                                     class="mt-1 text-sm text-red-600"></p>
                             </div>

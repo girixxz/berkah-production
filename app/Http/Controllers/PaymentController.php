@@ -2,15 +2,22 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Payment;
 use App\Models\Invoice;
+use App\Models\Payment;
 use App\Models\OrderStage;
-use App\Models\ProductionStage;
 use Illuminate\Http\Request;
+use App\Models\ProductionStage;
+use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
-use CloudinaryLabs\CloudinaryLaravel\Facades\Cloudinary;
+use Illuminate\Support\Facades\Storage;
 
+/**
+ * Payment Controller
+ * 
+ * Handles payment management including create, approve, reject, and delete operations.
+ * Uses route model binding for automatic model resolution.
+ */
 class PaymentController extends Controller
 {
     /**
@@ -66,20 +73,19 @@ class PaymentController extends Controller
                 ], 422);
             }
 
-            // Upload single image to Cloudinary
-            $imageUrl = null;
+            // Upload single image to local storage (private)
+            $imagePath = null;
             if ($request->hasFile('image') && $request->file('image')->isValid()) {
                 try {
                     $file = $request->file('image');
-                    $uploadedFile = Cloudinary::uploadApi()->upload($file->getRealPath(), [
-                        'folder' => 'payments',
-                        'resource_type' => 'image',
-                        'transformation' => [
-                            'quality' => 'auto',
-                            'fetch_format' => 'auto'
-                        ]
-                    ]);
-                    $imageUrl = $uploadedFile['secure_url'];
+                    
+                    // Generate unique filename with timestamp
+                    $filename = time() . '_' . uniqid() . '.' . $file->getClientOriginalExtension();
+                    
+                    // Store in private storage (storage/app/private/payments/)
+                    $path = $file->storeAs('payments', $filename, 'local');
+                    
+                    $imagePath = $path;
                 } catch (\Exception $uploadError) {
                     DB::rollBack();
                     return response()->json([
@@ -105,7 +111,7 @@ class PaymentController extends Controller
                 'amount' => $validated['amount'],
                 'status' => 'pending', // Default status
                 'notes' => $validated['notes'] ?? null,
-                'img_url' => $imageUrl, // Store as single string
+                'img_url' => $imagePath, // Store file path (not URL)
                 'paid_at' => now(),
             ]);
 
@@ -153,13 +159,16 @@ class PaymentController extends Controller
 
     /**
      * Get all payments for a specific invoice
+     * 
+     * @param \App\Models\Invoice $invoice
+     * @return \Illuminate\Http\JsonResponse
      */
     public function getPaymentsByInvoice(Invoice $invoice)
     {
         $payments = $invoice->payments()
             ->orderBy('paid_at', 'desc')
             ->get()
-            ->map(function ($payment) {
+            ->map(function (Payment $payment) {
                 return [
                     'id' => $payment->id,
                     'payment_method' => $payment->payment_method,
@@ -179,25 +188,28 @@ class PaymentController extends Controller
 
     /**
      * Remove the specified payment from storage.
+     * 
+     * @param \App\Models\Payment $payment
+     * @return \Illuminate\Http\RedirectResponse
      */
     public function destroy(Payment $payment)
     {
         DB::beginTransaction();
 
         try {
+            /** @var \App\Models\Invoice $invoice */
             $invoice = $payment->invoice;
 
-            // Delete image from Cloudinary (single image)
+            // Delete image from local storage (single image)
             if ($payment->img_url) {
                 try {
-                    // Extract public_id from URL
-                    $publicId = $this->getPublicIdFromUrl($payment->img_url);
-                    if ($publicId) {
-                        Cloudinary::uploadApi()->destroy($publicId);
+                    // Delete file from storage/app/private/
+                    if (Storage::disk('local')->exists($payment->img_url)) {
+                        Storage::disk('local')->delete($payment->img_url);
                     }
                 } catch (\Exception $e) {
                     // Log error but continue with deletion
-                    Log::warning('Failed to delete image from Cloudinary: ' . $e->getMessage());
+                    Log::warning('Failed to delete image from local storage: ' . $e->getMessage());
                 }
             }
 
@@ -238,6 +250,9 @@ class PaymentController extends Controller
 
     /**
      * Approve payment (Owner only)
+     * 
+     * @param \App\Models\Payment $payment
+     * @return \Illuminate\Http\RedirectResponse
      */
     public function approve(Payment $payment)
     {
@@ -255,7 +270,9 @@ class PaymentController extends Controller
             $payment->update(['status' => 'approved']);
 
             // Get invoice and order
+            /** @var \App\Models\Invoice $invoice */
             $invoice = $payment->invoice;
+            /** @var \App\Models\Order $order */
             $order = $invoice->order;
 
             // Recalculate invoice with newly approved payment
@@ -320,6 +337,9 @@ class PaymentController extends Controller
 
     /**
      * Reject payment (Owner only)
+     * 
+     * @param \App\Models\Payment $payment
+     * @return \Illuminate\Http\RedirectResponse
      */
     public function reject(Payment $payment)
     {
@@ -337,6 +357,7 @@ class PaymentController extends Controller
             $payment->update(['status' => 'rejected']);
 
             // Recalculate invoice (rejected payment tidak dihitung)
+            /** @var \App\Models\Invoice $invoice */
             $invoice = $payment->invoice;
             $totalPaid = $invoice->payments()->where('status', 'approved')->sum('amount');
             $amountDue = $invoice->total_bill - $totalPaid;
@@ -371,30 +392,40 @@ class PaymentController extends Controller
     }
 
     /**
-     * Extract public_id from Cloudinary URL
+     * Serve payment proof image (private file)
+     * Only accessible by authenticated users
+     * 
+     * @param \App\Models\Payment $payment
+     * @return \Symfony\Component\HttpFoundation\BinaryFileResponse
      */
-    private function getPublicIdFromUrl($url)
+    public function serveImage(Payment $payment)
     {
-        // Example URL: https://res.cloudinary.com/demo/image/upload/v1234567890/payments/abc123.jpg
-        // Extract: payments/abc123
-        
-        $parts = parse_url($url);
-        if (!isset($parts['path'])) {
-            return null;
+        // Check if user is authenticated
+        /** @var \Illuminate\Contracts\Auth\Guard|\Illuminate\Contracts\Auth\StatefulGuard $auth */
+        $auth = auth();
+        if (!$auth->check()) {
+            abort(403, 'Unauthorized');
         }
 
-        $pathParts = explode('/', $parts['path']);
-        $versionIndex = array_search('upload', $pathParts);
-        
-        if ($versionIndex === false) {
-            return null;
+        // Check if file exists
+        if (!$payment->img_url || !Storage::disk('local')->exists($payment->img_url)) {
+            abort(404, 'Image not found');
         }
 
-        // Get everything after version (skip v1234567890)
-        $publicIdParts = array_slice($pathParts, $versionIndex + 2);
-        $publicId = implode('/', $publicIdParts);
+        // Get file path
+        $path = Storage::disk('local')->path($payment->img_url);
         
-        // Remove file extension
-        return pathinfo($publicId, PATHINFO_DIRNAME) . '/' . pathinfo($publicId, PATHINFO_FILENAME);
+        // Get mime type using finfo
+        $finfo = finfo_open(FILEINFO_MIME_TYPE);
+        $mimeType = $finfo ? finfo_file($finfo, $path) : 'application/octet-stream';
+        if ($finfo) {
+            finfo_close($finfo);
+        }
+
+        // Return file response
+        return response()->file($path, [
+            'Content-Type' => $mimeType,
+            'Cache-Control' => 'no-cache, must-revalidate',
+        ]);
     }
 }

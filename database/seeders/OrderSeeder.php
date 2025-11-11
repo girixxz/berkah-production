@@ -139,7 +139,7 @@ class OrderSeeder extends Seeder
 
             // Create invoice
             $invoiceNo = 'INV-' . date('Ymd') . '-' . str_pad($i, 4, '0', STR_PAD_LEFT);
-            $amountPaid = rand(0, 1) ? rand(0, $grandTotal) : 0; // Random partial payment or no payment
+            $amountPaid = 0; // Random partial payment or no payment
             $amountDue = $grandTotal - $amountPaid;
             
             $invoiceStatus = 'unpaid';

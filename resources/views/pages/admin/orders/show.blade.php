@@ -573,7 +573,7 @@
                                     <td class="py-3 px-4 text-gray-600">{{ $payment->notes ?? '-' }}</td>
                                     <td class="py-3 px-4">
                                         @if ($payment->img_url)
-                                            <button @click="showImage('{{ $payment->img_url }}')"
+                                            <button @click="showImage('{{ route('admin.payments.image', $payment->id) }}')"
                                                 class="text-primary hover:text-primary-dark font-medium text-xs flex items-center gap-1">
                                                 <svg class="w-4 h-4" fill="none" stroke="currentColor"
                                                     viewBox="0 0 24 24">

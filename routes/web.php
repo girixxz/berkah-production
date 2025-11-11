@@ -69,6 +69,7 @@ Route::middleware(['auth'])->group(function () {
         Route::get('payment-history', [\App\Http\Controllers\PaymentHistoryController::class, 'index'])->name('payment-history');
         Route::patch('payments/{payment}/approve', [\App\Http\Controllers\PaymentController::class, 'approve'])->name('payments.approve');
         Route::patch('payments/{payment}/reject', [\App\Http\Controllers\PaymentController::class, 'reject'])->name('payments.reject');
+        Route::get('payments/{payment}/image', [\App\Http\Controllers\PaymentController::class, 'serveImage'])->name('payments.image');
 
         // Manage Data
         Route::prefix('manage-data')->name('manage-data.')->group(function () {
@@ -130,6 +131,7 @@ Route::middleware(['auth'])->group(function () {
         Route::post('payments', [\App\Http\Controllers\PaymentController::class, 'store'])->name('payments.store');
         Route::delete('payments/{payment}', [\App\Http\Controllers\PaymentController::class, 'destroy'])->name('payments.destroy');
         Route::get('invoices/{invoice}/payments', [\App\Http\Controllers\PaymentController::class, 'getPaymentsByInvoice'])->name('invoices.payments');
+        Route::get('payments/{payment}/image', [\App\Http\Controllers\PaymentController::class, 'serveImage'])->name('payments.image');
 
         // Shipping Orders
         Route::get('shipping-orders', [\App\Http\Controllers\ShippingOrderController::class, 'index'])->name('shipping-orders');
