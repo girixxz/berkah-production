@@ -61,7 +61,12 @@
 
                             {{-- Mockup Image --}}
                             <div class="flex justify-center px-2 py-6">
-                                <img :src="showData?.work_order?.mockup_img_url || '/images/work-order-null.png'"
+                                <img :src="(() => {
+                                    const url = showData?.work_order?.mockup_img_url;
+                                    if (!url) return '/images/work-order-null.png';
+                                    if (url.startsWith('http://') || url.startsWith('https://')) return url;
+                                    return '{{ route('admin.work-orders.image', ['path' => '__PATH__']) }}'.replace('__PATH__', url);
+                                })()"
                                     alt="Mockup" class="">
                             </div>
                         </div>
@@ -74,10 +79,14 @@
                                 <div class="bg-[#FFFF00] border-b-2 border-black p-1.5">
                                     <h3 class="font-bold text-xs text-black text-center">Size Chart Custom</h3>
                                 </div>
-                                <div class="p-2 bg-white flex justify-center items-center" style="height: 140px;">
-                                    <img :src="showData?.work_order?.cutting?.custom_size_chart_img_url ||
-                                        '/images/work-order-null.png'"
-                                        alt="Size Chart" class="max-h-18 w-auto object-contain">
+                                <div class="p-2 bg-white flex justify-center items-center mt-2" style="height: 160px;">
+                                    <img :src="(() => {
+                                        const url = showData?.work_order?.cutting?.custom_size_chart_img_url;
+                                        if (!url) return '/images/work-order-null.png';
+                                        if (url.startsWith('http://') || url.startsWith('https://')) return url;
+                                        return '{{ route('admin.work-orders.image', ['path' => '__PATH__']) }}'.replace('__PATH__', url);
+                                    })()"
+                                        alt="Size Chart" class="max-h-[160px] w-auto object-contain">
                                 </div>
                             </div>
 
@@ -268,7 +277,12 @@
                                 DETAIL & UKURAN SABLON
                             </h2>
                             <div class="p-3 flex justify-center items-center h-full">
-                                <img :src="showData?.work_order?.printing?.detail_img_url || '/images/work-order-null.png'"
+                                <img :src="(() => {
+                                    const url = showData?.work_order?.printing?.detail_img_url;
+                                    if (!url) return '/images/work-order-null.png';
+                                    if (url.startsWith('http://') || url.startsWith('https://')) return url;
+                                    return '{{ route('admin.work-orders.image', ['path' => '__PATH__']) }}'.replace('__PATH__', url);
+                                })()"
                                     alt="Detail Sablon" class="max-h-220 object-contain">
                             </div>
                         </div>
@@ -303,8 +317,12 @@
                                 JARAK & POSISI SABLON
                             </h2>
                             <div class="p-3 flex justify-center items-center h-full">
-                                <img :src="showData?.work_order?.printing_placement?.detail_img_url ||
-                                    '/images/work-order-null.png'"
+                                <img :src="(() => {
+                                    const url = showData?.work_order?.printing_placement?.detail_img_url;
+                                    if (!url) return '/images/work-order-null.png';
+                                    if (url.startsWith('http://') || url.startsWith('https://')) return url;
+                                    return '{{ route('admin.work-orders.image', ['path' => '__PATH__']) }}'.replace('__PATH__', url);
+                                })()"
                                     alt="Posisi Sablon" class="max-h-220 object-contain">
                             </div>
                         </div>
@@ -353,9 +371,14 @@
                                     <div class="bg-[#92D050] border-b-2 border-black p-1 text-center">
                                         <span class="font-bold text-[10px]">Posisi Jahit Label</span>
                                     </div>
-                                    <div class="p-2 bg-white flex justify-center items-center" style="height: 120px;">
-                                        <img :src="showData?.work_order?.sewing?.detail_img_url || '/images/work-order-null.png'"
-                                            alt="Posisi Label" class="max-h-full w-auto object-contain">
+                                    <div class="p-2 bg-white flex justify-center items-center" style="height: 160px;">
+                                        <img :src="(() => {
+                                            const url = showData?.work_order?.sewing?.detail_img_url;
+                                            if (!url) return '/images/work-order-null.png';
+                                            if (url.startsWith('http://') || url.startsWith('https://')) return url;
+                                            return '{{ route('admin.work-orders.image', ['path' => '__PATH__']) }}'.replace('__PATH__', url);
+                                        })()"
+                                            alt="Posisi Label" class="max-h-[160px] w-auto object-contain">
                                     </div>
                                 </div>
 
@@ -412,11 +435,11 @@
                             </div>
 
                             {{-- Keterangan Tambahan (Flexible) --}}
-                            <div class="border-2 border-black mb-2 flex-1">
+                            <div class="border-2 border-black mb-2">
                                 <div class="bg-[#FFFF00] border-b-2 border-black p-1 text-center">
                                     <span class="font-bold text-[10px]">Keterangan Tambahan</span>
                                 </div>
-                                <div class="p-1 bg-gray-100 h-full">
+                                <div class="p-1 bg-gray-100 min-h-[60px]">
                                     <p class="text-[10px]" x-text="showData?.work_order?.sewing?.notes || ''"></p>
                                 </div>
                             </div>
@@ -461,9 +484,14 @@
                                     <div class="bg-[#00B0F0] border-b-2 border-black p-1 text-center">
                                         <span class="font-bold text-[10px]">Hangtag</span>
                                     </div>
-                                    <div class="p-1 bg-white flex justify-center items-center" style="height: 60px;">
-                                        <img :src="showData?.work_order?.packing?.hangtag_img_url || '/images/work-order-null.png'"
-                                            alt="Hangtag" class="max-h-full w-auto object-contain">
+                                    <div class="p-2 bg-white flex justify-center items-center" style="height: 160px;">
+                                        <img :src="(() => {
+                                            const url = showData?.work_order?.packing?.hangtag_img_url;
+                                            if (!url) return '/images/work-order-null.png';
+                                            if (url.startsWith('http://') || url.startsWith('https://')) return url;
+                                            return '{{ route('admin.work-orders.image', ['path' => '__PATH__']) }}'.replace('__PATH__', url);
+                                        })()"
+                                            alt="Hangtag" class="max-h-[160px] w-auto object-contain">
                                     </div>
                                 </div>
 
@@ -490,11 +518,11 @@
                             </div>
 
                             {{-- Keterangan Tambahan (Flexible) --}}
-                            <div class="border-2 border-black mb-2 flex-1">
+                            <div class="border-2 border-black mb-2">
                                 <div class="bg-[#FFFF00] border-b-2 border-black p-1 text-center">
                                     <span class="font-bold text-[10px]">Keterangan Tambahan</span>
                                 </div>
-                                <div class="p-1 bg-gray-100 h-full">
+                                <div class="p-1 bg-gray-100 min-h-[60px]">
                                     <p class="text-[10px]" x-text="showData?.work_order?.packing?.notes || ''"></p>
                                 </div>
                             </div>

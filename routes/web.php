@@ -146,6 +146,9 @@ Route::middleware(['auth'])->group(function () {
             ->middleware('throttle:10,1')
             ->name('work-orders.update');
         Route::get('work-orders/{order}/finalize', [\App\Http\Controllers\WorkOrderController::class, 'finalize'])->name('work-orders.finalize');
+        Route::get('work-orders/image/{path}', [\App\Http\Controllers\WorkOrderController::class, 'serveImage'])
+            ->where('path', '.*')
+            ->name('work-orders.image');
         
         Route::get('payment-history', [\App\Http\Controllers\PaymentHistoryController::class, 'index'])->name('payment-history');
 

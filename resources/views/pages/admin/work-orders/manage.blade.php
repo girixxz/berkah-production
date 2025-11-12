@@ -50,6 +50,14 @@
             hangtag_img_url: null,
             packing_notes: ''
         },
+        deletedImages: {
+            mockup_img: false,
+            custom_size_chart_img: false,
+            printing_detail_img: false,
+            placement_detail_img: false,
+            sewing_detail_img: false,
+            hangtag_img: false
+        },
         init() {
             // Handle Laravel session flash messages
             @if (session('success')) setTimeout(() => {
@@ -223,16 +231,27 @@
         loadExistingData(workOrder) {
             console.log('Work Order to load:', workOrder);
     
+            // Helper function to convert path to URL untuk local storage
+            const convertToImageUrl = (path) => {
+                if (!path) return null;
+                // Jika sudah URL lengkap (http/https), return as is (untuk compatibility dengan data lama)
+                if (path.startsWith('http://') || path.startsWith('https://')) {
+                    return path;
+                }
+                // Convert local storage path ke route URL
+                return `{{ route('admin.work-orders.image', ['path' => '__PATH__']) }}`.replace('__PATH__', path);
+            };
+
             // Load work order data
-            this.formData.mockup_img_url = workOrder.mockup_img_url;
-            this.mockupPreview = workOrder.mockup_img_url;
+            this.formData.mockup_img_url = convertToImageUrl(workOrder.mockup_img_url);
+            this.mockupPreview = convertToImageUrl(workOrder.mockup_img_url);
     
             // Load cutting data
             if (workOrder.cutting) {
                 this.formData.cutting_pattern_id = workOrder.cutting.cutting_pattern_id;
                 this.formData.chain_cloth_id = workOrder.cutting.chain_cloth_id;
                 this.formData.rib_size_id = workOrder.cutting.rib_size_id;
-                this.formData.custom_size_chart_img_url = workOrder.cutting.custom_size_chart_img_url;
+                this.formData.custom_size_chart_img_url = convertToImageUrl(workOrder.cutting.custom_size_chart_img_url);
                 this.formData.cutting_notes = workOrder.cutting.notes || '';
             }
     
@@ -240,13 +259,13 @@
             if (workOrder.printing) {
                 this.formData.print_ink_id = workOrder.printing.print_ink_id;
                 this.formData.finishing_id = workOrder.printing.finishing_id;
-                this.formData.printing_detail_img_url = workOrder.printing.detail_img_url;
+                this.formData.printing_detail_img_url = convertToImageUrl(workOrder.printing.detail_img_url);
                 this.formData.printing_notes = workOrder.printing.notes || '';
             }
     
             // Load printing placement data
             if (workOrder.printing_placement) {
-                this.formData.placement_detail_img_url = workOrder.printing_placement.detail_img_url;
+                this.formData.placement_detail_img_url = convertToImageUrl(workOrder.printing_placement.detail_img_url);
                 this.formData.placement_notes = workOrder.printing_placement.notes || '';
             }
     
@@ -256,7 +275,7 @@
                 this.formData.underarm_overdeck_id = workOrder.sewing.underarm_overdeck_id;
                 this.formData.side_split_id = workOrder.sewing.side_split_id;
                 this.formData.sewing_label_id = workOrder.sewing.sewing_label_id;
-                this.formData.sewing_detail_img_url = workOrder.sewing.detail_img_url;
+                this.formData.sewing_detail_img_url = convertToImageUrl(workOrder.sewing.detail_img_url);
                 this.formData.sewing_notes = workOrder.sewing.notes || '';
             }
     
@@ -264,7 +283,7 @@
             if (workOrder.packing) {
                 this.formData.plastic_packing_id = workOrder.packing.plastic_packing_id;
                 this.formData.sticker_id = workOrder.packing.sticker_id;
-                this.formData.hangtag_img_url = workOrder.packing.hangtag_img_url;
+                this.formData.hangtag_img_url = convertToImageUrl(workOrder.packing.hangtag_img_url);
                 this.formData.packing_notes = workOrder.packing.notes || '';
             }
         },
@@ -278,6 +297,10 @@
                 }
             });
             this.mockupPreview = null;
+            // Reset deleted images flags
+            Object.keys(this.deletedImages).forEach(key => {
+                this.deletedImages[key] = false;
+            });
         },
         closeModal() {
             this.openModal = false;
@@ -359,7 +382,13 @@
                         {{-- 1. Image (Kiri) - dari work_orders.mockup_img_url --}}
                         <div class="flex-shrink-0">
                             @if ($design->workOrder && $design->workOrder->mockup_img_url)
-                                <img src="{{ $design->workOrder->mockup_img_url }}" alt="{{ $design->design_name }}"
+                                @php
+                                    $imgUrl = $design->workOrder->mockup_img_url;
+                                    // Check if it's a local path (starts with work-orders/) or external URL
+                                    $isLocalPath = strpos($imgUrl, 'work-orders/') === 0 || strpos($imgUrl, 'work-orders\\') === 0;
+                                    $finalUrl = $isLocalPath ? route('admin.work-orders.image', ['path' => $imgUrl]) : $imgUrl;
+                                @endphp
+                                <img src="{{ $finalUrl }}" alt="{{ $design->design_name }}"
                                     class="w-16 h-16 md:w-20 md:h-20 object-cover rounded-lg border-2 border-gray-200">
                             @elseif($design->orderItem->mockup_img_url ?? null)
                                 <img src="{{ $design->orderItem->mockup_img_url }}" alt="{{ $design->design_name }}"
@@ -763,15 +792,21 @@
 
                     {{-- Modal Body --}}
                     <form x-ref="workOrderForm" method="POST"
-                        :action="selectedDesign?.work_order ? '{{ url('admin/work-orders') }}/' + selectedDesign.work_order.id :
-                            '{{ route('admin.work-orders.store') }}'"
+                        action="{{ route('admin.work-orders.store') }}"
                         enctype="multipart/form-data">
                         @csrf
-                        <input type="hidden" name="_method" :value="selectedDesign?.work_order ? 'PUT' : 'POST'">
                         <input type="hidden" name="order_id" value="{{ $order->id }}">
                         <input type="hidden" name="design_variant_id" x-model="formData.design_variant_id">
+                        
+                        {{-- Hidden inputs for deleted images --}}
+                        <input type="hidden" name="delete_mockup_img" x-model="deletedImages.mockup_img">
+                        <input type="hidden" name="delete_custom_size_chart_img" x-model="deletedImages.custom_size_chart_img">
+                        <input type="hidden" name="delete_printing_detail_img" x-model="deletedImages.printing_detail_img">
+                        <input type="hidden" name="delete_placement_detail_img" x-model="deletedImages.placement_detail_img">
+                        <input type="hidden" name="delete_sewing_detail_img" x-model="deletedImages.sewing_detail_img">
+                        <input type="hidden" name="delete_hangtag_img" x-model="deletedImages.hangtag_img">
 
-                        <div class="p-5 space-y-4 max-h-[70vh] overflow-y-auto">
+                        <div class="p-5 space-y-6 max-h-[70vh] overflow-y-auto">
 
                             {{-- Display Backend Validation Errors --}}
                             @if ($errors->any())
@@ -796,50 +831,76 @@
                                 </div>
                             @endif
 
-                            {{-- ===== UPLOAD MOCKUP ===== --}}
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-1">
-                                    Mockup Image
-                                </label>
+                            {{-- SECTION 1: MOCKUP IMAGE --}}
+                            <div class="bg-white border-2 border-gray-200 rounded-lg p-6">
+                                <div class="flex items-center gap-3 mb-4">
+                                    <div class="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
+                                        <span class="text-lg">📸</span>
+                                    </div>
+                                    <div>
+                                        <h3 class="text-base font-semibold text-gray-900">1. Mockup Image</h3>
+                                        <p class="text-xs text-gray-500">Upload product mockup design</p>
+                                    </div>
+                                </div>
 
                                 {{-- Image Preview --}}
-                                <div x-show="mockupPreview" class="mb-3">
-                                    <img :src="mockupPreview" alt="Mockup preview"
-                                        class="w-full max-w-md h-auto rounded-md border border-gray-200 mx-auto">
+                                <div x-show="mockupPreview" x-cloak class="mb-4">
+                                    <div class="relative inline-block">
+                                        <img :src="mockupPreview" alt="Mockup preview"
+                                            class="w-full max-w-md h-auto rounded-lg border-2 border-gray-200">
+                                        <button type="button" @click="mockupPreview = null; formData.mockup_img_url = null; deletedImages.mockup_img = true; $refs.mockupInput.value = ''"
+                                            class="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1.5 hover:bg-red-600 shadow-lg">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                    d="M6 18L18 6M6 6l12 12" />
+                                            </svg>
+                                        </button>
+                                    </div>
                                 </div>
 
                                 {{-- Upload Area with Drag & Drop --}}
-                                <div class="flex items-center justify-center w-full" @drop="handleDrop($event)"
-                                    @dragover="handleDragOver($event)" @dragleave="handleDragLeave()">
-                                    <label for="mockup-upload"
-                                        :class="isDragging ? 'border-primary bg-primary/5' : errors.mockup_img ?
-                                            'border-red-500 bg-red-50' : 'border-gray-200 bg-white'"
-                                        class="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-md cursor-pointer hover:bg-gray-50 transition-all">
-                                        <div class="flex flex-col items-center justify-center pt-4 pb-4">
-                                            <svg class="w-8 h-8 mb-2 text-gray-400" fill="none" stroke="currentColor"
-                                                viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                    d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-                                            </svg>
-                                            <p class="mb-1 text-sm text-gray-500">
-                                                <span class="font-semibold">Click to upload</span> or drag and drop
-                                            </p>
-                                            <p class="text-xs text-gray-500">PNG, JPG, JPEG (MAX. 5MB)</p>
-                                        </div>
-                                        <input x-ref="mockupInput" id="mockup-upload" type="file" name="mockup_img"
-                                            class="hidden" accept="image/*" @change="handleMockupUpload($event)" />
-                                    </label>
+                                <div @drop.prevent="handleDrop($event)"
+                                    @dragover.prevent="handleDragOver($event)"
+                                    @dragleave="handleDragLeave()"
+                                    @click="$refs.mockupInput.click()"
+                                    :class="{
+                                        'border-primary bg-primary/5': isDragging,
+                                        'border-red-500 bg-red-50': errors.mockup_img,
+                                        'border-gray-300 bg-gray-50': !isDragging && !errors.mockup_img
+                                    }"
+                                    class="border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-all hover:border-primary hover:bg-primary/5">
+                                    <input x-ref="mockupInput" type="file" name="mockup_img"
+                                        @change="handleMockupUpload($event)"
+                                        accept="image/*" class="hidden">
+                                    
+                                    <svg class="w-12 h-12 mx-auto mb-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                                    </svg>
+
+                                    <div class="space-y-1">
+                                        <p class="text-sm font-medium text-gray-700">
+                                            <span class="text-primary font-semibold">Click to upload</span> or drag and drop
+                                        </p>
+                                        <p class="text-xs text-gray-500">PNG, JPG, JPEG (Max 5MB)</p>
+                                    </div>
                                 </div>
+
                                 <p x-show="errors.mockup_img" x-cloak x-text="errors.mockup_img"
-                                    class="mt-1 text-sm text-red-600"></p>
+                                    class="mt-2 text-sm text-red-600"></p>
                             </div>
 
-                            {{-- 🔪 CUTTING SECTION --}}
-                            <div>
-                                <h4 class="text-sm font-semibold text-gray-900 mb-3 flex items-center gap-2">
-                                    <span class="text-lg">🔪</span>
-                                    Cutting Section
-                                </h4>
+                            {{-- ===== SECTION 2: CUTTING ===== --}}
+                            <div class="bg-white border-2 border-gray-200 rounded-lg p-6">
+                                <div class="flex items-center gap-3 mb-4">
+                                    <div class="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
+                                        <span class="text-lg">🔪</span>
+                                    </div>
+                                    <div>
+                                        <h3 class="text-base font-semibold text-gray-900">2. Cutting Section</h3>
+                                        <p class="text-xs text-gray-500">Pattern, cloth, and sizing details</p>
+                                    </div>
+                                </div>
                                 <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                                     <div>
                                         <label class="block text-sm font-medium text-gray-700 mb-1">
@@ -895,24 +956,6 @@
                                             class="mt-1 text-sm text-red-600"></p>
                                     </div>
 
-                                    <div>
-                                        <label class="block text-sm font-medium text-gray-700 mb-1">
-                                            Custom Size Chart Image
-                                        </label>
-
-                                        {{-- Show existing image if available --}}
-                                        <div x-show="formData.custom_size_chart_img_url" class="mb-2">
-                                            <img :src="formData.custom_size_chart_img_url" alt="Size chart"
-                                                class="w-32 h-32 object-cover rounded border border-gray-200">
-                                            <p class="text-xs text-gray-500 mt-1">Current image (upload new to replace)</p>
-                                        </div>
-
-                                        <input type="file" name="custom_size_chart_img" accept="image/*"
-                                            @change="handleImageUpload($event, 'custom_size_chart_img_url')"
-                                            class="w-full rounded-md px-4 py-2 text-sm border border-gray-200 focus:outline-none focus:ring-2 focus:border-primary focus:ring-primary/20 text-gray-700">
-                                        <p class="mt-1 text-xs text-gray-500">Optional: Upload custom size chart</p>
-                                    </div>
-
                                     <div class="md:col-span-2">
                                         <label class="block text-sm font-medium text-gray-700 mb-1">
                                             Notes
@@ -921,15 +964,84 @@
                                             class="w-full rounded-md px-4 py-2 text-sm border border-gray-200 focus:outline-none focus:ring-2 focus:border-primary focus:ring-primary/20 text-gray-700"
                                             placeholder="Optional notes for cutting..."></textarea>
                                     </div>
+
+                                    <div class="md:col-span-2" x-data="{
+                                        preview: null,
+                                        dragging: false,
+                                        handleFile(event) {
+                                            const file = event.target.files[0];
+                                            if (file && file.type.startsWith('image/')) {
+                                                const reader = new FileReader();
+                                                reader.onload = (e) => {
+                                                    this.preview = e.target.result;
+                                                    formData.custom_size_chart_img_url = e.target.result;
+                                                };
+                                                reader.readAsDataURL(file);
+                                            }
+                                        },
+                                        handleDrop(event) {
+                                            this.dragging = false;
+                                            const file = event.dataTransfer.files[0];
+                                            if (file) {
+                                                const dataTransfer = new DataTransfer();
+                                                dataTransfer.items.add(file);
+                                                $refs.sizeChartInput.files = dataTransfer.files;
+                                                this.handleFile({ target: { files: [file] } });
+                                            }
+                                        }
+                                    }" x-init="preview = formData.custom_size_chart_img_url">
+                                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                                            Custom Size Chart Image <span class="text-gray-400">(Optional)</span>
+                                        </label>
+
+                                        {{-- Preview --}}
+                                        <div x-show="preview || formData.custom_size_chart_img_url" x-cloak class="mb-3">
+                                            <div class="relative inline-block">
+                                                <img :src="preview || formData.custom_size_chart_img_url" alt="Size chart"
+                                                    class="w-32 h-32 object-cover rounded-lg border-2 border-gray-200">
+                                                <button type="button" @click="preview = null; formData.custom_size_chart_img_url = null; deletedImages.custom_size_chart_img = true; $refs.sizeChartInput.value = ''"
+                                                    class="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 shadow-lg">
+                                                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                            d="M6 18L18 6M6 6l12 12" />
+                                                    </svg>
+                                                </button>
+                                            </div>
+                                        </div>
+
+                                        {{-- Drag & Drop Area --}}
+                                        <div @drop.prevent="handleDrop($event)"
+                                            @dragover.prevent="dragging = true"
+                                            @dragleave="dragging = false"
+                                            @click="$refs.sizeChartInput.click()"
+                                            :class="dragging ? 'border-primary bg-primary/5' : 'border-gray-300 bg-gray-50'"
+                                            class="border-2 border-dashed rounded-lg p-4 text-center cursor-pointer transition-all hover:border-primary hover:bg-primary/5">
+                                            <input x-ref="sizeChartInput" type="file" name="custom_size_chart_img" accept="image/*"
+                                                @change="handleFile($event)" class="hidden">
+                                            
+                                            <svg class="w-8 h-8 mx-auto mb-2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                    d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                                            </svg>
+                                            <p class="text-xs text-gray-600">
+                                                <span class="text-primary font-semibold">Click</span> or drag size chart
+                                            </p>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
 
-                            {{-- 🎨 PRINTING SECTION --}}
-                            <div>
-                                <h4 class="text-sm font-semibold text-gray-900 mb-3 flex items-center gap-2">
-                                    <span class="text-lg">🎨</span>
-                                    Printing Section
-                                </h4>
+                            {{-- SECTION 3: PRINTING #1 --}}
+                            <div class="bg-white border-2 border-gray-200 rounded-lg p-6">
+                                <div class="flex items-center gap-3 mb-4">
+                                    <div class="w-10 h-10 rounded-full bg-purple-100 flex items-center justify-center">
+                                        <span class="text-lg">🎨</span>
+                                    </div>
+                                    <div>
+                                        <h3 class="text-base font-semibold text-gray-900">3. Printing Section #1</h3>
+                                        <p class="text-xs text-gray-500">Ink, finishing, and detail image</p>
+                                    </div>
+                                </div>
                                 <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                                     <div>
                                         <label class="block text-sm font-medium text-gray-700 mb-1">
@@ -969,64 +1081,96 @@
 
                                     <div class="md:col-span-2">
                                         <label class="block text-sm font-medium text-gray-700 mb-1">
-                                            Detail Image
-                                        </label>
-
-                                        {{-- Show existing image if available --}}
-                                        <div x-show="formData.printing_detail_img_url" class="mb-2">
-                                            <img :src="formData.printing_detail_img_url" alt="Printing detail"
-                                                class="w-32 h-32 object-cover rounded border border-gray-200">
-                                            <p class="text-xs text-gray-500 mt-1">Current image (upload new to replace)</p>
-                                        </div>
-
-                                        <input type="file" name="printing_detail_img" accept="image/*"
-                                            @change="handleImageUpload($event, 'printing_detail_img_url')"
-                                            :class="errors.printing_detail_img ?
-                                                'border-red-500 focus:border-red-500 focus:ring-red-200' :
-                                                'border-gray-200 focus:border-primary focus:ring-primary/20'"
-                                            class="w-full rounded-md px-4 py-2 text-sm border focus:outline-none focus:ring-2 text-gray-700">
-                                        <p x-show="errors.printing_detail_img" x-cloak x-text="errors.printing_detail_img"
-                                            class="mt-1 text-sm text-red-600"></p>
-                                    </div>
-
-                                    <div class="md:col-span-2">
-                                        <label class="block text-sm font-medium text-gray-700 mb-1">
                                             Notes
                                         </label>
                                         <textarea name="printing_notes" x-model="formData.printing_notes" rows="2"
                                             class="w-full rounded-md px-4 py-2 text-sm border border-gray-200 focus:outline-none focus:ring-2 focus:border-primary focus:ring-primary/20 text-gray-700"
                                             placeholder="Optional notes for printing..."></textarea>
                                     </div>
+
+                                    <div class="md:col-span-2" x-data="{
+                                        preview: null,
+                                        dragging: false,
+                                        handleFile(event) {
+                                            const file = event.target.files[0];
+                                            if (file && file.type.startsWith('image/')) {
+                                                const reader = new FileReader();
+                                                reader.onload = (e) => {
+                                                    this.preview = e.target.result;
+                                                    formData.printing_detail_img_url = e.target.result;
+                                                };
+                                                reader.readAsDataURL(file);
+                                            }
+                                        },
+                                        handleDrop(event) {
+                                            this.dragging = false;
+                                            const file = event.dataTransfer.files[0];
+                                            if (file) {
+                                                const dataTransfer = new DataTransfer();
+                                                dataTransfer.items.add(file);
+                                                $refs.printingInput.files = dataTransfer.files;
+                                                this.handleFile({ target: { files: [file] } });
+                                            }
+                                        }
+                                    }" x-init="preview = formData.printing_detail_img_url">
+                                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                                            Detail Image <span class="text-gray-400">(Optional)</span>
+                                        </label>
+
+                                        {{-- Preview --}}
+                                        <div x-show="preview || formData.printing_detail_img_url" x-cloak class="mb-3">
+                                            <div class="relative inline-block">
+                                                <img :src="preview || formData.printing_detail_img_url" alt="Printing detail"
+                                                    class="w-32 h-32 object-cover rounded-lg border-2 border-gray-200">
+                                                <button type="button" @click="preview = null; formData.printing_detail_img_url = null; deletedImages.printing_detail_img = true; $refs.printingInput.value = ''"
+                                                    class="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 shadow-lg">
+                                                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                            d="M6 18L18 6M6 6l12 12" />
+                                                    </svg>
+                                                </button>
+                                            </div>
+                                        </div>
+
+                                        {{-- Drag & Drop Area --}}
+                                        <div @drop.prevent="handleDrop($event)"
+                                            @dragover.prevent="dragging = true"
+                                            @dragleave="dragging = false"
+                                            @click="$refs.printingInput.click()"
+                                            :class="[
+                                                dragging ? 'border-primary bg-primary/5' : 'border-gray-300 bg-gray-50',
+                                                errors.printing_detail_img ? 'border-red-500' : ''
+                                            ]"
+                                            class="border-2 border-dashed rounded-lg p-4 text-center cursor-pointer transition-all hover:border-primary hover:bg-primary/5">
+                                            <input x-ref="printingInput" type="file" name="printing_detail_img" accept="image/*"
+                                                @change="handleFile($event)" class="hidden">
+                                            
+                                            <svg class="w-8 h-8 mx-auto mb-2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                    d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                                            </svg>
+                                            <p class="text-xs text-gray-600">
+                                                <span class="text-primary font-semibold">Click</span> or drag detail image
+                                            </p>
+                                        </div>
+                                        <p x-show="errors.printing_detail_img" x-cloak x-text="errors.printing_detail_img"
+                                            class="mt-1 text-sm text-red-600"></p>
+                                    </div>
                                 </div>
                             </div>
 
-                            {{-- 📍 PRINTING PLACEMENT SECTION --}}
-                            <div>
-                                <h4 class="text-sm font-semibold text-gray-900 mb-3 flex items-center gap-2">
-                                    <span class="text-lg">📍</span>
-                                    Printing Placement Section
-                                </h4>
-                                <div class="grid grid-cols-1 gap-3">
-                                    <div>
-                                        <label class="block text-sm font-medium text-gray-700 mb-1">
-                                            Placement Detail Image
-                                        </label>
-
-                                        {{-- Show existing image if available --}}
-                                        <div x-show="formData.placement_detail_img_url" class="mb-2">
-                                            <img :src="formData.placement_detail_img_url" alt="Placement detail"
-                                                class="w-32 h-32 object-cover rounded border border-gray-200">
-                                            <p class="text-xs text-gray-500 mt-1">Current image (upload new to replace)</p>
-                                        </div>
-
-                                        <input type="file" name="placement_detail_img" accept="image/*"
-                                            @change="handleImageUpload($event, 'placement_detail_img_url')"
-                                            :class="{ 'border-red-500': errors.placement_detail_img }"
-                                            class="w-full rounded-md px-4 py-2 text-sm border border-gray-200 focus:outline-none focus:ring-2 focus:border-primary focus:ring-primary/20 text-gray-700">
-                                        <p x-show="errors.placement_detail_img" x-text="errors.placement_detail_img"
-                                            class="mt-1 text-xs text-red-500"></p>
+                            {{-- SECTION 4: PRINTING PLACEMENT --}}
+                            <div class="bg-white border-2 border-gray-200 rounded-lg p-6">
+                                <div class="flex items-center gap-3 mb-4">
+                                    <div class="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center">
+                                        <span class="text-lg">📍</span>
                                     </div>
-
+                                    <div>
+                                        <h3 class="text-base font-semibold text-gray-900">4. Printing Section #2</h3>
+                                        <p class="text-xs text-gray-500">Placement details and image</p>
+                                    </div>
+                                </div>
+                                <div class="grid grid-cols-1 gap-3">
                                     <div>
                                         <label class="block text-sm font-medium text-gray-700 mb-1">
                                             Notes
@@ -1035,15 +1179,89 @@
                                             class="w-full rounded-md px-4 py-2 text-sm border border-gray-200 focus:outline-none focus:ring-2 focus:border-primary focus:ring-primary/20 text-gray-700"
                                             placeholder="Optional notes for placement..."></textarea>
                                     </div>
+
+                                    <div x-data="{
+                                        preview: null,
+                                        dragging: false,
+                                        handleFile(event) {
+                                            const file = event.target.files[0];
+                                            if (file && file.type.startsWith('image/')) {
+                                                const reader = new FileReader();
+                                                reader.onload = (e) => {
+                                                    this.preview = e.target.result;
+                                                    formData.placement_detail_img_url = e.target.result;
+                                                };
+                                                reader.readAsDataURL(file);
+                                            }
+                                        },
+                                        handleDrop(event) {
+                                            this.dragging = false;
+                                            const file = event.dataTransfer.files[0];
+                                            if (file) {
+                                                const dataTransfer = new DataTransfer();
+                                                dataTransfer.items.add(file);
+                                                $refs.placementInput.files = dataTransfer.files;
+                                                this.handleFile({ target: { files: [file] } });
+                                            }
+                                        }
+                                    }" x-init="preview = formData.placement_detail_img_url">
+                                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                                            Placement Detail Image <span class="text-gray-400">(Optional)</span>
+                                        </label>
+
+                                        {{-- Preview --}}
+                                        <div x-show="preview || formData.placement_detail_img_url" x-cloak class="mb-3">
+                                            <div class="relative inline-block">
+                                                <img :src="preview || formData.placement_detail_img_url" alt="Placement detail"
+                                                    class="w-32 h-32 object-cover rounded-lg border-2 border-gray-200">
+                                                <button type="button" @click="preview = null; formData.placement_detail_img_url = null; deletedImages.placement_detail_img = true; $refs.placementInput.value = ''"
+                                                    class="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 shadow-lg">
+                                                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                            d="M6 18L18 6M6 6l12 12" />
+                                                    </svg>
+                                                </button>
+                                            </div>
+                                        </div>
+
+                                        {{-- Drag & Drop Area --}}
+                                        <div @drop.prevent="handleDrop($event)"
+                                            @dragover.prevent="dragging = true"
+                                            @dragleave="dragging = false"
+                                            @click="$refs.placementInput.click()"
+                                            :class="[
+                                                dragging ? 'border-primary bg-primary/5' : 'border-gray-300 bg-gray-50',
+                                                errors.placement_detail_img ? 'border-red-500' : ''
+                                            ]"
+                                            class="border-2 border-dashed rounded-lg p-4 text-center cursor-pointer transition-all hover:border-primary hover:bg-primary/5">
+                                            <input x-ref="placementInput" type="file" name="placement_detail_img" accept="image/*"
+                                                @change="handleFile($event)" class="hidden">
+                                            
+                                            <svg class="w-8 h-8 mx-auto mb-2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                    d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                                            </svg>
+                                            <p class="text-xs text-gray-600">
+                                                <span class="text-primary font-semibold">Click</span> or drag placement image
+                                            </p>
+                                        </div>
+                                        <p x-show="errors.placement_detail_img" x-cloak x-text="errors.placement_detail_img"
+                                            class="mt-1 text-sm text-red-600"></p>
+                                    </div>
                                 </div>
                             </div>
 
-                            {{-- 🧵 SEWING SECTION --}}
-                            <div>
-                                <h4 class="text-sm font-semibold text-gray-900 mb-3 flex items-center gap-2">
-                                    <span class="text-lg">🧵</span>
-                                    Sewing Section
-                                </h4>
+                            {{-- SECTION 5: SEWING --}}
+                            <div class="bg-white border-2 border-gray-200 rounded-lg p-6">
+                                <div class="flex items-center gap-3 mb-4">
+                                    <div class="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center">
+                                        <span class="text-lg">🧵</span>
+                                    </div>
+                                    <div>
+                                        <h3 class="text-base font-semibold text-gray-900">5. Sewing Section</h3>
+                                        <p class="text-xs text-gray-500">Overdeck, labels, and detail image</p>
+                                    </div>
+                                </div>
                                 <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                                     <div>
                                         <label class="block text-sm font-medium text-gray-700 mb-1">
@@ -1119,41 +1337,95 @@
 
                                     <div class="md:col-span-2">
                                         <label class="block text-sm font-medium text-gray-700 mb-1">
-                                            Detail Image
-                                        </label>
-
-                                        {{-- Show existing image if available --}}
-                                        <div x-show="formData.sewing_detail_img_url" class="mb-2">
-                                            <img :src="formData.sewing_detail_img_url" alt="Sewing detail"
-                                                class="w-32 h-32 object-cover rounded border border-gray-200">
-                                            <p class="text-xs text-gray-500 mt-1">Current image (upload new to replace)</p>
-                                        </div>
-
-                                        <input type="file" name="sewing_detail_img" accept="image/*"
-                                            @change="handleImageUpload($event, 'sewing_detail_img_url')"
-                                            :class="{ 'border-red-500': errors.sewing_detail_img }"
-                                            class="w-full rounded-md px-4 py-2 text-sm border border-gray-200 focus:outline-none focus:ring-2 focus:border-primary focus:ring-primary/20 text-gray-700">
-                                        <p x-show="errors.sewing_detail_img" x-text="errors.sewing_detail_img"
-                                            class="mt-1 text-xs text-red-500"></p>
-                                    </div>
-
-                                    <div class="md:col-span-2">
-                                        <label class="block text-sm font-medium text-gray-700 mb-1">
                                             Notes
                                         </label>
                                         <textarea name="sewing_notes" x-model="formData.sewing_notes" rows="2"
                                             class="w-full rounded-md px-4 py-2 text-sm border border-gray-200 focus:outline-none focus:ring-2 focus:border-primary focus:ring-primary/20 text-gray-700"
                                             placeholder="Optional notes for sewing..."></textarea>
                                     </div>
+
+                                    <div class="md:col-span-2" x-data="{
+                                        preview: null,
+                                        dragging: false,
+                                        handleFile(event) {
+                                            const file = event.target.files[0];
+                                            if (file && file.type.startsWith('image/')) {
+                                                const reader = new FileReader();
+                                                reader.onload = (e) => {
+                                                    this.preview = e.target.result;
+                                                    formData.sewing_detail_img_url = e.target.result;
+                                                };
+                                                reader.readAsDataURL(file);
+                                            }
+                                        },
+                                        handleDrop(event) {
+                                            this.dragging = false;
+                                            const file = event.dataTransfer.files[0];
+                                            if (file) {
+                                                const dataTransfer = new DataTransfer();
+                                                dataTransfer.items.add(file);
+                                                $refs.sewingInput.files = dataTransfer.files;
+                                                this.handleFile({ target: { files: [file] } });
+                                            }
+                                        }
+                                    }" x-init="preview = formData.sewing_detail_img_url">
+                                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                                            Detail Image <span class="text-gray-400">(Optional)</span>
+                                        </label>
+
+                                        {{-- Preview --}}
+                                        <div x-show="preview || formData.sewing_detail_img_url" x-cloak class="mb-3">
+                                            <div class="relative inline-block">
+                                                <img :src="preview || formData.sewing_detail_img_url" alt="Sewing detail"
+                                                    class="w-32 h-32 object-cover rounded-lg border-2 border-gray-200">
+                                                <button type="button" @click="preview = null; formData.sewing_detail_img_url = null; deletedImages.sewing_detail_img = true; $refs.sewingInput.value = ''"
+                                                    class="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 shadow-lg">
+                                                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                            d="M6 18L18 6M6 6l12 12" />
+                                                    </svg>
+                                                </button>
+                                            </div>
+                                        </div>
+
+                                        {{-- Drag & Drop Area --}}
+                                        <div @drop.prevent="handleDrop($event)"
+                                            @dragover.prevent="dragging = true"
+                                            @dragleave="dragging = false"
+                                            @click="$refs.sewingInput.click()"
+                                            :class="[
+                                                dragging ? 'border-primary bg-primary/5' : 'border-gray-300 bg-gray-50',
+                                                errors.sewing_detail_img ? 'border-red-500' : ''
+                                            ]"
+                                            class="border-2 border-dashed rounded-lg p-4 text-center cursor-pointer transition-all hover:border-primary hover:bg-primary/5">
+                                            <input x-ref="sewingInput" type="file" name="sewing_detail_img" accept="image/*"
+                                                @change="handleFile($event)" class="hidden">
+                                            
+                                            <svg class="w-8 h-8 mx-auto mb-2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                    d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                                            </svg>
+                                            <p class="text-xs text-gray-600">
+                                                <span class="text-primary font-semibold">Click</span> or drag sewing image
+                                            </p>
+                                        </div>
+                                        <p x-show="errors.sewing_detail_img" x-cloak x-text="errors.sewing_detail_img"
+                                            class="mt-1 text-sm text-red-600"></p>
+                                    </div>
                                 </div>
                             </div>
 
-                            {{-- 📦 PACKING SECTION --}}
-                            <div>
-                                <h4 class="text-sm font-semibold text-gray-900 mb-3 flex items-center gap-2">
-                                    <span class="text-lg">📦</span>
-                                    Packing Section
-                                </h4>
+                            {{-- SECTION 6: PACKING --}}
+                            <div class="bg-white border-2 border-gray-200 rounded-lg p-6">
+                                <div class="flex items-center gap-3 mb-4">
+                                    <div class="w-10 h-10 rounded-full bg-orange-100 flex items-center justify-center">
+                                        <span class="text-lg">📦</span>
+                                    </div>
+                                    <div>
+                                        <h3 class="text-base font-semibold text-gray-900">6. Packing Section</h3>
+                                        <p class="text-xs text-gray-500">Plastic, sticker, and hangtag image</p>
+                                    </div>
+                                </div>
                                 <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                                     <div>
                                         <label class="block text-sm font-medium text-gray-700 mb-1">
@@ -1193,31 +1465,80 @@
 
                                     <div class="md:col-span-2">
                                         <label class="block text-sm font-medium text-gray-700 mb-1">
-                                            Hangtag Image
-                                        </label>
-
-                                        {{-- Show existing image if available --}}
-                                        <div x-show="formData.hangtag_img_url" class="mb-2">
-                                            <img :src="formData.hangtag_img_url" alt="Hangtag"
-                                                class="w-32 h-32 object-cover rounded border border-gray-200">
-                                            <p class="text-xs text-gray-500 mt-1">Current image (upload new to replace)</p>
-                                        </div>
-
-                                        <input type="file" name="hangtag_img" accept="image/*"
-                                            @change="handleImageUpload($event, 'hangtag_img_url')"
-                                            :class="{ 'border-red-500': errors.hangtag_img }"
-                                            class="w-full rounded-md px-4 py-2 text-sm border border-gray-200 focus:outline-none focus:ring-2 focus:border-primary focus:ring-primary/20 text-gray-700">
-                                        <p x-show="errors.hangtag_img" x-text="errors.hangtag_img"
-                                            class="mt-1 text-xs text-red-500"></p>
-                                    </div>
-
-                                    <div class="md:col-span-2">
-                                        <label class="block text-sm font-medium text-gray-700 mb-1">
                                             Notes
                                         </label>
                                         <textarea name="packing_notes" x-model="formData.packing_notes" rows="2"
                                             class="w-full rounded-md px-4 py-2 text-sm border border-gray-200 focus:outline-none focus:ring-2 focus:border-primary focus:ring-primary/20 text-gray-700"
                                             placeholder="Optional notes for packing..."></textarea>
+                                    </div>
+
+                                    <div class="md:col-span-2" x-data="{
+                                        preview: null,
+                                        dragging: false,
+                                        handleFile(event) {
+                                            const file = event.target.files[0];
+                                            if (file && file.type.startsWith('image/')) {
+                                                const reader = new FileReader();
+                                                reader.onload = (e) => {
+                                                    this.preview = e.target.result;
+                                                    formData.hangtag_img_url = e.target.result;
+                                                };
+                                                reader.readAsDataURL(file);
+                                            }
+                                        },
+                                        handleDrop(event) {
+                                            this.dragging = false;
+                                            const file = event.dataTransfer.files[0];
+                                            if (file) {
+                                                const dataTransfer = new DataTransfer();
+                                                dataTransfer.items.add(file);
+                                                $refs.hangtagInput.files = dataTransfer.files;
+                                                this.handleFile({ target: { files: [file] } });
+                                            }
+                                        }
+                                    }" x-init="preview = formData.hangtag_img_url">
+                                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                                            Hangtag Image <span class="text-gray-400">(Optional)</span>
+                                        </label>
+
+                                        {{-- Preview --}}
+                                        <div x-show="preview || formData.hangtag_img_url" x-cloak class="mb-3">
+                                            <div class="relative inline-block">
+                                                <img :src="preview || formData.hangtag_img_url" alt="Hangtag"
+                                                    class="w-32 h-32 object-cover rounded-lg border-2 border-gray-200">
+                                                <button type="button" @click="preview = null; formData.hangtag_img_url = null; deletedImages.hangtag_img = true; $refs.hangtagInput.value = ''"
+                                                    class="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 shadow-lg">
+                                                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                            d="M6 18L18 6M6 6l12 12" />
+                                                    </svg>
+                                                </button>
+                                            </div>
+                                        </div>
+
+                                        {{-- Drag & Drop Area --}}
+                                        <div @drop.prevent="handleDrop($event)"
+                                            @dragover.prevent="dragging = true"
+                                            @dragleave="dragging = false"
+                                            @click="$refs.hangtagInput.click()"
+                                            :class="[
+                                                dragging ? 'border-primary bg-primary/5' : 'border-gray-300 bg-gray-50',
+                                                errors.hangtag_img ? 'border-red-500' : ''
+                                            ]"
+                                            class="border-2 border-dashed rounded-lg p-4 text-center cursor-pointer transition-all hover:border-primary hover:bg-primary/5">
+                                            <input x-ref="hangtagInput" type="file" name="hangtag_img" accept="image/*"
+                                                @change="handleFile($event)" class="hidden">
+                                            
+                                            <svg class="w-8 h-8 mx-auto mb-2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                    d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                                            </svg>
+                                            <p class="text-xs text-gray-600">
+                                                <span class="text-primary font-semibold">Click</span> or drag hangtag image
+                                            </p>
+                                        </div>
+                                        <p x-show="errors.hangtag_img" x-cloak x-text="errors.hangtag_img"
+                                            class="mt-1 text-sm text-red-600"></p>
                                     </div>
                                 </div>
                             </div>

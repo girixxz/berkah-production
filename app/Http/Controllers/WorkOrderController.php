@@ -6,6 +6,7 @@ use App\Models\Order;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 
 class WorkOrderController extends Controller
 {
@@ -280,13 +281,28 @@ class WorkOrderController extends Controller
                 ['status' => 'created']
             );
 
-            // Handle mockup image upload to Cloudinary
+            // Handle mockup image upload to local storage
             if ($request->hasFile('mockup_img')) {
-                $uploadedFile = cloudinary()->uploadApi()->upload($request->file('mockup_img')->getRealPath(), [
-                    'folder' => 'work-orders/mockup',
-                ]);
+                // Delete old image if exists
+                if ($workOrder->mockup_img_url && Storage::disk('local')->exists($workOrder->mockup_img_url)) {
+                    Storage::disk('local')->delete($workOrder->mockup_img_url);
+                }
+                
+                $file = $request->file('mockup_img');
+                $filename = time() . '_mockup_' . uniqid() . '.' . $file->getClientOriginalExtension();
+                $file->storeAs('work-orders/mockup', $filename, 'local');
+                
                 $workOrder->update([
-                    'mockup_img_url' => $uploadedFile['secure_url'],
+                    'mockup_img_url' => 'work-orders/mockup/' . $filename,
+                    'status' => 'created'
+                ]);
+            } elseif ($request->input('delete_mockup_img') === 'true') {
+                // User explicitly deleted the image
+                if ($workOrder->mockup_img_url && Storage::disk('local')->exists($workOrder->mockup_img_url)) {
+                    Storage::disk('local')->delete($workOrder->mockup_img_url);
+                }
+                $workOrder->update([
+                    'mockup_img_url' => null,
                     'status' => 'created'
                 ]);
             } else {
@@ -302,11 +318,24 @@ class WorkOrderController extends Controller
                 'notes' => $validated['cutting_notes'] ?? null,
             ];
 
+            $existingCutting = \App\Models\WorkOrderCutting::where('work_order_id', $workOrder->id)->first();
+
             if ($request->hasFile('custom_size_chart_img')) {
-                $uploadedFile = cloudinary()->uploadApi()->upload($request->file('custom_size_chart_img')->getRealPath(), [
-                    'folder' => 'work-orders/cutting',
-                ]);
-                $cuttingData['custom_size_chart_img_url'] = $uploadedFile['secure_url'];
+                // Delete old image if exists
+                if ($existingCutting && $existingCutting->custom_size_chart_img_url && Storage::disk('local')->exists($existingCutting->custom_size_chart_img_url)) {
+                    Storage::disk('local')->delete($existingCutting->custom_size_chart_img_url);
+                }
+                
+                $file = $request->file('custom_size_chart_img');
+                $filename = time() . '_cutting_' . uniqid() . '.' . $file->getClientOriginalExtension();
+                $file->storeAs('work-orders/cutting', $filename, 'local');
+                $cuttingData['custom_size_chart_img_url'] = 'work-orders/cutting/' . $filename;
+            } elseif ($request->input('delete_custom_size_chart_img') === 'true') {
+                // User explicitly deleted the image
+                if ($existingCutting && $existingCutting->custom_size_chart_img_url && Storage::disk('local')->exists($existingCutting->custom_size_chart_img_url)) {
+                    Storage::disk('local')->delete($existingCutting->custom_size_chart_img_url);
+                }
+                $cuttingData['custom_size_chart_img_url'] = null;
             }
 
             \App\Models\WorkOrderCutting::updateOrCreate(
@@ -322,11 +351,24 @@ class WorkOrderController extends Controller
                 'notes' => $validated['printing_notes'] ?? null,
             ];
 
+            $existingPrinting = \App\Models\WorkOrderPrinting::where('work_order_id', $workOrder->id)->first();
+
             if ($request->hasFile('printing_detail_img')) {
-                $uploadedFile = cloudinary()->uploadApi()->upload($request->file('printing_detail_img')->getRealPath(), [
-                    'folder' => 'work-orders/printing',
-                ]);
-                $printingData['detail_img_url'] = $uploadedFile['secure_url'];
+                // Delete old image if exists
+                if ($existingPrinting && $existingPrinting->detail_img_url && Storage::disk('local')->exists($existingPrinting->detail_img_url)) {
+                    Storage::disk('local')->delete($existingPrinting->detail_img_url);
+                }
+                
+                $file = $request->file('printing_detail_img');
+                $filename = time() . '_printing_' . uniqid() . '.' . $file->getClientOriginalExtension();
+                $file->storeAs('work-orders/printing', $filename, 'local');
+                $printingData['detail_img_url'] = 'work-orders/printing/' . $filename;
+            } elseif ($request->input('delete_printing_detail_img') === 'true') {
+                // User explicitly deleted the image
+                if ($existingPrinting && $existingPrinting->detail_img_url && Storage::disk('local')->exists($existingPrinting->detail_img_url)) {
+                    Storage::disk('local')->delete($existingPrinting->detail_img_url);
+                }
+                $printingData['detail_img_url'] = null;
             }
 
             \App\Models\WorkOrderPrinting::updateOrCreate(
@@ -340,11 +382,24 @@ class WorkOrderController extends Controller
                 'notes' => $validated['placement_notes'] ?? null,
             ];
 
+            $existingPlacement = \App\Models\WorkOrderPrintingPlacement::where('work_order_id', $workOrder->id)->first();
+
             if ($request->hasFile('placement_detail_img')) {
-                $uploadedFile = cloudinary()->uploadApi()->upload($request->file('placement_detail_img')->getRealPath(), [
-                    'folder' => 'work-orders/placement',
-                ]);
-                $placementData['detail_img_url'] = $uploadedFile['secure_url'];
+                // Delete old image if exists
+                if ($existingPlacement && $existingPlacement->detail_img_url && Storage::disk('local')->exists($existingPlacement->detail_img_url)) {
+                    Storage::disk('local')->delete($existingPlacement->detail_img_url);
+                }
+                
+                $file = $request->file('placement_detail_img');
+                $filename = time() . '_placement_' . uniqid() . '.' . $file->getClientOriginalExtension();
+                $file->storeAs('work-orders/placement', $filename, 'local');
+                $placementData['detail_img_url'] = 'work-orders/placement/' . $filename;
+            } elseif ($request->input('delete_placement_detail_img') === 'true') {
+                // User explicitly deleted the image
+                if ($existingPlacement && $existingPlacement->detail_img_url && Storage::disk('local')->exists($existingPlacement->detail_img_url)) {
+                    Storage::disk('local')->delete($existingPlacement->detail_img_url);
+                }
+                $placementData['detail_img_url'] = null;
             }
 
             \App\Models\WorkOrderPrintingPlacement::updateOrCreate(
@@ -362,11 +417,24 @@ class WorkOrderController extends Controller
                 'notes' => $validated['sewing_notes'] ?? null,
             ];
 
+            $existingSewing = \App\Models\WorkOrderSewing::where('work_order_id', $workOrder->id)->first();
+
             if ($request->hasFile('sewing_detail_img')) {
-                $uploadedFile = cloudinary()->uploadApi()->upload($request->file('sewing_detail_img')->getRealPath(), [
-                    'folder' => 'work-orders/sewing',
-                ]);
-                $sewingData['detail_img_url'] = $uploadedFile['secure_url'];
+                // Delete old image if exists
+                if ($existingSewing && $existingSewing->detail_img_url && Storage::disk('local')->exists($existingSewing->detail_img_url)) {
+                    Storage::disk('local')->delete($existingSewing->detail_img_url);
+                }
+                
+                $file = $request->file('sewing_detail_img');
+                $filename = time() . '_sewing_' . uniqid() . '.' . $file->getClientOriginalExtension();
+                $file->storeAs('work-orders/sewing', $filename, 'local');
+                $sewingData['detail_img_url'] = 'work-orders/sewing/' . $filename;
+            } elseif ($request->input('delete_sewing_detail_img') === 'true') {
+                // User explicitly deleted the image
+                if ($existingSewing && $existingSewing->detail_img_url && Storage::disk('local')->exists($existingSewing->detail_img_url)) {
+                    Storage::disk('local')->delete($existingSewing->detail_img_url);
+                }
+                $sewingData['detail_img_url'] = null;
             }
 
             \App\Models\WorkOrderSewing::updateOrCreate(
@@ -382,11 +450,24 @@ class WorkOrderController extends Controller
                 'notes' => $validated['packing_notes'] ?? null,
             ];
 
+            $existingPacking = \App\Models\WorkOrderPacking::where('work_order_id', $workOrder->id)->first();
+
             if ($request->hasFile('hangtag_img')) {
-                $uploadedFile = cloudinary()->uploadApi()->upload($request->file('hangtag_img')->getRealPath(), [
-                    'folder' => 'work-orders/packing',
-                ]);
-                $packingData['hangtag_img_url'] = $uploadedFile['secure_url'];
+                // Delete old image if exists
+                if ($existingPacking && $existingPacking->hangtag_img_url && Storage::disk('local')->exists($existingPacking->hangtag_img_url)) {
+                    Storage::disk('local')->delete($existingPacking->hangtag_img_url);
+                }
+                
+                $file = $request->file('hangtag_img');
+                $filename = time() . '_hangtag_' . uniqid() . '.' . $file->getClientOriginalExtension();
+                $file->storeAs('work-orders/packing', $filename, 'local');
+                $packingData['hangtag_img_url'] = 'work-orders/packing/' . $filename;
+            } elseif ($request->input('delete_hangtag_img') === 'true') {
+                // User explicitly deleted the image
+                if ($existingPacking && $existingPacking->hangtag_img_url && Storage::disk('local')->exists($existingPacking->hangtag_img_url)) {
+                    Storage::disk('local')->delete($existingPacking->hangtag_img_url);
+                }
+                $packingData['hangtag_img_url'] = null;
             }
 
             \App\Models\WorkOrderPacking::updateOrCreate(
@@ -473,6 +554,41 @@ class WorkOrderController extends Controller
                 ->route('admin.work-orders.manage', $orderId)
                 ->with('error', 'Failed to finalize work orders: ' . $e->getMessage());
         }
+    }
+
+    /**
+     * Serve work order image from private storage.
+     */
+    public function serveImage($path)
+    {
+        // Security check - must be authenticated
+        /** @var \Illuminate\Contracts\Auth\Guard $auth */
+        $auth = auth();
+        if (!$auth->check()) {
+            abort(403, 'Unauthorized');
+        }
+
+        // Validate path to prevent directory traversal
+        if (strpos($path, '..') !== false) {
+            abort(403, 'Invalid path');
+        }
+
+        // Full path in private storage
+        $fullPath = storage_path('app/private/' . $path);
+
+        // Check if file exists
+        if (!file_exists($fullPath)) {
+            abort(404, 'Image not found');
+        }
+
+        // Get mime type
+        $mimeType = finfo_file(finfo_open(FILEINFO_MIME_TYPE), $fullPath);
+
+        // Return image response
+        return response()->file($fullPath, [
+            'Content-Type' => $mimeType,
+            'Cache-Control' => 'private, max-age=3600',
+        ]);
     }
 
     /**
