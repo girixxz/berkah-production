@@ -626,6 +626,7 @@
                                                 sleeves: {{ Js::from($displaySleeves) }},
                                                 sizes: {{ Js::from($displaySizes) }},
                                                 order_items: {{ Js::from($orderItemsData) }},
+                                                shipping_type: {{ Js::from(ucfirst($order->shipping_type)) }},
                                                 work_order: {{ Js::from([
                                                     'id' => $design->workOrder->id ?? null,
                                                     'mockup_img_url' => $design->workOrder->mockup_img_url ?? null,

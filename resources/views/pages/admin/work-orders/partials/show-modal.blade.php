@@ -524,11 +524,11 @@
                                             <tr>
                                                 <td
                                                     class="bg-[#00B0F0] border-x-2 border-b-2 border-black p-1 font-semibold">
-                                                    Ekspedisi
+                                                    Shipping Type
                                                 </td>
                                                 <td class="border-b-2 border-black p-1">
                                                     <span
-                                                        x-text="showData?.work_order?.packing?.expedition_name || '-'"></span>
+                                                        x-text="showData?.shipping_type || '-'"></span>
                                                 </td>
                                             </tr>
                                         </table>
