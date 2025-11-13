@@ -523,20 +523,67 @@ class OrderController extends Controller
                 'grand_total' => $validated['grand_total'],
             ]);
 
-            // Delete existing design variants, order items will be cascade deleted
-            $order->designVariants()->delete();
-            $order->orderItems()->delete();
+            // ==========================================
+            // SMART UPDATE: PRESERVE WORK ORDERS
+            // ==========================================
+            
+            // Get existing design variants with work orders
+            $existingDesigns = $order->designVariants()->with('workOrder')->get();
+            
+            // Map existing designs by name for quick lookup
+            $existingDesignsMap = $existingDesigns->keyBy('design_name');
+            
+            // Track which design names are in the new data
+            $newDesignNames = collect($request->designs)->map(function($designData) {
+                return $designData['items'][0]['design_name'];
+            })->unique();
+            
+            // Delete ONLY design variants that:
+            // 1. Don't exist in new data (removed by user)
+            // 2. OR don't have work orders yet (safe to recreate)
+            foreach ($existingDesigns as $existingDesign) {
+                $shouldDelete = !$newDesignNames->contains($existingDesign->design_name) || 
+                               !$existingDesign->workOrder;
+                
+                if ($shouldDelete) {
+                    // Delete order items for this design first
+                    OrderItem::where('design_variant_id', $existingDesign->id)->delete();
+                    
+                    // Then delete the design (if no work order, will be recreated)
+                    if (!$existingDesign->workOrder) {
+                        $existingDesign->delete();
+                    }
+                }
+            }
+            
+            // Delete order items for designs that will be updated (have work orders)
+            foreach ($newDesignNames as $designName) {
+                if ($existingDesignsMap->has($designName)) {
+                    $existingDesign = $existingDesignsMap->get($designName);
+                    if ($existingDesign->workOrder) {
+                        // Only delete order items, keep the design variant
+                        OrderItem::where('design_variant_id', $existingDesign->id)->delete();
+                    }
+                }
+            }
 
-            // Recreate Design Variants and Order Items
+            // Process each design from request
             foreach ($request->designs as $designData) {
-                // Group items by design_name
                 $designName = $designData['items'][0]['design_name'];
                 
-                $designVariant = DesignVariant::create([
-                    'order_id' => $order->id,
-                    'design_name' => $designName,
-                ]);
+                // Use existing design variant if it has work orders, otherwise create new
+                if ($existingDesignsMap->has($designName) && $existingDesignsMap->get($designName)->workOrder) {
+                    // REUSE existing design variant (preserves work orders via FK)
+                    $designVariant = $existingDesignsMap->get($designName);
+                } else {
+                    // CREATE new design variant (no work order exists)
+                    $designVariant = DesignVariant::create([
+                        'order_id' => $order->id,
+                        'design_name' => $designName,
+                    ]);
+                }
 
+                // Create order items (always recreate for updated quantities/sizes)
                 foreach ($designData['items'] as $item) {
                     $subtotal = $item['qty'] * $item['unit_price'];
                     
