@@ -25,8 +25,15 @@
         showConfirmDone: false,
         selectedOrderStage: null,
         isSubmitting: false,
-        async markAsDone(orderStageId, invoiceNo, productName) {
-            this.selectedOrderStage = { id: orderStageId, invoice: invoiceNo, product: productName };
+        async markAsDone(orderStageId, invoiceNo, productName, customer = '', qty = 0, priority = 'normal') {
+            this.selectedOrderStage = { 
+                id: orderStageId, 
+                invoice: invoiceNo, 
+                product: productName,
+                customer: customer,
+                qty: qty,
+                priority: priority
+            };
             this.showConfirmDone = true;
         },
         async confirmDone() {
@@ -80,7 +87,7 @@
         {{-- Production Stages Grid --}}
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             @foreach ($stagesWithOrders as $stageData)
-                <div class="bg-white border border-gray-200 rounded-lg overflow-hidden">
+                <div class="bg-white border border-gray-200 rounded-lg overflow-hidden flex flex-col">
                     {{-- Card Header --}}
                     <div class="bg-gradient-to-r from-primary to-primary-dark p-4">
                         <h3 class="text-white font-semibold text-lg">{{ $stageData['stage']->stage_name }}</h3>
@@ -90,30 +97,34 @@
                     </div>
 
                     {{-- Card Body - Order Bubbles --}}
-                    <div class="p-4 min-h-[200px]">
+                    <div class="p-4 min-h-[200px] flex flex-col flex-1">
                         @if ($stageData['total_count'] > 0)
-                            <div class="space-y-2">
+                            <div class="space-y-2 flex-1">
                                 @foreach ($stageData['order_stages']->take(5) as $orderStage)
                                     @php
                                         $isHighPriority = strtolower($orderStage->order->priority ?? '') === 'high';
-                                        $bubbleClass = $isHighPriority
-                                            ? 'bg-yellow-100 border-yellow-300 text-yellow-800'
-                                            : 'bg-gray-100 border-gray-300 text-gray-700';
+                                        $isLast = $loop->iteration >= 4; // Last 2 items, dropdown goes up
                                     @endphp
-                                    <div class="px-3 py-2 rounded-lg border {{ $bubbleClass }} text-xs font-medium"
+                                    <div class="px-3 py-2 rounded-lg border bg-primary-light border-gray-400 text-xs font-medium"
                                         x-data="{ showDropdown: false }">
-                                        <div class="flex items-start justify-between gap-2">
-                                            <div class="flex-1 min-w-0">
-                                                <p class="truncate">
-                                                    {{ $orderStage->order->invoice->invoice_no ?? 'N/A' }}
-                                                    {{ $orderStage->order->productCategory->product_name ?? 'N/A' }}
-                                                    @if ($isHighPriority)
-                                                        <span class="font-bold text-red-600">(HIGH)</span>
-                                                    @endif
-                                                </p>
-                                                <p class="text-[10px] mt-1 opacity-75">
+                                        <div class="flex items-center justify-between gap-2">
+                                            {{-- Content: Nama • Product • QTY • HIGH (horizontal row) --}}
+                                            <div class="flex items-center gap-2 flex-1 min-w-0 {{ $isHighPriority ? 'text-red-600' : 'text-gray-900' }}">
+                                                <span class="font-semibold truncate">
                                                     {{ $orderStage->order->customer->customer_name ?? 'N/A' }}
-                                                </p>
+                                                </span>
+                                                <span class="text-gray-400">•</span>
+                                                <span class="truncate">
+                                                    {{ $orderStage->order->productCategory->product_name ?? 'N/A' }}
+                                                </span>
+                                                <span class="text-gray-400">•</span>
+                                                <span class="font-medium">
+                                                    {{ $orderStage->order->total_qty ?? 0 }}
+                                                </span>
+                                                @if ($isHighPriority)
+                                                    <span class="text-gray-400">•</span>
+                                                    <span class="font-bold italic">HIGH</span>
+                                                @endif
                                             </div>
                                             {{-- Three Dot Button --}}
                                             <div class="flex-shrink-0 relative">
@@ -130,7 +141,7 @@
 
                                                     {{-- Dropdown Menu --}}
                                                     <div x-show="showDropdown" @click.away="showDropdown = false" x-cloak
-                                                        class="absolute right-0 mt-1 w-40 bg-white rounded-lg shadow-lg border border-gray-200 z-50 py-1">
+                                                        class="absolute right-0 {{ $isLast ? 'bottom-full mb-1' : 'top-full mt-1' }} w-40 bg-white rounded-lg shadow-lg border border-gray-200 z-[9999] py-1">
                                                         {{-- View Detail --}}
                                                         <button type="button"
                                                             @click="showDropdown = false; alert('View Detail - Coming Soon')"
@@ -147,7 +158,7 @@
                                                         </button>
                                                         {{-- Mark as Done --}}
                                                         <button type="button"
-                                                            @click="showDropdown = false; markAsDone({{ $orderStage->id }}, '{{ $orderStage->order->invoice->invoice_no ?? 'N/A' }}', '{{ $orderStage->order->productCategory->product_name ?? 'N/A' }}')"
+                                                            @click="showDropdown = false; markAsDone({{ $orderStage->id }}, '{{ $orderStage->order->invoice->invoice_no ?? 'N/A' }}', '{{ $orderStage->order->productCategory->product_name ?? 'N/A' }}', '{{ $orderStage->order->customer->customer_name ?? 'N/A' }}', {{ $orderStage->order->total_qty ?? 0 }}, '{{ strtolower($orderStage->order->priority ?? 'normal') }}')"
                                                             class="w-full text-left px-4 py-2 text-xs text-green-700 hover:bg-green-50 flex items-center gap-2 cursor-pointer">
                                                             <svg class="w-3 h-3" fill="none" stroke="currentColor"
                                                                 viewBox="0 0 24 24">
@@ -171,6 +182,33 @@
                                     </div>
                                 @endforeach
                             </div>
+                            
+                            {{-- View All Button - Always at bottom --}}
+                            <div class="mt-auto pt-3">
+                                <button type="button"
+                                    @click="showModal = true; 
+                                            modalStage = '{{ $stageData['stage']->stage_name }}'; 
+                                            modalOrders = {{ $stageData['order_stages']->map(function ($os) {
+                                                    $isHigh = strtolower($os->order->priority ?? '') === 'high';
+                                                    return [
+                                                        'id' => $os->id,
+                                                        'invoice' => $os->order->invoice->invoice_no ?? 'N/A',
+                                                        'product' => $os->order->productCategory->product_name ?? 'N/A',
+                                                        'customer' => $os->order->customer->customer_name ?? 'N/A',
+                                                        'qty' => $os->order->total_qty ?? 0,
+                                                        'priority' => $isHigh ? 'high' : 'normal',
+                                                        'status' => $os->status,
+                                                        'deadline' => $os->deadline ? $os->deadline->format('d M Y H:i') : 'N/A',
+                                                    ];
+                                                })->toJson() }}"
+                                    class="w-full text-center text-sm font-medium text-primary hover:text-primary-dark transition-colors cursor-pointer border-t border-gray-200 pt-3">
+                                    @if ($stageData['remaining_count'] > 0)
+                                        View All ({{ $stageData['remaining_count'] }}+ More)
+                                    @else
+                                        View All
+                                    @endif
+                                </button>
+                            </div>
                         @else
                             <div class="flex flex-col items-center justify-center h-full py-8">
                                 <svg class="w-12 h-12 text-gray-300 mb-2" fill="none" stroke="currentColor"
@@ -182,29 +220,6 @@
                             </div>
                         @endif
                     </div>
-
-                    {{-- Card Footer - Show More --}}
-                    @if ($stageData['remaining_count'] > 0)
-                        <div class="border-t border-gray-200 p-3 bg-gray-50">
-                            <button type="button"
-                                @click="showModal = true; 
-                                        modalStage = '{{ $stageData['stage']->stage_name }}'; 
-                                        modalOrders = {{ $stageData['order_stages']->map(function ($os) {
-                                                $isHigh = strtolower($os->order->priority ?? '') === 'high';
-                                                return [
-                                                    'invoice' => $os->order->invoice->invoice_no ?? 'N/A',
-                                                    'product' => $os->order->productCategory->product_name ?? 'N/A',
-                                                    'customer' => $os->order->customer->customer_name ?? 'N/A',
-                                                    'priority' => $isHigh ? 'high' : 'normal',
-                                                    'status' => $os->status,
-                                                    'deadline' => $os->deadline ? $os->deadline->format('d M Y H:i') : 'N/A',
-                                                ];
-                                            })->toJson() }}"
-                                class="w-full text-center text-sm font-medium text-primary hover:text-primary-dark transition-colors cursor-pointer">
-                                {{ $stageData['remaining_count'] }}+ More
-                            </button>
-                        </div>
-                    @endif
                 </div>
             @endforeach
         </div>
@@ -233,36 +248,79 @@
                     <div class="p-5 max-h-[60vh] overflow-y-auto">
                         <div class="space-y-3">
                             <template x-for="(order, index) in modalOrders" :key="index">
-                                <div class="px-4 py-3 rounded-lg border"
-                                    :class="order.priority === 'high' ? 'bg-yellow-50 border-yellow-300' :
-                                        'bg-gray-50 border-gray-200'">
-                                    <div class="flex items-start justify-between gap-3">
-                                        <div class="flex-1 min-w-0">
-                                            <p class="font-medium text-gray-900 text-sm">
-                                                <span x-text="order.invoice"></span>
-                                                <span x-text="order.product"></span>
-                                                <span x-show="order.priority === 'high'"
-                                                    class="font-bold text-red-600 ml-1">(HIGH)</span>
-                                            </p>
-                                            <p class="text-xs text-gray-600 mt-1" x-text="order.customer"></p>
-                                            <p class="text-xs text-gray-500 mt-1">
-                                                Deadline: <span x-text="order.deadline"></span>
-                                            </p>
+                                <div class="px-4 py-3 rounded-lg border bg-primary-light border-gray-400"
+                                    x-data="{ showDropdown: false }">
+                                    <div class="flex items-center justify-between gap-3">
+                                        {{-- Content: Nama • Product • QTY • HIGH (horizontal row) --}}
+                                        <div class="flex items-center gap-2 flex-1 min-w-0 text-xs font-medium"
+                                            :class="order.priority === 'high' ? 'text-red-600' : 'text-gray-900'">
+                                            <span class="font-semibold truncate" x-text="order.customer"></span>
+                                            <span class="text-gray-400">•</span>
+                                            <span class="truncate" x-text="order.product"></span>
+                                            <span class="text-gray-400">•</span>
+                                            <span class="font-medium" x-text="order.qty || 0"></span>
+                                            <template x-if="order.priority === 'high'">
+                                                <span>
+                                                    <span class="text-gray-400">•</span>
+                                                    <span class="font-bold italic">HIGH</span>
+                                                </span>
+                                            </template>
                                         </div>
-                                        {{-- Status Badge --}}
-                                        <div class="flex-shrink-0">
-                                            <span x-show="order.status === 'done'"
-                                                class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                                                Done
-                                            </span>
-                                            <span x-show="order.status === 'in_progress'"
-                                                class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                                                In Progress
-                                            </span>
-                                            <span x-show="order.status === 'pending'"
-                                                class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-                                                Pending
-                                            </span>
+                                        {{-- Three Dot Button --}}
+                                        <div class="flex-shrink-0 relative">
+                                            <template x-if="order.status !== 'done'">
+                                                <button type="button" @click="showDropdown = !showDropdown"
+                                                    class="p-1 hover:bg-gray-200 rounded transition-colors cursor-pointer"
+                                                    title="Actions">
+                                                    <svg class="w-4 h-4 text-gray-600" fill="currentColor"
+                                                        viewBox="0 0 20 20">
+                                                        <path
+                                                            d="M6 10a2 2 0 11-4 0 2 2 0 014 0zM12 10a2 2 0 11-4 0 2 2 0 014 0zM16 12a2 2 0 100-4 2 2 0 000 4z" />
+                                                    </svg>
+                                                </button>
+                                            </template>
+                                            
+                                            {{-- Dropdown Menu - Auto adjust position based on index --}}
+                                            <div x-show="showDropdown" @click.away="showDropdown = false" x-cloak
+                                                class="absolute right-0 w-40 bg-white rounded-lg shadow-lg border border-gray-200 z-[9999] py-1"
+                                                :class="index >= modalOrders.length - 3 ? 'bottom-full mb-1' : 'top-full mt-1'">
+                                                {{-- View Detail --}}
+                                                <button type="button"
+                                                    @click="showDropdown = false; alert('View Detail - Coming Soon')"
+                                                    class="w-full text-left px-4 py-2 text-xs text-gray-700 hover:bg-gray-50 flex items-center gap-2 cursor-pointer">
+                                                    <svg class="w-3 h-3" fill="none" stroke="currentColor"
+                                                        viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round"
+                                                            stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                                        <path stroke-linecap="round" stroke-linejoin="round"
+                                                            stroke-width="2"
+                                                            d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                                    </svg>
+                                                    View Detail
+                                                </button>
+                                                {{-- Mark as Done --}}
+                                                <button type="button"
+                                                    @click="showDropdown = false; markAsDone(order.id, order.invoice, order.product, order.customer, order.qty, order.priority)"
+                                                    class="w-full text-left px-4 py-2 text-xs text-green-700 hover:bg-green-50 flex items-center gap-2 cursor-pointer">
+                                                    <svg class="w-3 h-3" fill="none" stroke="currentColor"
+                                                        viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round"
+                                                            stroke-width="2"
+                                                            d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                                    </svg>
+                                                    Done
+                                                </button>
+                                            </div>
+                                            
+                                            {{-- Done checkmark --}}
+                                            <template x-if="order.status === 'done'">
+                                                <svg class="w-4 h-4 text-green-500" fill="currentColor"
+                                                    viewBox="0 0 20 20">
+                                                    <path fill-rule="evenodd"
+                                                        d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                                                        clip-rule="evenodd" />
+                                                </svg>
+                                            </template>
                                         </div>
                                     </div>
                                 </div>
@@ -304,11 +362,23 @@
                         <p class="text-sm text-gray-600 mb-4">
                             You are about to mark this task as completed:
                         </p>
-                        <div class="bg-gray-50 border border-gray-200 rounded-lg p-3 mb-4">
-                            <p class="text-sm font-medium text-gray-900">
-                                <span x-text="selectedOrderStage?.invoice"></span>
+                        {{-- Bubble sama seperti di page awal --}}
+                        <div class="px-3 py-2 rounded-lg border bg-primary-light border-gray-400 text-xs font-medium mb-4"
+                            x-data="{ isHighPriority: selectedOrderStage?.priority === 'high' }">
+                            <div class="flex items-center gap-2 justify-center"
+                                :class="isHighPriority ? 'text-red-600' : 'text-gray-900'">
+                                <span class="font-semibold" x-text="selectedOrderStage?.customer"></span>
+                                <span class="text-gray-400">•</span>
                                 <span x-text="selectedOrderStage?.product"></span>
-                            </p>
+                                <span class="text-gray-400">•</span>
+                                <span class="font-medium" x-text="selectedOrderStage?.qty || 0"></span>
+                                <template x-if="isHighPriority">
+                                    <span>
+                                        <span class="text-gray-400">•</span>
+                                        <span class="font-bold italic">HIGH</span>
+                                    </span>
+                                </template>
+                            </div>
                         </div>
                         <p class="text-xs text-gray-500">
                             This action will update the stage status in PM Manage Task.
