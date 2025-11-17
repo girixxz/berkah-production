@@ -26,10 +26,8 @@ class CustomerController extends Controller
             ->orderBy('created_at', 'desc')
             ->paginate(15, ['*'], 'customer_page');
 
-        // Fetch provinces from API
-        $provinces = $this->getProvinces();
-
-        return view('pages.admin.customers', compact('customers', 'provinces'));
+        // No longer passing provinces - will be loaded via AJAX
+        return view('pages.admin.customers', compact('customers'));
     }
 
     /**
@@ -128,28 +126,61 @@ class CustomerController extends Controller
     }
 
     /**
-     * Get cities by province (for AJAX)
+     * Get provinces from API (for AJAX) - with caching
+     */
+    public function getProvinces()
+    {
+        try {
+            // Cache for 24 hours (86400 seconds)
+            $provinces = cache()->remember('api_provinces', 86400, function () {
+                $response = Http::timeout(10)->get("https://www.emsifa.com/api-wilayah-indonesia/api/provinces.json");
+
+                if ($response->successful()) {
+                    $data = $response->json();
+                    
+                    return collect($data)->map(function ($item) {
+                        return [
+                            'id' => $item['id'],
+                            'province_name' => $item['name']
+                        ];
+                    });
+                }
+
+                return collect([]);
+            });
+
+            return response()->json($provinces);
+        } catch (\Exception $e) {
+            Log::error('Error fetching provinces from API: ' . $e->getMessage());
+            return response()->json([]);
+        }
+    }
+
+    /**
+     * Get cities by province (for AJAX) - with caching
      */
     public function getCities($provinceId)
     {
         try {
-            $response = Http::get("https://www.emsifa.com/api-wilayah-indonesia/api/regencies/{$provinceId}.json");
+            // Cache for 24 hours per province
+            $cities = cache()->remember("api_cities_{$provinceId}", 86400, function () use ($provinceId) {
+                $response = Http::timeout(10)->get("https://www.emsifa.com/api-wilayah-indonesia/api/regencies/{$provinceId}.json");
 
-            if ($response->successful()) {
-                $data = $response->json();
-                
-                // Transform to match expected format
-                $cities = collect($data)->map(function ($item) {
-                    return [
-                        'id' => $item['id'],
-                        'city_name' => $item['name']
-                    ];
-                });
+                if ($response->successful()) {
+                    $data = $response->json();
+                    
+                    return collect($data)->map(function ($item) {
+                        return [
+                            'id' => $item['id'],
+                            'city_name' => $item['name']
+                        ];
+                    });
+                }
 
-                return response()->json($cities);
-            }
+                return collect([]);
+            });
 
-            return response()->json([]);
+            return response()->json($cities);
         } catch (\Exception $e) {
             Log::error('Error fetching cities from API: ' . $e->getMessage());
             return response()->json([]);
@@ -157,28 +188,30 @@ class CustomerController extends Controller
     }
 
     /**
-     * Get districts by city (for AJAX)
+     * Get districts by city (for AJAX) - with caching
      */
     public function getDistricts($cityId)
     {
         try {
-            $response = Http::get("https://www.emsifa.com/api-wilayah-indonesia/api/districts/{$cityId}.json");
+            // Cache for 24 hours per city
+            $districts = cache()->remember("api_districts_{$cityId}", 86400, function () use ($cityId) {
+                $response = Http::timeout(10)->get("https://www.emsifa.com/api-wilayah-indonesia/api/districts/{$cityId}.json");
 
-            if ($response->successful()) {
-                $data = $response->json();
-                
-                // Transform to match expected format
-                $districts = collect($data)->map(function ($item) {
-                    return [
-                        'id' => $item['id'],
-                        'district_name' => $item['name']
-                    ];
-                });
+                if ($response->successful()) {
+                    $data = $response->json();
+                    
+                    return collect($data)->map(function ($item) {
+                        return [
+                            'id' => $item['id'],
+                            'district_name' => $item['name']
+                        ];
+                    });
+                }
 
-                return response()->json($districts);
-            }
+                return collect([]);
+            });
 
-            return response()->json([]);
+            return response()->json($districts);
         } catch (\Exception $e) {
             Log::error('Error fetching districts from API: ' . $e->getMessage());
             return response()->json([]);
@@ -186,58 +219,33 @@ class CustomerController extends Controller
     }
 
     /**
-     * Get villages by district (for AJAX)
+     * Get villages by district (for AJAX) - with caching
      */
     public function getVillages($districtId)
     {
         try {
-            $response = Http::get("https://www.emsifa.com/api-wilayah-indonesia/api/villages/{$districtId}.json");
+            // Cache for 24 hours per district
+            $villages = cache()->remember("api_villages_{$districtId}", 86400, function () use ($districtId) {
+                $response = Http::timeout(10)->get("https://www.emsifa.com/api-wilayah-indonesia/api/villages/{$districtId}.json");
 
-            if ($response->successful()) {
-                $data = $response->json();
-                
-                // Transform to match expected format
-                $villages = collect($data)->map(function ($item) {
-                    return [
-                        'id' => $item['id'],
-                        'village_name' => $item['name']
-                    ];
-                });
+                if ($response->successful()) {
+                    $data = $response->json();
+                    
+                    return collect($data)->map(function ($item) {
+                        return [
+                            'id' => $item['id'],
+                            'village_name' => $item['name']
+                        ];
+                    });
+                }
 
-                return response()->json($villages);
-            }
+                return collect([]);
+            });
 
-            return response()->json([]);
+            return response()->json($villages);
         } catch (\Exception $e) {
             Log::error('Error fetching villages from API: ' . $e->getMessage());
             return response()->json([]);
-        }
-    }
-
-    /**
-     * Get provinces from API
-     */
-    private function getProvinces()
-    {
-        try {
-            $response = Http::get("https://www.emsifa.com/api-wilayah-indonesia/api/provinces.json");
-
-            if ($response->successful()) {
-                $data = $response->json();
-                
-                // Transform to match expected format with object-like access
-                return collect($data)->map(function ($item) {
-                    return (object) [
-                        'id' => $item['id'],
-                        'province_name' => $item['name']
-                    ];
-                });
-            }
-
-            return collect([]);
-        } catch (\Exception $e) {
-            Log::error('Error fetching provinces from API: ' . $e->getMessage());
-            return collect([]);
         }
     }
 }

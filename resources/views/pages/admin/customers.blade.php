@@ -11,6 +11,10 @@
         editCustomer: {},
         searchCustomer: '',
         showDeleteCustomerConfirm: null,
+        
+        // Provinces data (loaded via AJAX)
+        provinces: [],
+        provincesLoaded: false,
     
         // For Add Customer
         addCustomerForm: {
@@ -78,6 +82,9 @@
         },
     
         async init() {
+            // Lazy load provinces immediately (non-blocking)
+            this.fetchProvinces();
+            
             // Watch for modal changes and scroll to modal
             this.$watch('openModal', value => {
                 if (value) {
@@ -97,39 +104,50 @@
             const oldDistrict = '{{ old('district_id') }}' ? parseInt('{{ old('district_id') }}') : '';
             const oldVillage = '{{ old('village_id') }}' ? parseInt('{{ old('village_id') }}') : '';
     
-            console.log('🔍 OLD VALUES:', {
-                province: oldProvince,
-                city: oldCity,
-                district: oldDistrict,
-                village: oldVillage
-            });
-    
             if (oldProvince) {
+                // Wait for provinces to load first
+                await this.waitForProvinces();
+                
                 this.addProvince = oldProvince;
                 await this.fetchCities(oldProvince, 'add', true);
     
                 if (oldCity) {
-                    // Wait for cities to be populated
                     await new Promise(resolve => setTimeout(resolve, 100));
                     this.addCity = oldCity;
-                    console.log('✅ City set to:', oldCity, 'Available cities:', this.addCities.length);
                     await this.fetchDistricts(oldCity, 'add', true);
     
                     if (oldDistrict) {
-                        // Wait for districts to be populated
                         await new Promise(resolve => setTimeout(resolve, 100));
                         this.addDistrict = oldDistrict;
-                        console.log('✅ District set to:', oldDistrict, 'Available districts:', this.addDistricts.length);
                         await this.fetchVillages(oldDistrict, 'add', true);
     
                         if (oldVillage) {
-                            // Wait for villages to be populated
                             await new Promise(resolve => setTimeout(resolve, 100));
                             this.addVillage = oldVillage;
-                            console.log('✅ Village set to:', oldVillage, 'Available villages:', this.addVillages.length);
                         }
                     }
                 }
+            }
+        },
+        
+        async fetchProvinces() {
+            try {
+                const response = await fetch('{{ route('admin.customers.api.provinces') }}');
+                this.provinces = await response.json();
+                this.provincesLoaded = true;
+            } catch (error) {
+                console.error('Error fetching provinces:', error);
+                this.provinces = [];
+                this.provincesLoaded = true; // Set true even on error to prevent infinite wait
+            }
+        },
+        
+        async waitForProvinces() {
+            // Wait until provinces are loaded (max 10 seconds)
+            let attempts = 0;
+            while (!this.provincesLoaded && attempts < 100) {
+                await new Promise(resolve => setTimeout(resolve, 100));
+                attempts++;
             }
         },
         async fetchCities(provinceId, mode = 'add', preserveValue = false) {
@@ -592,17 +610,15 @@
                                 </label>
                                 <select x-model="addProvince" name="province_id"
                                     @change="fetchCities(addProvince, 'add')" @blur="validateAddCustomer()"
+                                    :disabled="!provincesLoaded"
                                     :class="addCustomerErrors.province_id ||
                                         {{ $errors->addCustomer->has('province_id') ? 'true' : 'false' }} ?
                                         'w-full rounded-md px-4 py-2 text-sm border border-red-500 focus:border-red-500 focus:outline-none focus:ring-2 focus:ring-red-200 text-gray-700' :
                                         'w-full rounded-md px-4 py-2 text-sm border border-gray-200 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 text-gray-700'">
-                                    <option value="">Select Province</option>
-                                    @foreach ($provinces as $province)
-                                        <option value="{{ $province->id }}"
-                                            {{ old('province_id') == $province->id ? 'selected' : '' }}>
-                                            {{ $province->province_name }}
-                                        </option>
-                                    @endforeach
+                                    <option value="" x-text="provincesLoaded ? 'Select Province' : 'Loading provinces...'"></option>
+                                    <template x-for="province in provinces" :key="province.id">
+                                        <option :value="province.id" x-text="province.province_name"></option>
+                                    </template>
                                 </select>
                                 <p x-show="addCustomerErrors.province_id" x-text="addCustomerErrors.province_id"
                                     class="mt-1 text-sm text-red-600"></p>
@@ -771,19 +787,19 @@
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-1">Province</label>
                                 <select x-model="editProvince" name="province_id"
-                                    @change="fetchCities(editProvince, 'edit')" @class([
+                                    @change="fetchCities(editProvince, 'edit')"
+                                    :disabled="!provincesLoaded"
+                                    @class([
                                         'w-full rounded-md px-4 py-2 text-sm border focus:outline-none focus:ring-2 text-gray-700',
                                         'border-red-500 focus:border-red-500 focus:ring-red-200' => $errors->editCustomer->has(
                                             'province_id'),
                                         'border-gray-200 focus:border-primary focus:ring-primary/20' => !$errors->editCustomer->has(
                                             'province_id'),
                                     ])>
-                                    <option value="">Select Province</option>
-                                    @foreach ($provinces as $province)
-                                        <option value="{{ $province->id }}">
-                                            {{ $province->province_name }}
-                                        </option>
-                                    @endforeach
+                                    <option value="" x-text="provincesLoaded ? 'Select Province' : 'Loading provinces...'"></option>
+                                    <template x-for="province in provinces" :key="province.id">
+                                        <option :value="province.id" x-text="province.province_name"></option>
+                                    </template>
                                 </select>
                                 @error('province_id', 'editCustomer')
                                     <p class="mt-1 text-sm text-red-600">{{ $message }}</p>

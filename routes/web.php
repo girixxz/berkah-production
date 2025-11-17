@@ -160,6 +160,7 @@ Route::middleware(['auth'])->group(function () {
         Route::get('manage-task', [ManageTaskController::class, 'index'])->name('manage-task');
         
         // API for cascading dropdowns
+        Route::get('customers/api/provinces', [CustomerController::class, 'getProvinces'])->name('customers.api.provinces');
         Route::get('customers/api/cities/{provinceId}', [CustomerController::class, 'getCities'])->name('customers.api.cities');
         Route::get('customers/api/districts/{cityId}', [CustomerController::class, 'getDistricts'])->name('customers.api.districts');
         Route::get('customers/api/villages/{districtId}', [CustomerController::class, 'getVillages'])->name('customers.api.villages');
