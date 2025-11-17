@@ -30,6 +30,7 @@ use App\Http\Controllers\UserController;
 use App\Http\Controllers\SalesController;
 use App\Http\Controllers\OrderController;
 use App\Http\Controllers\ManageTaskController;
+use App\Http\Controllers\CalendarController;
 
 /* ================= DEFAULT INDEX / LOGIN ================= */
 
@@ -183,7 +184,7 @@ Route::middleware(['auth'])->group(function () {
 
     /* ---------- ALL ROLE ---------- */
     Route::get('highlights', fn() => view('pages.highlights'))->name('highlights');
-    Route::get('calendar', fn() => view('pages.calendar'))->name('calendar');
+    Route::get('calendar', [\App\Http\Controllers\CalendarController::class, 'index'])->name('calendar');
     Route::get('profile', fn() => view('pages.profile'))->name('profile');
 });
 
