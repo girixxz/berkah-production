@@ -75,7 +75,7 @@
                     <label class="text-sm text-gray-600 md:w-24 md:mt-2">Customer</label>
 
                     <div class="w-full space-y-2">
-                        <x-select-form name="customer_id" label="Customer" placeholder="-- Select Customer --"
+                        <x-select-search name="customer_id" label="Customer" placeholder="-- Select Customer --"
                             :options="$customers" display="customer_name" :old="old('customer_id')" />
 
                         <button type="button" @click="$dispatch('open-add-customer')"
@@ -92,7 +92,7 @@
                 <div class="relative flex flex-col md:flex-row md:items-start gap-2 md:gap-3">
                     <label class="text-sm text-gray-600 md:w-24 md:mt-2">Sales</label>
 
-                    <x-select-form name="sales_id" label="Sales" placeholder="-- Select Sales --" :options="$sales"
+                    <x-select-search name="sales_id" label="Sales" placeholder="-- Select Sales --" :options="$sales"
                         display="sales_name" :old="old('sales_id')" />
                 </div>
 
@@ -109,7 +109,7 @@
                     <div class="relative flex flex-col md:flex-row md:items-center gap-2 md:gap-3">
                         <label class="text-sm text-gray-600 md:w-24">Product</label>
 
-                        <x-select-form name="product_category_id" label="Product" placeholder="-- Select Product --"
+                        <x-select-search name="product_category_id" label="Product" placeholder="-- Select Product --"
                             :options="$productCategories" display="product_name" :old="old('product_category_id')" />
                     </div>
 
@@ -132,10 +132,10 @@
                     <div class="relative flex flex-col md:flex-row md:items-center gap-2 md:gap-3">
                         <label class="text-sm text-gray-600 md:w-24">Material</label>
                         <div class="flex flex-col md:flex-row gap-2 gap-y-6 md:gap-3 w-full">
-                            <x-select-form name="material_category_id" label="Product" placeholder="-- Select Material --"
+                            <x-select-search name="material_category_id" label="Product" placeholder="-- Select Material --"
                                 :options="$materialCategories" display="material_name" :old="old('material_category_id')" />
 
-                            <x-select-form name="material_texture_id" label="Product" placeholder="-- Select Texture --"
+                            <x-select-search name="material_texture_id" label="Product" placeholder="-- Select Texture --"
                                 :options="$materialTextures" display="texture_name" :old="old('material_texture_id')" />
                         </div>
                     </div>
