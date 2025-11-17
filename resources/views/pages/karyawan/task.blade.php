@@ -89,11 +89,16 @@
             @foreach ($stagesWithOrders as $stageData)
                 <div class="bg-white border border-gray-200 rounded-lg overflow-hidden flex flex-col">
                     {{-- Card Header --}}
-                    <div class="bg-gradient-to-r from-primary to-primary-dark p-4">
-                        <h3 class="text-white font-semibold text-lg">{{ $stageData['stage']->stage_name }}</h3>
-                        <p class="text-white/80 text-xs mt-1">
-                            {{ $stageData['total_count'] }} {{ Str::plural('task', $stageData['total_count']) }}
-                        </p>
+                    <div class="bg-primary-light p-4 border-b border-gray-300">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center gap-1">
+                                <h3 class="text-gray-900 font-semibold text-base">{{ $stageData['stage']->stage_name }}</h3>
+                                <span class="text-gray-600 text-sm">({{ $stageData['total_count'] }} {{ Str::plural('Task', $stageData['total_count']) }})</span>
+                            </div>
+                            <div class="px-3 py-1 bg-primary text-white text-sm font-medium rounded-md">
+                                {{ number_format($stageData['total_pcs']) }} Pcs
+                            </div>
+                        </div>
                     </div>
 
                     {{-- Card Body - Order Bubbles --}}
@@ -104,25 +109,38 @@
                                     @php
                                         $isHighPriority = strtolower($orderStage->order->priority ?? '') === 'high';
                                         $isLast = $loop->iteration >= 4; // Last 2 items, dropdown goes up
+                                        
+                                        // Set colors based on priority (same as calendar)
+                                        if ($isHighPriority) {
+                                            $bgClass = 'bg-red-500';
+                                            $borderClass = 'border-red-600';
+                                            $textClass = 'text-white';
+                                            $separatorClass = 'text-white opacity-70';
+                                        } else {
+                                            $bgClass = 'bg-[#eddfad]';
+                                            $borderClass = 'border-[#d4c973]';
+                                            $textClass = 'text-gray-900';
+                                            $separatorClass = 'text-gray-600';
+                                        }
                                     @endphp
-                                    <div class="px-3 py-2 rounded-lg border bg-primary-light border-gray-400 text-xs font-medium"
+                                    <div class="px-3 py-2 rounded-lg border {{ $bgClass }} {{ $borderClass }} text-xs font-medium"
                                         x-data="{ showDropdown: false }">
                                         <div class="flex items-center justify-between gap-2">
                                             {{-- Content: Nama • Product • QTY • HIGH (horizontal row) --}}
-                                            <div class="flex items-center gap-2 flex-1 min-w-0 {{ $isHighPriority ? 'text-red-600' : 'text-gray-900' }}">
+                                            <div class="flex items-center gap-2 flex-1 min-w-0 {{ $textClass }}">
                                                 <span class="font-semibold truncate">
                                                     {{ $orderStage->order->customer->customer_name ?? 'N/A' }}
                                                 </span>
-                                                <span class="text-gray-400">•</span>
+                                                <span class="{{ $separatorClass }}">•</span>
                                                 <span class="truncate">
                                                     {{ $orderStage->order->productCategory->product_name ?? 'N/A' }}
                                                 </span>
-                                                <span class="text-gray-400">•</span>
+                                                <span class="{{ $separatorClass }}">•</span>
                                                 <span class="font-medium">
                                                     {{ $orderStage->order->total_qty ?? 0 }}
                                                 </span>
                                                 @if ($isHighPriority)
-                                                    <span class="text-gray-400">•</span>
+                                                    <span class="{{ $separatorClass }}">•</span>
                                                     <span class="font-bold italic">HIGH</span>
                                                 @endif
                                             </div>
@@ -248,20 +266,24 @@
                     <div class="p-5 max-h-[60vh] overflow-y-auto">
                         <div class="space-y-3">
                             <template x-for="(order, index) in modalOrders" :key="index">
-                                <div class="px-4 py-3 rounded-lg border bg-primary-light border-gray-400"
+                                <div class="px-4 py-3 rounded-lg border"
+                                    :style="order.priority !== 'high' ? 'background-color: #eddfad; border-color: #d4c973;' : ''"
+                                    :class="{
+                                        'bg-red-500 border-red-600': order.priority === 'high'
+                                    }"
                                     x-data="{ showDropdown: false }">
                                     <div class="flex items-center justify-between gap-3">
                                         {{-- Content: Nama • Product • QTY • HIGH (horizontal row) --}}
                                         <div class="flex items-center gap-2 flex-1 min-w-0 text-xs font-medium"
-                                            :class="order.priority === 'high' ? 'text-red-600' : 'text-gray-900'">
+                                            :class="order.priority === 'high' ? 'text-white' : 'text-gray-900'">
                                             <span class="font-semibold truncate" x-text="order.customer"></span>
-                                            <span class="text-gray-400">•</span>
+                                            <span :class="order.priority === 'high' ? 'text-white opacity-70' : 'text-gray-600'">•</span>
                                             <span class="truncate" x-text="order.product"></span>
-                                            <span class="text-gray-400">•</span>
+                                            <span :class="order.priority === 'high' ? 'text-white opacity-70' : 'text-gray-600'">•</span>
                                             <span class="font-medium" x-text="order.qty || 0"></span>
                                             <template x-if="order.priority === 'high'">
                                                 <span>
-                                                    <span class="text-gray-400">•</span>
+                                                    <span class="text-white opacity-70">•</span>
                                                     <span class="font-bold italic">HIGH</span>
                                                 </span>
                                             </template>
@@ -363,18 +385,22 @@
                             You are about to mark this task as completed:
                         </p>
                         {{-- Bubble sama seperti di page awal --}}
-                        <div class="px-3 py-2 rounded-lg border bg-primary-light border-gray-400 text-xs font-medium mb-4"
-                            x-data="{ isHighPriority: selectedOrderStage?.priority === 'high' }">
+                        <div class="px-3 py-2 rounded-lg border text-xs font-medium mb-4"
+                            x-data="{ isHighPriority: selectedOrderStage?.priority === 'high' }"
+                            :style="!isHighPriority ? 'background-color: #eddfad; border-color: #d4c973;' : ''"
+                            :class="{
+                                'bg-red-500 border-red-600': isHighPriority
+                            }">
                             <div class="flex items-center gap-2 justify-center"
-                                :class="isHighPriority ? 'text-red-600' : 'text-gray-900'">
+                                :class="isHighPriority ? 'text-white' : 'text-gray-900'">
                                 <span class="font-semibold" x-text="selectedOrderStage?.customer"></span>
-                                <span class="text-gray-400">•</span>
+                                <span :class="isHighPriority ? 'text-white opacity-70' : 'text-gray-600'">•</span>
                                 <span x-text="selectedOrderStage?.product"></span>
-                                <span class="text-gray-400">•</span>
+                                <span :class="isHighPriority ? 'text-white opacity-70' : 'text-gray-600'">•</span>
                                 <span class="font-medium" x-text="selectedOrderStage?.qty || 0"></span>
                                 <template x-if="isHighPriority">
                                     <span>
-                                        <span class="text-gray-400">•</span>
+                                        <span class="text-white opacity-70">•</span>
                                         <span class="font-bold italic">HIGH</span>
                                     </span>
                                 </template>

@@ -44,10 +44,16 @@ class TaskController extends Controller
                 ->orderBy('deadline', 'asc')
                 ->get();
 
+            // Calculate total pcs (sum of all order total_qty)
+            $totalPcs = $orderStages->sum(function ($orderStage) {
+                return $orderStage->order->total_qty ?? 0;
+            });
+
             return [
                 'stage' => $stage,
                 'order_stages' => $orderStages,
                 'total_count' => $orderStages->count(),
+                'total_pcs' => $totalPcs,
                 'visible_count' => min(5, $orderStages->count()),
                 'remaining_count' => max(0, $orderStages->count() - 5),
             ];
