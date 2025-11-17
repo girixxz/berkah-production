@@ -604,22 +604,50 @@
                             </div>
 
                             {{-- Province --}}
-                            <div>
+                            <div x-data="{
+                                    open: false,
+                                    search: '',
+                                    selectedProvince: null,
+                                    get filteredProvinces() {
+                                        if (!this.search) return provinces;
+                                        return provinces.filter(p => p.province_name.toLowerCase().includes(this.search.toLowerCase()));
+                                    }
+                                }">
                                 <label class="block text-sm font-medium text-gray-700 mb-1">
                                     Province <span class="text-red-600">*</span>
                                 </label>
-                                <select x-model="addProvince" name="province_id"
-                                    @change="fetchCities(addProvince, 'add')" @blur="validateAddCustomer()"
-                                    :disabled="!provincesLoaded"
-                                    :class="addCustomerErrors.province_id ||
-                                        {{ $errors->addCustomer->has('province_id') ? 'true' : 'false' }} ?
-                                        'w-full rounded-md px-4 py-2 text-sm border border-red-500 focus:border-red-500 focus:outline-none focus:ring-2 focus:ring-red-200 text-gray-700' :
-                                        'w-full rounded-md px-4 py-2 text-sm border border-gray-200 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 text-gray-700'">
-                                    <option value="" x-text="provincesLoaded ? 'Select Province' : 'Loading provinces...'"></option>
-                                    <template x-for="province in provinces" :key="province.id">
-                                        <option :value="province.id" x-text="province.province_name"></option>
-                                    </template>
-                                </select>
+                                <div x-show="provincesLoaded" class="relative">
+                                    <button type="button" @click="open = !open"
+                                        class="w-full flex justify-between items-center rounded-md border px-3 py-2 text-sm text-gray-700 bg-white focus:outline-none focus:ring-2"
+                                        :class="(addCustomerErrors.province_id || {{ $errors->addCustomer->has('province_id') ? 'true' : 'false' }}) ? 'border-red-500 focus:border-red-500 focus:ring-red-200' : 'border-gray-200 focus:border-primary focus:ring-primary/20'">
+                                        <span x-text="selectedProvince ? selectedProvince.province_name : '-- Select Province --'" 
+                                            :class="!selectedProvince && 'text-gray-400'"></span>
+                                        <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                                        </svg>
+                                    </button>
+                                    <input type="hidden" name="province_id" :value="selectedProvince?.id || ''">
+                                    
+                                    <div x-show="open" @click.away="open = false" x-cloak
+                                        class="absolute z-50 mt-1 w-full bg-white border border-gray-200 rounded-md shadow-lg">
+                                        <div class="p-2 border-b border-gray-200">
+                                            <input type="text" x-model="search" placeholder="Search..." @click.stop
+                                                class="w-full px-3 py-1.5 text-sm border border-gray-200 rounded-md focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20" />
+                                        </div>
+                                        <ul class="max-h-60 overflow-y-auto">
+                                            <template x-for="province in filteredProvinces" :key="province.id">
+                                                <li @click="selectedProvince = province; addProvince = province.id; fetchCities(province.id, 'add'); open = false; search = ''"
+                                                    class="px-4 py-2 text-sm hover:bg-gray-50 cursor-pointer"
+                                                    :class="selectedProvince?.id === province.id && 'bg-gray-100 font-medium'">
+                                                    <span x-text="province.province_name"></span>
+                                                </li>
+                                            </template>
+                                        </ul>
+                                    </div>
+                                </div>
+                                <div x-show="!provincesLoaded" class="w-full rounded-md px-4 py-2 text-sm border border-gray-200 bg-gray-50 text-gray-500">
+                                    Loading provinces...
+                                </div>
                                 <p x-show="addCustomerErrors.province_id" x-text="addCustomerErrors.province_id"
                                     class="mt-1 text-sm text-red-600"></p>
                                 @error('province_id', 'addCustomer')
@@ -628,21 +656,48 @@
                             </div>
 
                             {{-- City (shown when province selected) --}}
-                            <div x-show="addProvince" x-transition>
+                            <div x-show="addProvince" x-transition
+                                x-data="{
+                                    open: false,
+                                    search: '',
+                                    selectedCity: null,
+                                    get filteredCities() {
+                                        if (!this.search) return addCities;
+                                        return addCities.filter(c => c.city_name.toLowerCase().includes(this.search.toLowerCase()));
+                                    }
+                                }">
                                 <label class="block text-sm font-medium text-gray-700 mb-1">
                                     City <span class="text-red-600">*</span>
                                 </label>
-                                <select x-model="addCity" name="city_id" @change="fetchDistricts(addCity, 'add')"
-                                    @blur="validateAddCustomer()"
-                                    :class="addCustomerErrors.city_id ||
-                                        {{ $errors->addCustomer->has('city_id') ? 'true' : 'false' }} ?
-                                        'w-full rounded-md px-4 py-2 text-sm border border-red-500 focus:border-red-500 focus:outline-none focus:ring-2 focus:ring-red-200 text-gray-700' :
-                                        'w-full rounded-md px-4 py-2 text-sm border border-gray-200 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 text-gray-700'">
-                                    <option value="">Select City</option>
-                                    <template x-for="city in addCities" :key="city.id">
-                                        <option :value="city.id" x-text="city.city_name"></option>
-                                    </template>
-                                </select>
+                                <div class="relative">
+                                    <button type="button" @click="open = !open"
+                                        class="w-full flex justify-between items-center rounded-md border px-3 py-2 text-sm text-gray-700 bg-white focus:outline-none focus:ring-2"
+                                        :class="(addCustomerErrors.city_id || {{ $errors->addCustomer->has('city_id') ? 'true' : 'false' }}) ? 'border-red-500 focus:border-red-500 focus:ring-red-200' : 'border-gray-200 focus:border-primary focus:ring-primary/20'">
+                                        <span x-text="selectedCity ? selectedCity.city_name : '-- Select City --'" 
+                                            :class="!selectedCity && 'text-gray-400'"></span>
+                                        <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                                        </svg>
+                                    </button>
+                                    <input type="hidden" name="city_id" :value="selectedCity?.id || ''">
+                                    
+                                    <div x-show="open" @click.away="open = false" x-cloak
+                                        class="absolute z-50 mt-1 w-full bg-white border border-gray-200 rounded-md shadow-lg">
+                                        <div class="p-2 border-b border-gray-200">
+                                            <input type="text" x-model="search" placeholder="Search..." @click.stop
+                                                class="w-full px-3 py-1.5 text-sm border border-gray-200 rounded-md focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20" />
+                                        </div>
+                                        <ul class="max-h-60 overflow-y-auto">
+                                            <template x-for="city in filteredCities" :key="city.id">
+                                                <li @click="selectedCity = city; addCity = city.id; fetchDistricts(city.id, 'add'); open = false; search = ''"
+                                                    class="px-4 py-2 text-sm hover:bg-gray-50 cursor-pointer"
+                                                    :class="selectedCity?.id === city.id && 'bg-gray-100 font-medium'">
+                                                    <span x-text="city.city_name"></span>
+                                                </li>
+                                            </template>
+                                        </ul>
+                                    </div>
+                                </div>
                                 <p x-show="addCustomerErrors.city_id" x-text="addCustomerErrors.city_id"
                                     class="mt-1 text-sm text-red-600"></p>
                                 @error('city_id', 'addCustomer')
@@ -651,21 +706,48 @@
                             </div>
 
                             {{-- District (shown when city selected) --}}
-                            <div x-show="addCity" x-transition>
+                            <div x-show="addCity" x-transition
+                                x-data="{
+                                    open: false,
+                                    search: '',
+                                    selectedDistrict: null,
+                                    get filteredDistricts() {
+                                        if (!this.search) return addDistricts;
+                                        return addDistricts.filter(d => d.district_name.toLowerCase().includes(this.search.toLowerCase()));
+                                    }
+                                }">
                                 <label class="block text-sm font-medium text-gray-700 mb-1">
                                     District <span class="text-red-600">*</span>
                                 </label>
-                                <select x-model="addDistrict" name="district_id"
-                                    @change="fetchVillages(addDistrict, 'add')" @blur="validateAddCustomer()"
-                                    :class="addCustomerErrors.district_id ||
-                                        {{ $errors->addCustomer->has('district_id') ? 'true' : 'false' }} ?
-                                        'w-full rounded-md px-4 py-2 text-sm border border-red-500 focus:border-red-500 focus:outline-none focus:ring-2 focus:ring-red-200 text-gray-700' :
-                                        'w-full rounded-md px-4 py-2 text-sm border border-gray-200 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 text-gray-700'">
-                                    <option value="">Select District</option>
-                                    <template x-for="district in addDistricts" :key="district.id">
-                                        <option :value="district.id" x-text="district.district_name"></option>
-                                    </template>
-                                </select>
+                                <div class="relative">
+                                    <button type="button" @click="open = !open"
+                                        class="w-full flex justify-between items-center rounded-md border px-3 py-2 text-sm text-gray-700 bg-white focus:outline-none focus:ring-2"
+                                        :class="(addCustomerErrors.district_id || {{ $errors->addCustomer->has('district_id') ? 'true' : 'false' }}) ? 'border-red-500 focus:border-red-500 focus:ring-red-200' : 'border-gray-200 focus:border-primary focus:ring-primary/20'">
+                                        <span x-text="selectedDistrict ? selectedDistrict.district_name : '-- Select District --'" 
+                                            :class="!selectedDistrict && 'text-gray-400'"></span>
+                                        <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                                        </svg>
+                                    </button>
+                                    <input type="hidden" name="district_id" :value="selectedDistrict?.id || ''">
+                                    
+                                    <div x-show="open" @click.away="open = false" x-cloak
+                                        class="absolute z-50 mt-1 w-full bg-white border border-gray-200 rounded-md shadow-lg">
+                                        <div class="p-2 border-b border-gray-200">
+                                            <input type="text" x-model="search" placeholder="Search..." @click.stop
+                                                class="w-full px-3 py-1.5 text-sm border border-gray-200 rounded-md focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20" />
+                                        </div>
+                                        <ul class="max-h-60 overflow-y-auto">
+                                            <template x-for="district in filteredDistricts" :key="district.id">
+                                                <li @click="selectedDistrict = district; addDistrict = district.id; fetchVillages(district.id, 'add'); open = false; search = ''"
+                                                    class="px-4 py-2 text-sm hover:bg-gray-50 cursor-pointer"
+                                                    :class="selectedDistrict?.id === district.id && 'bg-gray-100 font-medium'">
+                                                    <span x-text="district.district_name"></span>
+                                                </li>
+                                            </template>
+                                        </ul>
+                                    </div>
+                                </div>
                                 <p x-show="addCustomerErrors.district_id" x-text="addCustomerErrors.district_id"
                                     class="mt-1 text-sm text-red-600"></p>
                                 @error('district_id', 'addCustomer')
@@ -674,20 +756,48 @@
                             </div>
 
                             {{-- Village (shown when district selected) --}}
-                            <div x-show="addDistrict" x-transition>
+                            <div x-show="addDistrict" x-transition
+                                x-data="{
+                                    open: false,
+                                    search: '',
+                                    selectedVillage: null,
+                                    get filteredVillages() {
+                                        if (!this.search) return addVillages;
+                                        return addVillages.filter(v => v.village_name.toLowerCase().includes(this.search.toLowerCase()));
+                                    }
+                                }">
                                 <label class="block text-sm font-medium text-gray-700 mb-1">
                                     Village <span class="text-red-600">*</span>
                                 </label>
-                                <select x-model="addVillage" name="village_id" @blur="validateAddCustomer()"
-                                    :class="addCustomerErrors.village_id ||
-                                        {{ $errors->addCustomer->has('village_id') ? 'true' : 'false' }} ?
-                                        'w-full rounded-md px-4 py-2 text-sm border border-red-500 focus:border-red-500 focus:outline-none focus:ring-2 focus:ring-red-200 text-gray-700' :
-                                        'w-full rounded-md px-4 py-2 text-sm border border-gray-200 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 text-gray-700'">
-                                    <option value="">Select Village</option>
-                                    <template x-for="village in addVillages" :key="village.id">
-                                        <option :value="village.id" x-text="village.village_name"></option>
-                                    </template>
-                                </select>
+                                <div class="relative">
+                                    <button type="button" @click="open = !open"
+                                        class="w-full flex justify-between items-center rounded-md border px-3 py-2 text-sm text-gray-700 bg-white focus:outline-none focus:ring-2"
+                                        :class="(addCustomerErrors.village_id || {{ $errors->addCustomer->has('village_id') ? 'true' : 'false' }}) ? 'border-red-500 focus:border-red-500 focus:ring-red-200' : 'border-gray-200 focus:border-primary focus:ring-primary/20'">
+                                        <span x-text="selectedVillage ? selectedVillage.village_name : '-- Select Village --'" 
+                                            :class="!selectedVillage && 'text-gray-400'"></span>
+                                        <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                                        </svg>
+                                    </button>
+                                    <input type="hidden" name="village_id" :value="selectedVillage?.id || ''">
+                                    
+                                    <div x-show="open" @click.away="open = false" x-cloak
+                                        class="absolute z-50 mt-1 w-full bg-white border border-gray-200 rounded-md shadow-lg">
+                                        <div class="p-2 border-b border-gray-200">
+                                            <input type="text" x-model="search" placeholder="Search..." @click.stop
+                                                class="w-full px-3 py-1.5 text-sm border border-gray-200 rounded-md focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20" />
+                                        </div>
+                                        <ul class="max-h-60 overflow-y-auto">
+                                            <template x-for="village in filteredVillages" :key="village.id">
+                                                <li @click="selectedVillage = village; addVillage = village.id; open = false; search = ''"
+                                                    class="px-4 py-2 text-sm hover:bg-gray-50 cursor-pointer"
+                                                    :class="selectedVillage?.id === village.id && 'bg-gray-100 font-medium'">
+                                                    <span x-text="village.village_name"></span>
+                                                </li>
+                                            </template>
+                                        </ul>
+                                    </div>
+                                </div>
                                 <p x-show="addCustomerErrors.village_id" x-text="addCustomerErrors.village_id"
                                     class="mt-1 text-sm text-red-600"></p>
                                 @error('village_id', 'addCustomer')
@@ -784,85 +894,186 @@
                             </div>
 
                             {{-- Province --}}
-                            <div>
+                            <div x-data="{
+                                    open: false,
+                                    search: '',
+                                    selectedProvince: null,
+                                    get filteredProvinces() {
+                                        if (!this.search) return provinces;
+                                        return provinces.filter(p => p.province_name.toLowerCase().includes(this.search.toLowerCase()));
+                                    }
+                                }" x-init="$watch('editProvince', val => { if(val && provinces.length) selectedProvince = provinces.find(p => p.id == val) })">
                                 <label class="block text-sm font-medium text-gray-700 mb-1">Province</label>
-                                <select x-model="editProvince" name="province_id"
-                                    @change="fetchCities(editProvince, 'edit')"
-                                    :disabled="!provincesLoaded"
-                                    @class([
-                                        'w-full rounded-md px-4 py-2 text-sm border focus:outline-none focus:ring-2 text-gray-700',
-                                        'border-red-500 focus:border-red-500 focus:ring-red-200' => $errors->editCustomer->has(
-                                            'province_id'),
-                                        'border-gray-200 focus:border-primary focus:ring-primary/20' => !$errors->editCustomer->has(
-                                            'province_id'),
-                                    ])>
-                                    <option value="" x-text="provincesLoaded ? 'Select Province' : 'Loading provinces...'"></option>
-                                    <template x-for="province in provinces" :key="province.id">
-                                        <option :value="province.id" x-text="province.province_name"></option>
-                                    </template>
-                                </select>
+                                <div x-show="provincesLoaded" class="relative">
+                                    <button type="button" @click="open = !open"
+                                        class="w-full flex justify-between items-center rounded-md border px-3 py-2 text-sm text-gray-700 bg-white focus:outline-none focus:ring-2"
+                                        :class="{{ $errors->editCustomer->has('province_id') ? 'true' : 'false' }} ? 'border-red-500 focus:border-red-500 focus:ring-red-200' : 'border-gray-200 focus:border-primary focus:ring-primary/20'">
+                                        <span x-text="selectedProvince ? selectedProvince.province_name : '-- Select Province --'" 
+                                            :class="!selectedProvince && 'text-gray-400'"></span>
+                                        <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                                        </svg>
+                                    </button>
+                                    <input type="hidden" name="province_id" :value="selectedProvince?.id || ''">
+                                    
+                                    <div x-show="open" @click.away="open = false" x-cloak
+                                        class="absolute z-50 mt-1 w-full bg-white border border-gray-200 rounded-md shadow-lg">
+                                        <div class="p-2 border-b border-gray-200">
+                                            <input type="text" x-model="search" placeholder="Search..." @click.stop
+                                                class="w-full px-3 py-1.5 text-sm border border-gray-200 rounded-md focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20" />
+                                        </div>
+                                        <ul class="max-h-60 overflow-y-auto">
+                                            <template x-for="province in filteredProvinces" :key="province.id">
+                                                <li @click="selectedProvince = province; editProvince = province.id; fetchCities(province.id, 'edit'); open = false; search = ''"
+                                                    class="px-4 py-2 text-sm hover:bg-gray-50 cursor-pointer"
+                                                    :class="selectedProvince?.id === province.id && 'bg-gray-100 font-medium'">
+                                                    <span x-text="province.province_name"></span>
+                                                </li>
+                                            </template>
+                                        </ul>
+                                    </div>
+                                </div>
+                                <div x-show="!provincesLoaded" class="w-full rounded-md px-4 py-2 text-sm border border-gray-200 bg-gray-50 text-gray-500">
+                                    Loading provinces...
+                                </div>
                                 @error('province_id', 'editCustomer')
                                     <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                                 @enderror
                             </div>
 
                             {{-- City (shown when province selected) --}}
-                            <div x-show="editProvince && editCities.length > 0" x-transition>
+                            <div x-show="editProvince" x-transition
+                                x-data="{
+                                    open: false,
+                                    search: '',
+                                    selectedCity: null,
+                                    get filteredCities() {
+                                        if (!this.search) return editCities;
+                                        return editCities.filter(c => c.city_name.toLowerCase().includes(this.search.toLowerCase()));
+                                    }
+                                }" x-init="$watch('editCities', val => { if(editCity && val.length) selectedCity = val.find(c => c.id == editCity) })">
                                 <label class="block text-sm font-medium text-gray-700 mb-1">City</label>
-                                <select x-model="editCity" name="city_id" @change="fetchDistricts(editCity, 'edit')"
-                                    @class([
-                                        'w-full rounded-md px-4 py-2 text-sm border focus:outline-none focus:ring-2 text-gray-700',
-                                        'border-red-500 focus:border-red-500 focus:ring-red-200' => $errors->editCustomer->has(
-                                            'city_id'),
-                                        'border-gray-200 focus:border-primary focus:ring-primary/20' => !$errors->editCustomer->has(
-                                            'city_id'),
-                                    ])>
-                                    <option value="">Select City</option>
-                                    <template x-for="city in editCities" :key="city.id">
-                                        <option :value="city.id" x-text="city.city_name"></option>
-                                    </template>
-                                </select>
+                                <div class="relative">
+                                    <button type="button" @click="open = !open"
+                                        class="w-full flex justify-between items-center rounded-md border px-3 py-2 text-sm text-gray-700 bg-white focus:outline-none focus:ring-2"
+                                        :class="{{ $errors->editCustomer->has('city_id') ? 'true' : 'false' }} ? 'border-red-500 focus:border-red-500 focus:ring-red-200' : 'border-gray-200 focus:border-primary focus:ring-primary/20'">
+                                        <span x-text="selectedCity ? selectedCity.city_name : '-- Select City --'" 
+                                            :class="!selectedCity && 'text-gray-400'"></span>
+                                        <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                                        </svg>
+                                    </button>
+                                    <input type="hidden" name="city_id" :value="selectedCity?.id || ''">
+                                    
+                                    <div x-show="open" @click.away="open = false" x-cloak
+                                        class="absolute z-50 mt-1 w-full bg-white border border-gray-200 rounded-md shadow-lg">
+                                        <div class="p-2 border-b border-gray-200">
+                                            <input type="text" x-model="search" placeholder="Search..." @click.stop
+                                                class="w-full px-3 py-1.5 text-sm border border-gray-200 rounded-md focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20" />
+                                        </div>
+                                        <ul class="max-h-60 overflow-y-auto">
+                                            <template x-for="city in filteredCities" :key="city.id">
+                                                <li @click="selectedCity = city; editCity = city.id; fetchDistricts(city.id, 'edit'); open = false; search = ''"
+                                                    class="px-4 py-2 text-sm hover:bg-gray-50 cursor-pointer"
+                                                    :class="selectedCity?.id === city.id && 'bg-gray-100 font-medium'">
+                                                    <span x-text="city.city_name"></span>
+                                                </li>
+                                            </template>
+                                        </ul>
+                                    </div>
+                                </div>
                                 @error('city_id', 'editCustomer')
                                     <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                                 @enderror
                             </div>
 
                             {{-- District (shown when city selected) --}}
-                            <div x-show="editCity && editDistricts.length > 0" x-transition>
+                            <div x-show="editCity" x-transition
+                                x-data="{
+                                    open: false,
+                                    search: '',
+                                    selectedDistrict: null,
+                                    get filteredDistricts() {
+                                        if (!this.search) return editDistricts;
+                                        return editDistricts.filter(d => d.district_name.toLowerCase().includes(this.search.toLowerCase()));
+                                    }
+                                }" x-init="$watch('editDistricts', val => { if(editDistrict && val.length) selectedDistrict = val.find(d => d.id == editDistrict) })">
                                 <label class="block text-sm font-medium text-gray-700 mb-1">District</label>
-                                <select x-model="editDistrict" name="district_id"
-                                    @change="fetchVillages(editDistrict, 'edit')" @class([
-                                        'w-full rounded-md px-4 py-2 text-sm border focus:outline-none focus:ring-2 text-gray-700',
-                                        'border-red-500 focus:border-red-500 focus:ring-red-200' => $errors->editCustomer->has(
-                                            'district_id'),
-                                        'border-gray-200 focus:border-primary focus:ring-primary/20' => !$errors->editCustomer->has(
-                                            'district_id'),
-                                    ])>
-                                    <option value="">Select District</option>
-                                    <template x-for="district in editDistricts" :key="district.id">
-                                        <option :value="district.id" x-text="district.district_name"></option>
-                                    </template>
-                                </select>
+                                <div class="relative">
+                                    <button type="button" @click="open = !open"
+                                        class="w-full flex justify-between items-center rounded-md border px-3 py-2 text-sm text-gray-700 bg-white focus:outline-none focus:ring-2"
+                                        :class="{{ $errors->editCustomer->has('district_id') ? 'true' : 'false' }} ? 'border-red-500 focus:border-red-500 focus:ring-red-200' : 'border-gray-200 focus:border-primary focus:ring-primary/20'">
+                                        <span x-text="selectedDistrict ? selectedDistrict.district_name : '-- Select District --'" 
+                                            :class="!selectedDistrict && 'text-gray-400'"></span>
+                                        <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                                        </svg>
+                                    </button>
+                                    <input type="hidden" name="district_id" :value="selectedDistrict?.id || ''">
+                                    
+                                    <div x-show="open" @click.away="open = false" x-cloak
+                                        class="absolute z-50 mt-1 w-full bg-white border border-gray-200 rounded-md shadow-lg">
+                                        <div class="p-2 border-b border-gray-200">
+                                            <input type="text" x-model="search" placeholder="Search..." @click.stop
+                                                class="w-full px-3 py-1.5 text-sm border border-gray-200 rounded-md focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20" />
+                                        </div>
+                                        <ul class="max-h-60 overflow-y-auto">
+                                            <template x-for="district in filteredDistricts" :key="district.id">
+                                                <li @click="selectedDistrict = district; editDistrict = district.id; fetchVillages(district.id, 'edit'); open = false; search = ''"
+                                                    class="px-4 py-2 text-sm hover:bg-gray-50 cursor-pointer"
+                                                    :class="selectedDistrict?.id === district.id && 'bg-gray-100 font-medium'">
+                                                    <span x-text="district.district_name"></span>
+                                                </li>
+                                            </template>
+                                        </ul>
+                                    </div>
+                                </div>
                                 @error('district_id', 'editCustomer')
                                     <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                                 @enderror
                             </div>
 
                             {{-- Village (shown when district selected) --}}
-                            <div x-show="editDistrict && editVillages.length > 0" x-transition>
+                            <div x-show="editDistrict" x-transition
+                                x-data="{
+                                    open: false,
+                                    search: '',
+                                    selectedVillage: null,
+                                    get filteredVillages() {
+                                        if (!this.search) return editVillages;
+                                        return editVillages.filter(v => v.village_name.toLowerCase().includes(this.search.toLowerCase()));
+                                    }
+                                }" x-init="$watch('editVillages', val => { if(editVillage && val.length) selectedVillage = val.find(v => v.id == editVillage) })">
                                 <label class="block text-sm font-medium text-gray-700 mb-1">Village</label>
-                                <select x-model="editVillage" name="village_id" @class([
-                                    'w-full rounded-md px-4 py-2 text-sm border focus:outline-none focus:ring-2 text-gray-700',
-                                    'border-red-500 focus:border-red-500 focus:ring-red-200' => $errors->editCustomer->has(
-                                        'village_id'),
-                                    'border-gray-200 focus:border-primary focus:ring-primary/20' => !$errors->editCustomer->has(
-                                        'village_id'),
-                                ])>
-                                    <option value="">Select Village</option>
-                                    <template x-for="village in editVillages" :key="village.id">
-                                        <option :value="village.id" x-text="village.village_name"></option>
-                                    </template>
-                                </select>
+                                <div class="relative">
+                                    <button type="button" @click="open = !open"
+                                        class="w-full flex justify-between items-center rounded-md border px-3 py-2 text-sm text-gray-700 bg-white focus:outline-none focus:ring-2"
+                                        :class="{{ $errors->editCustomer->has('village_id') ? 'true' : 'false' }} ? 'border-red-500 focus:border-red-500 focus:ring-red-200' : 'border-gray-200 focus:border-primary focus:ring-primary/20'">
+                                        <span x-text="selectedVillage ? selectedVillage.village_name : '-- Select Village --'" 
+                                            :class="!selectedVillage && 'text-gray-400'"></span>
+                                        <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                                        </svg>
+                                    </button>
+                                    <input type="hidden" name="village_id" :value="selectedVillage?.id || ''">
+                                    
+                                    <div x-show="open" @click.away="open = false" x-cloak
+                                        class="absolute z-50 mt-1 w-full bg-white border border-gray-200 rounded-md shadow-lg">
+                                        <div class="p-2 border-b border-gray-200">
+                                            <input type="text" x-model="search" placeholder="Search..." @click.stop
+                                                class="w-full px-3 py-1.5 text-sm border border-gray-200 rounded-md focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20" />
+                                        </div>
+                                        <ul class="max-h-60 overflow-y-auto">
+                                            <template x-for="village in editVillages" :key="village.id">
+                                                <li @click="selectedVillage = village; editVillage = village.id; open = false; search = ''"
+                                                    class="px-4 py-2 text-sm hover:bg-gray-50 cursor-pointer"
+                                                    :class="selectedVillage?.id === village.id && 'bg-gray-100 font-medium'">
+                                                    <span x-text="village.village_name"></span>
+                                                </li>
+                                            </template>
+                                        </ul>
+                                    </div>
+                                </div>
                                 @error('village_id', 'editCustomer')
                                     <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                                 @enderror
@@ -948,6 +1159,52 @@
 
     {{-- Pagination AJAX Script --}}
     <script>
+        // Search Select Component (sama seperti di orders/create.blade.php)
+        function searchSelect(initialOptions, oldValue, fieldName) {
+            return {
+                open: false,
+                search: '',
+                options: initialOptions || [],
+                selected: null,
+                selectedId: oldValue || '',
+                fieldName,
+
+                init() {
+                    // Watch options untuk auto-select ketika data berubah
+                    this.$watch('options', (newOptions) => {
+                        if (this.selectedId && newOptions && newOptions.length > 0 && !this.selected) {
+                            this.selected = newOptions.find(o => String(o.id) === String(this.selectedId)) || null;
+                        }
+                    });
+
+                    // Initial selection
+                    if (this.selectedId && this.options.length > 0) {
+                        this.selected = this.options.find(o => String(o.id) === String(this.selectedId)) || null;
+                    }
+                    
+                    this.$dispatch(`${this.fieldName}-selected`, this.selectedId || '');
+
+                    // Listen untuk auto-select
+                    window.addEventListener(`${this.fieldName}-selected`, (e) => {
+                        if (e.detail) {
+                            const option = this.options.find(o => String(o.id) === String(e.detail));
+                            if (option) {
+                                this.selected = option;
+                                this.selectedId = option.id;
+                            }
+                        }
+                    });
+                },
+
+                select(option) {
+                    this.selected = option;
+                    this.selectedId = option.id;
+                    this.open = false;
+                    this.$dispatch(`${this.fieldName}-selected`, this.selectedId);
+                }
+            }
+        }
+    
         document.addEventListener('DOMContentLoaded', function() {
             setupPagination('customers-pagination-container', 'customers-section');
         });
