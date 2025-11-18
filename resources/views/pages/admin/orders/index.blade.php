@@ -1185,15 +1185,57 @@
                                 <label class="block text-sm font-medium text-gray-700 mb-1">
                                     Payment Method <span class="text-red-600">*</span>
                                 </label>
-                                <select name="payment_method"
-                                    :class="paymentErrors.payment_method ?
-                                        'border-red-500 focus:border-red-500 focus:ring-red-200' :
-                                        'border-gray-200 focus:border-primary focus:ring-primary/20'"
-                                    class="w-full rounded-md px-4 py-2 text-sm border focus:outline-none focus:ring-2 text-gray-700">
-                                    <option value="">-- Select Method --</option>
-                                    <option value="tranfer">Transfer</option>
-                                    <option value="cash">Cash</option>
-                                </select>
+                                <div x-data="{
+                                    open: false,
+                                    options: [
+                                        { value: 'tranfer', name: 'Transfer' },
+                                        { value: 'cash', name: 'Cash' }
+                                    ],
+                                    selected: null,
+                                    selectedValue: '',
+                                    
+                                    select(option) {
+                                        this.selected = option;
+                                        this.selectedValue = option.value;
+                                        this.open = false;
+                                        if (paymentErrors.payment_method) {
+                                            delete paymentErrors.payment_method;
+                                        }
+                                    }
+                                }" class="relative w-full">
+                                    {{-- Trigger --}}
+                                    <button type="button" @click="open = !open"
+                                        :class="paymentErrors.payment_method ? 'border-red-500 focus:border-red-500 focus:ring-red-200' : 'border-gray-200 focus:border-primary focus:ring-primary/20'"
+                                        class="w-full flex justify-between items-center rounded-md border px-4 py-2 text-sm bg-white
+                                               focus:outline-none focus:ring-2 transition-colors">
+                                        <span x-text="selected ? selected.name : 'Select Method'"
+                                            :class="!selected ? 'text-gray-400' : 'text-gray-500'"></span>
+                                        <svg class="w-4 h-4 text-gray-400 transition-transform" :class="open && 'rotate-180'" fill="none"
+                                            stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                                        </svg>
+                                    </button>
+
+                                    {{-- Hidden input --}}
+                                    <input type="hidden" name="payment_method" x-model="selectedValue">
+
+                                    {{-- Dropdown --}}
+                                    <div x-show="open" @click.away="open = false" x-cloak x-transition:enter="transition ease-out duration-100"
+                                        x-transition:enter-start="opacity-0 scale-95" x-transition:enter-end="opacity-100 scale-100"
+                                        x-transition:leave="transition ease-in duration-75" x-transition:leave-start="opacity-100 scale-100"
+                                        x-transition:leave-end="opacity-0 scale-95"
+                                        class="absolute z-20 mt-1 w-full bg-white border border-gray-200 rounded-md shadow-lg">
+                                        <ul class="max-h-60 overflow-y-auto py-1">
+                                            <template x-for="option in options" :key="option.value">
+                                                <li @click="select(option)"
+                                                    class="px-4 py-2 cursor-pointer text-sm text-gray-700 hover:bg-primary/5 transition-colors"
+                                                    :class="{ 'bg-primary/10 font-medium text-primary': selected && selected.value === option.value }">
+                                                    <span x-text="option.name"></span>
+                                                </li>
+                                            </template>
+                                        </ul>
+                                    </div>
+                                </div>
                                 <p x-show="paymentErrors.payment_method" x-cloak
                                     x-text="paymentErrors.payment_method?.[0]" class="mt-1 text-sm text-red-600"></p>
                             </div>
@@ -1203,23 +1245,65 @@
                                 <label class="block text-sm font-medium text-gray-700 mb-1">
                                     Payment Type <span class="text-red-600">*</span>
                                 </label>
-                                <select name="payment_type"
-                                    @change="
-                                        const selectedType = $event.target.value;
-                                        if (selectedType === 'repayment' || selectedType === 'full_payment') {
+                                <div x-data="{
+                                    open: false,
+                                    options: [
+                                        { value: 'dp', name: 'DP (Down Payment)' },
+                                        { value: 'repayment', name: 'Repayment' },
+                                        { value: 'full_payment', name: 'Full Payment' }
+                                    ],
+                                    selected: null,
+                                    selectedValue: '',
+                                    
+                                    select(option) {
+                                        this.selected = option;
+                                        this.selectedValue = option.value;
+                                        this.open = false;
+                                        
+                                        // Auto-fill amount untuk repayment atau full_payment
+                                        if (option.value === 'repayment' || option.value === 'full_payment') {
                                             const remainingDue = selectedOrderForPayment?.remaining_due || 0;
                                             paymentAmount = Math.floor(remainingDue).toLocaleString('id-ID');
                                         }
-                                    "
-                                    :class="paymentErrors.payment_type ?
-                                        'border-red-500 focus:border-red-500 focus:ring-red-200' :
-                                        'border-gray-200 focus:border-primary focus:ring-primary/20'"
-                                    class="w-full rounded-md px-4 py-2 text-sm border focus:outline-none focus:ring-2 text-gray-700">
-                                    <option value="">-- Select Type --</option>
-                                    <option value="dp">DP (Down Payment)</option>
-                                    <option value="repayment">Repayment</option>
-                                    <option value="full_payment">Full Payment</option>
-                                </select>
+                                        
+                                        if (paymentErrors.payment_type) {
+                                            delete paymentErrors.payment_type;
+                                        }
+                                    }
+                                }" class="relative w-full">
+                                    {{-- Trigger --}}
+                                    <button type="button" @click="open = !open"
+                                        :class="paymentErrors.payment_type ? 'border-red-500 focus:border-red-500 focus:ring-red-200' : 'border-gray-200 focus:border-primary focus:ring-primary/20'"
+                                        class="w-full flex justify-between items-center rounded-md border px-4 py-2 text-sm bg-white
+                                               focus:outline-none focus:ring-2 transition-colors">
+                                        <span x-text="selected ? selected.name : 'Select Type'"
+                                            :class="!selected ? 'text-gray-400' : 'text-gray-500'"></span>
+                                        <svg class="w-4 h-4 text-gray-400 transition-transform" :class="open && 'rotate-180'" fill="none"
+                                            stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                                        </svg>
+                                    </button>
+
+                                    {{-- Hidden input --}}
+                                    <input type="hidden" name="payment_type" x-model="selectedValue">
+
+                                    {{-- Dropdown --}}
+                                    <div x-show="open" @click.away="open = false" x-cloak x-transition:enter="transition ease-out duration-100"
+                                        x-transition:enter-start="opacity-0 scale-95" x-transition:enter-end="opacity-100 scale-100"
+                                        x-transition:leave="transition ease-in duration-75" x-transition:leave-start="opacity-100 scale-100"
+                                        x-transition:leave-end="opacity-0 scale-95"
+                                        class="absolute z-20 mt-1 w-full bg-white border border-gray-200 rounded-md shadow-lg">
+                                        <ul class="max-h-60 overflow-y-auto py-1">
+                                            <template x-for="option in options" :key="option.value">
+                                                <li @click="select(option)"
+                                                    class="px-4 py-2 cursor-pointer text-sm text-gray-700 hover:bg-primary/5 transition-colors"
+                                                    :class="{ 'bg-primary/10 font-medium text-primary': selected && selected.value === option.value }">
+                                                    <span x-text="option.name"></span>
+                                                </li>
+                                            </template>
+                                        </ul>
+                                    </div>
+                                </div>
                                 <p x-show="paymentErrors.payment_type" x-cloak x-text="paymentErrors.payment_type?.[0]"
                                     class="mt-1 text-sm text-red-600"></p>
                             </div>
