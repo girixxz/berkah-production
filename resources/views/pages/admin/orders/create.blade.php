@@ -16,7 +16,9 @@
         @product_category_id-selected.window="product_category_id = $event.detail"
         @material_category_id-selected.window="material_category_id = $event.detail"
         @material_texture_id-selected.window="material_texture_id = $event.detail"
-        @shipping_id-selected.window="shipping_id = $event.detail" method="POST" action="{{ route('admin.orders.store') }}"
+        @shipping_id-selected.window="shipping_id = $event.detail" 
+        @submit.prevent="validateAndSubmit"
+        method="POST" action="{{ route('admin.orders.store') }}"
         class="bg-white border border-gray-200 rounded-2xl p-4 md:p-6 space-y-6 md:space-y-8">
         @csrf
 
@@ -32,20 +34,21 @@
                 {{-- Priority --}}
                 <div class="space-y-2">
                     <label for="priority" class="block text-sm font-medium text-gray-600">Priority</label>
-                    <select id="priority" name="priority" x-model="priority"
-                        class="w-full rounded-md px-3 py-2 text-sm border border-gray-300 focus:border-primary focus:ring-primary/20 focus:outline-none focus:ring-2 text-gray-700">
-                        <option value="normal">Normal</option>
-                        <option value="high">High</option>
-                    </select>
+                    <x-select-form name="priority" placeholder="-- Select Priority --" :options="[
+                        ['value' => 'normal', 'name' => 'Normal'],
+                        ['value' => 'high', 'name' => 'High']
+                    ]" value="value" display="name" :old="old('priority', 'normal')" />
                 </div>
 
                 {{-- Order Date --}}
                 <div class="space-y-2">
-                    <label for="order_date" class="block text-sm font-medium text-gray-600">Order Date</label>
+                    <label for="order_date" class="block text-sm font-medium text-gray-600">Order Date <span class="text-red-500">*</span></label>
                     <div class="relative">
                         <input id="order_date" name="order_date" type="date" x-model="order_date"
                             value="{{ old('order_date', date('Y-m-d')) }}"
-                            class="w-full rounded-md px-3 py-2 text-sm border border-gray-300 focus:border-primary focus:ring-primary/20 focus:outline-none focus:ring-2 text-gray-700" />
+                            :class="errors.order_date ? 'border-red-500' : 'border-gray-300'"
+                            class="w-full rounded-md px-3 py-2 text-sm border focus:border-primary focus:ring-primary/20 focus:outline-none focus:ring-2 text-gray-700" />
+                        <p x-show="errors.order_date" x-text="errors.order_date" class="absolute left-0 -bottom-5 text-[10px] md:text-xs text-red-600"></p>
                         @error('order_date')
                             <p class="absolute left-0 -bottom-5 text-[10px] md:text-xs text-red-600">{{ $message }}</p>
                         @enderror
@@ -54,11 +57,13 @@
 
                 {{-- Deadline --}}
                 <div class="space-y-2">
-                    <label for="deadline" class="block text-sm font-medium text-gray-600">Deadline</label>
+                    <label for="deadline" class="block text-sm font-medium text-gray-600">Deadline <span class="text-red-500">*</span></label>
                     <div class="relative">
                         <input id="deadline" name="deadline" type="date" x-model="deadline"
                             value="{{ old('deadline') }}"
-                            class="w-full rounded-md px-3 py-2 text-sm border border-gray-300 focus:border-primary focus:ring-primary/20 focus:outline-none focus:ring-2 text-gray-700" />
+                            :class="errors.deadline ? 'border-red-500' : 'border-gray-300'"
+                            class="w-full rounded-md px-3 py-2 text-sm border focus:border-primary focus:ring-primary/20 focus:outline-none focus:ring-2 text-gray-700" />
+                        <p x-show="errors.deadline" x-text="errors.deadline" class="absolute left-0 -bottom-5 text-[10px] md:text-xs text-red-600"></p>
                         @error('deadline')
                             <p class="absolute left-0 -bottom-5 text-[10px] md:text-xs text-red-600">{{ $message }}</p>
                         @enderror
@@ -72,11 +77,14 @@
             <h3 class="text-lg font-semibold text-gray-800">Data Customers & Sales</h3>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
                 <div class="relative flex flex-col md:flex-row md:items-start gap-2 md:gap-3">
-                    <label class="text-sm text-gray-600 md:w-24 md:mt-2">Customer</label>
+                    <label class="text-sm text-gray-600 md:w-24 md:mt-2">Customer <span class="text-red-500">*</span></label>
 
                     <div class="w-full space-y-2">
-                        <x-select-search name="customer_id" label="Customer" placeholder="-- Select Customer --"
-                            :options="$customers" display="customer_name" :old="old('customer_id')" />
+                        <div class="relative">
+                            <x-select-search name="customer_id" label="Customer" placeholder="-- Select Customer --"
+                                :options="$customers" display="customer_name" :old="old('customer_id')" />
+                            <p x-show="errors.customer_id" x-text="errors.customer_id" class="absolute left-0 -bottom-5 text-xs text-red-600"></p>
+                        </div>
 
                         <button type="button" @click="$dispatch('open-add-customer')"
                             class="text-sm text-primary hover:text-primary-dark font-medium flex items-center gap-1 group">
@@ -90,10 +98,15 @@
                 </div>
 
                 <div class="relative flex flex-col md:flex-row md:items-start gap-2 md:gap-3">
-                    <label class="text-sm text-gray-600 md:w-24 md:mt-2">Sales</label>
+                    <label class="text-sm text-gray-600 md:w-24 md:mt-2">Sales <span class="text-red-500">*</span></label>
 
-                    <x-select-search name="sales_id" label="Sales" placeholder="-- Select Sales --" :options="$sales"
-                        display="sales_name" :old="old('sales_id')" />
+                    <div class="w-full">
+                        <div class="relative">
+                            <x-select-search name="sales_id" label="Sales" placeholder="-- Select Sales --" :options="$sales"
+                                display="sales_name" :old="old('sales_id')" />
+                            <p x-show="errors.sales_id" x-text="errors.sales_id" class="absolute left-0 -bottom-5 text-xs text-red-600"></p>
+                        </div>
+                    </div>
                 </div>
 
 
@@ -107,21 +120,26 @@
                 <div class="space-y-7">
                     {{-- Product --}}
                     <div class="relative flex flex-col md:flex-row md:items-center gap-2 md:gap-3">
-                        <label class="text-sm text-gray-600 md:w-24">Product</label>
+                        <label class="text-sm text-gray-600 md:w-24">Product <span class="text-red-500">*</span></label>
 
-                        <x-select-search name="product_category_id" label="Product" placeholder="-- Select Product --"
-                            :options="$productCategories" display="product_name" :old="old('product_category_id')" />
+                        <div class="relative w-full">
+                            <x-select-search name="product_category_id" label="Product" placeholder="-- Select Product --"
+                                :options="$productCategories" display="product_name" :old="old('product_category_id')" />
+                            <p x-show="errors.product_category_id" x-text="errors.product_category_id" class="absolute left-0 -bottom-5 text-xs text-red-600"></p>
+                        </div>
                     </div>
 
                     {{-- Color --}}
                     <div class="relative flex flex-col md:flex-row md:items-center gap-2 md:gap-3">
-                        <label class="text-sm text-gray-600 md:w-24">Color</label>
+                        <label class="text-sm text-gray-600 md:w-24">Color <span class="text-red-500">*</span></label>
                         <div class="relative w-full">
                             <input type="text" name="product_color" x-model="product_color"
                                 value="{{ old('product_color') }}"
-                                class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-700
+                                :class="errors.product_color ? 'border-red-500' : 'border-gray-300'"
+                                class="w-full rounded-md border px-3 py-2 text-sm text-gray-700
                                 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
                                 placeholder="Enter color" />
+                            <p x-show="errors.product_color" x-text="errors.product_color" class="absolute left-0 -bottom-5 text-xs text-red-600"></p>
                             @error('product_color')
                                 <p class="absolute left-0 -bottom-5 text-xs text-red-600">{{ $message }}</p>
                             @enderror
@@ -130,13 +148,19 @@
 
                     {{-- Materials --}}
                     <div class="relative flex flex-col md:flex-row md:items-center gap-2 md:gap-3">
-                        <label class="text-sm text-gray-600 md:w-24">Material</label>
+                        <label class="text-sm text-gray-600 md:w-24">Material <span class="text-red-500">*</span></label>
                         <div class="flex flex-col md:flex-row gap-2 gap-y-6 md:gap-3 w-full">
-                            <x-select-search name="material_category_id" label="Product" placeholder="-- Select Material --"
-                                :options="$materialCategories" display="material_name" :old="old('material_category_id')" />
+                            <div class="relative w-full">
+                                <x-select-search name="material_category_id" label="Product" placeholder="-- Select Material --"
+                                    :options="$materialCategories" display="material_name" :old="old('material_category_id')" />
+                                <p x-show="errors.material_category_id" x-text="errors.material_category_id" class="absolute left-0 -bottom-5 text-xs text-red-600"></p>
+                            </div>
 
-                            <x-select-search name="material_texture_id" label="Product" placeholder="-- Select Texture --"
-                                :options="$materialTextures" display="texture_name" :old="old('material_texture_id')" />
+                            <div class="relative w-full">
+                                <x-select-search name="material_texture_id" label="Product" placeholder="-- Select Texture --"
+                                    :options="$materialTextures" display="texture_name" :old="old('material_texture_id')" />
+                                <p x-show="errors.material_texture_id" x-text="errors.material_texture_id" class="absolute left-0 -bottom-5 text-xs text-red-600"></p>
+                            </div>
                         </div>
                     </div>
 
@@ -161,7 +185,8 @@
         {{-- ================= Detail Orders ================= --}}
         <section class="space-y-4 md:space-y-5 border-b border-gray-200 pb-8">
             <div class="flex items-center justify-between">
-                <h3 class="text-lg font-semibold text-gray-800">Detail Orders</h3>
+                <h3 class="text-lg font-semibold text-gray-800">Detail Orders <span class="text-red-500">*</span></h3>
+                <p x-show="errors.designs" x-text="errors.designs" class="text-sm text-red-600"></p>
                 @error('designs')
                     <p class="text-sm text-red-600">{{ $message }}</p>
                 @enderror
@@ -536,6 +561,10 @@
 
                             {{-- Error Messages --}}
                             <div class="flex flex-col gap-1">
+                                {{-- Frontend validation error --}}
+                                <p x-show="item.error" x-text="item.error" class="text-xs text-red-600"></p>
+                                
+                                {{-- Backend validation errors --}}
                                 <template x-if="index === 0">
                                     <div>
                                         @error('additionals.0.service_id')
@@ -604,27 +633,15 @@
                 </div>
 
                 {{-- Shipping Type --}}
-                <div class="relative flex flex-col gap-2 md:gap-3">
-                    <label class="text-sm text-gray-600 md:w-24">Shipping <span class="text-red-500">*</span></label>
-
-                    <div class="flex flex-row gap-4">
-                        <label class="flex items-center gap-2 cursor-pointer">
-                            <input type="radio" name="shipping_type" value="pickup"
-                                {{ old('shipping_type', 'pickup') === 'pickup' ? 'checked' : '' }}
-                                class="w-4 h-4 text-primary border-gray-300 focus:ring-primary">
-                            <span class="text-sm text-gray-700">Pickup</span>
-                        </label>
-                        <label class="flex items-center gap-2 cursor-pointer">
-                            <input type="radio" name="shipping_type" value="delivery"
-                                {{ old('shipping_type') === 'delivery' ? 'checked' : '' }}
-                                class="w-4 h-4 text-primary border-gray-300 focus:ring-primary">
-                            <span class="text-sm text-gray-700">Delivery</span>
-                        </label>
+                <div class="space-y-2">
+                    <label class="block text-sm font-medium text-gray-600">Shipping <span class="text-red-500">*</span></label>
+                    <div class="relative">
+                        <x-select-form name="shipping_type" placeholder="-- Select Shipping --" :options="[
+                            ['value' => 'pickup', 'name' => 'Pickup'],
+                            ['value' => 'delivery', 'name' => 'Delivery']
+                        ]" value="value" display="name" :old="old('shipping_type')" />
+                        <p x-show="errors.shipping_type" x-text="errors.shipping_type" class="absolute left-0 -bottom-5 text-xs text-red-600"></p>
                     </div>
-
-                    @error('shipping_type')
-                        <span class="text-red-500 text-xs">{{ $message }}</span>
-                    @enderror
                 </div>
 
             </div>
@@ -1181,6 +1198,10 @@
                 designVariants: [],
                 additionals: [],
 
+                // ====== VALIDATION ERRORS ======
+                errors: {},
+                isSubmitting: false,
+
                 // REF DATA
                 sizes: @json($materialSizes),
                 sleeves: @json($materialSleeves),
@@ -1383,6 +1404,149 @@
                 },
                 getFinalPrice() {
                     return this.getSubTotal() - (this.discount || 0);
+                },
+
+                // ====== VALIDATION ======
+                validateForm() {
+                    this.errors = {};
+                    let isValid = true;
+
+                    // Validate Customer
+                    if (!this.customer_id || this.customer_id === '') {
+                        this.errors.customer_id = 'Customer is required';
+                        isValid = false;
+                    }
+
+                    // Validate Sales
+                    if (!this.sales_id || this.sales_id === '') {
+                        this.errors.sales_id = 'Sales person is required';
+                        isValid = false;
+                    }
+
+                    // Validate Order Date
+                    if (!this.order_date || this.order_date === '') {
+                        this.errors.order_date = 'Order date is required';
+                        isValid = false;
+                    }
+
+                    // Validate Deadline
+                    if (!this.deadline || this.deadline === '') {
+                        this.errors.deadline = 'Deadline is required';
+                        isValid = false;
+                    } else if (this.order_date && this.deadline < this.order_date) {
+                        this.errors.deadline = 'Deadline must be after or equal to order date';
+                        isValid = false;
+                    }
+
+                    // Validate Product
+                    if (!this.product_category_id || this.product_category_id === '') {
+                        this.errors.product_category_id = 'Product is required';
+                        isValid = false;
+                    }
+
+                    // Validate Color
+                    if (!this.product_color || this.product_color.trim() === '') {
+                        this.errors.product_color = 'Color is required';
+                        isValid = false;
+                    }
+
+                    // Validate Material Category
+                    if (!this.material_category_id || this.material_category_id === '') {
+                        this.errors.material_category_id = 'Material is required';
+                        isValid = false;
+                    }
+
+                    // Validate Material Texture
+                    if (!this.material_texture_id || this.material_texture_id === '') {
+                        this.errors.material_texture_id = 'Texture is required';
+                        isValid = false;
+                    }
+
+                    // Validate Shipping Type
+                    const shippingInput = document.querySelector('input[name="shipping_type"]');
+                    if (!shippingInput || !shippingInput.value || shippingInput.value === '') {
+                        this.errors.shipping_type = 'Shipping type is required';
+                        isValid = false;
+                    }
+
+                    // Validate Design Variants
+                    if (this.designVariants.length === 0) {
+                        this.errors.designs = 'At least one design variant is required';
+                        isValid = false;
+                    } else {
+                        // Validate each design variant
+                        let hasItems = false;
+                        this.designVariants.forEach((design, dIndex) => {
+                            // Check design name
+                            if (!design.name || design.name.trim() === '') {
+                                design.error = 'Design name is required';
+                                isValid = false;
+                            } else {
+                                design.error = '';
+                            }
+
+                            // Check if has sleeve variants with items
+                            design.sleeveVariants.forEach((variant, vIndex) => {
+                                if (variant.rows && variant.rows.length > 0) {
+                                    hasItems = true;
+                                    // Validate quantities
+                                    variant.rows.forEach(row => {
+                                        if (!row.qty || row.qty <= 0) {
+                                            variant.error = 'All quantities must be greater than 0';
+                                            isValid = false;
+                                        }
+                                    });
+                                }
+                            });
+                        });
+
+                        if (!hasItems) {
+                            this.errors.designs = 'At least one item with quantity is required';
+                            isValid = false;
+                        }
+                    }
+
+                    // Validate Additionals (if any added)
+                    if (this.additionals.length > 0) {
+                        this.additionals.forEach((additional, index) => {
+                            additional.error = '';
+                            
+                            // If additional exists, both service and price must be filled
+                            if (!additional.service_id || additional.service_id === '') {
+                                additional.error = 'Please select a service or remove this additional';
+                                isValid = false;
+                            } else if (!additional.price || additional.price <= 0) {
+                                additional.error = 'Price must be greater than 0';
+                                isValid = false;
+                            }
+                        });
+                    }
+
+                    // Scroll to first error
+                    if (!isValid) {
+                        setTimeout(() => {
+                            const firstError = document.querySelector('[x-show="errors.' + Object.keys(this.errors)[0] + '"]') ||
+                                              document.querySelector('.text-red-600:not([style*="display: none"])');
+                            if (firstError) {
+                                firstError.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                            }
+                        }, 100);
+                    }
+
+                    return isValid;
+                },
+
+                // ====== SUBMIT ======
+                validateAndSubmit(e) {
+                    e.preventDefault();
+                    
+                    if (this.isSubmitting) return;
+
+                    if (this.validateForm()) {
+                        this.isSubmitting = true;
+                        // Submit form natively
+                        e.target.submit();
+                    }
                 }
             }
         }
