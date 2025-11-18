@@ -34,7 +34,7 @@
                 {{-- Priority --}}
                 <div class="space-y-2">
                     <label for="priority" class="block text-sm font-medium text-gray-600">Priority</label>
-                    <x-select-form name="priority" placeholder="-- Select Priority --" :options="[
+                    <x-select-form name="priority" placeholder="Select Priority" :options="[
                         ['value' => 'normal', 'name' => 'Normal'],
                         ['value' => 'high', 'name' => 'High']
                     ]" value="value" display="name" :old="old('priority', 'normal')" />
@@ -43,11 +43,11 @@
                 {{-- Order Date --}}
                 <div class="space-y-2">
                     <label for="order_date" class="block text-sm font-medium text-gray-600">Order Date <span class="text-red-500">*</span></label>
-                    <div class="relative">
-                        <input id="order_date" name="order_date" type="date" x-model="order_date"
+                    <div class="relative cursor-pointer" @click="$refs.orderDateInput.showPicker()">
+                        <input x-ref="orderDateInput" id="order_date" name="order_date" type="date" x-model="order_date"
                             value="{{ old('order_date', date('Y-m-d')) }}"
                             :class="errors.order_date ? 'border-red-500' : 'border-gray-300'"
-                            class="w-full rounded-md px-3 py-2 text-sm border focus:border-primary focus:ring-primary/20 focus:outline-none focus:ring-2 text-gray-700" />
+                            class="w-full rounded-md px-3 py-2 text-sm border focus:border-primary focus:ring-primary/20 focus:outline-none focus:ring-2 text-gray-700 cursor-pointer" />
                         <p x-show="errors.order_date" x-text="errors.order_date" class="absolute left-0 -bottom-5 text-[10px] md:text-xs text-red-600"></p>
                         @error('order_date')
                             <p class="absolute left-0 -bottom-5 text-[10px] md:text-xs text-red-600">{{ $message }}</p>
@@ -58,11 +58,11 @@
                 {{-- Deadline --}}
                 <div class="space-y-2">
                     <label for="deadline" class="block text-sm font-medium text-gray-600">Deadline <span class="text-red-500">*</span></label>
-                    <div class="relative">
-                        <input id="deadline" name="deadline" type="date" x-model="deadline"
+                    <div class="relative cursor-pointer" @click="$refs.deadlineInput.showPicker()">
+                        <input x-ref="deadlineInput" id="deadline" name="deadline" type="date" x-model="deadline"
                             value="{{ old('deadline') }}"
                             :class="errors.deadline ? 'border-red-500' : 'border-gray-300'"
-                            class="w-full rounded-md px-3 py-2 text-sm border focus:border-primary focus:ring-primary/20 focus:outline-none focus:ring-2 text-gray-700" />
+                            class="w-full rounded-md px-3 py-2 text-sm border focus:border-primary focus:ring-primary/20 focus:outline-none focus:ring-2 text-gray-700 cursor-pointer" />
                         <p x-show="errors.deadline" x-text="errors.deadline" class="absolute left-0 -bottom-5 text-[10px] md:text-xs text-red-600"></p>
                         @error('deadline')
                             <p class="absolute left-0 -bottom-5 text-[10px] md:text-xs text-red-600">{{ $message }}</p>
@@ -81,7 +81,7 @@
 
                     <div class="w-full space-y-2">
                         <div class="relative">
-                            <x-select-search name="customer_id" label="Customer" placeholder="-- Select Customer --"
+                            <x-select-search name="customer_id" label="Customer" placeholder="Select Customer"
                                 :options="$customers" display="customer_name" :old="old('customer_id')" />
                             <p x-show="errors.customer_id" x-text="errors.customer_id" class="absolute left-0 -bottom-5 text-xs text-red-600"></p>
                         </div>
@@ -102,7 +102,7 @@
 
                     <div class="w-full">
                         <div class="relative">
-                            <x-select-search name="sales_id" label="Sales" placeholder="-- Select Sales --" :options="$sales"
+                            <x-select-search name="sales_id" label="Sales" placeholder="Select Sales" :options="$sales"
                                 display="sales_name" :old="old('sales_id')" />
                             <p x-show="errors.sales_id" x-text="errors.sales_id" class="absolute left-0 -bottom-5 text-xs text-red-600"></p>
                         </div>
@@ -123,7 +123,7 @@
                         <label class="text-sm text-gray-600 md:w-24">Product <span class="text-red-500">*</span></label>
 
                         <div class="relative w-full">
-                            <x-select-search name="product_category_id" label="Product" placeholder="-- Select Product --"
+                            <x-select-search name="product_category_id" label="Product" placeholder="Select Product"
                                 :options="$productCategories" display="product_name" :old="old('product_category_id')" />
                             <p x-show="errors.product_category_id" x-text="errors.product_category_id" class="absolute left-0 -bottom-5 text-xs text-red-600"></p>
                         </div>
@@ -151,13 +151,13 @@
                         <label class="text-sm text-gray-600 md:w-24">Material <span class="text-red-500">*</span></label>
                         <div class="flex flex-col md:flex-row gap-2 gap-y-6 md:gap-3 w-full">
                             <div class="relative w-full">
-                                <x-select-search name="material_category_id" label="Product" placeholder="-- Select Material --"
+                                <x-select-search name="material_category_id" label="Product" placeholder="Select Material"
                                     :options="$materialCategories" display="material_name" :old="old('material_category_id')" />
                                 <p x-show="errors.material_category_id" x-text="errors.material_category_id" class="absolute left-0 -bottom-5 text-xs text-red-600"></p>
                             </div>
 
                             <div class="relative w-full">
-                                <x-select-search name="material_texture_id" label="Product" placeholder="-- Select Texture --"
+                                <x-select-search name="material_texture_id" label="Product" placeholder="Select Texture"
                                     :options="$materialTextures" display="texture_name" :old="old('material_texture_id')" />
                                 <p x-show="errors.material_texture_id" x-text="errors.material_texture_id" class="absolute left-0 -bottom-5 text-xs text-red-600"></p>
                             </div>
@@ -259,7 +259,7 @@
                                             <button type="button" @click="open = !open"
                                                 class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-left bg-white
                                                 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary flex justify-between items-center">
-                                                <span x-text="selected ? selected.sleeve_name : '-- Select Sleeve --'"
+                                                <span x-text="selected ? selected.sleeve_name : 'Select Sleeve'"
                                                     :class="!selected ? 'text-gray-400' : 'text-gray-900'"></span>
                                                 <svg class="w-4 h-4 text-gray-400" :class="open && 'rotate-180'"
                                                     fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -492,7 +492,7 @@
                                     <button type="button" @click="open = !open"
                                         class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-left bg-white
                                         focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary flex justify-between items-center">
-                                        <span x-text="selected ? selected.service_name : '-- Select Service --'"
+                                        <span x-text="selected ? selected.service_name : 'Select Service'"
                                             :class="!selected ? 'text-gray-400' : 'text-gray-900'"></span>
                                         <svg class="w-4 h-4 text-gray-400" :class="open && 'rotate-180'" fill="none"
                                             stroke="currentColor" viewBox="0 0 24 24">
@@ -636,7 +636,7 @@
                 <div class="space-y-2">
                     <label class="block text-sm font-medium text-gray-600">Shipping <span class="text-red-500">*</span></label>
                     <div class="relative">
-                        <x-select-form name="shipping_type" placeholder="-- Select Shipping --" :options="[
+                        <x-select-form name="shipping_type" placeholder="Select Shipping" :options="[
                             ['value' => 'pickup', 'name' => 'Pickup'],
                             ['value' => 'delivery', 'name' => 'Delivery']
                         ]" value="value" display="name" :old="old('shipping_type')" />
@@ -1238,6 +1238,36 @@
                             });
                         @endforeach
                     @endif
+
+                    // Setup watcher manually (Alpine.js x-effect alternative)
+                    this.$watch('customer_id', (value) => { if (value) delete this.errors.customer_id; });
+                    this.$watch('sales_id', (value) => { if (value) delete this.errors.sales_id; });
+                    this.$watch('order_date', (value) => { if (value) delete this.errors.order_date; });
+                    this.$watch('deadline', (value) => { 
+                        if (value) {
+                            delete this.errors.deadline;
+                            if (this.order_date && value < this.order_date) {
+                                this.errors.deadline = 'Deadline must be after or equal to order date';
+                            }
+                        }
+                    });
+                    this.$watch('product_category_id', (value) => { if (value) delete this.errors.product_category_id; });
+                    this.$watch('product_color', (value) => { if (value && value.trim() !== '') delete this.errors.product_color; });
+                    this.$watch('material_category_id', (value) => { if (value) delete this.errors.material_category_id; });
+                    this.$watch('material_texture_id', (value) => { if (value) delete this.errors.material_texture_id; });
+                    
+                    // Watch shipping_type hidden input
+                    const shippingInput = document.querySelector('input[name="shipping_type"]');
+                    if (shippingInput) {
+                        const observer = new MutationObserver(() => {
+                            if (shippingInput.value) delete this.errors.shipping_type;
+                        });
+                        observer.observe(shippingInput, { attributes: true, attributeFilter: ['value'] });
+                        // Also watch for input event
+                        shippingInput.addEventListener('input', () => {
+                            if (shippingInput.value) delete this.errors.shipping_type;
+                        });
+                    }
                 },
 
                 // Restore design variants from old input
@@ -1511,14 +1541,12 @@
                         this.additionals.forEach((additional, index) => {
                             additional.error = '';
                             
-                            // If additional exists, both service and price must be filled
+                            // If additional exists, service must be selected
                             if (!additional.service_id || additional.service_id === '') {
                                 additional.error = 'Please select a service or remove this additional';
                                 isValid = false;
-                            } else if (!additional.price || additional.price <= 0) {
-                                additional.error = 'Price must be greater than 0';
-                                isValid = false;
                             }
+                            // Price can be 0, no validation needed for price
                         });
                     }
 
