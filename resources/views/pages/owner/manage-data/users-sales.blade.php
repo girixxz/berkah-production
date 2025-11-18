@@ -18,7 +18,7 @@
             fullname: '',
             username: '',
             phone_number: '',
-            role: 'owner',
+            role: '',
             password: '',
             password_confirmation: ''
         },
@@ -52,6 +52,8 @@
     
             if (!this.addUserForm.role) {
                 this.addUserErrors.role = 'Role is required';
+            } else if (!['owner', 'admin', 'pm', 'karyawan'].includes(this.addUserForm.role)) {
+                this.addUserErrors.role = 'Please select a valid role';
             }
     
             if (!this.addUserForm.password) {
@@ -102,7 +104,7 @@
                         fullname: '',
                         username: '',
                         phone_number: '',
-                        role: 'owner',
+                        role: '',
                         password: '',
                         password_confirmation: ''
                     };
@@ -525,13 +527,67 @@
                     <div>
                         <label class="block text-sm font-medium text-gray-700">Roles <span
                                 class="text-red-500">*</span></label>
-                        <select name="role" x-model="addUserForm.role" @change="validateAddUser()"
-                            class="mt-1 w-full rounded-md border border-gray-200 px-4 py-2 text-sm text-gray-500 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20">
-                            <option value="owner">Owner</option>
-                            <option value="admin">Admin</option>
-                            <option value="pm">Project Manager</option>
-                            <option value="karyawan">Karyawan</option>
-                        </select>
+                        <div x-data="{
+                            open: false,
+                            options: [
+                                { value: 'owner', name: 'Owner' },
+                                { value: 'admin', name: 'Admin' },
+                                { value: 'pm', name: 'Project Manager' },
+                                { value: 'karyawan', name: 'Karyawan' }
+                            ],
+                            selected: null,
+                            selectedValue: '{{ old('role') }}',
+                            
+                            init() {
+                                if (this.selectedValue) {
+                                    this.selected = this.options.find(o => o.value === this.selectedValue) || null;
+                                    addUserForm.role = this.selectedValue;
+                                }
+                            },
+                            
+                            select(option) {
+                                this.selected = option;
+                                this.selectedValue = option.value;
+                                this.open = false;
+                                addUserForm.role = option.value;
+                                if (addUserErrors.role) {
+                                    delete addUserErrors.role;
+                                }
+                            }
+                        }" class="relative w-full">
+                            {{-- Trigger --}}
+                            <button type="button" @click="open = !open" @blur="validateAddUser()"
+                                :class="addUserErrors.role ? 'border-red-500 focus:border-red-500 focus:ring-red-200' : 'border-gray-200 focus:border-primary focus:ring-primary/20'"
+                                class="mt-1 w-full flex justify-between items-center rounded-md border px-4 py-2 text-sm bg-white
+                                       focus:outline-none focus:ring-2 transition-colors">
+                                <span x-text="selected ? selected.name : 'Select Role'"
+                                    :class="!selected ? 'text-gray-400' : 'text-gray-500'"></span>
+                                <svg class="w-4 h-4 text-gray-400 transition-transform" :class="open && 'rotate-180'" fill="none"
+                                    stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                                </svg>
+                            </button>
+
+                            {{-- Hidden input --}}
+                            <input type="hidden" name="role" x-model="selectedValue">
+
+                            {{-- Dropdown --}}
+                            <div x-show="open" @click.away="open = false" x-cloak x-transition:enter="transition ease-out duration-100"
+                                x-transition:enter-start="opacity-0 scale-95" x-transition:enter-end="opacity-100 scale-100"
+                                x-transition:leave="transition ease-in duration-75" x-transition:leave-start="opacity-100 scale-100"
+                                x-transition:leave-end="opacity-0 scale-95"
+                                class="absolute z-20 mt-1 w-full bg-white border border-gray-200 rounded-md shadow-lg">
+                                <ul class="max-h-60 overflow-y-auto py-1">
+                                    <template x-for="option in options" :key="option.value">
+                                        <li @click="select(option)"
+                                            class="px-4 py-2 cursor-pointer text-sm text-gray-700 hover:bg-primary/5 transition-colors"
+                                            :class="{ 'bg-primary/10 font-medium text-primary': selected && selected.value === option.value }">
+                                            <span x-text="option.name"></span>
+                                        </li>
+                                    </template>
+                                </ul>
+                            </div>
+                        </div>
                         <p x-show="addUserErrors.role" x-text="addUserErrors.role" class="mt-1 text-sm text-red-600"></p>
                     </div>
                     {{-- Password --}}
@@ -638,14 +694,84 @@
                     <div>
                         <label class="block text-sm font-medium text-gray-700">Role <span
                                 class="text-red-500">*</span></label>
-                        <select name="role" x-model="editUser.role" required
-                            class="mt-1 w-full rounded-md border border-gray-200 px-4 py-2 text-sm 
-                           text-gray-700 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20">
-                            <option value="owner">Owner</option>
-                            <option value="admin">Admin</option>
-                            <option value="pm">Project Manager</option>
-                            <option value="karyawan">Karyawan</option>
-                        </select>
+                        <div x-data="{
+                            open: false,
+                            options: [
+                                { value: 'owner', name: 'Owner' },
+                                { value: 'admin', name: 'Admin' },
+                                { value: 'pm', name: 'Project Manager' },
+                                { value: 'karyawan', name: 'Karyawan' }
+                            ],
+                            selected: null,
+                            selectedValue: '',
+                            
+                            loadRole() {
+                                if (editUser && editUser.role) {
+                                    this.selectedValue = editUser.role;
+                                    this.selected = this.options.find(o => o.value === editUser.role) || null;
+                                }
+                            },
+                            
+                            init() {
+                                // Load saat init
+                                this.$nextTick(() => {
+                                    this.loadRole();
+                                });
+                                
+                                // Watch editUser.role untuk update otomatis
+                                this.$watch('editUser.role', () => {
+                                    this.loadRole();
+                                });
+                                
+                                // Sync perubahan ke editUser.role
+                                this.$watch('selectedValue', value => {
+                                    if (value && editUser) {
+                                        editUser.role = value;
+                                    }
+                                });
+                            },
+                            
+                            select(option) {
+                                this.selected = option;
+                                this.selectedValue = option.value;
+                                this.open = false;
+                                if (editUser) {
+                                    editUser.role = option.value;
+                                }
+                            }
+                        }" class="relative w-full">
+                            {{-- Trigger --}}
+                            <button type="button" @click="open = !open"
+                                class="mt-1 w-full flex justify-between items-center rounded-md border border-gray-200 px-4 py-2 text-sm bg-white
+                                       focus:outline-none focus:ring-2 focus:border-primary focus:ring-primary/20 transition-colors">
+                                <span x-text="selected ? selected.name : 'Select Role'"
+                                    :class="!selected ? 'text-gray-400' : 'text-gray-700'"></span>
+                                <svg class="w-4 h-4 text-gray-400 transition-transform" :class="open && 'rotate-180'" fill="none"
+                                    stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                                </svg>
+                            </button>
+
+                            {{-- Hidden input --}}
+                            <input type="hidden" name="role" x-model="selectedValue">
+
+                            {{-- Dropdown --}}
+                            <div x-show="open" @click.away="open = false" x-cloak x-transition:enter="transition ease-out duration-100"
+                                x-transition:enter-start="opacity-0 scale-95" x-transition:enter-end="opacity-100 scale-100"
+                                x-transition:leave="transition ease-in duration-75" x-transition:leave-start="opacity-100 scale-100"
+                                x-transition:leave-end="opacity-0 scale-95"
+                                class="absolute z-20 mt-1 w-full bg-white border border-gray-200 rounded-md shadow-lg">
+                                <ul class="max-h-60 overflow-y-auto py-1">
+                                    <template x-for="option in options" :key="option.value">
+                                        <li @click="select(option)"
+                                            class="px-4 py-2 cursor-pointer text-sm text-gray-700 hover:bg-primary/5 transition-colors"
+                                            :class="{ 'bg-primary/10 font-medium text-primary': selected && selected.value === option.value }">
+                                            <span x-text="option.name"></span>
+                                        </li>
+                                    </template>
+                                </ul>
+                            </div>
+                        </div>
                     </div>
                     {{-- Password --}}
                     <div>
