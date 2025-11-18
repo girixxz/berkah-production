@@ -15,8 +15,9 @@
         @product_category_id-selected.window="product_category_id = $event.detail"
         @material_category_id-selected.window="material_category_id = $event.detail"
         @material_texture_id-selected.window="material_texture_id = $event.detail"
-        @shipping_id-selected.window="shipping_id = $event.detail" method="POST"
-        action="{{ route('admin.orders.update', $order->id) }}"
+        @shipping_id-selected.window="shipping_id = $event.detail"
+        @submit.prevent="validateAndSubmit"
+        method="POST" action="{{ route('admin.orders.update', $order->id) }}"
         class="bg-white border border-gray-200 rounded-2xl p-4 md:p-6 space-y-6 md:space-y-8">
         @csrf
         @method('PUT')
@@ -33,31 +34,36 @@
                 {{-- Priority --}}
                 <div class="space-y-2">
                     <label for="priority" class="block text-sm font-medium text-gray-600">Priority</label>
-                    <select id="priority" name="priority" x-model="priority"
-                        class="w-full rounded-md px-3 py-2 text-sm border border-gray-300 focus:border-primary focus:ring-primary/20 focus:outline-none focus:ring-2 text-gray-700">
-                        <option value="normal">Normal</option>
-                        <option value="high">High</option>
-                    </select>
+                    <x-select-form name="priority" placeholder="Select Priority" :options="[
+                        ['value' => 'normal', 'name' => 'Normal'],
+                        ['value' => 'high', 'name' => 'High']
+                    ]" value="value" display="name" :old="old('priority', $order->priority)" />
                 </div>
 
-                {{-- Order Date (READONLY) --}}
+                {{-- Order Date --}}
                 <div class="space-y-2">
-                    <label for="order_date" class="block text-sm font-medium text-gray-600">Order Date</label>
-                    <div class="relative">
-                        <input id="order_date" name="order_date" type="date" x-model="order_date" readonly
-                            class="w-full rounded-md px-3 py-2 text-sm border border-gray-300 bg-gray-100 text-gray-500 cursor-not-allowed" />
+                    <label for="order_date" class="block text-sm font-medium text-gray-600">Order Date <span class="text-red-500">*</span></label>
+                    <div class="relative cursor-pointer" @click="$refs.orderDateInput.showPicker()">
+                        <input x-ref="orderDateInput" id="order_date" name="order_date" type="date" x-model="order_date"
+                            value="{{ old('order_date', $order->order_date->format('Y-m-d')) }}"
+                            :class="errors.order_date ? 'border-red-500' : 'border-gray-300'"
+                            class="w-full rounded-md px-3 py-2 text-sm border focus:border-primary focus:ring-primary/20 focus:outline-none focus:ring-2 text-gray-700 cursor-pointer" />
+                        <p x-show="errors.order_date" x-text="errors.order_date" class="absolute left-0 -bottom-5 text-[10px] md:text-xs text-red-600"></p>
                         @error('order_date')
                             <p class="absolute left-0 -bottom-5 text-[10px] md:text-xs text-red-600">{{ $message }}</p>
                         @enderror
                     </div>
                 </div>
 
-                {{-- Deadline (READONLY) --}}
+                {{-- Deadline --}}
                 <div class="space-y-2">
-                    <label for="deadline" class="block text-sm font-medium text-gray-600">Deadline</label>
-                    <div class="relative">
-                        <input id="deadline" name="deadline" type="date" x-model="deadline" readonly
-                            class="w-full rounded-md px-3 py-2 text-sm border border-gray-300 bg-gray-100 text-gray-500 cursor-not-allowed" />
+                    <label for="deadline" class="block text-sm font-medium text-gray-600">Deadline <span class="text-red-500">*</span></label>
+                    <div class="relative cursor-pointer" @click="$refs.deadlineInput.showPicker()">
+                        <input x-ref="deadlineInput" id="deadline" name="deadline" type="date" x-model="deadline"
+                            value="{{ old('deadline', $order->deadline->format('Y-m-d')) }}"
+                            :class="errors.deadline ? 'border-red-500' : 'border-gray-300'"
+                            class="w-full rounded-md px-3 py-2 text-sm border focus:border-primary focus:ring-primary/20 focus:outline-none focus:ring-2 text-gray-700 cursor-pointer" />
+                        <p x-show="errors.deadline" x-text="errors.deadline" class="absolute left-0 -bottom-5 text-[10px] md:text-xs text-red-600"></p>
                         @error('deadline')
                             <p class="absolute left-0 -bottom-5 text-[10px] md:text-xs text-red-600">{{ $message }}</p>
                         @enderror
@@ -66,37 +72,33 @@
             </div>
         </div>
 
-        {{-- ================= Customers & Sales (DISABLED) ================= --}}
+        {{-- ================= Customers & Sales ================= --}}
         <section class="space-y-4 md:space-y-5 border-b border-gray-200 pb-8 md:pb-12">
             <h3 class="text-lg font-semibold text-gray-800">Data Customers & Sales</h3>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
                 <div class="relative flex flex-col md:flex-row md:items-start gap-2 md:gap-3">
-                    <label class="text-sm text-gray-600 md:w-24 md:mt-2">Customer</label>
+                    <label class="text-sm text-gray-600 md:w-24 md:mt-2">Customer <span class="text-red-500">*</span></label>
 
                     <div class="w-full">
-                        {{-- Customer Disabled Display --}}
-                        <div
-                            class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm bg-gray-100 text-gray-600 cursor-not-allowed">
-                            {{ $order->customer->customer_name }}
+                        <div class="relative">
+                            <x-select-search name="customer_id" label="Customer" placeholder="Select Customer"
+                                :options="$customers" display="customer_name" :old="old('customer_id', $order->customer_id)" />
+                            <p x-show="errors.customer_id" x-text="errors.customer_id" class="absolute left-0 -bottom-5 text-xs text-red-600"></p>
                         </div>
-                        <input type="hidden" name="customer_id" value="{{ $order->customer_id }}">
                     </div>
                 </div>
 
                 <div class="relative flex flex-col md:flex-row md:items-start gap-2 md:gap-3">
-                    <label class="text-sm text-gray-600 md:w-24 md:mt-2">Sales</label>
+                    <label class="text-sm text-gray-600 md:w-24 md:mt-2">Sales <span class="text-red-500">*</span></label>
 
-                    {{-- Sales Disabled Display --}}
                     <div class="w-full">
-                        <div
-                            class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm bg-gray-100 text-gray-600 cursor-not-allowed">
-                            {{ $order->sales->sales_name }}
+                        <div class="relative">
+                            <x-select-search name="sales_id" label="Sales" placeholder="Select Sales" :options="$sales"
+                                display="sales_name" :old="old('sales_id', $order->sales_id)" />
+                            <p x-show="errors.sales_id" x-text="errors.sales_id" class="absolute left-0 -bottom-5 text-xs text-red-600"></p>
                         </div>
-                        <input type="hidden" name="sales_id" value="{{ $order->sales_id }}">
                     </div>
                 </div>
-
-
             </div>
         </section>
 
@@ -107,21 +109,26 @@
                 <div class="space-y-7">
                     {{-- Product --}}
                     <div class="relative flex flex-col md:flex-row md:items-center gap-2 md:gap-3">
-                        <label class="text-sm text-gray-600 md:w-24">Product</label>
+                        <label class="text-sm text-gray-600 md:w-24">Product <span class="text-red-500">*</span></label>
 
-                        <x-select-form name="product_category_id" label="Product" placeholder="-- Select Product --"
-                            :options="$productCategories" display="product_name" :old="old('product_category_id', $order->product_category_id)" />
+                        <div class="relative w-full">
+                            <x-select-search name="product_category_id" label="Product" placeholder="Select Product"
+                                :options="$productCategories" display="product_name" :old="old('product_category_id', $order->product_category_id)" />
+                            <p x-show="errors.product_category_id" x-text="errors.product_category_id" class="absolute left-0 -bottom-5 text-xs text-red-600"></p>
+                        </div>
                     </div>
 
                     {{-- Color --}}
                     <div class="relative flex flex-col md:flex-row md:items-center gap-2 md:gap-3">
-                        <label class="text-sm text-gray-600 md:w-24">Color</label>
+                        <label class="text-sm text-gray-600 md:w-24">Color <span class="text-red-500">*</span></label>
                         <div class="relative w-full">
                             <input type="text" name="product_color" x-model="product_color"
                                 value="{{ old('product_color', $order->product_color) }}"
-                                class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-700
+                                :class="errors.product_color ? 'border-red-500' : 'border-gray-300'"
+                                class="w-full rounded-md border px-3 py-2 text-sm text-gray-700
                                 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
                                 placeholder="Enter color" />
+                            <p x-show="errors.product_color" x-text="errors.product_color" class="absolute left-0 -bottom-5 text-xs text-red-600"></p>
                             @error('product_color')
                                 <p class="absolute left-0 -bottom-5 text-xs text-red-600">{{ $message }}</p>
                             @enderror
@@ -130,13 +137,19 @@
 
                     {{-- Materials --}}
                     <div class="relative flex flex-col md:flex-row md:items-center gap-2 md:gap-3">
-                        <label class="text-sm text-gray-600 md:w-24">Material</label>
+                        <label class="text-sm text-gray-600 md:w-24">Material <span class="text-red-500">*</span></label>
                         <div class="flex flex-col md:flex-row gap-2 gap-y-6 md:gap-3 w-full">
-                            <x-select-form name="material_category_id" label="Product" placeholder="-- Select Material --"
-                                :options="$materialCategories" display="material_name" :old="old('material_category_id', $order->material_category_id)" />
+                            <div class="relative w-full">
+                                <x-select-search name="material_category_id" label="Product" placeholder="Select Material"
+                                    :options="$materialCategories" display="material_name" :old="old('material_category_id', $order->material_category_id)" />
+                                <p x-show="errors.material_category_id" x-text="errors.material_category_id" class="absolute left-0 -bottom-5 text-xs text-red-600"></p>
+                            </div>
 
-                            <x-select-form name="material_texture_id" label="Product" placeholder="-- Select Texture --"
-                                :options="$materialTextures" display="texture_name" :old="old('material_texture_id', $order->material_texture_id)" />
+                            <div class="relative w-full">
+                                <x-select-search name="material_texture_id" label="Product" placeholder="Select Texture"
+                                    :options="$materialTextures" display="texture_name" :old="old('material_texture_id', $order->material_texture_id)" />
+                                <p x-show="errors.material_texture_id" x-text="errors.material_texture_id" class="absolute left-0 -bottom-5 text-xs text-red-600"></p>
+                            </div>
                         </div>
                     </div>
 
@@ -161,7 +174,8 @@
         {{-- ================= Detail Orders ================= --}}
         <section class="space-y-4 md:space-y-5 border-b border-gray-200 pb-8">
             <div class="flex items-center justify-between">
-                <h3 class="text-lg font-semibold text-gray-800">Detail Orders</h3>
+                <h3 class="text-lg font-semibold text-gray-800">Detail Orders <span class="text-red-500">*</span></h3>
+                <p x-show="errors.designs" x-text="errors.designs" class="text-sm text-red-600"></p>
                 @error('designs')
                     <p class="text-sm text-red-600">{{ $message }}</p>
                 @enderror
@@ -283,22 +297,23 @@
                                     {{-- Base Price --}}
                                     <div class="flex flex-col md:flex-row md:items-center gap-2 md:gap-3">
                                         <label class="text-sm text-gray-600">Base Price</label>
-                                        <div class="relative w-full md:w-40">
-                                            <span
-                                                class="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-500 text-sm font-medium">
-                                                Rp
-                                            </span>
-                                            <input type="text"
-                                                :value="variant.basePrice ? parseInt(variant.basePrice).toLocaleString(
-                                                    'id-ID') : ''"
-                                                @input="
-                                                    let value = $event.target.value.replace(/[^0-9]/g, '');
-                                                    variant.basePrice = value ? parseInt(value) : 0;
-                                                    $event.target.value = variant.basePrice ? variant.basePrice.toLocaleString('id-ID') : '';
-                                                    updateUnitPrices(dIndex, vIndex);
-                                                "
-                                                placeholder="0"
-                                                class="w-full rounded-md border border-gray-300 pl-10 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary" />
+                                        <div class="relative">
+                                            <div class="relative">
+                                                <span
+                                                    class="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-500 text-sm font-medium">
+                                                    Rp
+                                                </span>
+                                                <input type="text" :value="variant.basePriceDisplay || ''"
+                                                    @input="
+                                                        let value = $event.target.value.replace(/[^0-9]/g, '');
+                                                        variant.basePrice = value ? parseInt(value) : 0;
+                                                        variant.basePriceDisplay = value ? parseInt(value).toLocaleString('id-ID') : '';
+                                                        $event.target.value = variant.basePriceDisplay;
+                                                        updateUnitPrices(dIndex, vIndex);
+                                                    "
+                                                    placeholder="0"
+                                                    class="w-full md:w-40 rounded-md border border-gray-300 pl-10 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary" />
+                                            </div>
                                             <span x-show="variant.basePriceError" x-text="variant.basePriceError"
                                                 class="absolute left-0 -bottom-5 text-xs text-red-600"></span>
                                         </div>
@@ -307,7 +322,12 @@
                                     {{-- Add Size --}}
                                     <div class="flex flex-col md:flex-row md:items-center gap-2">
                                         <button type="button"
-                                            @click="if(variant.sleeve !== '' && variant.basePrice > 0) { openModal = 'addSize'; selectedDesign = dIndex; selectedVariant = vIndex }"
+                                            @click="if(variant.sleeve !== '' && variant.basePrice > 0) { 
+                                                openModal = 'addSize'; 
+                                                selectedDesign = dIndex; 
+                                                selectedVariant = vIndex;
+                                                selectedSizes = variant.rows.map(r => sizes.find(s => s.id === r.size_id)).filter(s => s);
+                                            }"
                                             :class="(variant.sleeve === '' || variant.basePrice <= 0) ?
                                             'cursor-not-allowed bg-gray-300 text-white' :
                                             'bg-primary hover:bg-primary-dark text-white'"
@@ -324,39 +344,37 @@
                             {{-- Table --}}
                             <div class="overflow-x-auto -mx-4 md:mx-0">
                                 <table class="w-full text-sm min-w-[640px]">
-                                    <thead class="bg-gray-50 text-gray-600">
+                                    <thead class="bg-primary-light text-gray-600">
                                         <tr>
-                                            <th class="py-2 px-4 text-left w-12">No</th>
+                                            <th class="py-2 px-4 text-left w-12 rounded-l-lg">No</th>
                                             <th class="py-2 px-4 text-left min-w-[100px]">Size</th>
                                             <th class="py-2 px-4 text-left min-w-[160px]">Unit Price</th>
                                             <th class="py-2 px-4 text-left min-w-[140px]">QTY</th>
                                             <th class="py-2 px-4 text-left min-w-[140px]">Total Price</th>
-                                            <th class="py-2 px-4 text-right w-16">Action</th>
+                                            <th class="py-2 px-4 text-right w-16 rounded-r-lg">Action</th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         <template x-for="(row, rIndex) in variant.rows" :key="rIndex">
-                                            <tr class="border-t">
+                                            <tr class="border-t border-gray-200">
                                                 <td class="py-2 px-4" x-text="rIndex+1"></td>
                                                 <td class="py-2 px-4">
                                                     <span x-text="row.size"></span>
                                                     <span class="text-xs text-gray-500" x-show="row.extraPrice > 0">
-                                                        (+Rp <span x-text="row.extraPrice.toLocaleString('id-ID')"></span>)
+                                                        (+<span x-text="row.extraPrice.toLocaleString('id-ID')"></span>)
                                                     </span>
                                                 </td>
                                                 <td class="py-2 px-4">
                                                     <div class="flex items-center gap-2">
                                                         <span class="text-gray-600 text-sm">Rp</span>
-                                                        <input type="text"
-                                                            :value="row.unitPrice ? parseInt(row.unitPrice).toLocaleString(
-                                                                'id-ID') : ''"
+                                                        <input type="text" :value="row.unitPriceDisplay || ''"
                                                             @input="
                                                                 let value = $event.target.value.replace(/[^0-9]/g, '');
                                                                 row.unitPrice = value ? parseInt(value) : 0;
-                                                                $event.target.value = row.unitPrice ? row.unitPrice.toLocaleString('id-ID') : '';
+                                                                row.unitPriceDisplay = value ? parseInt(value).toLocaleString('id-ID') : '';
+                                                                $event.target.value = row.unitPriceDisplay;
                                                             "
                                                             :class="row.unitPrice === 0 ? 'border-red-500' : 'border-gray-300'"
-                                                            placeholder="0"
                                                             class="w-32 rounded-md border px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary" />
                                                     </div>
                                                 </td>
@@ -606,24 +624,16 @@
                 <div class="relative flex flex-col gap-2 md:gap-3">
                     <label class="text-sm text-gray-600 md:w-24">Shipping <span class="text-red-500">*</span></label>
 
-                    <div class="flex flex-col gap-2">
-                        <label class="flex items-center gap-2 cursor-pointer">
-                            <input type="radio" name="shipping_type" value="pickup"
-                                {{ old('shipping_type', $order->shipping_type) === 'pickup' ? 'checked' : '' }}
-                                class="w-4 h-4 text-primary border-gray-300 focus:ring-primary">
-                            <span class="text-sm text-gray-700">Pickup</span>
-                        </label>
-                        <label class="flex items-center gap-2 cursor-pointer">
-                            <input type="radio" name="shipping_type" value="delivery"
-                                {{ old('shipping_type', $order->shipping_type) === 'delivery' ? 'checked' : '' }}
-                                class="w-4 h-4 text-primary border-gray-300 focus:ring-primary">
-                            <span class="text-sm text-gray-700">Delivery</span>
-                        </label>
+                    <div class="relative w-full">
+                        <x-select-form name="shipping_type" placeholder="Select Shipping" :options="[
+                            ['value' => 'pickup', 'name' => 'Pickup'],
+                            ['value' => 'delivery', 'name' => 'Delivery']
+                        ]" value="value" display="name" :old="old('shipping_type', $order->shipping_type)" />
+                        <p x-show="errors.shipping_type" x-text="errors.shipping_type" class="absolute left-0 -bottom-5 text-xs text-red-600"></p>
+                        @error('shipping_type')
+                            <p class="absolute left-0 -bottom-5 text-xs text-red-600">{{ $message }}</p>
+                        @enderror
                     </div>
-
-                    @error('shipping_type')
-                        <span class="text-red-500 text-xs">{{ $message }}</span>
-                    @enderror
                 </div>
 
             </div>
@@ -833,6 +843,10 @@
                 selectedVariant: null,
                 selectedSizes: [],
 
+                // ERROR & SUBMIT STATE
+                errors: {},
+                isSubmitting: false,
+
                 // INIT
                 init() {
                     @if (old('designs'))
@@ -861,6 +875,26 @@
                             });
                         @endforeach
                     @endif
+
+                    // Auto-clear errors when user fills the fields
+                    this.$watch('customer_id', () => { delete this.errors.customer_id; });
+                    this.$watch('sales_id', () => { delete this.errors.sales_id; });
+                    this.$watch('order_date', () => { delete this.errors.order_date; });
+                    this.$watch('deadline', () => { delete this.errors.deadline; });
+                    this.$watch('product_category_id', () => { delete this.errors.product_category_id; });
+                    this.$watch('product_color', () => { delete this.errors.product_color; });
+                    this.$watch('material_category_id', () => { delete this.errors.material_category_id; });
+                    this.$watch('material_texture_id', () => { delete this.errors.material_texture_id; });
+                    this.$watch('designVariants', () => { delete this.errors.designs; }, { deep: true });
+
+                    // Watch for shipping_type changes (from hidden input)
+                    const shippingObserver = new MutationObserver(() => {
+                        delete this.errors.shipping_type;
+                    });
+                    const shippingInput = document.querySelector('input[name="shipping_type"]');
+                    if (shippingInput) {
+                        shippingObserver.observe(shippingInput, { attributes: true, attributeFilter: ['value'] });
+                    }
                 },
 
                 // Load existing order data
@@ -898,11 +932,14 @@
 
                             const rows = sleeveItems.map(item => {
                                 const size = this.sizes.find(s => s.id == item.size_id);
+                                const unitPrice = parseFloat(item.unit_price);
                                 return {
                                     size_id: item.size_id,
                                     size: item.size?.size_name || '',
                                     extraPrice: parseFloat(item.size?.extra_price || 0),
-                                    unitPrice: parseFloat(item.unit_price),
+                                    unitPrice: unitPrice,
+                                    unitPriceDisplay: unitPrice ? unitPrice.toLocaleString(
+                                        'id-ID') : '',
                                     qty: parseInt(item.qty || 0)
                                 };
                             });
@@ -910,6 +947,8 @@
                             sleeveVariants.push({
                                 sleeve: sleeveId,
                                 basePrice: basePrice,
+                                basePriceDisplay: basePrice ? basePrice.toLocaleString('id-ID') :
+                                    '',
                                 rows: rows,
                                 error: '',
                                 basePriceError: ''
@@ -963,11 +1002,14 @@
 
                             const rows = sleeveItems.map(item => {
                                 const size = this.sizes.find(s => s.id == item.size_id);
+                                const unitPrice = parseFloat(item.unit_price);
                                 return {
                                     size_id: item.size_id,
                                     size: size?.size_name || '',
                                     extraPrice: parseFloat(size?.extra_price || 0),
-                                    unitPrice: parseFloat(item.unit_price),
+                                    unitPrice: unitPrice,
+                                    unitPriceDisplay: unitPrice ? unitPrice.toLocaleString(
+                                        'id-ID') : '',
                                     qty: parseInt(item.qty || 0)
                                 };
                             });
@@ -975,6 +1017,8 @@
                             sleeveVariants.push({
                                 sleeve: sleeveId,
                                 basePrice: basePrice,
+                                basePriceDisplay: basePrice ? basePrice.toLocaleString('id-ID') :
+                                    '',
                                 rows: rows,
                                 error: '',
                                 basePriceError: ''
@@ -1001,6 +1045,7 @@
                     this.designVariants[dIndex].sleeveVariants.push({
                         sleeve: '',
                         basePrice: 0,
+                        basePriceDisplay: '',
                         rows: [],
                         error: '',
                         basePriceError: ''
@@ -1014,6 +1059,7 @@
 
                     variant.rows.forEach(row => {
                         row.unitPrice = basePrice + row.extraPrice;
+                        row.unitPriceDisplay = row.unitPrice ? row.unitPrice.toLocaleString('id-ID') : '';
                     });
                 },
 
@@ -1040,6 +1086,7 @@
                                     size: size.size_name,
                                     extraPrice: extraPrice,
                                     unitPrice: unitPrice,
+                                    unitPriceDisplay: unitPrice ? unitPrice.toLocaleString('id-ID') : '',
                                     qty: 0
                                 });
                             }
@@ -1079,6 +1126,147 @@
                 },
                 getFinalPrice() {
                     return this.getSubTotal() - (this.discount || 0);
+                },
+
+                // ====== VALIDATION ======
+                validateForm() {
+                    this.errors = {};
+                    let isValid = true;
+
+                    // Validate Customer
+                    if (!this.customer_id || this.customer_id === '') {
+                        this.errors.customer_id = 'Customer is required';
+                        isValid = false;
+                    }
+
+                    // Validate Sales
+                    if (!this.sales_id || this.sales_id === '') {
+                        this.errors.sales_id = 'Sales person is required';
+                        isValid = false;
+                    }
+
+                    // Validate Order Date
+                    if (!this.order_date || this.order_date === '') {
+                        this.errors.order_date = 'Order date is required';
+                        isValid = false;
+                    }
+
+                    // Validate Deadline
+                    if (!this.deadline || this.deadline === '') {
+                        this.errors.deadline = 'Deadline is required';
+                        isValid = false;
+                    } else if (this.order_date && this.deadline < this.order_date) {
+                        this.errors.deadline = 'Deadline must be after or equal to order date';
+                        isValid = false;
+                    }
+
+                    // Validate Product
+                    if (!this.product_category_id || this.product_category_id === '') {
+                        this.errors.product_category_id = 'Product is required';
+                        isValid = false;
+                    }
+
+                    // Validate Color
+                    if (!this.product_color || this.product_color.trim() === '') {
+                        this.errors.product_color = 'Color is required';
+                        isValid = false;
+                    }
+
+                    // Validate Material Category
+                    if (!this.material_category_id || this.material_category_id === '') {
+                        this.errors.material_category_id = 'Material is required';
+                        isValid = false;
+                    }
+
+                    // Validate Material Texture
+                    if (!this.material_texture_id || this.material_texture_id === '') {
+                        this.errors.material_texture_id = 'Texture is required';
+                        isValid = false;
+                    }
+
+                    // Validate Shipping Type
+                    const shippingInput = document.querySelector('input[name="shipping_type"]');
+                    if (!shippingInput || !shippingInput.value || shippingInput.value === '') {
+                        this.errors.shipping_type = 'Shipping type is required';
+                        isValid = false;
+                    }
+
+                    // Validate Design Variants
+                    if (this.designVariants.length === 0) {
+                        this.errors.designs = 'At least one design variant is required';
+                        isValid = false;
+                    } else {
+                        // Validate each design variant
+                        let hasItems = false;
+                        this.designVariants.forEach((design, dIndex) => {
+                            // Check design name
+                            if (!design.name || design.name.trim() === '') {
+                                design.error = 'Design name is required';
+                                isValid = false;
+                            } else {
+                                design.error = '';
+                            }
+
+                            // Check if has sleeve variants with items
+                            design.sleeveVariants.forEach((variant, vIndex) => {
+                                if (variant.rows && variant.rows.length > 0) {
+                                    hasItems = true;
+                                    // Validate quantities
+                                    variant.rows.forEach(row => {
+                                        if (!row.qty || row.qty <= 0) {
+                                            variant.error = 'All quantities must be greater than 0';
+                                            isValid = false;
+                                        }
+                                    });
+                                }
+                            });
+                        });
+
+                        if (!hasItems) {
+                            this.errors.designs = 'At least one item with quantity is required';
+                            isValid = false;
+                        }
+                    }
+
+                    // Validate Additionals (if any added)
+                    if (this.additionals.length > 0) {
+                        this.additionals.forEach((additional, index) => {
+                            additional.error = '';
+                            
+                            // If additional exists, service must be selected
+                            if (!additional.service_id || additional.service_id === '') {
+                                additional.error = 'Please select a service or remove this additional';
+                                isValid = false;
+                            }
+                            // Price can be 0, no validation needed for price
+                        });
+                    }
+
+                    // Scroll to first error
+                    if (!isValid) {
+                        setTimeout(() => {
+                            const firstError = document.querySelector('[x-show="errors.' + Object.keys(this.errors)[0] + '"]') ||
+                                              document.querySelector('.text-red-600:not([style*="display: none"])');
+                            if (firstError) {
+                                firstError.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                            }
+                        }, 100);
+                    }
+
+                    return isValid;
+                },
+
+                // ====== SUBMIT ======
+                validateAndSubmit(e) {
+                    e.preventDefault();
+                    
+                    if (this.isSubmitting) return;
+
+                    if (this.validateForm()) {
+                        this.isSubmitting = true;
+                        // Submit form natively
+                        e.target.submit();
+                    }
                 }
             }
         }

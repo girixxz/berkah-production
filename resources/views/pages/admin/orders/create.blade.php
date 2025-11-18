@@ -333,7 +333,12 @@
                                     {{-- Add Size --}}
                                     <div class="flex flex-col md:flex-row md:items-center gap-2">
                                         <button type="button"
-                                            @click="if(variant.sleeve !== '' && variant.basePrice > 0) { openModal = 'addSize'; selectedDesign = dIndex; selectedVariant = vIndex }"
+                                            @click="if(variant.sleeve !== '' && variant.basePrice > 0) { 
+                                                openModal = 'addSize'; 
+                                                selectedDesign = dIndex; 
+                                                selectedVariant = vIndex;
+                                                selectedSizes = variant.rows.map(r => sizes.find(s => s.id === r.size_id)).filter(s => s);
+                                            }"
                                             :class="(variant.sleeve === '' || variant.basePrice <= 0) ?
                                             'cursor-not-allowed bg-gray-300 text-white' :
                                             'bg-primary hover:bg-primary-dark text-white'"
