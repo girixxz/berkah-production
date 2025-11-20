@@ -354,15 +354,15 @@
 
                             {{-- Table --}}
                             <div class="overflow-x-auto -mx-4 md:mx-0">
-                                <table class="w-full text-sm min-w-[640px]">
+                                <table class="w-full text-sm min-w-[640px]" style="table-layout: fixed;">
                                     <thead class="bg-primary-light text-gray-600">
                                         <tr>
-                                            <th class="py-2 px-4 text-left w-12 rounded-l-lg">No</th>
-                                            <th class="py-2 px-4 text-left min-w-[100px]">Size</th>
-                                            <th class="py-2 px-4 text-left min-w-[160px]">Unit Price</th>
-                                            <th class="py-2 px-4 text-left min-w-[140px]">QTY</th>
-                                            <th class="py-2 px-4 text-left min-w-[140px]">Total Price</th>
-                                            <th class="py-2 px-4 text-right w-16 rounded-r-lg">Action</th>
+                                            <th class="py-2 px-4 text-left rounded-l-lg" style="width: 5%;">No</th>
+                                            <th class="py-2 px-4 text-left" style="width: 12%;">Size</th>
+                                            <th class="py-2 px-4 text-left" style="width: 22%;">Unit Price</th>
+                                            <th class="py-2 px-4 text-left" style="width: 15%;">QTY</th>
+                                            <th class="py-2 px-4 text-left" style="width: 20%;">Total Price</th>
+                                            <th class="py-2 px-4 text-right rounded-r-lg" style="width: 8%;">Action</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -390,16 +390,11 @@
                                                     </div>
                                                 </td>
                                                 <td class="py-2 px-4">
-                                                    <div class="flex items-center gap-2">
-                                                        <input type="number" x-model.number="row.qty" min="0"
-                                                            @focus="if(row.qty == 0) row.qty = ''"
-                                                            @blur="if(row.qty === '' || row.qty === null) row.qty = 0"
-                                                            :class="row.qty === 0 ? 'border-red-500' : 'border-gray-300'"
-                                                            class="w-20 rounded-md border px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary" />
-                                                        <span x-show="row.qty === 0"
-                                                            class="text-xs text-red-600 whitespace-nowrap">QTY
-                                                            required</span>
-                                                    </div>
+                                                    <input type="number" x-model.number="row.qty" min="0"
+                                                        @focus="if(row.qty == 0) row.qty = ''"
+                                                        @blur="if(row.qty === '' || row.qty === null) row.qty = 0"
+                                                        :class="row.qty === 0 ? 'border-red-500' : 'border-gray-300'"
+                                                        class="w-20 rounded-md border px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary" />
                                                 </td>
                                                 <td class="py-2 px-4 font-medium text-gray-900"
                                                     x-text="'Rp ' + (row.unitPrice * row.qty).toLocaleString('id-ID')">
@@ -417,6 +412,21 @@
                                                 </td>
                                             </tr>
                                         </template>
+                                        
+                                        {{-- Row TOTAL per Sleeve --}}
+                                        <tr x-show="variant.rows.length > 0" class=" bg-primary-light/30">
+                                            <td colspan="3" class="py-3 px-4 text-center font-bold text-gray-800">
+                                                TOTAL
+                                            </td>
+                                            <td class="py-3 px-4 font-bold text-gray-900" 
+                                                x-text="variant.rows.reduce((sum, row) => sum + (row.qty || 0), 0)">
+                                            </td>
+                                            <td class="py-3 px-4 font-bold text-gray-900" 
+                                                x-text="'Rp ' + variant.rows.reduce((sum, row) => sum + ((row.unitPrice || 0) * (row.qty || 0)), 0).toLocaleString('id-ID')">
+                                            </td>
+                                            <td class="py-3 px-4"></td>
+                                        </tr>
+                                        
                                         <tr x-show="variant.rows.length === 0">
                                             <td colspan="6" class="py-3 px-4 text-center text-gray-400">
                                                 No sizes added yet.
@@ -427,6 +437,31 @@
                             </div>
                         </div>
                     </template>
+                    
+                    {{-- TOTAL per Design (Gabungan semua sleeve) --}}
+                    <div x-show="design.sleeveVariants.length > 0" class="mt-4 overflow-x-auto -mx-4 md:mx-0">
+                        <table class="w-full text-sm min-w-[640px]" style="table-layout: fixed;">
+                            <tbody>
+                                <tr class="bg-primary-light/30">
+                                    <td class="py-3 px-4 font-bold text-gray-600 rounded-l-md" style="width: 5%;"></td>
+                                    <td class="py-3 px-4 font-bold text-gray-600" style="width: 12%;"></td>
+                                    <td class="py-3 px-4 font-bold text-gray-600 text-left" style="width: 22%;">
+                                        <span>TOTAL (</span><span x-text="design.design_name || 'Design ' + (dIndex + 1)"></span><span>)</span>
+                                    </td>
+                                    <td class="py-3 px-4 font-bold text-primary text-left" style="width: 15%;" 
+                                        x-text="design.sleeveVariants.reduce((total, variant) => 
+                                            total + variant.rows.reduce((sum, row) => sum + (row.qty || 0), 0), 0)">
+                                    </td>
+                                    <td class="py-3 px-4 font-bold text-primary text-left" style="width: 20%;" 
+                                        x-text="'Rp ' + design.sleeveVariants.reduce((total, variant) => 
+                                            total + variant.rows.reduce((sum, row) => 
+                                                sum + ((row.unitPrice || 0) * (row.qty || 0)), 0), 0).toLocaleString('id-ID')">
+                                    </td>
+                                    <td class="py-3 px-4 rounded-r-md" style="width: 8%;"></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </template>
 
@@ -435,6 +470,33 @@
                 class="w-full md:w-auto px-3 py-2 rounded-md text-sm font-medium cursor-pointer bg-primary hover:bg-green-700 text-white">
                 + Add Design Variant
             </button>
+
+            {{-- GRAND TOTAL (Seluruh Design) --}}
+            <div x-show="designVariants.length > 0" class="mt-4 overflow-x-auto -mx-4 md:mx-0">
+                <table class="w-full text-sm min-w-[640px]" style="table-layout: fixed;">
+                    <tbody>
+                        <tr class="bg-primary-light">
+                            <td class="py-4 px-4 font-bold text-gray-600 rounded-l-md" style="width: 5%;"></td>
+                            <td class="py-4 px-4 font-bold text-gray-600" style="width: 12%;"></td>
+                            <td class="py-4 px-4 font-bold text-gray-600 text-left" style="width: 22%;">
+                                GRAND TOTAL
+                            </td>
+                            <td class="py-4 px-4 font-bold text-gray-600 text-left text-lg" style="width: 15%;" 
+                                x-text="designVariants.reduce((grandTotal, design) => 
+                                    grandTotal + design.sleeveVariants.reduce((total, variant) => 
+                                        total + variant.rows.reduce((sum, row) => sum + (row.qty || 0), 0), 0), 0)">
+                            </td>
+                            <td class="py-4 px-4 font-bold text-gray-600 text-left text-lg" style="width: 20%;" 
+                                x-text="'Rp ' + designVariants.reduce((grandTotal, design) => 
+                                    grandTotal + design.sleeveVariants.reduce((total, variant) => 
+                                        total + variant.rows.reduce((sum, row) => 
+                                            sum + ((row.unitPrice || 0) * (row.qty || 0)), 0), 0), 0).toLocaleString('id-ID')">
+                            </td>
+                            <td class="py-4 px-4 rounded-r-md" style="width: 8%;"></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
             {{-- ================= Modal Add Size ================= --}}
             <div x-show="openModal === 'addSize'" x-cloak
                 class="fixed inset-0 z-50 flex items-center justify-center bg-gray-500/50 backdrop-blur-sm px-4">
