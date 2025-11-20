@@ -1108,27 +1108,74 @@
                     {{-- Form --}}
                     <form id="addPaymentForm"
                         @submit.prevent="
-                            isSubmittingPayment = true;
+                            // Frontend validation - prevent submit if fields are empty
+                            paymentErrors = {};
+                            let hasValidationError = false;
                             const formData = new FormData($event.target);
+                            
+                            // Validate payment_method
+                            if (!formData.get('payment_method')) {
+                                paymentErrors.payment_method = ['Payment method is required'];
+                                hasValidationError = true;
+                            }
+                            
+                            // Validate payment_type
+                            if (!formData.get('payment_type')) {
+                                paymentErrors.payment_type = ['Payment type is required'];
+                                hasValidationError = true;
+                            }
+                            
+                            // Validate amount
+                            const amount = formData.get('amount');
+                            if (!amount || amount === '0' || amount === '') {
+                                paymentErrors.amount = ['Amount is required'];
+                                hasValidationError = true;
+                            }
+                            
+                            // Validate image
+                            const imageFile = formData.get('image');
+                            if (!imageFile || imageFile.size === 0) {
+                                paymentErrors.image = ['Payment proof image is required'];
+                                hasValidationError = true;
+                            }
+                            
+                            // If validation fails, stop here and show errors
+                            if (hasValidationError) {
+                                return; // Don't submit to server
+                            }
+                            
+                            // Validation passed, proceed with submission
+                            isSubmittingPayment = true;
                             fetch('{{ route('admin.payments.store') }}', {
                                 method: 'POST',
                                 headers: {
-                                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                                    'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                                    'Accept': 'application/json',
+                                    'X-Requested-With': 'XMLHttpRequest'
                                 },
-                                body: formData
+                                body: formData,
+                                redirect: 'manual'
                             })
-                            .then(res => res.json())
-                            .then(data => {
-                                if (data.success) {
-                                    // Success - reload with toast
+                            .then(async res => {
+                                if (!res.ok && res.type === 'opaqueredirect') {
+                                    throw new Error('Redirect detected');
+                                }
+                                const data = await res.json();
+                                return { status: res.status, ok: res.ok, data };
+                            })
+                            .then(({ status, ok, data }) => {
+                                if (ok && data.success) {
                                     sessionStorage.setItem('toast_message', 'Payment added successfully');
                                     sessionStorage.setItem('toast_type', 'success');
                                     window.location.reload();
+                                } else if (status === 422) {
+                                    // Validation errors - expected behavior
+                                    isSubmittingPayment = false;
+                                    paymentErrors = data.errors || {};
                                 } else {
                                     isSubmittingPayment = false;
                                     paymentErrors = data.errors || {};
-                                    if (data.message && !data.errors) {
-                                        // Show toast for general errors
+                                    if (data.message) {
                                         window.dispatchEvent(new CustomEvent('show-toast', {
                                             detail: { message: data.message, type: 'error' }
                                         }));
@@ -1137,10 +1184,13 @@
                             })
                             .catch(err => {
                                 isSubmittingPayment = false;
+                                // Suppress console error for expected validation errors
+                                if (err.message !== 'Redirect detected') {
+                                    console.error('Payment error:', err);
+                                }
                                 window.dispatchEvent(new CustomEvent('show-toast', {
                                     detail: { message: 'Failed to add payment. Please try again.', type: 'error' }
                                 }));
-                                console.error(err);
                             });
                         ">
                         <input type="hidden" name="invoice_id" :value="selectedOrderForPayment?.invoice_id">

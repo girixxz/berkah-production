@@ -23,7 +23,7 @@ return new class extends Migration
             $table->enum('status', ['pending', 'approved', 'rejected'])->default('pending');
             
             $table->text('notes')->nullable();
-            $table->text('img_url')->nullable();
+            $table->string('img_url');
             
             $table->timestamps();
         });
