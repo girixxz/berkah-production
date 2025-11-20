@@ -49,6 +49,8 @@ return new class extends Migration
 
             $table->enum('work_order_status', ['pending', 'created'])->default('pending');
 
+            $table->string('img_url', 255)->nullable();
+
             $table->timestamps();
         });
     }

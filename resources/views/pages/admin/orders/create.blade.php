@@ -18,7 +18,7 @@
         @material_texture_id-selected.window="material_texture_id = $event.detail"
         @shipping_id-selected.window="shipping_id = $event.detail" 
         @submit.prevent="validateAndSubmit"
-        method="POST" action="{{ route('admin.orders.store') }}"
+        method="POST" action="{{ route('admin.orders.store') }}" enctype="multipart/form-data"
         class="bg-white border border-gray-200 rounded-2xl p-4 md:p-6 space-y-6 md:space-y-8">
         @csrf
 
@@ -715,8 +715,82 @@
         </section>
 
         {{-- ================= Discount, Final Price & Create ================= --}}
-        <div class="flex justify-end mt-6">
-            <div class="w-full lg:w-1/2 xl:w-1/3 space-y-4">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
+            {{-- Left: Order Image Upload --}}
+            <div class="space-y-4" x-data="{
+                orderImage: null,
+                imagePreview: null,
+                isDragging: false,
+                handleFileSelect(event) {
+                    const file = event.target.files[0];
+                    if (file && file.type.startsWith('image/')) {
+                        this.orderImage = file;
+                        this.imagePreview = URL.createObjectURL(file);
+                    }
+                },
+                handleDrop(event) {
+                    event.preventDefault();
+                    this.isDragging = false;
+                    const file = event.dataTransfer.files[0];
+                    if (file && file.type.startsWith('image/')) {
+                        this.orderImage = file;
+                        this.imagePreview = URL.createObjectURL(file);
+                        // Update file input
+                        const dataTransfer = new DataTransfer();
+                        dataTransfer.items.add(file);
+                        $refs.orderImageInput.files = dataTransfer.files;
+                    }
+                },
+                removeImage() {
+                    this.orderImage = null;
+                    this.imagePreview = null;
+                    $refs.orderImageInput.value = '';
+                }
+            }">
+                <label class="block text-sm font-medium text-gray-600">Order Image (Optional)</label>
+                
+                {{-- Drag & Drop Area --}}
+                <div @drop="handleDrop($event)" 
+                     @dragover.prevent="isDragging = true" 
+                     @dragleave.prevent="isDragging = false"
+                     @click="$refs.orderImageInput.click()"
+                     :class="isDragging ? 'border-primary bg-primary/5' : 'border-gray-300'"
+                     class="relative border-2 border-dashed rounded-lg p-6 text-center cursor-pointer hover:border-primary hover:bg-primary/5 transition-all duration-200">
+                    
+                    {{-- Preview Image --}}
+                    <div x-show="imagePreview" class="relative">
+                        <img :src="imagePreview" alt="Order Preview" class="max-h-48 mx-auto rounded-lg shadow-sm">
+                        <button type="button" @click.stop="removeImage()"
+                            class="absolute top-2 right-2 p-1.5 rounded-full bg-red-500 text-white hover:bg-red-600 shadow-lg transition-colors">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                        </button>
+                    </div>
+                    
+                    {{-- Upload Icon & Text --}}
+                    <div x-show="!imagePreview" class="space-y-2">
+                        <svg class="w-12 h-12 mx-auto text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                                d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        </svg>
+                        <p class="text-sm text-gray-600">
+                            <span class="font-medium text-primary">Click to upload</span> or drag and drop
+                        </p>
+                        <p class="text-xs text-gray-500">PNG, JPG, JPEG up to 5MB</p>
+                    </div>
+                </div>
+                
+                <input type="file" x-ref="orderImageInput" name="order_image" accept="image/png,image/jpeg,image/jpg" 
+                       @change="handleFileSelect($event)" class="hidden">
+                
+                @error('order_image')
+                    <p class="text-xs text-red-600">{{ $message }}</p>
+                @enderror
+            </div>
+
+            {{-- Right: Discount, Final Price & Submit --}}
+            <div class="space-y-4">
                 <div class="flex flex-col md:flex-row md:items-center gap-2 md:gap-3">
                     <label class="text-sm text-gray-600 md:w-24">Discount</label>
                     <div class="relative w-full">

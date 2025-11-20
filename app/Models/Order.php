@@ -32,6 +32,7 @@ class Order extends Model
         'wip_date',
         'finished_date',
         'cancelled_date',
+        'img_url',
     ];
 
     protected $casts = [

@@ -284,6 +284,7 @@ class OrderController extends Controller
             'subtotal' => 'required|numeric|min:0',
             'discount' => 'nullable|numeric|min:0',
             'grand_total' => 'required|numeric|min:0',
+            'order_image' => 'nullable|image|mimes:jpeg,jpg,png|max:5120',
             'designs' => 'required|array|min:1',
             'designs.*.items' => 'required|array|min:1',
             'designs.*.items.*.design_name' => 'required|string',
@@ -318,6 +319,15 @@ class OrderController extends Controller
         DB::beginTransaction();
 
         try {
+            // Handle Order Image Upload
+            $imagePath = null;
+            if ($request->hasFile('order_image')) {
+                $image = $request->file('order_image');
+                $imageName = time() . '_' . uniqid() . '.' . $image->getClientOriginalExtension();
+                $image->storeAs('orders', $imageName, 'public');
+                $imagePath = 'orders/' . $imageName;
+            }
+
             // Create Order
             $order = Order::create([
                 'priority' => $validated['priority'],
@@ -336,6 +346,7 @@ class OrderController extends Controller
                 'discount' => $validated['discount'] ?? 0,
                 'grand_total' => $validated['grand_total'],
                 'production_status' => 'pending',
+                'img_url' => $imagePath,
             ]);
 
             // Create Design Variants and Order Items
