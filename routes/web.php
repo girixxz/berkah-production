@@ -184,7 +184,7 @@ Route::middleware(['auth'])->group(function () {
     });
 
     /* ---------- ALL ROLE ---------- */
-    Route::get('highlights', fn() => view('pages.highlights'))->name('highlights');
+    Route::get('highlights', [\App\Http\Controllers\HighlightController::class, 'index'])->name('highlights');
     Route::get('calendar', [\App\Http\Controllers\CalendarController::class, 'index'])->name('calendar');
     Route::get('profile', fn() => view('pages.profile'))->name('profile');
 });
