@@ -557,37 +557,199 @@ class WorkOrderController extends Controller
     }
 
     /**
-     * Serve work order image from private storage.
+     * Serve work order mockup image (USING MODEL BINDING - same pattern as Payment)
+     * 
+     * @param \App\Models\WorkOrder $workOrder
+     * @return \Symfony\Component\HttpFoundation\BinaryFileResponse
      */
-    public function serveImage($path)
+    public function serveMockupImage(\App\Models\WorkOrder $workOrder)
     {
-        // Security check - must be authenticated
-        /** @var \Illuminate\Contracts\Auth\Guard $auth */
+        // Check if user is authenticated
+        /** @var \Illuminate\Contracts\Auth\Guard|\Illuminate\Contracts\Auth\StatefulGuard $auth */
         $auth = auth();
         if (!$auth->check()) {
             abort(403, 'Unauthorized');
         }
 
-        // Validate path to prevent directory traversal
-        if (strpos($path, '..') !== false) {
-            abort(403, 'Invalid path');
-        }
-
-        // Full path in private storage
-        $fullPath = storage_path('app/private/' . $path);
-
         // Check if file exists
-        if (!file_exists($fullPath)) {
-            abort(404, 'Image not found');
+        if (!$workOrder->mockup_img_url || !Storage::disk('local')->exists($workOrder->mockup_img_url)) {
+            abort(404, 'Mockup image not found');
         }
 
-        // Get mime type
-        $mimeType = finfo_file(finfo_open(FILEINFO_MIME_TYPE), $fullPath);
+        // Get file path
+        $path = Storage::disk('local')->path($workOrder->mockup_img_url);
+        
+        // Get mime type using finfo
+        $finfo = finfo_open(FILEINFO_MIME_TYPE);
+        $mimeType = $finfo ? finfo_file($finfo, $path) : 'application/octet-stream';
+        if ($finfo) {
+            finfo_close($finfo);
+        }
 
-        // Return image response
-        return response()->file($fullPath, [
+        // Return file response
+        return response()->file($path, [
             'Content-Type' => $mimeType,
-            'Cache-Control' => 'private, max-age=3600',
+            'Cache-Control' => 'no-cache, must-revalidate',
+        ]);
+    }
+
+    /**
+     * Serve cutting size chart image (USING MODEL BINDING)
+     * 
+     * @param \App\Models\WorkOrderCutting $cutting
+     * @return \Symfony\Component\HttpFoundation\BinaryFileResponse
+     */
+    public function serveCuttingImage(\App\Models\WorkOrderCutting $cutting)
+    {
+        /** @var \Illuminate\Contracts\Auth\Guard|\Illuminate\Contracts\Auth\StatefulGuard $auth */
+        $auth = auth();
+        if (!$auth->check()) {
+            abort(403, 'Unauthorized');
+        }
+
+        if (!$cutting->custom_size_chart_img_url || !Storage::disk('local')->exists($cutting->custom_size_chart_img_url)) {
+            abort(404, 'Cutting image not found');
+        }
+
+        $path = Storage::disk('local')->path($cutting->custom_size_chart_img_url);
+        
+        $finfo = finfo_open(FILEINFO_MIME_TYPE);
+        $mimeType = $finfo ? finfo_file($finfo, $path) : 'application/octet-stream';
+        if ($finfo) {
+            finfo_close($finfo);
+        }
+
+        return response()->file($path, [
+            'Content-Type' => $mimeType,
+            'Cache-Control' => 'no-cache, must-revalidate',
+        ]);
+    }
+
+    /**
+     * Serve printing detail image (USING MODEL BINDING)
+     * 
+     * @param \App\Models\WorkOrderPrinting $printing
+     * @return \Symfony\Component\HttpFoundation\BinaryFileResponse
+     */
+    public function servePrintingImage(\App\Models\WorkOrderPrinting $printing)
+    {
+        /** @var \Illuminate\Contracts\Auth\Guard|\Illuminate\Contracts\Auth\StatefulGuard $auth */
+        $auth = auth();
+        if (!$auth->check()) {
+            abort(403, 'Unauthorized');
+        }
+
+        if (!$printing->detail_img_url || !Storage::disk('local')->exists($printing->detail_img_url)) {
+            abort(404, 'Printing image not found');
+        }
+
+        $path = Storage::disk('local')->path($printing->detail_img_url);
+        
+        $finfo = finfo_open(FILEINFO_MIME_TYPE);
+        $mimeType = $finfo ? finfo_file($finfo, $path) : 'application/octet-stream';
+        if ($finfo) {
+            finfo_close($finfo);
+        }
+
+        return response()->file($path, [
+            'Content-Type' => $mimeType,
+            'Cache-Control' => 'no-cache, must-revalidate',
+        ]);
+    }
+
+    /**
+     * Serve printing placement image (USING MODEL BINDING)
+     * 
+     * @param \App\Models\WorkOrderPrintingPlacement $placement
+     * @return \Symfony\Component\HttpFoundation\BinaryFileResponse
+     */
+    public function servePlacementImage(\App\Models\WorkOrderPrintingPlacement $placement)
+    {
+        /** @var \Illuminate\Contracts\Auth\Guard|\Illuminate\Contracts\Auth\StatefulGuard $auth */
+        $auth = auth();
+        if (!$auth->check()) {
+            abort(403, 'Unauthorized');
+        }
+
+        if (!$placement->detail_img_url || !Storage::disk('local')->exists($placement->detail_img_url)) {
+            abort(404, 'Placement image not found');
+        }
+
+        $path = Storage::disk('local')->path($placement->detail_img_url);
+        
+        $finfo = finfo_open(FILEINFO_MIME_TYPE);
+        $mimeType = $finfo ? finfo_file($finfo, $path) : 'application/octet-stream';
+        if ($finfo) {
+            finfo_close($finfo);
+        }
+
+        return response()->file($path, [
+            'Content-Type' => $mimeType,
+            'Cache-Control' => 'no-cache, must-revalidate',
+        ]);
+    }
+
+    /**
+     * Serve sewing detail image (USING MODEL BINDING)
+     * 
+     * @param \App\Models\WorkOrderSewing $sewing
+     * @return \Symfony\Component\HttpFoundation\BinaryFileResponse
+     */
+    public function serveSewingImage(\App\Models\WorkOrderSewing $sewing)
+    {
+        /** @var \Illuminate\Contracts\Auth\Guard|\Illuminate\Contracts\Auth\StatefulGuard $auth */
+        $auth = auth();
+        if (!$auth->check()) {
+            abort(403, 'Unauthorized');
+        }
+
+        if (!$sewing->detail_img_url || !Storage::disk('local')->exists($sewing->detail_img_url)) {
+            abort(404, 'Sewing image not found');
+        }
+
+        $path = Storage::disk('local')->path($sewing->detail_img_url);
+        
+        $finfo = finfo_open(FILEINFO_MIME_TYPE);
+        $mimeType = $finfo ? finfo_file($finfo, $path) : 'application/octet-stream';
+        if ($finfo) {
+            finfo_close($finfo);
+        }
+
+        return response()->file($path, [
+            'Content-Type' => $mimeType,
+            'Cache-Control' => 'no-cache, must-revalidate',
+        ]);
+    }
+
+    /**
+     * Serve packing hangtag image (USING MODEL BINDING)
+     * 
+     * @param \App\Models\WorkOrderPacking $packing
+     * @return \Symfony\Component\HttpFoundation\BinaryFileResponse
+     */
+    public function servePackingImage(\App\Models\WorkOrderPacking $packing)
+    {
+        /** @var \Illuminate\Contracts\Auth\Guard|\Illuminate\Contracts\Auth\StatefulGuard $auth */
+        $auth = auth();
+        if (!$auth->check()) {
+            abort(403, 'Unauthorized');
+        }
+
+        if (!$packing->hangtag_img_url || !Storage::disk('local')->exists($packing->hangtag_img_url)) {
+            abort(404, 'Packing image not found');
+        }
+
+        $path = Storage::disk('local')->path($packing->hangtag_img_url);
+        
+        $finfo = finfo_open(FILEINFO_MIME_TYPE);
+        $mimeType = $finfo ? finfo_file($finfo, $path) : 'application/octet-stream';
+        if ($finfo) {
+            finfo_close($finfo);
+        }
+
+        return response()->file($path, [
+            'Content-Type' => $mimeType,
+            'Cache-Control' => 'no-cache, must-revalidate',
         ]);
     }
 

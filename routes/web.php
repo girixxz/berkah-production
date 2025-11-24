@@ -147,9 +147,14 @@ Route::middleware(['auth'])->group(function () {
             ->middleware('throttle:10,1')
             ->name('work-orders.update');
         Route::get('work-orders/{order}/finalize', [\App\Http\Controllers\WorkOrderController::class, 'finalize'])->name('work-orders.finalize');
-        Route::get('work-orders/image/{path}', [\App\Http\Controllers\WorkOrderController::class, 'serveImage'])
-            ->where('path', '.*')
-            ->name('work-orders.image');
+        
+        // Work Order Image Routes - USING MODEL BINDING (same pattern as Payment)
+        Route::get('work-orders/{workOrder}/mockup-image', [\App\Http\Controllers\WorkOrderController::class, 'serveMockupImage'])->name('work-orders.mockup-image');
+        Route::get('work-orders/cutting/{cutting}/image', [\App\Http\Controllers\WorkOrderController::class, 'serveCuttingImage'])->name('work-orders.cutting-image');
+        Route::get('work-orders/printing/{printing}/image', [\App\Http\Controllers\WorkOrderController::class, 'servePrintingImage'])->name('work-orders.printing-image');
+        Route::get('work-orders/placement/{placement}/image', [\App\Http\Controllers\WorkOrderController::class, 'servePlacementImage'])->name('work-orders.placement-image');
+        Route::get('work-orders/sewing/{sewing}/image', [\App\Http\Controllers\WorkOrderController::class, 'serveSewingImage'])->name('work-orders.sewing-image');
+        Route::get('work-orders/packing/{packing}/image', [\App\Http\Controllers\WorkOrderController::class, 'servePackingImage'])->name('work-orders.packing-image');
         
         Route::get('payment-history', [\App\Http\Controllers\PaymentHistoryController::class, 'index'])->name('payment-history');
 

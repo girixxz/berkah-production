@@ -231,27 +231,24 @@
         loadExistingData(workOrder) {
             console.log('Work Order to load:', workOrder);
     
-            // Helper function to convert path to URL untuk local storage
-            const convertToImageUrl = (path) => {
-                if (!path) return null;
-                // Jika sudah URL lengkap (http/https), return as is (untuk compatibility dengan data lama)
-                if (path.startsWith('http://') || path.startsWith('https://')) {
-                    return path;
-                }
-                // Convert local storage path ke route URL
-                return `{{ route('admin.work-orders.image', ['path' => '__PATH__']) }}`.replace('__PATH__', path);
-            };
-
-            // Load work order data
-            this.formData.mockup_img_url = convertToImageUrl(workOrder.mockup_img_url);
-            this.mockupPreview = convertToImageUrl(workOrder.mockup_img_url);
+            // ✅ UPDATED: Using Model Binding Routes (same pattern as Payment)
+            // Load work order mockup image
+            if (workOrder.mockup_img_url) {
+                const mockupUrl = `{{ route('admin.work-orders.mockup-image', ['workOrder' => '__ID__']) }}`.replace('__ID__', workOrder.id);
+                this.formData.mockup_img_url = mockupUrl;
+                this.mockupPreview = mockupUrl;
+            }
     
             // Load cutting data
             if (workOrder.cutting) {
                 this.formData.cutting_pattern_id = workOrder.cutting.cutting_pattern_id;
                 this.formData.chain_cloth_id = workOrder.cutting.chain_cloth_id;
                 this.formData.rib_size_id = workOrder.cutting.rib_size_id;
-                this.formData.custom_size_chart_img_url = convertToImageUrl(workOrder.cutting.custom_size_chart_img_url);
+                
+                // Cutting image with model binding
+                if (workOrder.cutting.custom_size_chart_img_url) {
+                    this.formData.custom_size_chart_img_url = `{{ route('admin.work-orders.cutting-image', ['cutting' => '__ID__']) }}`.replace('__ID__', workOrder.cutting.id);
+                }
                 this.formData.cutting_notes = workOrder.cutting.notes || '';
             }
     
@@ -259,13 +256,20 @@
             if (workOrder.printing) {
                 this.formData.print_ink_id = workOrder.printing.print_ink_id;
                 this.formData.finishing_id = workOrder.printing.finishing_id;
-                this.formData.printing_detail_img_url = convertToImageUrl(workOrder.printing.detail_img_url);
+                
+                // Printing image with model binding
+                if (workOrder.printing.detail_img_url) {
+                    this.formData.printing_detail_img_url = `{{ route('admin.work-orders.printing-image', ['printing' => '__ID__']) }}`.replace('__ID__', workOrder.printing.id);
+                }
                 this.formData.printing_notes = workOrder.printing.notes || '';
             }
     
             // Load printing placement data
             if (workOrder.printing_placement) {
-                this.formData.placement_detail_img_url = convertToImageUrl(workOrder.printing_placement.detail_img_url);
+                // Placement image with model binding
+                if (workOrder.printing_placement.detail_img_url) {
+                    this.formData.placement_detail_img_url = `{{ route('admin.work-orders.placement-image', ['placement' => '__ID__']) }}`.replace('__ID__', workOrder.printing_placement.id);
+                }
                 this.formData.placement_notes = workOrder.printing_placement.notes || '';
             }
     
@@ -275,7 +279,11 @@
                 this.formData.underarm_overdeck_id = workOrder.sewing.underarm_overdeck_id;
                 this.formData.side_split_id = workOrder.sewing.side_split_id;
                 this.formData.sewing_label_id = workOrder.sewing.sewing_label_id;
-                this.formData.sewing_detail_img_url = convertToImageUrl(workOrder.sewing.detail_img_url);
+                
+                // Sewing image with model binding
+                if (workOrder.sewing.detail_img_url) {
+                    this.formData.sewing_detail_img_url = `{{ route('admin.work-orders.sewing-image', ['sewing' => '__ID__']) }}`.replace('__ID__', workOrder.sewing.id);
+                }
                 this.formData.sewing_notes = workOrder.sewing.notes || '';
             }
     
@@ -283,7 +291,11 @@
             if (workOrder.packing) {
                 this.formData.plastic_packing_id = workOrder.packing.plastic_packing_id;
                 this.formData.sticker_id = workOrder.packing.sticker_id;
-                this.formData.hangtag_img_url = convertToImageUrl(workOrder.packing.hangtag_img_url);
+                
+                // Packing image with model binding
+                if (workOrder.packing.hangtag_img_url) {
+                    this.formData.hangtag_img_url = `{{ route('admin.work-orders.packing-image', ['packing' => '__ID__']) }}`.replace('__ID__', workOrder.packing.id);
+                }
                 this.formData.packing_notes = workOrder.packing.notes || '';
             }
         },
@@ -382,13 +394,9 @@
                         {{-- 1. Image (Kiri) - dari work_orders.mockup_img_url --}}
                         <div class="flex-shrink-0">
                             @if ($design->workOrder && $design->workOrder->mockup_img_url)
-                                @php
-                                    $imgUrl = $design->workOrder->mockup_img_url;
-                                    // Check if it's a local path (starts with work-orders/) or external URL
-                                    $isLocalPath = strpos($imgUrl, 'work-orders/') === 0 || strpos($imgUrl, 'work-orders\\') === 0;
-                                    $finalUrl = $isLocalPath ? route('admin.work-orders.image', ['path' => $imgUrl]) : $imgUrl;
-                                @endphp
-                                <img src="{{ $finalUrl }}" alt="{{ $design->design_name }}"
+                                {{-- ✅ UPDATED: Use model binding route for mockup image --}}
+                                <img src="{{ route('admin.work-orders.mockup-image', ['workOrder' => $design->workOrder->id]) }}" 
+                                    alt="{{ $design->design_name }}"
                                     class="w-16 h-16 md:w-20 md:h-20 object-cover rounded-lg border-2 border-gray-200">
                             @elseif($design->orderItem->mockup_img_url ?? null)
                                 <img src="{{ $design->orderItem->mockup_img_url }}" alt="{{ $design->design_name }}"
@@ -633,6 +641,7 @@
                                                     'status' => $design->workOrder->status ?? null,
                                                     'cutting' => $design->workOrder->cutting
                                                         ? [
+                                                            'id' => $design->workOrder->cutting->id,
                                                             'cutting_pattern_id' => $design->workOrder->cutting->cutting_pattern_id,
                                                             'cutting_pattern_name' => $design->workOrder->cutting->cuttingPattern->name ?? '-',
                                                             'chain_cloth_id' => $design->workOrder->cutting->chain_cloth_id,
@@ -645,6 +654,7 @@
                                                         : null,
                                                     'printing' => $design->workOrder->printing
                                                         ? [
+                                                            'id' => $design->workOrder->printing->id,
                                                             'print_ink_id' => $design->workOrder->printing->print_ink_id,
                                                             'print_ink_name' => $design->workOrder->printing->printInk->name ?? '-',
                                                             'finishing_id' => $design->workOrder->printing->finishing_id,
@@ -655,12 +665,14 @@
                                                         : null,
                                                     'printing_placement' => $design->workOrder->printingPlacement
                                                         ? [
+                                                            'id' => $design->workOrder->printingPlacement->id,
                                                             'detail_img_url' => $design->workOrder->printingPlacement->detail_img_url,
                                                             'notes' => $design->workOrder->printingPlacement->notes,
                                                         ]
                                                         : null,
                                                     'sewing' => $design->workOrder->sewing
                                                         ? [
+                                                            'id' => $design->workOrder->sewing->id,
                                                             'neck_overdeck_id' => $design->workOrder->sewing->neck_overdeck_id,
                                                             'neck_overdeck_name' => $design->workOrder->sewing->neckOverdeck->name ?? '-',
                                                             'underarm_overdeck_id' => $design->workOrder->sewing->underarm_overdeck_id,
@@ -675,6 +687,7 @@
                                                         : null,
                                                     'packing' => $design->workOrder->packing
                                                         ? [
+                                                            'id' => $design->workOrder->packing->id,
                                                             'plastic_packing_id' => $design->workOrder->packing->plastic_packing_id,
                                                             'plastic_packing_name' => $design->workOrder->packing->plasticPacking->name ?? '-',
                                                             'sticker_id' => $design->workOrder->packing->sticker_id,
