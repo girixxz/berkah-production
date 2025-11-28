@@ -582,9 +582,6 @@ class WorkOrderController extends Controller
         // Get mime type using finfo
         $finfo = finfo_open(FILEINFO_MIME_TYPE);
         $mimeType = $finfo ? finfo_file($finfo, $path) : 'application/octet-stream';
-        if ($finfo) {
-            finfo_close($finfo);
-        }
 
         // Return file response
         return response()->file($path, [
@@ -615,9 +612,6 @@ class WorkOrderController extends Controller
         
         $finfo = finfo_open(FILEINFO_MIME_TYPE);
         $mimeType = $finfo ? finfo_file($finfo, $path) : 'application/octet-stream';
-        if ($finfo) {
-            finfo_close($finfo);
-        }
 
         return response()->file($path, [
             'Content-Type' => $mimeType,
@@ -647,9 +641,6 @@ class WorkOrderController extends Controller
         
         $finfo = finfo_open(FILEINFO_MIME_TYPE);
         $mimeType = $finfo ? finfo_file($finfo, $path) : 'application/octet-stream';
-        if ($finfo) {
-            finfo_close($finfo);
-        }
 
         return response()->file($path, [
             'Content-Type' => $mimeType,
@@ -679,9 +670,6 @@ class WorkOrderController extends Controller
         
         $finfo = finfo_open(FILEINFO_MIME_TYPE);
         $mimeType = $finfo ? finfo_file($finfo, $path) : 'application/octet-stream';
-        if ($finfo) {
-            finfo_close($finfo);
-        }
 
         return response()->file($path, [
             'Content-Type' => $mimeType,
@@ -711,9 +699,6 @@ class WorkOrderController extends Controller
         
         $finfo = finfo_open(FILEINFO_MIME_TYPE);
         $mimeType = $finfo ? finfo_file($finfo, $path) : 'application/octet-stream';
-        if ($finfo) {
-            finfo_close($finfo);
-        }
 
         return response()->file($path, [
             'Content-Type' => $mimeType,
@@ -743,9 +728,6 @@ class WorkOrderController extends Controller
         
         $finfo = finfo_open(FILEINFO_MIME_TYPE);
         $mimeType = $finfo ? finfo_file($finfo, $path) : 'application/octet-stream';
-        if ($finfo) {
-            finfo_close($finfo);
-        }
 
         return response()->file($path, [
             'Content-Type' => $mimeType,
