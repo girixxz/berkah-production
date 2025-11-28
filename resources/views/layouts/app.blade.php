@@ -6,6 +6,7 @@
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <meta name="turbo-cache-control" content="no-cache">
+    <meta name="turbo-prefetch" content="false">
     <title>@yield('title')</title>
 
     @vite(['resources/css/app.css', 'resources/js/app.js'])
@@ -22,6 +23,17 @@
         body {
             background-color: #f9fafb;
             /* Same as bg-gray-light/bg-gray-50 */
+        }
+
+        /* NProgress custom styling */
+        #nprogress .bar {
+            background: #3b82f6 !important; /* Blue-500, sesuaikan dengan primary color Anda */
+            height: 3px !important;
+            z-index: 9999 !important;
+        }
+
+        #nprogress .peg {
+            box-shadow: 0 0 10px #3b82f6, 0 0 5px #3b82f6 !important;
         }
     </style>
 </head>
