@@ -21,6 +21,9 @@ NProgress.configure({
     trickleSpeed: 200, // How often to trickle
 });
 
+// Expose NProgress to global scope for Blade templates
+window.NProgress = NProgress;
+
 // Track actual navigation (bukan prefetch)
 let isNavigating = false;
 
