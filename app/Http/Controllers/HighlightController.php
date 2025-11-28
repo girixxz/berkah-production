@@ -64,8 +64,18 @@ class HighlightController extends Controller
             $query->whereBetween('order_date', [$startDate, $endDate]);
         }
 
+        // Apply sorting based on filter
+        // All & WIP: sort by wip_date DESC (terbaru di atas)
+        // Finished: sort by finished_date DESC
+        if ($filter === 'finished') {
+            $query->orderBy('finished_date', 'desc');
+        } else {
+            // 'all' atau 'wip' pakai wip_date
+            $query->orderBy('wip_date', 'desc');
+        }
+
         // Get orders with pagination
-        $orders = $query->orderBy('order_date', 'desc')->paginate(15);
+        $orders = $query->paginate(15);
 
         // Calculate statistics
         $allOrders = Order::whereIn('production_status', ['wip', 'finished']);
