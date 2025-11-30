@@ -9,9 +9,9 @@
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     
     <style>
-        /* Fixed height for calendar cells */
+        /* Calendar cells will stretch to fill available space */
         .calendar-cell {
-            height: 180px;
+            min-height: 100px;
             display: flex;
             flex-direction: column;
         }
@@ -33,7 +33,7 @@
         }
     </style>
 </head>
-<body class="bg-gray-light min-h-screen">
+<body class="bg-gray-light h-screen overflow-hidden">
 
     {{-- Root Alpine State --}}
     <div x-data="{
@@ -45,33 +45,83 @@
             this.modalTasks = tasks;
             this.showModal = true;
         }
-    }">
+    }" class="h-full flex flex-col">
 
         {{-- Header --}}
-        <div class="p-2">
+        <div class="p-2 flex-shrink-0 bg-white border-b border-gray-200">
             <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-                {{-- Left Side: Filter Stage --}}
+                {{-- Left Side: Filter --}}
                 <div class="flex-1 max-w-md">
                     <form method="GET" action="{{ route('calendar') }}" id="filterForm">
                         <input type="hidden" name="month" value="{{ request('month', $currentDate->month) }}">
                         <input type="hidden" name="year" value="{{ request('year', $currentDate->year) }}">
                         
-                        <select name="stage_id" 
-                                onchange="document.getElementById('filterForm').submit()"
-                                class="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all">
-                            @foreach ($productionStages as $stage)
-                                <option value="{{ $stage->id }}" {{ $selectedStageId == $stage->id ? 'selected' : '' }}>
-                                    {{ $stage->stage_name }}
-                                </option>
-                            @endforeach
-                        </select>
+                        {{-- Custom Select Component --}}
+                        <div x-data="{
+                            open: false,
+                            options: [
+                                { value: 'create', name: 'Order by Create' },
+                                { value: 'deadline', name: 'Order by Deadline' },
+                                @foreach ($productionStages as $stage)
+                                    { value: 'stage_{{ $stage->id }}', name: '{{ $stage->stage_name }}' },
+                                @endforeach
+                            ],
+                            selected: null,
+                            selectedValue: '{{ $filter ?? 'create' }}',
+                            
+                            init() {
+                                this.selected = this.options.find(o => o.value === this.selectedValue) || null;
+                            },
+                            
+                            select(option) {
+                                this.selected = option;
+                                this.selectedValue = option.value;
+                                this.open = false;
+                                // Auto submit form using nextTick to ensure value is updated
+                                this.$nextTick(() => {
+                                    document.getElementById('filterForm').submit();
+                                });
+                            }
+                        }" class="relative w-full">
+                            {{-- Trigger --}}
+                            <button type="button" @click="open = !open"
+                                class="w-full flex justify-between items-center rounded-md border border-gray-200 px-3 py-2 text-sm text-gray-700 bg-white
+                                       focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors">
+                                <span x-text="selected ? selected.name : 'Select Filter'"
+                                    :class="!selected ? 'text-gray-400' : 'text-gray-900'"></span>
+                                <svg class="w-4 h-4 text-gray-400 transition-transform" :class="open && 'rotate-180'" fill="none"
+                                    stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                                </svg>
+                            </button>
+
+                            {{-- Hidden input --}}
+                            <input type="hidden" name="filter" x-model="selectedValue">
+
+                            {{-- Dropdown --}}
+                            <div x-show="open" @click.away="open = false" x-cloak x-transition:enter="transition ease-out duration-100"
+                                x-transition:enter-start="opacity-0 scale-95" x-transition:enter-end="opacity-100 scale-100"
+                                x-transition:leave="transition ease-in duration-75" x-transition:leave-start="opacity-100 scale-100"
+                                x-transition:leave-end="opacity-0 scale-95"
+                                class="absolute z-20 mt-1 w-full bg-white border border-gray-200 rounded-md shadow-lg">
+                                <ul class="max-h-60 overflow-y-auto py-1">
+                                    <template x-for="option in options" :key="option.value">
+                                        <li @click="select(option)"
+                                            class="px-4 py-2 cursor-pointer text-sm hover:bg-primary/5 transition-colors"
+                                            :class="{ 'bg-primary/10 font-medium text-primary': selected && selected.value === option.value }">
+                                            <span x-text="option.name"></span>
+                                        </li>
+                                    </template>
+                                </ul>
+                            </div>
+                        </div>
                     </form>
                 </div>
 
                 {{-- Right Side: Month Navigation + Reset --}}
                 <div class="flex items-center gap-3 flex-wrap justify-end">
                     {{-- Previous Month --}}
-                    <a href="{{ route('calendar', ['stage_id' => $selectedStageId, 'month' => $prevMonth->month, 'year' => $prevMonth->year]) }}" 
+                    <a href="{{ route('calendar', ['filter' => $filter, 'month' => $prevMonth->month, 'year' => $prevMonth->year]) }}" 
                        class="p-2 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer">
                         <svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
@@ -86,7 +136,7 @@
                     </div>
 
                     {{-- Next Month --}}
-                    <a href="{{ route('calendar', ['stage_id' => $selectedStageId, 'month' => $nextMonth->month, 'year' => $nextMonth->year]) }}" 
+                    <a href="{{ route('calendar', ['filter' => $filter, 'month' => $nextMonth->month, 'year' => $nextMonth->year]) }}" 
                        class="p-2 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer">
                         <svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
@@ -94,7 +144,7 @@
                     </a>
 
                     {{-- Reset Button --}}
-                    <a href="{{ route('calendar', ['stage_id' => $selectedStageId]) }}" 
+                    <a href="{{ route('calendar', ['filter' => $filter]) }}" 
                        class="px-4 py-2 bg-primary hover:bg-primary-dark text-white text-sm font-medium rounded-lg transition-colors cursor-pointer">
                         Reset
                     </a>
@@ -103,35 +153,35 @@
         </div>
 
         {{-- Calendar Grid --}}
-        <div class="calendar-wrapper">
-            <div class="calendar-grid overflow-hidden shadow-sm">
+        <div class="calendar-wrapper flex-1 overflow-hidden flex flex-col">
+            <div class="calendar-grid flex-1 flex flex-col overflow-hidden shadow-sm">
                 {{-- Calendar Header (Days of Week) --}}
                 <div class="grid grid-cols-7 bg-primary-light border-y border-gray-300">
                     @foreach (['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'] as $day)
-                        <div class="py-3 text-center text-md font-semibold border-r border-gray-300 last:border-r-0">
+                        <div class="py-2 text-center text-sm font-semibold border-r border-gray-300 last:border-r-0">
                             {{ $day }}
                         </div>
                     @endforeach
                 </div>
 
                 {{-- Calendar Body (Weeks and Days) --}}
-                <div>
+                <div class="flex-1 flex flex-col">
                     @foreach ($calendar as $week)
-                        <div class="grid grid-cols-7 border-b border-gray-200 last:border-b-0">
+                        <div class="grid grid-cols-7 border-b border-gray-200 last:border-b-0 flex-1">
                             @foreach ($week as $day)
-                                <div class="calendar-cell border-r border-gray-200 last:border-r-0 p-2 {{ !$day['isCurrentMonth'] ? 'bg-gray-50' : 'bg-white' }}">
+                                <div class="calendar-cell border-r border-gray-200 last:border-r-0 p-1.5 {{ !$day['isCurrentMonth'] ? 'bg-gray-50' : 'bg-white' }}">
                                     {{-- Date Number --}}
-                                    <div class="flex items-center justify-between mb-2">
-                                        <span class="text-sm font-medium {{ $day['isToday'] ? 'text-primary font-bold' : ($day['isCurrentMonth'] ? 'text-gray-900' : 'text-gray-400') }}">
+                                    <div class="flex items-center justify-between mb-1">
+                                        <span class="text-xs font-medium {{ $day['isToday'] ? 'text-primary font-bold' : ($day['isCurrentMonth'] ? 'text-gray-900' : 'text-gray-400') }}">
                                             {{ $day['date']->format('d') }}
                                         </span>
                                     </div>
 
                                     {{-- Tasks for this day --}}
                                     @if (count($day['tasks']) > 0)
-                                        <div class="space-y-1.5 flex-1">
-                                            {{-- Show max 3 tasks --}}
-                                            @foreach (array_slice($day['tasks'], 0, 3) as $orderStage)
+                                        <div class="space-y-1 flex-1">
+                                            {{-- Show max 4 tasks --}}
+                                            @foreach (array_slice($day['tasks'], 0, 4) as $orderStage)
                                                 @php
                                                     $status = strtolower($orderStage->status ?? '');
                                                     $isHighPriority = strtolower($orderStage->order->priority ?? '') === 'high';
@@ -158,7 +208,7 @@
                                                         $separatorClass = 'text-gray-600';
                                                     }
                                                 @endphp
-                                                <div class="px-2 py-1.5 rounded-lg border {{ $bgClass }} {{ $borderClass }} text-[10px] font-medium">
+                                                <div class="px-1.5 py-0.5 rounded border {{ $bgClass }} {{ $borderClass }} text-[9px] font-medium">
                                                     <div class="flex items-center justify-between gap-1">
                                                         <div class="flex items-center gap-1 {{ $textClass }} flex-1 min-w-0">
                                                             <span class="font-semibold truncate">
@@ -184,8 +234,8 @@
                                                 </div>
                                             @endforeach
 
-                                            {{-- View All button if more than 3 tasks --}}
-                                            @if (count($day['tasks']) > 3)
+                                            {{-- View All button if more than 4 tasks --}}
+                                            @if (count($day['tasks']) > 4)
                                                 <button type="button"
                                                     @click="openModal('{{ $day['date']->format('l, d F Y') }}', {{ collect($day['tasks'])->map(function ($os) {
                                                         $isHigh = strtolower($os->order->priority ?? '') === 'high';
@@ -200,8 +250,8 @@
                                                             'deadline' => $os->deadline ? $os->deadline->format('d M Y') : 'N/A',
                                                         ];
                                                     })->toJson() }})"
-                                                    class="w-full text-center text-[10px] font-medium text-primary hover:text-primary-dark transition-colors cursor-pointer border-t border-gray-200 pt-1.5 mt-1">
-                                                    View All ({{ count($day['tasks']) - 3 }}+ More)
+                                                    class="w-full text-center text-[9px] font-medium text-primary hover:text-primary-dark transition-colors cursor-pointer border-t border-gray-200 pt-1 mt-0.5">
+                                                    View All ({{ count($day['tasks']) - 4 }}+ More)
                                                 </button>
                                             @endif
                                         </div>

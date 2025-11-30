@@ -20,7 +20,7 @@
 }" class="relative w-full">
     {{-- Trigger --}}
     <button type="button" @click="open = !open"
-        :class="(errors && errors['{{ $name }}']) || {{ $errors->has($name) ? 'true' : 'false' }} ? 'border-red-500' : 'border-gray-300'"
+        :class="(errors && errors['{{ $name }}']) || {{ $errors->has($name) ? 'true' : 'false' }} ? 'border-red-500' : 'border-gray-200'"
         class="w-full flex justify-between items-center rounded-md border px-3 py-2 text-sm text-gray-700 bg-white
                focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors">
         <span x-text="selected ? selected['{{ $display }}'] : '{{ $placeholder }}'"
