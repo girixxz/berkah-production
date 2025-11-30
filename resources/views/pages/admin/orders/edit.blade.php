@@ -17,7 +17,7 @@
         @material_texture_id-selected.window="material_texture_id = $event.detail"
         @shipping_id-selected.window="shipping_id = $event.detail"
         @submit.prevent="validateAndSubmit"
-        method="POST" action="{{ route('admin.orders.update', $order->id) }}"
+        method="POST" action="{{ route('admin.orders.update', $order->id) }}" enctype="multipart/form-data"
         class="bg-white border border-gray-200 rounded-2xl p-4 md:p-6 space-y-6 md:space-y-8">
         @csrf
         @method('PUT')
@@ -343,15 +343,15 @@
 
                             {{-- Table --}}
                             <div class="overflow-x-auto -mx-4 md:mx-0">
-                                <table class="w-full text-sm min-w-[640px]">
+                                <table class="w-full text-sm min-w-[640px]" style="table-layout: fixed;">
                                     <thead class="bg-primary-light text-gray-600">
                                         <tr>
-                                            <th class="py-2 px-4 text-left w-12 rounded-l-lg">No</th>
-                                            <th class="py-2 px-4 text-left min-w-[100px]">Size</th>
-                                            <th class="py-2 px-4 text-left min-w-[160px]">Unit Price</th>
-                                            <th class="py-2 px-4 text-left min-w-[140px]">QTY</th>
-                                            <th class="py-2 px-4 text-left min-w-[140px]">Total Price</th>
-                                            <th class="py-2 px-4 text-right w-16 rounded-r-lg">Action</th>
+                                            <th class="py-2 px-4 text-left rounded-l-lg" style="width: 5%;">No</th>
+                                            <th class="py-2 px-4 text-left" style="width: 12%;">Size</th>
+                                            <th class="py-2 px-4 text-left" style="width: 22%;">Unit Price</th>
+                                            <th class="py-2 px-4 text-left" style="width: 15%;">QTY</th>
+                                            <th class="py-2 px-4 text-left" style="width: 20%;">Total Price</th>
+                                            <th class="py-2 px-4 text-right rounded-r-lg" style="width: 8%;">Action</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -406,6 +406,23 @@
                                                 </td>
                                             </tr>
                                         </template>
+                                        
+                                        {{-- Row TOTAL per Sleeve --}}
+                                        <tr x-show="variant.rows.length > 0" class="bg-primary-light/50">
+                                            <td class="py-3 px-4 font-bold text-gray-800" style="width: 5%;"></td>
+                                            <td class="py-3 px-4 font-bold text-gray-800" style="width: 12%;"></td>
+                                            <td class="py-3 px-4 font-bold text-gray-800 text-center" style="width: 22%;">
+                                                TOTAL
+                                            </td>
+                                            <td class="py-3 px-4 font-bold text-gray-900 text-left" style="width: 15%;" 
+                                                x-text="variant.rows.reduce((sum, row) => sum + (row.qty || 0), 0)">
+                                            </td>
+                                            <td class="py-3 px-4 font-bold text-gray-900 text-left" style="width: 20%;" 
+                                                x-text="'Rp ' + variant.rows.reduce((sum, row) => sum + ((row.unitPrice || 0) * (row.qty || 0)), 0).toLocaleString('id-ID')">
+                                            </td>
+                                            <td class="py-3 px-4" style="width: 8%;"></td>
+                                        </tr>
+                                        
                                         <tr x-show="variant.rows.length === 0">
                                             <td colspan="6" class="py-3 px-4 text-center text-gray-400">
                                                 No sizes added yet.
@@ -416,6 +433,31 @@
                             </div>
                         </div>
                     </template>
+                    
+                    {{-- TOTAL per Design (Gabungan semua sleeve) --}}
+                    <div x-show="design.sleeveVariants.length > 0" class="mt-4 overflow-x-auto -mx-4 md:mx-0">
+                        <table class="w-full text-sm min-w-[640px]" style="table-layout: fixed;">
+                            <tbody>
+                                <tr class="bg-alert-danger ">
+                                    <td class="py-3 px-4 font-bold text-white rounded-l-md" style="width: 5%;"></td>
+                                    <td class="py-3 px-4 font-bold text-white" style="width: 12%;"></td>
+                                    <td class="py-3 px-4 font-bold text-white text-left" style="width: 22%;">
+                                        <span>TOTAL (</span><span x-text="design.name || 'Design ' + (dIndex + 1)"></span><span>)</span>
+                                    </td>
+                                    <td class="py-3 px-4 font-bold text-white text-left" style="width: 15%;" 
+                                        x-text="design.sleeveVariants.reduce((total, variant) => 
+                                            total + variant.rows.reduce((sum, row) => sum + (row.qty || 0), 0), 0)">
+                                    </td>
+                                    <td class="py-3 px-4 font-bold text-white text-left" style="width: 20%;" 
+                                        x-text="'Rp ' + design.sleeveVariants.reduce((total, variant) => 
+                                            total + variant.rows.reduce((sum, row) => 
+                                                sum + ((row.unitPrice || 0) * (row.qty || 0)), 0), 0).toLocaleString('id-ID')">
+                                    </td>
+                                    <td class="py-3 px-4 rounded-r-md" style="width: 8%;"></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </template>
 
@@ -424,6 +466,33 @@
                 class="w-full md:w-auto px-3 py-2 rounded-md text-sm font-medium cursor-pointer bg-primary hover:bg-green-700 text-white">
                 + Add Design Variant
             </button>
+
+            {{-- GRAND TOTAL (Seluruh Design) --}}
+            <div x-show="designVariants.length > 0" class="mt-4 overflow-x-auto -mx-4 md:mx-0">
+                <table class="w-full text-sm min-w-[640px]" style="table-layout: fixed;">
+                    <tbody>
+                        <tr class="bg-primary-light">
+                            <td class="py-4 px-4 font-bold text-gray-600 rounded-l-md" style="width: 5%;"></td>
+                            <td class="py-4 px-4 font-bold text-gray-600" style="width: 12%;"></td>
+                            <td class="py-4 px-4 font-bold text-gray-600 text-left" style="width: 22%;">
+                                GRAND TOTAL
+                            </td>
+                            <td class="py-4 px-4 font-bold text-gray-600 text-left text-lg" style="width: 15%;" 
+                                x-text="designVariants.reduce((grandTotal, design) => 
+                                    grandTotal + design.sleeveVariants.reduce((total, variant) => 
+                                        total + variant.rows.reduce((sum, row) => sum + (row.qty || 0), 0), 0), 0)">
+                            </td>
+                            <td class="py-4 px-4 font-bold text-gray-600 text-left text-lg" style="width: 20%;" 
+                                x-text="'Rp ' + designVariants.reduce((grandTotal, design) => 
+                                    grandTotal + design.sleeveVariants.reduce((total, variant) => 
+                                        total + variant.rows.reduce((sum, row) => 
+                                            sum + ((row.unitPrice || 0) * (row.qty || 0)), 0), 0), 0).toLocaleString('id-ID')">
+                            </td>
+                            <td class="py-4 px-4 rounded-r-md" style="width: 8%;"></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
             {{-- ================= Modal Add Size ================= --}}
             <div x-show="openModal === 'addSize'" x-cloak
                 class="fixed inset-0 z-50 flex items-center justify-center bg-gray-500/50 backdrop-blur-sm px-4">
@@ -639,20 +708,104 @@
             </div>
         </section>
 
-        {{-- ================= Discount, Final Price & Create ================= --}}
-        <div class="flex justify-end mt-6">
-            <div class="w-full lg:w-1/2 xl:w-1/3 space-y-4">
+        {{-- ================= Image Upload, Discount & Final Price ================= --}}
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
+            {{-- Left: Order Image Upload --}}
+            <div class="space-y-4" x-data="{
+                orderImage: null,
+                imagePreview: '{{ $order->img_url ? asset('storage/' . $order->img_url) : '' }}' || null,
+                isDragging: false,
+                handleFileSelect(event) {
+                    const file = event.target.files[0];
+                    if (file && file.type.startsWith('image/')) {
+                        this.orderImage = file;
+                        this.imagePreview = URL.createObjectURL(file);
+                    }
+                },
+                handleDrop(event) {
+                    event.preventDefault();
+                    this.isDragging = false;
+                    const file = event.dataTransfer.files[0];
+                    if (file && file.type.startsWith('image/')) {
+                        this.orderImage = file;
+                        this.imagePreview = URL.createObjectURL(file);
+                        // Update file input
+                        const dataTransfer = new DataTransfer();
+                        dataTransfer.items.add(file);
+                        $refs.orderImageInput.files = dataTransfer.files;
+                    }
+                },
+                removeImage() {
+                    this.orderImage = null;
+                    this.imagePreview = null;
+                    $refs.orderImageInput.value = '';
+                }
+            }">
+                <label class="block text-sm font-medium text-gray-600 mb-3">Order Image (Optional)</label>
+                
+                {{-- Preview Image (Di Atas) --}}
+                <div x-show="imagePreview" class="mb-4 relative group">
+                    <img :src="imagePreview" alt="Order Preview" 
+                         @click.stop="$dispatch('open-image-modal', imagePreview)"
+                         class="max-h-48 mx-auto rounded-lg shadow-sm cursor-pointer hover:opacity-90 transition-opacity">
+                    <button type="button" @click.stop="removeImage()"
+                        class="absolute top-2 right-2 p-1.5 rounded-full bg-red-500 text-white hover:bg-red-600 shadow-lg transition-colors">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                    {{-- Click to view hint --}}
+                    <div class="absolute bottom-2 left-0 right-0 text-center">
+                        <span class="inline-block px-2 py-1 text-xs bg-black/60 text-white rounded opacity-0 group-hover:opacity-100 transition-opacity">
+                            Click to view
+                        </span>
+                    </div>
+                </div>
+                
+                {{-- Drag & Drop Area (Di Bawah) --}}
+                <div @drop="handleDrop($event)" 
+                     @dragover.prevent="isDragging = true" 
+                     @dragleave.prevent="isDragging = false"
+                     @click="$refs.orderImageInput.click()"
+                     :class="isDragging ? 'border-primary bg-primary/5' : 'border-gray-300'"
+                     class="relative border-2 border-dashed rounded-lg p-6 text-center cursor-pointer hover:border-primary hover:bg-primary/5 transition-all duration-200">
+                    
+                    {{-- Upload Icon & Text --}}
+                    <div class="space-y-2">
+                        <svg class="w-12 h-12 mx-auto text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                                d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        </svg>
+                        <p class="text-sm text-gray-600">
+                            <span class="font-medium text-primary" x-text="imagePreview ? 'Click to change image' : 'Click to upload'"></span>
+                            <span x-show="!imagePreview"> or drag and drop</span>
+                        </p>
+                        <p class="text-xs text-gray-500">PNG, JPG, JPEG up to 5MB</p>
+                    </div>
+                </div>
+                
+                <input type="file" x-ref="orderImageInput" name="order_image" accept="image/png,image/jpeg,image/jpg" 
+                       @change="handleFileSelect($event)" class="hidden">
+                
+                @error('order_image')
+                    <p class="text-xs text-red-600">{{ $message }}</p>
+                @enderror
+            </div>
+
+            {{-- Right: Discount, Final Price & Submit --}}
+            <div class="space-y-4">
                 <div class="flex flex-col md:flex-row md:items-center gap-2 md:gap-3">
                     <label class="text-sm text-gray-600 md:w-24">Discount</label>
                     <div class="relative w-full">
                         <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-500 text-sm font-medium">
                             Rp
                         </span>
-                        <input type="text" :value="discount ? parseInt(discount).toLocaleString('id-ID') : ''"
+                        <input type="text" :value="discountDisplay || ''"
                             @input="
                                 let value = $event.target.value.replace(/[^0-9]/g, '');
                                 discount = value ? parseInt(value) : 0;
-                                $event.target.value = discount ? discount.toLocaleString('id-ID') : '';
+                                discountDisplay = value ? parseInt(value).toLocaleString('id-ID') : '';
+                                $event.target.value = discountDisplay;
                             "
                             placeholder="0"
                             class="w-full rounded-md border border-gray-300 pl-10 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-200 focus:border-green-400" />
@@ -708,6 +861,23 @@
                 <input type="hidden" :name="'additionals[' + index + '][price]'" x-model="item.price">
             </div>
         </template>
+
+        {{-- Modal Image Preview --}}
+        <div x-data="{ showImageModal: false, modalImageSrc: '' }"
+             @open-image-modal.window="showImageModal = true; modalImageSrc = $event.detail"
+             x-show="showImageModal" x-cloak
+             class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4"
+             @click="showImageModal = false">
+            <div class="relative max-w-4xl max-h-[90vh]" @click.stop>
+                <img :src="modalImageSrc" alt="Order Image" class="max-w-full max-h-[90vh] rounded-lg shadow-2xl">
+                <button type="button" @click="showImageModal = false"
+                    class="absolute top-4 right-4 p-2 rounded-full bg-white/90 hover:bg-white shadow-lg transition-colors">
+                    <svg class="w-6 h-6 text-gray-800" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+        </div>
 
         {{-- Hidden calculated totals --}}
         <input type="hidden" name="total_qty"
@@ -827,6 +997,7 @@
                 material_texture_id: '{{ old('material_texture_id', $order->material_texture_id) }}',
                 notes: '{{ old('notes', $order->notes) }}',
                 discount: {{ old('discount', $order->discount ?? 0) }},
+                discountDisplay: '{{ old('discount', $order->discount ?? 0) ? number_format($order->discount, 0, ',', '.') : '' }}',
                 shipping_type: '{{ old('shipping_type', $order->shipping_type) }}',
 
                 // ====== DETAIL ======

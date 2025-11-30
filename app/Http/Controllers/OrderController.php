@@ -18,6 +18,7 @@ use App\Models\Invoice;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Storage;
 use Barryvdh\DomPDF\Facade\Pdf;
 
 class OrderController extends Controller
@@ -515,6 +516,22 @@ class OrderController extends Controller
         DB::beginTransaction();
 
         try {
+            // Handle Order Image Upload
+            $imagePath = $order->img_url; // Keep existing image by default
+            
+            if ($request->hasFile('order_image')) {
+                // Delete old image if exists
+                if ($order->img_url && Storage::disk('public')->exists($order->img_url)) {
+                    Storage::disk('public')->delete($order->img_url);
+                }
+
+                // Upload new image
+                $image = $request->file('order_image');
+                $imageName = time() . '_' . uniqid() . '.' . $image->getClientOriginalExtension();
+                $image->storeAs('orders', $imageName, 'public');
+                $imagePath = 'orders/' . $imageName;
+            }
+
             // Update Order
             $order->update([
                 'priority' => $validated['priority'],
@@ -532,6 +549,7 @@ class OrderController extends Controller
                 'subtotal' => $validated['subtotal'],
                 'discount' => $validated['discount'] ?? 0,
                 'grand_total' => $validated['grand_total'],
+                'img_url' => $imagePath,
             ]);
 
             // ==========================================
