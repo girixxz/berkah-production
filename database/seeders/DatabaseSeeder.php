@@ -20,7 +20,7 @@ class DatabaseSeeder extends Seeder
             ProductionStageSeeder::class,
             WorkOrderDataSeeder::class, // Work Order Master Data
             CustomerSeeder::class,
-            OrderSeeder::class,
+            // OrderSeeder::class,
             WorkOrderDataSeeder::class
         ]);
     }

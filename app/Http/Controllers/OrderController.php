@@ -320,12 +320,12 @@ class OrderController extends Controller
         DB::beginTransaction();
 
         try {
-            // Handle Order Image Upload
+            // Handle Order Image Upload to PRIVATE storage
             $imagePath = null;
             if ($request->hasFile('order_image')) {
                 $image = $request->file('order_image');
                 $imageName = time() . '_' . uniqid() . '.' . $image->getClientOriginalExtension();
-                $image->storeAs('orders', $imageName, 'public');
+                $image->storeAs('orders', $imageName, 'local');
                 $imagePath = 'orders/' . $imageName;
             }
 
@@ -516,19 +516,19 @@ class OrderController extends Controller
         DB::beginTransaction();
 
         try {
-            // Handle Order Image Upload
+            // Handle Order Image Upload to PRIVATE storage
             $imagePath = $order->img_url; // Keep existing image by default
             
             if ($request->hasFile('order_image')) {
                 // Delete old image if exists
-                if ($order->img_url && Storage::disk('public')->exists($order->img_url)) {
-                    Storage::disk('public')->delete($order->img_url);
+                if ($order->img_url && Storage::disk('local')->exists($order->img_url)) {
+                    Storage::disk('local')->delete($order->img_url);
                 }
 
-                // Upload new image
+                // Upload new image to private storage
                 $image = $request->file('order_image');
                 $imageName = time() . '_' . uniqid() . '.' . $image->getClientOriginalExtension();
-                $image->storeAs('orders', $imageName, 'public');
+                $image->storeAs('orders', $imageName, 'local');
                 $imagePath = 'orders/' . $imageName;
             }
 
@@ -851,5 +851,37 @@ class OrderController extends Controller
         }
 
         return $locationData;
+    }
+
+    /**
+     * Serve order image (private file)
+     * Only accessible by authenticated users
+     * 
+     * @param \App\Models\Order $order
+     * @return \Symfony\Component\HttpFoundation\BinaryFileResponse
+     */
+    public function serveOrderImage(Order $order)
+    {
+        // Check if user is authenticated
+        if (!auth()->check()) {
+            abort(403, 'Unauthorized');
+        }
+
+        // Check if file exists
+        if (!$order->img_url || !Storage::disk('local')->exists($order->img_url)) {
+            abort(404, 'Order image not found');
+        }
+
+        // Get file path
+        $path = Storage::disk('local')->path($order->img_url);
+        
+        // Get mime type from file extension
+        $mimeType = Storage::disk('local')->mimeType($order->img_url) ?: 'application/octet-stream';
+
+        // Return file response
+        return response()->file($path, [
+            'Content-Type' => $mimeType,
+            'Cache-Control' => 'no-cache, must-revalidate',
+        ]);
     }
 }

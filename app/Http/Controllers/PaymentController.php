@@ -415,12 +415,8 @@ class PaymentController extends Controller
         // Get file path
         $path = Storage::disk('local')->path($payment->img_url);
         
-        // Get mime type using finfo
-        $finfo = finfo_open(FILEINFO_MIME_TYPE);
-        $mimeType = $finfo ? finfo_file($finfo, $path) : 'application/octet-stream';
-        if ($finfo) {
-            finfo_close($finfo);
-        }
+        // Get mime type from file extension
+        $mimeType = Storage::disk('local')->mimeType($payment->img_url) ?: 'application/octet-stream';
 
         // Return file response
         return response()->file($path, [

@@ -75,20 +75,54 @@
         {{-- ================= SECTION 1: HEADER ================= --}}
         <div class="bg-white border border-gray-200 rounded-2xl p-4 md:p-6">
             <div class="flex justify-between gap-4">
-                {{-- Invoice & Status --}}
-                <div class="flex items-center gap-2 md:gap-4 justify-between">
-                    <h1 class="text-md md:text-2xl font-bold text-gray-900">{{ $order->invoice->invoice_no }}</h1>
-                    @php
-                        $statusClasses = [
-                            'pending' => 'bg-yellow-100 text-yellow-800',
-                            'wip' => 'bg-blue-100 text-blue-800',
-                            'finished' => 'bg-green-100 text-green-800',
-                            'cancelled' => 'bg-red-100 text-red-800',
-                        ];
-                        $statusClass = $statusClasses[$order->production_status] ?? 'bg-gray-100 text-gray-800';
-                    @endphp
-                    <div class="px-3 py-2 rounded-full text-xs md:text-sm md:px-4 font-bold {{ $statusClass }}">
-                        {{ strtoupper(str_replace('_', ' ', $order->production_status)) }}
+                {{-- Left Section: Order Image + Invoice & Status --}}
+                <div class="flex items-center gap-3 md:gap-4">
+                    {{-- Order Image --}}
+                    @if($order->img_url)
+                        <div class="flex-shrink-0">
+                            <img src="{{ route('admin.orders.image', $order->id) }}" 
+                                 alt="Order Image" 
+                                 class="w-16 h-16 md:w-20 md:h-20 object-cover rounded-lg border-2 border-gray-200 shadow-sm cursor-pointer hover:border-primary transition-colors"
+                                 @click="showImage('{{ route('admin.orders.image', $order->id) }}')"
+                                 onerror="this.onerror=null; this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22100%22 height=%22100%22 viewBox=%220 0 100 100%22%3E%3Crect fill=%22%23f3f4f6%22 width=%22100%22 height=%22100%22/%3E%3Ctext fill=%22%239ca3af%22 font-family=%22Arial%22 font-size=%2214%22 text-anchor=%22middle%22 x=%2250%22 y=%2250%22 dy=%220.3em%22%3ENo Image%3C/text%3E%3C/svg%3E';">
+                        </div>
+                    @endif
+
+                    {{-- Invoice & Status --}}
+                    <div class="flex flex-col gap-2">
+                        <div class="flex items-center gap-2 md:gap-3">
+                            <h1 class="text-md md:text-2xl font-bold text-gray-900">{{ $order->invoice->invoice_no }}</h1>
+                            @php
+                                $statusClasses = [
+                                    'pending' => 'bg-yellow-100 text-yellow-800',
+                                    'wip' => 'bg-blue-100 text-blue-800',
+                                    'finished' => 'bg-green-100 text-green-800',
+                                    'cancelled' => 'bg-red-100 text-red-800',
+                                ];
+                                $statusClass = $statusClasses[$order->production_status] ?? 'bg-gray-100 text-gray-800';
+                            @endphp
+                            <div class="px-3 py-2 rounded-full text-xs md:text-sm md:px-4 font-bold {{ $statusClass }}">
+                                {{ strtoupper(str_replace('_', ' ', $order->production_status)) }}
+                            </div>
+                        </div>
+
+                        {{-- Order Date & Deadline - Moved under invoice --}}
+                        <div class="flex items-center gap-4 text-xs md:text-sm text-gray-600">
+                            <div class="flex items-center gap-1.5">
+                                <svg class="w-3.5 h-3.5 md:w-4 md:h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                </svg>
+                                <span class="font-medium text-gray-900">{{ \Carbon\Carbon::parse($order->order_date)->format('d M Y') }}</span>
+                            </div>
+                            <div class="flex items-center gap-1.5">
+                                <svg class="w-3.5 h-3.5 md:w-4 md:h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                                <span class="font-medium text-gray-900">{{ $order->deadline ? \Carbon\Carbon::parse($order->deadline)->format('d M Y') : '-' }}</span>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
@@ -257,27 +291,6 @@
                             @endif
                         </div>
                     </div>
-                </div>
-            </div>
-            {{-- Order Date & Deadline - Responsive Layout --}}
-            <div class="flex items-center justify-between sm:justify-start sm:gap-6 text-sm text-gray-600 mt-4">
-                <div class="flex items-center gap-2">
-                    <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                    </svg>
-                    <span class="hidden sm:inline font-semibold text-gray-900">Order Date:</span>
-                    <span
-                        class="font-normal text-gray-700">{{ \Carbon\Carbon::parse($order->order_date)->format('d M Y') }}</span>
-                </div>
-                <div class="flex items-center gap-2">
-                    <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                    <span class="hidden sm:inline font-semibold text-gray-900">Deadline:</span>
-                    <span
-                        class="font-normal text-gray-700">{{ $order->deadline ? \Carbon\Carbon::parse($order->deadline)->format('d M Y') : '-' }}</span>
                 </div>
             </div>
         </div>

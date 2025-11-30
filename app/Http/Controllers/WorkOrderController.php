@@ -579,9 +579,8 @@ class WorkOrderController extends Controller
         // Get file path
         $path = Storage::disk('local')->path($workOrder->mockup_img_url);
         
-        // Get mime type using finfo
-        $finfo = finfo_open(FILEINFO_MIME_TYPE);
-        $mimeType = $finfo ? finfo_file($finfo, $path) : 'application/octet-stream';
+        // Get mime type from file extension
+        $mimeType = Storage::disk('local')->mimeType($workOrder->mockup_img_url) ?: 'application/octet-stream';
 
         // Return file response
         return response()->file($path, [
@@ -610,8 +609,8 @@ class WorkOrderController extends Controller
 
         $path = Storage::disk('local')->path($cutting->custom_size_chart_img_url);
         
-        $finfo = finfo_open(FILEINFO_MIME_TYPE);
-        $mimeType = $finfo ? finfo_file($finfo, $path) : 'application/octet-stream';
+        // Get mime type from file extension
+        $mimeType = Storage::disk('local')->mimeType($cutting->custom_size_chart_img_url) ?: 'application/octet-stream';
 
         return response()->file($path, [
             'Content-Type' => $mimeType,
@@ -639,8 +638,8 @@ class WorkOrderController extends Controller
 
         $path = Storage::disk('local')->path($printing->detail_img_url);
         
-        $finfo = finfo_open(FILEINFO_MIME_TYPE);
-        $mimeType = $finfo ? finfo_file($finfo, $path) : 'application/octet-stream';
+        // Get mime type from file extension
+        $mimeType = Storage::disk('local')->mimeType($printing->detail_img_url) ?: 'application/octet-stream';
 
         return response()->file($path, [
             'Content-Type' => $mimeType,
@@ -668,8 +667,8 @@ class WorkOrderController extends Controller
 
         $path = Storage::disk('local')->path($placement->detail_img_url);
         
-        $finfo = finfo_open(FILEINFO_MIME_TYPE);
-        $mimeType = $finfo ? finfo_file($finfo, $path) : 'application/octet-stream';
+        // Get mime type from file extension
+        $mimeType = Storage::disk('local')->mimeType($placement->detail_img_url) ?: 'application/octet-stream';
 
         return response()->file($path, [
             'Content-Type' => $mimeType,
@@ -697,8 +696,8 @@ class WorkOrderController extends Controller
 
         $path = Storage::disk('local')->path($sewing->detail_img_url);
         
-        $finfo = finfo_open(FILEINFO_MIME_TYPE);
-        $mimeType = $finfo ? finfo_file($finfo, $path) : 'application/octet-stream';
+        // Get mime type from file extension
+        $mimeType = Storage::disk('local')->mimeType($sewing->detail_img_url) ?: 'application/octet-stream';
 
         return response()->file($path, [
             'Content-Type' => $mimeType,
@@ -726,8 +725,8 @@ class WorkOrderController extends Controller
 
         $path = Storage::disk('local')->path($packing->hangtag_img_url);
         
-        $finfo = finfo_open(FILEINFO_MIME_TYPE);
-        $mimeType = $finfo ? finfo_file($finfo, $path) : 'application/octet-stream';
+        // Get mime type from file extension
+        $mimeType = Storage::disk('local')->mimeType($packing->hangtag_img_url) ?: 'application/octet-stream';
 
         return response()->file($path, [
             'Content-Type' => $mimeType,
