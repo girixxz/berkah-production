@@ -77,16 +77,20 @@
             <div class="flex justify-between gap-4">
                 {{-- Left Section: Order Image + Invoice & Status --}}
                 <div class="flex items-center gap-3 md:gap-4">
-                    {{-- Order Image --}}
-                    @if($order->img_url)
-                        <div class="flex-shrink-0">
+                    {{-- Order Image Container - Hidden on mobile, shown on md+ --}}
+                    <div class="hidden md:flex flex-shrink-0">
+                        @if($order->img_url)
                             <img src="{{ route('admin.orders.image', $order->id) }}" 
                                  alt="Order Image" 
-                                 class="w-16 h-16 md:w-20 md:h-20 object-cover rounded-lg border-2 border-gray-200 shadow-sm cursor-pointer hover:border-primary transition-colors"
+                                 class="w-20 h-20 object-cover rounded-lg border-2 border-gray-200 shadow-sm cursor-pointer hover:border-primary transition-colors"
                                  @click="showImage('{{ route('admin.orders.image', $order->id) }}')"
                                  onerror="this.onerror=null; this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22100%22 height=%22100%22 viewBox=%220 0 100 100%22%3E%3Crect fill=%22%23f3f4f6%22 width=%22100%22 height=%22100%22/%3E%3Ctext fill=%22%239ca3af%22 font-family=%22Arial%22 font-size=%2214%22 text-anchor=%22middle%22 x=%2250%22 y=%2250%22 dy=%220.3em%22%3ENo Image%3C/text%3E%3C/svg%3E';">
-                        </div>
-                    @endif
+                        @else
+                            <div class="w-20 h-20 rounded-lg border-2 border-gray-200 bg-gray-50 flex items-center justify-center">
+                                <span class="text-xs text-gray-400 font-medium">No Image</span>
+                            </div>
+                        @endif
+                    </div>
 
                     {{-- Invoice & Status --}}
                     <div class="flex flex-col gap-2">

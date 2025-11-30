@@ -519,6 +519,16 @@ class OrderController extends Controller
             // Handle Order Image Upload to PRIVATE storage
             $imagePath = $order->img_url; // Keep existing image by default
             
+            // Check if user wants to remove image
+            if ($request->input('remove_order_image') === '1') {
+                // Delete old image if exists
+                if ($order->img_url && Storage::disk('local')->exists($order->img_url)) {
+                    Storage::disk('local')->delete($order->img_url);
+                }
+                $imagePath = null;
+            }
+            
+            // Check if user uploads new image
             if ($request->hasFile('order_image')) {
                 // Delete old image if exists
                 if ($order->img_url && Storage::disk('local')->exists($order->img_url)) {

@@ -714,12 +714,14 @@
             <div class="space-y-4" x-data="{
                 orderImage: null,
                 imagePreview: '{{ $order->img_url ? route('admin.orders.image', $order->id) : '' }}' || null,
+                removeImageFlag: false,
                 isDragging: false,
                 handleFileSelect(event) {
                     const file = event.target.files[0];
                     if (file && file.type.startsWith('image/')) {
                         this.orderImage = file;
                         this.imagePreview = URL.createObjectURL(file);
+                        this.removeImageFlag = false;
                     }
                 },
                 handleDrop(event) {
@@ -729,6 +731,7 @@
                     if (file && file.type.startsWith('image/')) {
                         this.orderImage = file;
                         this.imagePreview = URL.createObjectURL(file);
+                        this.removeImageFlag = false;
                         // Update file input
                         const dataTransfer = new DataTransfer();
                         dataTransfer.items.add(file);
@@ -738,31 +741,13 @@
                 removeImage() {
                     this.orderImage = null;
                     this.imagePreview = null;
+                    this.removeImageFlag = true;
                     $refs.orderImageInput.value = '';
                 }
             }">
-                <label class="block text-sm font-medium text-gray-600 mb-3">Order Image (Optional)</label>
+                <label class="block text-sm font-medium text-gray-600">Order Image (Optional)</label>
                 
-                {{-- Preview Image (Di Atas) --}}
-                <div x-show="imagePreview" class="mb-4 relative group">
-                    <img :src="imagePreview" alt="Order Preview" 
-                         @click.stop="$dispatch('open-image-modal', imagePreview)"
-                         class="max-h-48 mx-auto rounded-lg shadow-sm cursor-pointer hover:opacity-90 transition-opacity">
-                    <button type="button" @click.stop="removeImage()"
-                        class="absolute top-2 right-2 p-1.5 rounded-full bg-red-500 text-white hover:bg-red-600 shadow-lg transition-colors">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                        </svg>
-                    </button>
-                    {{-- Click to view hint --}}
-                    <div class="absolute bottom-2 left-0 right-0 text-center">
-                        <span class="inline-block px-2 py-1 text-xs bg-black/60 text-white rounded opacity-0 group-hover:opacity-100 transition-opacity">
-                            Click to view
-                        </span>
-                    </div>
-                </div>
-                
-                {{-- Drag & Drop Area (Di Bawah) --}}
+                {{-- Drag & Drop Area --}}
                 <div @drop="handleDrop($event)" 
                      @dragover.prevent="isDragging = true" 
                      @dragleave.prevent="isDragging = false"
@@ -770,15 +755,25 @@
                      :class="isDragging ? 'border-primary bg-primary/5' : 'border-gray-300'"
                      class="relative border-2 border-dashed rounded-lg p-6 text-center cursor-pointer hover:border-primary hover:bg-primary/5 transition-all duration-200">
                     
+                    {{-- Preview Image --}}
+                    <div x-show="imagePreview" class="relative">
+                        <img :src="imagePreview" alt="Order Preview" class="max-h-48 mx-auto rounded-lg shadow-sm">
+                        <button type="button" @click.stop="removeImage()"
+                            class="absolute top-2 right-2 p-1.5 rounded-full bg-red-500 text-white hover:bg-red-600 shadow-lg transition-colors">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                        </button>
+                    </div>
+                    
                     {{-- Upload Icon & Text --}}
-                    <div class="space-y-2">
+                    <div x-show="!imagePreview" class="space-y-2">
                         <svg class="w-12 h-12 mx-auto text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
                                 d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                         </svg>
                         <p class="text-sm text-gray-600">
-                            <span class="font-medium text-primary" x-text="imagePreview ? 'Click to change image' : 'Click to upload'"></span>
-                            <span x-show="!imagePreview"> or drag and drop</span>
+                            <span class="font-medium text-primary">Click to upload</span> or drag and drop
                         </p>
                         <p class="text-xs text-gray-500">PNG, JPG, JPEG up to 5MB</p>
                     </div>
@@ -786,6 +781,9 @@
                 
                 <input type="file" x-ref="orderImageInput" name="order_image" accept="image/png,image/jpeg,image/jpg" 
                        @change="handleFileSelect($event)" class="hidden">
+                
+                {{-- Hidden input to flag image removal --}}
+                <input type="hidden" name="remove_order_image" :value="removeImageFlag ? '1' : '0'">
                 
                 @error('order_image')
                     <p class="text-xs text-red-600">{{ $message }}</p>
