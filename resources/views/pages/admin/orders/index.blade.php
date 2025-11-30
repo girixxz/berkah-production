@@ -61,58 +61,85 @@
         },
         applyDatePreset(preset) {
             const today = new Date();
-            const form = this.$refs.dateForm;
             if (preset === 'last-month') {
                 const lastMonth = new Date(today.getFullYear(), today.getMonth() - 1, 1);
                 const lastMonthEnd = new Date(today.getFullYear(), today.getMonth(), 0);
                 this.startDate = lastMonth.toISOString().split('T')[0];
                 this.endDate = lastMonthEnd.toISOString().split('T')[0];
                 this.dateRange = 'last_month';
-                form.querySelector('input[name=date_range]').value = 'last_month';
-                form.querySelector('input[name=start_date]').value = this.startDate;
-                form.querySelector('input[name=end_date]').value = this.endDate;
-                form.submit();
+                this.applyFilter();
             } else if (preset === '1-week-ago') {
                 const oneWeekAgo = new Date(today);
                 oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
                 this.startDate = oneWeekAgo.toISOString().split('T')[0];
                 this.endDate = today.toISOString().split('T')[0];
                 this.dateRange = 'last_7_days';
-                form.querySelector('input[name=date_range]').value = 'last_7_days';
-                form.querySelector('input[name=start_date]').value = this.startDate;
-                form.querySelector('input[name=end_date]').value = this.endDate;
-                form.submit();
+                this.applyFilter();
             } else if (preset === 'yesterday') {
                 const yesterday = new Date(today);
                 yesterday.setDate(yesterday.getDate() - 1);
                 this.startDate = yesterday.toISOString().split('T')[0];
                 this.endDate = yesterday.toISOString().split('T')[0];
                 this.dateRange = 'yesterday';
-                form.querySelector('input[name=date_range]').value = 'yesterday';
-                form.querySelector('input[name=start_date]').value = this.startDate;
-                form.querySelector('input[name=end_date]').value = this.endDate;
-                form.submit();
+                this.applyFilter();
             } else if (preset === 'today') {
                 this.startDate = today.toISOString().split('T')[0];
                 this.endDate = today.toISOString().split('T')[0];
                 this.dateRange = 'today';
-                form.querySelector('input[name=date_range]').value = 'today';
-                form.querySelector('input[name=start_date]').value = this.startDate;
-                form.querySelector('input[name=end_date]').value = this.endDate;
-                form.submit();
+                this.applyFilter();
             } else if (preset === 'this-month') {
                 const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
                 const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0);
                 this.startDate = firstDay.toISOString().split('T')[0];
                 this.endDate = lastDay.toISOString().split('T')[0];
                 this.dateRange = 'this_month';
-                form.querySelector('input[name=date_range]').value = 'this_month';
-                form.querySelector('input[name=start_date]').value = this.startDate;
-                form.querySelector('input[name=end_date]').value = this.endDate;
-                form.submit();
+                this.applyFilter();
             } else if (preset === 'custom') {
                 this.showDateCustomRange = true;
             }
+        },
+        applyFilter() {
+            this.showDateFilter = false;
+            this.showDateCustomRange = false;
+            
+            // Build URL with query params
+            const params = new URLSearchParams();
+            params.set('filter', this.activeFilter);
+            if (this.searchQuery) params.set('search', this.searchQuery);
+            if (this.dateRange) params.set('date_range', this.dateRange);
+            if (this.startDate) params.set('start_date', this.startDate);
+            if (this.endDate) params.set('end_date', this.endDate);
+            
+            const url = '{{ route('admin.orders.index') }}?' + params.toString();
+            
+            // Update URL without reload
+            window.history.pushState({}, '', url);
+            
+            // Fetch content via AJAX with loading bar
+            NProgress.start();
+            
+            fetch(url, {
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+            .then(response => response.text())
+            .then(html => {
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(html, 'text/html');
+                const newSection = doc.getElementById('orders-section');
+                
+                if (newSection) {
+                    document.getElementById('orders-section').innerHTML = newSection.innerHTML;
+                    setupPagination('orders-pagination-container', 'orders-section');
+                }
+                
+                NProgress.done();
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                NProgress.done();
+            });
         }
     }" class="space-y-6">
 
@@ -339,16 +366,6 @@
                                     <span x-text="getDateLabel()" class="hidden lg:inline whitespace-nowrap"></span>
                                 </button>
 
-                                {{-- Hidden Form for Date Presets --}}
-                                <form x-ref="dateForm" method="GET" action="{{ route('admin.orders.index') }}"
-                                    class="hidden">
-                                    <input type="hidden" name="filter" :value="activeFilter">
-                                    <input type="hidden" name="search" :value="searchQuery">
-                                    <input type="hidden" name="date_range" :value="dateRange">
-                                    <input type="hidden" name="start_date" :value="startDate">
-                                    <input type="hidden" name="end_date" :value="endDate">
-                                </form>
-
                                 {{-- Date Filter Modal --}}
                                 <div x-show="showDateFilter"
                                     @click.away="showDateFilter = false; showDateCustomRange = false" x-cloak
@@ -396,9 +413,8 @@
                                     </div>
 
                                     {{-- Custom Range Form --}}
-                                    <form x-show="showDateCustomRange" method="GET"
-                                        action="{{ route('admin.orders.index') }}" class="p-4"
-                                        @submit="dateRange = 'custom'">
+                                    <form x-show="showDateCustomRange" class="p-4"
+                                        @submit.prevent="dateRange = 'custom'; applyFilter();">
                                         <input type="hidden" name="filter" :value="activeFilter">
                                         <input type="hidden" name="search" :value="searchQuery">
                                         <input type="hidden" name="date_range" value="custom">
