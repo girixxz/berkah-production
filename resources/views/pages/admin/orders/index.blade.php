@@ -163,6 +163,14 @@
                 if (newSection) {
                     document.getElementById('orders-section').innerHTML = newSection.innerHTML;
                     setupPagination('orders-pagination-container', 'orders-section');
+                    
+                    // Scroll to filter section (section 2)
+                    setTimeout(() => {
+                        const filterSection = document.getElementById('filter-section');
+                        if (filterSection) {
+                            filterSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                        }
+                    }, 100);
                 }
                 
                 NProgress.done();
@@ -327,42 +335,42 @@
                 <div class="flex flex-col xl:flex-row xl:items-center gap-4">
 
                     {{-- Left: Filter Buttons --}}
-                    <div class="grid grid-cols-3 md:flex md:flex-wrap gap-2">
+                    <div class="grid grid-cols-3 md:flex md:flex-wrap gap-2" id="filter-section">
                         {{-- Default - Green (Primary) --}}
-                        <a href="{{ route('admin.orders.index', ['filter' => 'default'] + request()->except('filter')) }}"
+                        <button type="button" @click="activeFilter = 'default'; applyFilter();"
                             :class="activeFilter === 'default' ? 'bg-primary text-white' :
                                 'bg-gray-100 text-gray-700 hover:bg-gray-200'"
                             class="px-4 py-2 rounded-md text-sm font-medium transition-colors text-center">
                             Default
-                        </a>
+                        </button>
                         {{-- Pending - Yellow --}}
-                        <a href="{{ route('admin.orders.index', ['filter' => 'pending'] + request()->except('filter')) }}"
+                        <button type="button" @click="activeFilter = 'pending'; applyFilter();"
                             :class="activeFilter === 'pending' ? 'bg-yellow-500 text-white' :
                                 'bg-gray-100 text-gray-700 hover:bg-yellow-50'"
                             class="px-4 py-2 rounded-md text-sm font-medium transition-colors text-center">
                             Pending
-                        </a>
+                        </button>
                         {{-- WIP - Blue --}}
-                        <a href="{{ route('admin.orders.index', ['filter' => 'wip'] + request()->except('filter')) }}"
+                        <button type="button" @click="activeFilter = 'wip'; applyFilter();"
                             :class="activeFilter === 'wip' ? 'bg-blue-500 text-white' :
                                 'bg-gray-100 text-gray-700 hover:bg-blue-50'"
                             class="px-4 py-2 rounded-md text-sm font-medium transition-colors text-center">
                             WIP
-                        </a>
+                        </button>
                         {{-- Finished - Green --}}
-                        <a href="{{ route('admin.orders.index', ['filter' => 'finished'] + request()->except('filter')) }}"
+                        <button type="button" @click="activeFilter = 'finished'; applyFilter();"
                             :class="activeFilter === 'finished' ? 'bg-green-500 text-white' :
                                 'bg-gray-100 text-gray-700 hover:bg-green-50'"
                             class="px-4 py-2 rounded-md text-sm font-medium transition-colors text-center">
                             Finished
-                        </a>
+                        </button>
                         {{-- Cancelled - Red --}}
-                        <a href="{{ route('admin.orders.index', ['filter' => 'cancelled'] + request()->except('filter')) }}"
+                        <button type="button" @click="activeFilter = 'cancelled'; applyFilter();"
                             :class="activeFilter === 'cancelled' ? 'bg-red-500 text-white' :
                                 'bg-gray-100 text-gray-700 hover:bg-red-50'"
                             class="px-4 py-2 rounded-md text-sm font-medium transition-colors text-center">
                             Cancelled
-                        </a>
+                        </button>
                     </div>
 
                     {{-- Right: Search, Date Filter, Create Order --}}
@@ -1635,14 +1643,16 @@
                         if (newSection) {
                             document.getElementById(sectionId).innerHTML = newSection.innerHTML;
 
-                            // Smooth scroll to top of section
-                            document.getElementById(sectionId).scrollIntoView({
-                                behavior: 'smooth',
-                                block: 'start'
-                            });
-
                             // Re-setup pagination after content update
                             setupPagination(containerId, sectionId);
+                            
+                            // Scroll to pagination area (bottom)
+                            setTimeout(() => {
+                                const paginationContainer = document.getElementById(containerId);
+                                if (paginationContainer) {
+                                    paginationContainer.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                }
+                            }, 100);
                         }
                     })
                     .catch(error => console.error('Error:', error));
