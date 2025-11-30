@@ -266,18 +266,18 @@
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                             d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                     </svg>
-                    <span class="hidden sm:inline text-gray-600">Order Date:</span>
+                    <span class="hidden sm:inline font-semibold text-gray-900">Order Date:</span>
                     <span
-                        class="font-medium text-gray-900">{{ \Carbon\Carbon::parse($order->order_date)->format('d M Y') }}</span>
+                        class="font-normal text-gray-700">{{ \Carbon\Carbon::parse($order->order_date)->format('d M Y') }}</span>
                 </div>
                 <div class="flex items-center gap-2">
                     <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                             d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
-                    <span class="hidden sm:inline text-gray-600">Deadline:</span>
+                    <span class="hidden sm:inline font-semibold text-gray-900">Deadline:</span>
                     <span
-                        class="font-medium text-gray-900">{{ $order->deadline ? \Carbon\Carbon::parse($order->deadline)->format('d M Y') : '-' }}</span>
+                        class="font-normal text-gray-700">{{ $order->deadline ? \Carbon\Carbon::parse($order->deadline)->format('d M Y') : '-' }}</span>
                 </div>
             </div>
         </div>
@@ -287,36 +287,36 @@
             <h2 class="text-lg font-semibold text-gray-900 mb-4">Customer Information</h2>
             <div class="grid grid-cols-2 md:grid-cols-3 gap-3">
                 <div>
-                    <p class="text-xs md:text-sm text-gray-500 mb-1">Name</p>
-                    <p class="text-sm md:text-base font-medium text-gray-900">{{ $order->customer->customer_name }}</p>
+                    <p class="text-xs md:text-sm font-semibold text-gray-900 mb-1">Name</p>
+                    <p class="text-sm md:text-base font-normal text-gray-700">{{ $order->customer->customer_name }}</p>
                 </div>
                 <div>
-                    <p class="text-xs md:text-sm text-gray-500 mb-1">Phone</p>
-                    <p class="text-sm md:text-base font-medium text-gray-900">{{ $order->customer->phone }}</p>
+                    <p class="text-xs md:text-sm font-semibold text-gray-900 mb-1">Phone</p>
+                    <p class="text-sm md:text-base font-normal text-gray-700">{{ $order->customer->phone }}</p>
                 </div>
                 <div>
-                    <p class="text-xs md:text-sm text-gray-500 mb-1">Sales</p>
-                    <p class="text-sm md:text-base font-medium text-gray-900">{{ $order->sale->sales_name ?? '-' }}</p>
+                    <p class="text-xs md:text-sm font-semibold text-gray-900 mb-1">Sales</p>
+                    <p class="text-sm md:text-base font-normal text-gray-700">{{ $order->sale->sales_name ?? '-' }}</p>
                 </div>
                 <div>
-                    <p class="text-xs md:text-sm text-gray-500 mb-1">Province</p>
-                    <p class="text-sm md:text-base font-medium text-gray-900" x-text="locationData.province_name"></p>
+                    <p class="text-xs md:text-sm font-semibold text-gray-900 mb-1">Province</p>
+                    <p class="text-sm md:text-base font-normal text-gray-700" x-text="locationData.province_name"></p>
                 </div>
                 <div>
-                    <p class="text-xs md:text-sm text-gray-500 mb-1">City</p>
-                    <p class="text-sm md:text-base font-medium text-gray-900" x-text="locationData.city_name"></p>
+                    <p class="text-xs md:text-sm font-semibold text-gray-900 mb-1">City</p>
+                    <p class="text-sm md:text-base font-normal text-gray-700" x-text="locationData.city_name"></p>
                 </div>
                 <div>
-                    <p class="text-xs md:text-sm text-gray-500 mb-1">District</p>
-                    <p class="text-sm md:text-base font-medium text-gray-900" x-text="locationData.district_name"></p>
+                    <p class="text-xs md:text-sm font-semibold text-gray-900 mb-1">District</p>
+                    <p class="text-sm md:text-base font-normal text-gray-700" x-text="locationData.district_name"></p>
                 </div>
                 <div>
-                    <p class="text-xs md:text-sm text-gray-500 mb-1">Village</p>
-                    <p class="text-sm md:text-base font-medium text-gray-900" x-text="locationData.village_name"></p>
+                    <p class="text-xs md:text-sm font-semibold text-gray-900 mb-1">Village</p>
+                    <p class="text-sm md:text-base font-normal text-gray-700" x-text="locationData.village_name"></p>
                 </div>
                 <div class="col-span-2 md:col-span-2">
-                    <p class="text-xs md:text-sm text-gray-500 mb-1">Address</p>
-                    <p class="text-sm md:text-base font-medium text-gray-900">{{ $order->customer->address }}</p>
+                    <p class="text-xs md:text-sm font-semibold text-gray-900 mb-1">Address</p>
+                    <p class="text-sm md:text-base font-normal text-gray-700">{{ $order->customer->address }}</p>
                 </div>
             </div>
         </div>
@@ -328,31 +328,31 @@
             {{-- Product Info --}}
             <div class="grid grid-cols-2 md:grid-cols-3 gap-3">
                 <div>
-                    <p class="text-xs md:text-sm text-gray-500 mb-1">Product</p>
-                    <p class="text-sm md:text-base font-medium text-gray-900">
+                    <p class="text-xs md:text-sm font-semibold text-gray-900 mb-1">Product</p>
+                    <p class="text-sm md:text-base font-normal text-gray-700">
                         {{ $order->productCategory->product_name ?? '-' }}</p>
                 </div>
                 <div>
-                    <p class="text-xs md:text-sm text-gray-500 mb-1">Material</p>
-                    <p class="text-sm md:text-base font-medium text-gray-900">
+                    <p class="text-xs md:text-sm font-semibold text-gray-900 mb-1">Material</p>
+                    <p class="text-sm md:text-base font-normal text-gray-700">
                         {{ $order->materialCategory->material_name ?? '-' }} -
                         {{ $order->materialTexture->texture_name ?? '-' }}
                     </p>
                 </div>
                 <div>
-                    <p class="text-xs md:text-sm text-gray-500 mb-1">Color</p>
-                    <p class="text-sm md:text-base font-medium text-gray-900">{{ $order->product_color ?? '-' }}</p>
+                    <p class="text-xs md:text-sm font-semibold text-gray-900 mb-1">Color</p>
+                    <p class="text-sm md:text-base font-normal text-gray-700">{{ $order->product_color ?? '-' }}</p>
                 </div>
                 <div>
-                    <p class="text-xs md:text-sm text-gray-500 mb-1">Shipping</p>
-                    <p class="text-sm md:text-base font-medium text-gray-900">
+                    <p class="text-xs md:text-sm font-semibold text-gray-900 mb-1">Shipping</p>
+                    <p class="text-sm md:text-base font-normal text-gray-700">
                         {{ $order->shipping_type === 'pickup' ? 'Pickup' : 'Delivery' }}
                     </p>
                 </div>
                 @if ($order->notes)
                     <div class="col-span-2 md:col-span-1">
-                        <p class="text-xs md:text-sm text-gray-500 mb-1">Notes</p>
-                        <p class="text-sm md:text-base font-medium text-gray-900">{{ $order->notes }}</p>
+                        <p class="text-xs md:text-sm font-semibold text-gray-900 mb-1">Notes</p>
+                        <p class="text-sm md:text-base font-normal text-gray-700">{{ $order->notes }}</p>
                     </div>
                 @endif
             </div>
@@ -367,8 +367,8 @@
                 <div class="border border-gray-300 rounded-lg p-4 mb-4">
                     {{-- Label Design Variant - Row Layout --}}
                     <div class="flex items-center gap-2 mb-4">
-                        <span class="text-xs text-gray-500 uppercase tracking-wide">Design Variant:</span>
-                        <h3 class="text-md font-semibold text-gray-900">{{ $designName }}</h3>
+                        <span class="text-xs font-semibold text-gray-900 uppercase tracking-wide">Design Variant:</span>
+                        <h3 class="text-md font-normal text-gray-700">{{ $designName }}</h3>
                     </div>
 
                     @foreach ($variants as $sleeveData)
@@ -376,24 +376,26 @@
                             {{-- Label Sleeve Type - Row Layout --}}
                             <div class="flex items-center gap-4 mb-3">
                                 <div class="flex items-center gap-2">
-                                    <span class="text-xs text-gray-500 uppercase tracking-wide">Sleeve Type:</span>
+                                    <span class="text-xs font-semibold text-gray-900 uppercase tracking-wide">Sleeve Type:</span>
                                     <span
                                         class="px-3 py-1 bg-primary/10 text-primary rounded-md text-sm font-medium">{{ $sleeveData['sleeve_name'] }}</span>
                                 </div>
-                                <span class="text-sm text-gray-600">Base Price: Rp
-                                    {{ number_format($sleeveData['base_price'], 0, ',', '.') }}</span>
+                                <div class="flex items-center gap-2">
+                                    <span class="text-sm font-semibold text-gray-900">Base Price:</span>
+                                    <span class="text-sm font-normal text-gray-700">Rp {{ number_format($sleeveData['base_price'], 0, ',', '.') }}</span>
+                                </div>
                             </div>
 
                             {{-- Table --}}
                             <div class="overflow-x-auto">
-                                <table class="w-full text-sm">
+                                <table class="w-full text-sm" style="table-layout: fixed;">
                                     <thead class="bg-primary-light text-gray-600">
                                         <tr>
-                                            <th class="py-2 px-4 text-left rounded-l-lg">No</th>
-                                            <th class="py-2 px-4 text-left">Size</th>
-                                            <th class="py-2 px-4 text-left">Unit Price</th>
-                                            <th class="py-2 px-4 text-left">QTY</th>
-                                            <th class="py-2 px-4 text-left rounded-r-lg">Total Price</th>
+                                            <th class="py-2 px-4 text-left rounded-l-lg" style="width: 8%;">No</th>
+                                            <th class="py-2 px-4 text-left" style="width: 20%;">Size</th>
+                                            <th class="py-2 px-4 text-left" style="width: 25%;">Unit Price</th>
+                                            <th class="py-2 px-4 text-left" style="width: 15%;">QTY</th>
+                                            <th class="py-2 px-4 text-left rounded-r-lg" style="width: 32%;">Total Price</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -501,23 +503,23 @@
             {{-- Payment Cards --}}
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
                 {{-- Total Bill --}}
-                <div class="bg-white border border-gray-200 rounded-lg p-4">
-                    <p class="text-sm text-gray-500 mb-1">Total Bill</p>
-                    <p class="text-2xl font-bold text-gray-900">Rp
+                <div class="bg-gradient-to-br from-blue-100 to-blue-50 border border-blue-300 rounded-lg p-4 shadow-sm">
+                    <p class="text-sm font-semibold text-blue-700 mb-1">Total Bill</p>
+                    <p class="text-2xl font-bold text-blue-600">Rp
                         {{ number_format($order->invoice->total_bill ?? 0, 0, ',', '.') }}</p>
                 </div>
 
                 {{-- Amount Paid --}}
-                <div class="bg-white border border-gray-200 rounded-lg p-4">
-                    <p class="text-sm text-gray-500 mb-1">Amount Paid</p>
+                <div class="bg-gradient-to-br from-green-100 to-green-50 border border-green-300 rounded-lg p-4 shadow-sm">
+                    <p class="text-sm font-semibold text-green-700 mb-1">Amount Paid</p>
                     <p class="text-2xl font-bold text-green-600">Rp
                         {{ number_format($order->invoice->amount_paid ?? 0, 0, ',', '.') }}</p>
                 </div>
 
                 {{-- Remaining Due --}}
-                <div class="bg-white border border-gray-200 rounded-lg p-4">
-                    <p class="text-sm text-gray-500 mb-1">Remaining Due</p>
-                    <p class="text-2xl font-bold text-orange-600">Rp
+                <div class="bg-gradient-to-br from-red-100 to-red-50 border border-red-300 rounded-lg p-4 shadow-sm">
+                    <p class="text-sm font-semibold text-red-700 mb-1">Remaining Due</p>
+                    <p class="text-2xl font-bold text-red-600">Rp
                         {{ number_format($order->invoice->amount_due ?? 0, 0, ',', '.') }}</p>
                 </div>
             </div>
