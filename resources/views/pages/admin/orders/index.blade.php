@@ -1095,7 +1095,7 @@
             class="fixed inset-0 z-50 overflow-y-auto bg-gray-500/50 backdrop-blur-sm">
             <div class="flex items-center justify-center min-h-screen p-4">
                 <div @click.away="showAddPaymentModal = false; resetPaymentForm()"
-                    class="bg-white rounded-xl shadow-lg w-full max-w-lg">
+                    class="bg-white rounded-xl shadow-lg w-full max-w-3xl">
                     {{-- Header --}}
                     <div class="flex items-center justify-between p-5 border-b border-gray-200">
                         <h3 class="text-lg font-semibold text-gray-900">Add Payment</h3>
@@ -1230,11 +1230,13 @@
                                 </div>
                             </div>
 
-                            {{-- Payment Method --}}
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-1">
-                                    Payment Method <span class="text-red-600">*</span>
-                                </label>
+                            {{-- Payment Method & Type (1 Row) --}}
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                {{-- Payment Method --}}
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">
+                                        Payment Method <span class="text-red-600">*</span>
+                                    </label>
                                 <div x-data="{
                                     open: false,
                                     options: [
@@ -1285,16 +1287,16 @@
                                             </template>
                                         </ul>
                                     </div>
+                                    </div>
+                                    <p x-show="paymentErrors.payment_method" x-cloak
+                                        x-text="paymentErrors.payment_method?.[0]" class="mt-1 text-sm text-red-600"></p>
                                 </div>
-                                <p x-show="paymentErrors.payment_method" x-cloak
-                                    x-text="paymentErrors.payment_method?.[0]" class="mt-1 text-sm text-red-600"></p>
-                            </div>
 
-                            {{-- Payment Type --}}
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-1">
-                                    Payment Type <span class="text-red-600">*</span>
-                                </label>
+                                {{-- Payment Type --}}
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">
+                                        Payment Type <span class="text-red-600">*</span>
+                                    </label>
                                 <div x-data="{
                                     open: false,
                                     options: [
@@ -1353,9 +1355,10 @@
                                             </template>
                                         </ul>
                                     </div>
+                                    </div>
+                                    <p x-show="paymentErrors.payment_type" x-cloak x-text="paymentErrors.payment_type?.[0]"
+                                        class="mt-1 text-sm text-red-600"></p>
                                 </div>
-                                <p x-show="paymentErrors.payment_type" x-cloak x-text="paymentErrors.payment_type?.[0]"
-                                    class="mt-1 text-sm text-red-600"></p>
                             </div>
 
                             {{-- Amount --}}
@@ -1427,21 +1430,6 @@
                                     Payment Proof <span class="text-red-600">*</span>
                                 </label>
 
-                                {{-- Image Preview --}}
-                                <div x-show="imagePreview" x-cloak class="mb-3">
-                                    <div class="relative inline-block">
-                                        <img :src="imagePreview" alt="Preview"
-                                            class="w-full max-w-sm h-48 object-cover rounded-lg border-2 border-gray-200">
-                                        <button type="button" @click="imagePreview = null; fileName = ''; $refs.fileInput.value = ''"
-                                            class="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1.5 hover:bg-red-600 shadow-lg">
-                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                    d="M6 18L18 6M6 6l12 12" />
-                                            </svg>
-                                        </button>
-                                    </div>
-                                </div>
-
                                 {{-- Drag & Drop Area --}}
                                 <div @drop.prevent="handleDrop($event)"
                                     @dragover.prevent="handleDragOver($event)"
@@ -1457,14 +1445,29 @@
                                         @change="handleFileChange($event)"
                                         class="hidden">
                                     
+                                    {{-- Image Preview (Inside Container) --}}
+                                    <div x-show="imagePreview" x-cloak class="mb-4">
+                                        <div class="relative inline-block">
+                                            <img :src="imagePreview" alt="Preview"
+                                                class="w-full max-w-sm h-48 object-cover rounded-lg border-2 border-gray-200">
+                                            <button type="button" @click.stop="imagePreview = null; fileName = ''; $refs.fileInput.value = ''"
+                                                class="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1.5 hover:bg-red-600 shadow-lg">
+                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                        d="M6 18L18 6M6 6l12 12" />
+                                                </svg>
+                                            </button>
+                                        </div>
+                                    </div>
+                                    
                                     {{-- Upload Icon --}}
-                                    <svg class="w-12 h-12 mx-auto mb-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <svg x-show="!imagePreview" class="w-12 h-12 mx-auto mb-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                             d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
                                     </svg>
 
                                     {{-- Text Instructions --}}
-                                    <div class="space-y-1">
+                                    <div x-show="!imagePreview" class="space-y-1">
                                         <p class="text-sm font-medium text-gray-700">
                                             <span class="text-primary font-semibold">Click to upload</span> or drag and drop
                                         </p>
@@ -1472,7 +1475,7 @@
                                     </div>
 
                                     {{-- File Name Display --}}
-                                    <div x-show="fileName" x-cloak class="mt-3 pt-3 border-t border-gray-200">
+                                    <div x-show="fileName && !imagePreview" x-cloak class="mt-3 pt-3 border-t border-gray-200">
                                         <div class="flex items-center justify-center gap-2 text-sm text-gray-700">
                                             <svg class="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
