@@ -414,7 +414,7 @@
                                         </template>
                                         
                                         {{-- Row TOTAL per Sleeve --}}
-                                        <tr x-show="variant.rows.length > 0" class=" bg-primary-light/30">
+                                        <tr x-show="variant.rows.length > 0" class=" bg-primary-light/50">
                                             <td colspan="3" class="py-3 px-4 text-center font-bold text-gray-800">
                                                 TOTAL
                                             </td>
@@ -442,17 +442,17 @@
                     <div x-show="design.sleeveVariants.length > 0" class="mt-4 overflow-x-auto -mx-4 md:mx-0">
                         <table class="w-full text-sm min-w-[640px]" style="table-layout: fixed;">
                             <tbody>
-                                <tr class="bg-primary-light/30">
-                                    <td class="py-3 px-4 font-bold text-gray-600 rounded-l-md" style="width: 5%;"></td>
-                                    <td class="py-3 px-4 font-bold text-gray-600" style="width: 12%;"></td>
-                                    <td class="py-3 px-4 font-bold text-gray-600 text-left" style="width: 22%;">
+                                <tr class="bg-alert-danger ">
+                                    <td class="py-3 px-4 font-bold text-white rounded-l-md" style="width: 5%;"></td>
+                                    <td class="py-3 px-4 font-bold text-white" style="width: 12%;"></td>
+                                    <td class="py-3 px-4 font-bold text-white text-left" style="width: 22%;">
                                         <span>TOTAL (</span><span x-text="design.design_name || 'Design ' + (dIndex + 1)"></span><span>)</span>
                                     </td>
-                                    <td class="py-3 px-4 font-bold text-primary text-left" style="width: 15%;" 
+                                    <td class="py-3 px-4 font-bold text-white text-left" style="width: 15%;" 
                                         x-text="design.sleeveVariants.reduce((total, variant) => 
                                             total + variant.rows.reduce((sum, row) => sum + (row.qty || 0), 0), 0)">
                                     </td>
-                                    <td class="py-3 px-4 font-bold text-primary text-left" style="width: 20%;" 
+                                    <td class="py-3 px-4 font-bold text-white text-left" style="width: 20%;" 
                                         x-text="'Rp ' + design.sleeveVariants.reduce((total, variant) => 
                                             total + variant.rows.reduce((sum, row) => 
                                                 sum + ((row.unitPrice || 0) * (row.qty || 0)), 0), 0).toLocaleString('id-ID')">
