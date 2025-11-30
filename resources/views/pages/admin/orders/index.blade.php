@@ -27,6 +27,33 @@
         paymentAmount: '',
         paymentErrors: {},
         isSubmittingPayment: false,
+        matchesSearch(row) {
+            if (!this.searchQuery || this.searchQuery.trim() === '') return true;
+            const query = this.searchQuery.toLowerCase();
+            const invoiceNo = (row.getAttribute('data-invoice') || '').toLowerCase();
+            const customer = (row.getAttribute('data-customer') || '').toLowerCase();
+            const product = (row.getAttribute('data-product') || '').toLowerCase();
+            return invoiceNo.includes(query) || customer.includes(query) || product.includes(query);
+        },
+        get hasVisibleRows() {
+            if (!this.searchQuery || this.searchQuery.trim() === '') return true;
+            const tbody = document.querySelector('tbody');
+            if (!tbody) return true;
+            const rows = tbody.querySelectorAll('tr[data-invoice]');
+            for (let row of rows) {
+                const isVisible = this.matchesSearch(row) && this.checkFilterMatch(row);
+                if (isVisible) return true;
+            }
+            return false;
+        },
+        checkFilterMatch(row) {
+            const activeFilter = this.activeFilter;
+            if (activeFilter === 'finished') {
+                return row.hasAttribute('data-finished-row');
+            } else {
+                return row.hasAttribute('data-default-row');
+            }
+        },
         init() {
             // Check for toast message from sessionStorage
             const toastMessage = sessionStorage.getItem('toast_message');
@@ -102,6 +129,10 @@
             this.showDateFilter = false;
             this.showDateCustomRange = false;
             
+            // Save focus state
+            const searchInputFocused = document.activeElement === this.$refs.searchInput;
+            const cursorPosition = searchInputFocused ? this.$refs.searchInput.selectionStart : null;
+            
             // Build URL with query params
             const params = new URLSearchParams();
             params.set('filter', this.activeFilter);
@@ -135,6 +166,16 @@
                 }
                 
                 NProgress.done();
+                
+                // Restore focus and cursor position
+                if (searchInputFocused && this.$refs.searchInput) {
+                    this.$nextTick(() => {
+                        this.$refs.searchInput.focus();
+                        if (cursorPosition !== null) {
+                            this.$refs.searchInput.setSelectionRange(cursorPosition, cursorPosition);
+                        }
+                    });
+                }
             })
             .catch(error => {
                 console.error('Error:', error);
@@ -330,27 +371,18 @@
                         {{-- Search & Date Filter - Same row on mobile --}}
                         <div class="flex gap-2 items-center xl:flex-1 xl:min-w-0">
                             {{-- Search - Flexible width yang bisa menyesuaikan --}}
-                            <form method="GET" action="{{ route('admin.orders.index') }}"
-                                class="flex-1 xl:min-w-[180px]" x-ref="searchForm">
-                                <input type="hidden" name="filter" value="{{ request('filter', 'default') }}">
-                                @if (request('start_date'))
-                                    <input type="hidden" name="start_date" value="{{ request('start_date') }}">
-                                @endif
-                                @if (request('end_date'))
-                                    <input type="hidden" name="end_date" value="{{ request('end_date') }}">
-                                @endif
+                            <div class="flex-1 xl:min-w-[180px]">
                                 <div class="relative">
                                     <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400"
                                         fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                             d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                                     </svg>
-                                    <input type="text" name="search" value="{{ request('search') }}"
-                                        @input.debounce.500ms="$refs.searchForm.submit()"
+                                    <input type="text" x-model="searchQuery" x-ref="searchInput"
                                         placeholder="Search invoice, customer..."
                                         class="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary">
                                 </div>
-                            </form>
+                            </div>
 
                             {{-- Date Filter - Icon only di mobile, with text di desktop --}}
                             <div class="relative flex-shrink-0">
@@ -506,7 +538,12 @@
                                     $pendingAmount = $pendingPayments->sum('amount');
                                 @endphp
                                 {{-- Finished Filter: Different Row Structure --}}
-                                <tr x-show="activeFilter === 'finished'" class="hover:bg-gray-50">
+                                <tr x-show="activeFilter === 'finished' && matchesSearch($el)" 
+                                    class="hover:bg-gray-50 border-b border-gray-200"
+                                    data-finished-row
+                                    data-invoice="{{ $order->invoice->invoice_no ?? '' }}"
+                                    data-customer="{{ $order->customer->customer_name ?? '' }}"
+                                    data-product="{{ $order->productCategory->product_name ?? '' }}">
                                     {{-- Invoice No with Shipping Type and Priority --}}
                                     <td class="py-3 px-4">
                                         <div class="flex items-center gap-1.5 flex-wrap">
@@ -750,7 +787,12 @@
                                 </tr>
 
                                 {{-- Other Filters: Default Row Structure --}}
-                                <tr x-show="activeFilter !== 'finished'" class="hover:bg-gray-50">
+                                <tr x-show="activeFilter !== 'finished' && matchesSearch($el)" 
+                                    class="hover:bg-gray-50 border-b border-gray-200"
+                                    data-default-row
+                                    data-invoice="{{ $order->invoice->invoice_no ?? '' }}"
+                                    data-customer="{{ $order->customer->customer_name ?? '' }}"
+                                    data-product="{{ $order->productCategory->product_name ?? '' }}">
                                     {{-- Invoice No with Shipping Type and Priority --}}
                                     <td class="py-3 px-4">
                                         <div class="flex items-center gap-1.5 flex-wrap">
@@ -983,7 +1025,7 @@
                                 </tr>
                             @empty
                                 {{-- Empty State for Finished Filter --}}
-                                <tr x-show="activeFilter === 'finished'">
+                                <tr x-show="activeFilter === 'finished' && !searchQuery">
                                     <td colspan="10" class="py-8 text-center text-gray-400">
                                         <svg class="w-16 h-16 mx-auto mb-3 opacity-50" fill="none"
                                             stroke="currentColor" viewBox="0 0 24 24">
@@ -994,7 +1036,7 @@
                                     </td>
                                 </tr>
                                 {{-- Empty State for Other Filters --}}
-                                <tr x-show="activeFilter !== 'finished'">
+                                <tr x-show="activeFilter !== 'finished' && !searchQuery">
                                     <td colspan="10" class="py-8 text-center text-gray-400">
                                         <svg class="w-16 h-16 mx-auto mb-3 opacity-50" fill="none"
                                             stroke="currentColor" viewBox="0 0 24 24">
@@ -1005,15 +1047,26 @@
                                     </td>
                                 </tr>
                             @endforelse
+                            
+                            {{-- No Search Results Message --}}
+                            <tr x-show="searchQuery && !hasVisibleRows" x-cloak>
+                                <td colspan="10" class="py-8 text-center text-gray-400">
+                                    <svg class="w-16 h-16 mx-auto mb-3 opacity-50" fill="none"
+                                        stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                                    </svg>
+                                    <p class="text-sm font-medium text-gray-700">No results found for "<span x-text="searchQuery"></span>"</p>
+                                    <p class="text-xs text-gray-500 mt-1">Try different keywords or filters</p>
+                                </td>
+                            </tr>
                         </tbody>
                     </table>
                 </div>
 
                 {{-- Pagination --}}
                 <div id="orders-pagination-container" class="mt-5">
-                    @if ($orders->hasPages())
-                        <x-custom-pagination :paginator="$orders" />
-                    @endif
+                    <x-custom-pagination :paginator="$orders" />
                 </div>
         </section>
 

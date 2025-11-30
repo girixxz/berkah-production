@@ -1,9 +1,8 @@
-@if ($paginator->hasPages())
-    <div class="flex flex-col items-center gap-3">
-        {{-- Info Text --}}
-        <div class="text-sm text-gray-600 mt-4">
-            Showing {{ $paginator->firstItem() }} to {{ $paginator->lastItem() }} of {{ $paginator->total() }} entries
-        </div>
+<div class="flex flex-col items-center gap-3">
+    {{-- Info Text --}}
+    <div class="text-sm text-gray-600">
+        Showing {{ $paginator->firstItem() ?? 0 }} to {{ $paginator->lastItem() ?? 0 }} of {{ $paginator->total() }} entries
+    </div>
 
         {{-- Pagination Navigation --}}
         <div class="flex items-center gap-1">
@@ -87,4 +86,3 @@
             @endif
         </div>
     </div>
-@endif
