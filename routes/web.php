@@ -71,6 +71,8 @@ Route::middleware(['auth'])->group(function () {
         Route::patch('payments/{payment}/approve', [\App\Http\Controllers\PaymentController::class, 'approve'])->name('payments.approve');
         Route::patch('payments/{payment}/reject', [\App\Http\Controllers\PaymentController::class, 'reject'])->name('payments.reject');
         Route::get('payments/{payment}/image', [\App\Http\Controllers\PaymentController::class, 'serveImage'])->name('payments.image');
+        Route::get('payments/pending-count', [\App\Http\Controllers\PaymentController::class, 'getPendingCount'])->name('payments.pending-count');
+        Route::get('payments/pending-list', [\App\Http\Controllers\PaymentController::class, 'getPendingList'])->name('payments.pending-list');
 
         // Manage Data
         Route::prefix('manage-data')->name('manage-data.')->group(function () {

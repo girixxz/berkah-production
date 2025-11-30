@@ -424,4 +424,47 @@ class PaymentController extends Controller
             'Cache-Control' => 'no-cache, must-revalidate',
         ]);
     }
+
+    /**
+     * Get count of pending payments (for notification badge)
+     */
+    public function getPendingCount()
+    {
+        $count = Payment::where('status', 'pending')->count();
+        
+        return response()->json([
+            'count' => $count
+        ]);
+    }
+
+    /**
+     * Get pending payments list (for notification dropdown)
+     */
+    public function getPendingList()
+    {
+        $payments = Payment::with(['invoice.order.customer', 'invoice.order.productCategory'])
+            ->where('status', 'pending')
+            ->orderBy('created_at', 'desc')
+            ->limit(5)
+            ->get()
+            ->map(function ($payment) {
+                $order = $payment->invoice->order ?? null;
+                $productCategory = $order && $order->productCategory 
+                    ? $order->productCategory->product_name 
+                    : '-';
+                
+                return [
+                    'id' => $payment->id,
+                    'invoice_no' => $payment->invoice->invoice_no ?? '-',
+                    'customer_name' => $payment->invoice->order->customer->customer_name ?? 'Unknown',
+                    'product_category' => $productCategory,
+                    'amount' => $payment->amount,
+                    'created_at' => $payment->created_at->diffForHumans(),
+                ];
+            });
+
+        return response()->json([
+            'payments' => $payments
+        ]);
+    }
 }

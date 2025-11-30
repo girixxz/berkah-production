@@ -109,7 +109,7 @@
             @click="$dispatch('sidebar-toggle')" aria-hidden="true"></div>
 
         {{-- container sidebar mobile/tablet: overlay --}}
-        <div x-cloak class="fixed inset-y-0 left-0 w-64 transform z-50"
+        <div class="fixed inset-y-0 left-0 w-64 transform z-50"
             :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full'"
             :style="sidebarOpen ? 'transition: transform 300ms ease-out' : 'transition: none'">
             @include('partials.sidebar')
@@ -130,6 +130,126 @@
 
     {{-- Script --}}
     @stack('scripts')
+    
+    {{-- Payment Notification Bell (Owner Only) --}}
+    @if(auth()->check() && auth()->user()->role === 'owner')
+        <script>
+            // Function to update notification bell badge
+            function updateNotificationBell() {
+                const badge = document.getElementById('notification-badge-count');
+                
+                fetch('{{ route("owner.payments.pending-count") }}', {
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'Accept': 'application/json'
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (badge) {
+                        if (data.count > 0) {
+                            badge.textContent = data.count;
+                            badge.style.display = 'flex';
+                        } else {
+                            badge.style.display = 'none';
+                        }
+                    }
+                })
+                .catch(error => {
+                    console.error('Error fetching notification:', error);
+                });
+            }
+
+            // Function to load notification list
+            function loadNotificationList() {
+                const listContainer = document.getElementById('notification-list');
+                const emptyState = document.getElementById('notification-empty');
+                if (!listContainer || !emptyState) return;
+                
+                fetch('{{ route("owner.payments.pending-list") }}', {
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'Accept': 'application/json'
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    // Clear existing items (keep empty state)
+                    const items = listContainer.querySelectorAll('.notification-item');
+                    items.forEach(item => item.remove());
+                    
+                    if (data.payments && data.payments.length > 0) {
+                        emptyState.style.display = 'none';
+                        
+                        // Add each payment as notification item
+                        data.payments.forEach(payment => {
+                            const item = document.createElement('a');
+                            item.href = '{{ route("owner.payment-history") }}';
+                            item.className = 'notification-item block px-4 py-3 hover:bg-gray-50 border-b border-gray-100 transition-colors';
+                            
+                            item.innerHTML = `
+                                <div class="flex items-start space-x-3">
+                                    <div class="flex-shrink-0">
+                                        <svg class="w-6 h-6 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                        </svg>
+                                    </div>
+                                    <div class="flex-1 min-w-0">
+                                        <p class="text-sm font-semibold text-gray-900">
+                                            Payment Unconfirmed!
+                                        </p>
+                                        <p class="text-xs font-medium text-gray-700 mt-0.5">
+                                            ${payment.invoice_no} • ${payment.customer_name} • ${payment.product_category}
+                                        </p>
+                                        <p class="text-xs text-gray-500 mt-1">
+                                            Please confirm this payment of Rp ${payment.amount.toLocaleString('id-ID')}
+                                        </p>
+                                        <p class="text-xs text-gray-400 mt-0.5">
+                                            ${payment.created_at}
+                                        </p>
+                                    </div>
+                                </div>
+                            `;
+                            
+                            listContainer.insertBefore(item, emptyState);
+                        });
+                    } else {
+                        emptyState.style.display = 'block';
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading notifications:', error);
+                    emptyState.style.display = 'block';
+                });
+            }
+
+            // Update on page load
+            document.addEventListener('DOMContentLoaded', function() {
+                updateNotificationBell();
+                loadNotificationList();
+            });
+
+            // Poll every 10 seconds
+            setInterval(() => {
+                updateNotificationBell();
+                loadNotificationList();
+            }, 10000);
+
+            // Update on turbo navigation
+            document.addEventListener('turbo:load', function() {
+                updateNotificationBell();
+                loadNotificationList();
+            });
+
+            // Update when tab becomes visible
+            document.addEventListener('visibilitychange', function() {
+                if (!document.hidden) {
+                    updateNotificationBell();
+                    loadNotificationList();
+                }
+            });
+        </script>
+    @endif
 </body>
 
 </html>
