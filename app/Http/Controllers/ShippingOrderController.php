@@ -110,6 +110,11 @@ class ShippingOrderController extends Controller
                 ->count(),
         ];
 
+        // Check if AJAX request
+        if ($request->ajax() || $request->wantsJson() || $request->header('X-Requested-With') === 'XMLHttpRequest') {
+            return view('pages.admin.shipping-orders.index', compact('orders', 'stats', 'dateRange', 'startDate', 'endDate'))->render();
+        }
+
         return view('pages.admin.shipping-orders.index', compact('orders', 'stats', 'dateRange', 'startDate', 'endDate'));
     }
 }
