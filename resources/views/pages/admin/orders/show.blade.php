@@ -412,32 +412,30 @@
                                                 <tr>
                                                     <th class="py-3 px-4 text-left rounded-l-lg whitespace-nowrap min-w-[60px]">No</th>
                                                     <th class="py-3 px-4 text-left whitespace-nowrap min-w-[140px]">Size</th>
-                                                    <th class="py-3 px-4 text-left whitespace-nowrap min-w-[150px]">Unit Price</th>
-                                                    <th class="py-3 px-4 text-left whitespace-nowrap min-w-[80px]">QTY</th>
-                                                    <th class="py-3 px-4 text-left rounded-r-lg whitespace-nowrap min-w-[170px]">Total Price</th>
+                                                    <th class="py-3 px-4 text-right whitespace-nowrap min-w-[150px]">Unit Price</th>
+                                                    <th class="py-3 px-4 text-center whitespace-nowrap min-w-[80px]">QTY</th>
+                                                    <th class="py-3 px-4 text-right rounded-r-lg whitespace-nowrap min-w-[170px]">Total Price</th>
                                                 </tr>
                                             </thead>
                                             <tbody>
                                                 @foreach ($sleeveData['items'] as $index => $item)
                                                     <tr class="border-t border-gray-200 hover:bg-gray-50">
                                                         <td class="py-3 px-4 whitespace-nowrap">{{ $index + 1 }}</td>
-                                                        <td class="py-3 px-4">
-                                                            <div class="flex flex-col">
-                                                                <span class="font-medium">{{ $item->size->size_name ?? 'N/A' }}</span>
-                                                                @if (($item->size->extra_price ?? 0) > 0)
-                                                                    <span class="text-xs text-gray-500 mt-0.5">
-                                                                        +Rp {{ number_format($item->size->extra_price, 0, ',', '.') }}
-                                                                    </span>
-                                                                @endif
-                                                            </div>
-                                                        </td>
                                                         <td class="py-3 px-4 whitespace-nowrap">
+                                                            <span class="font-medium">{{ $item->size->size_name ?? 'N/A' }}</span>
+                                                            @if (($item->size->extra_price ?? 0) > 0)
+                                                                <span class="text-xs text-gray-500 ml-1.5">
+                                                                    +Rp {{ number_format($item->size->extra_price, 0, ',', '.') }}
+                                                                </span>
+                                                            @endif
+                                                        </td>
+                                                        <td class="py-3 px-4 whitespace-nowrap text-right">
                                                             Rp {{ number_format($item->unit_price, 0, ',', '.') }}
                                                         </td>
                                                         <td class="py-3 px-4 whitespace-nowrap text-center">
                                                             {{ $item->qty }}
                                                         </td>
-                                                        <td class="py-3 px-4 font-semibold whitespace-nowrap">
+                                                        <td class="py-3 px-4 font-semibold whitespace-nowrap text-right">
                                                             Rp {{ number_format($item->unit_price * $item->qty, 0, ',', '.') }}
                                                         </td>
                                                     </tr>
@@ -659,37 +657,78 @@
 
         {{-- ================= INVOICE MODAL ================= --}}
         <div x-show="openInvoiceModal" x-cloak
-            class="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/50 backdrop-blur-sm px-4 overflow-y-auto py-8">
-            <div @click.away="openInvoiceModal = false"
-                class="bg-white rounded-xl shadow-2xl w-full max-w-4xl my-8 max-h-[90vh] flex flex-col">
-                {{-- Header --}}
-                <div
-                    class="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 rounded-t-xl flex items-center justify-between z-10">
-                    <h3 class="text-lg font-semibold text-gray-900">Invoice Preview</h3>
-                    <div class="flex items-center gap-3">
+            class="fixed inset-0 z-50 overflow-y-auto"
+            @keydown.escape.window="openInvoiceModal && (openInvoiceModal = false)"
+            aria-labelledby="modal-title" role="dialog" aria-modal="true">
+
+            {{-- Background Overlay --}}
+            <div x-show="openInvoiceModal" class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity"
+                @click="openInvoiceModal = false">
+            </div>
+
+            {{-- Modal Panel --}}
+            <div class="flex items-center justify-center h-screen px-4 py-8">
+                <div x-show="openInvoiceModal"
+                    class="relative w-full max-w-4xl bg-white rounded-lg shadow-xl transform transition-all flex flex-col"
+                    style="max-height: 95vh;" @click.away="openInvoiceModal = false">
+
+                    {{-- Modal Header --}}
+                    <div class="px-6 py-4 border-b border-gray-200 bg-gray-50 flex-shrink-0">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <h3 class="text-md md:text-lg font-semibold text-gray-900">
+                                    Invoice Preview
+                                </h3>
+                                <p class="text-sm text-gray-500 mt-1">
+                                    {{ $order->invoice->invoice_no }} - {{ $order->customer->customer_name }}
+                                </p>
+                            </div>
+                            <button @click="openInvoiceModal = false" type="button"
+                                class="text-gray-400 hover:text-gray-600 focus:outline-none">
+                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+
+                    {{-- Modal Content - In Progress Notice --}}
+                    <div class="p-6 bg-gray-100 flex-1 overflow-y-auto flex items-center justify-center">
+                        <div class="text-center">
+                            <div class="inline-flex items-center justify-center w-20 h-20 bg-yellow-100 rounded-full mb-4">
+                                <svg class="w-10 h-10 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                            </div>
+                            <h4 class="text-2xl font-bold text-gray-900 mb-2">In Progress</h4>
+                            <p class="text-lg text-yellow-600 font-semibold mb-1">(PENDING)</p>
+                            <p class="text-sm text-gray-500 max-w-md">
+                                Invoice preview feature is currently under development and will be available soon.
+                            </p>
+                        </div>
+                    </div>
+
+                    {{-- Modal Footer --}}
+                    <div class="px-6 py-4 border-t border-gray-200 bg-gray-50 flex justify-end items-center gap-3">
                         {{-- Download PDF Button --}}
                         <a href="{{ route('admin.orders.invoice.download', $order->id) }}" target="_blank"
-                            class="px-4 py-2 rounded-md bg-primary text-white hover:bg-primary-dark flex items-center gap-2 text-sm font-medium">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            class="inline-flex items-center px-4 py-2 text-sm font-medium text-white bg-primary rounded-md hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary">
+                            {{-- Icon --}}
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                     d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                             </svg>
-                            Download PDF
+                            {{-- Text (Hidden on mobile, shown on md+) --}}
+                            <span class="hidden md:inline ml-2">Download PDF</span>
                         </a>
+
                         {{-- Close Button --}}
                         <button @click="openInvoiceModal = false" type="button"
-                            class="text-gray-400 hover:text-gray-600">
-                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="M6 18L18 6M6 6l12 12" />
-                            </svg>
+                            class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary">
+                            Close
                         </button>
                     </div>
-                </div>
-
-                {{-- Invoice Content --}}
-                <div class="flex-1 overflow-y-auto p-8 bg-gray-50">
-                    @include('pages.admin.orders.partials.invoice-content')
                 </div>
             </div>
         </div>
