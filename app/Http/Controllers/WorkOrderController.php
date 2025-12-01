@@ -21,7 +21,7 @@ class WorkOrderController extends Controller
         $endDate = $request->input('end_date');
         $dateRange = $request->input('date_range');
 
-        // Query orders that are in WIP status
+        // Query orders that are in WIP status or higher (including finished)
         $query = Order::with([
             'customer',
             'productCategory',
@@ -30,7 +30,7 @@ class WorkOrderController extends Controller
             'designVariants',
             'workOrders'
         ])
-        ->where('production_status', 'wip');
+        ->whereIn('production_status', ['wip', 'finished']);
 
         // Apply filter based on work order status
         if ($filter === 'pending') {
@@ -95,7 +95,7 @@ class WorkOrderController extends Controller
             $query->whereDate('wip_date', '<=', $endDate);
         }
 
-        // Order by wip_date DESC (newest first)
+        // Order by wip_date DESC (newest first) - show most recent WIP orders at top
         $orders = $query->orderBy('wip_date', 'desc')
             ->paginate(15)
             ->appends($request->except('page'));
@@ -111,6 +111,12 @@ class WorkOrderController extends Controller
                 ->count(),
         ];
 
+        // AJAX support - return rendered HTML for AJAX requests
+        if ($request->ajax() || $request->wantsJson() || 
+            $request->header('X-Requested-With') === 'XMLHttpRequest') {
+            return view('pages.admin.work-orders.index', compact('orders', 'stats', 'dateRange', 'startDate', 'endDate'))->render();
+        }
+        
         return view('pages.admin.work-orders.index', compact('orders', 'stats', 'dateRange', 'startDate', 'endDate'));
     }
 
@@ -142,10 +148,10 @@ class WorkOrderController extends Controller
             'orderItems.sleeve'
         ])->findOrFail($orderId);
 
-        // Check if order is in WIP status
-        if ($order->production_status !== 'wip') {
+        // Check if order is in WIP status or higher (including finished)
+        if (!in_array($order->production_status, ['wip', 'finished'])) {
             return redirect()->route('admin.work-orders.index')
-                ->with('error', 'Order must be in WIP status to manage work orders');
+                ->with('error', 'Order must be in WIP or Finished status to manage work orders');
         }
 
         // Auto-create work orders with status='pending' if not exist

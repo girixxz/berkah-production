@@ -19,6 +19,24 @@
         dateRange: '{{ $dateRange ?? '' }}',
         showDateFilter: false,
         showDateCustomRange: false,
+        matchesSearch(row) {
+            if (!this.searchQuery || this.searchQuery.trim() === '') return true;
+            const query = this.searchQuery.toLowerCase();
+            const invoiceNo = (row.getAttribute('data-invoice') || '').toLowerCase();
+            const customer = (row.getAttribute('data-customer') || '').toLowerCase();
+            const product = (row.getAttribute('data-product') || '').toLowerCase();
+            return invoiceNo.includes(query) || customer.includes(query) || product.includes(query);
+        },
+        get hasVisibleRows() {
+            if (!this.searchQuery || this.searchQuery.trim() === '') return true;
+            const tbody = document.querySelector('tbody');
+            if (!tbody) return true;
+            const rows = tbody.querySelectorAll('tr[data-invoice]');
+            for (let row of rows) {
+                if (this.matchesSearch(row)) return true;
+            }
+            return false;
+        },
         init() {
             const toastMessage = sessionStorage.getItem('toast_message');
             const toastType = sessionStorage.getItem('toast_type');
@@ -43,58 +61,107 @@
         },
         applyDatePreset(preset) {
             const today = new Date();
-            const form = this.$refs.dateForm;
             if (preset === 'last-month') {
                 const lastMonth = new Date(today.getFullYear(), today.getMonth() - 1, 1);
                 const lastMonthEnd = new Date(today.getFullYear(), today.getMonth(), 0);
                 this.startDate = lastMonth.toISOString().split('T')[0];
                 this.endDate = lastMonthEnd.toISOString().split('T')[0];
                 this.dateRange = 'last_month';
-                form.querySelector('input[name=date_range]').value = 'last_month';
-                form.querySelector('input[name=start_date]').value = this.startDate;
-                form.querySelector('input[name=end_date]').value = this.endDate;
-                form.submit();
+                this.applyFilter();
             } else if (preset === '1-week-ago') {
                 const oneWeekAgo = new Date(today);
                 oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
                 this.startDate = oneWeekAgo.toISOString().split('T')[0];
                 this.endDate = today.toISOString().split('T')[0];
                 this.dateRange = 'last_7_days';
-                form.querySelector('input[name=date_range]').value = 'last_7_days';
-                form.querySelector('input[name=start_date]').value = this.startDate;
-                form.querySelector('input[name=end_date]').value = this.endDate;
-                form.submit();
+                this.applyFilter();
             } else if (preset === 'yesterday') {
                 const yesterday = new Date(today);
                 yesterday.setDate(yesterday.getDate() - 1);
                 this.startDate = yesterday.toISOString().split('T')[0];
                 this.endDate = yesterday.toISOString().split('T')[0];
                 this.dateRange = 'yesterday';
-                form.querySelector('input[name=date_range]').value = 'yesterday';
-                form.querySelector('input[name=start_date]').value = this.startDate;
-                form.querySelector('input[name=end_date]').value = this.endDate;
-                form.submit();
+                this.applyFilter();
             } else if (preset === 'today') {
                 this.startDate = today.toISOString().split('T')[0];
                 this.endDate = today.toISOString().split('T')[0];
                 this.dateRange = 'today';
-                form.querySelector('input[name=date_range]').value = 'today';
-                form.querySelector('input[name=start_date]').value = this.startDate;
-                form.querySelector('input[name=end_date]').value = this.endDate;
-                form.submit();
+                this.applyFilter();
             } else if (preset === 'this-month') {
                 const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
                 const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0);
                 this.startDate = firstDay.toISOString().split('T')[0];
                 this.endDate = lastDay.toISOString().split('T')[0];
                 this.dateRange = 'this_month';
-                form.querySelector('input[name=date_range]').value = 'this_month';
-                form.querySelector('input[name=start_date]').value = this.startDate;
-                form.querySelector('input[name=end_date]').value = this.endDate;
-                form.submit();
+                this.applyFilter();
             } else if (preset === 'custom') {
                 this.showDateCustomRange = true;
             }
+        },
+        applyFilter() {
+            this.showDateFilter = false;
+            this.showDateCustomRange = false;
+            
+            // Save focus state and cursor position
+            const searchInputFocused = document.activeElement === this.$refs.searchInput;
+            const cursorPosition = searchInputFocused ? this.$refs.searchInput.selectionStart : null;
+            
+            // Build URL with query params
+            const params = new URLSearchParams();
+            params.set('filter', this.activeFilter);
+            if (this.searchQuery) params.set('search', this.searchQuery);
+            if (this.dateRange) params.set('date_range', this.dateRange);
+            if (this.startDate) params.set('start_date', this.startDate);
+            if (this.endDate) params.set('end_date', this.endDate);
+            
+            const url = '{{ route('admin.work-orders.index') }}?' + params.toString();
+            
+            // Update URL without reload
+            window.history.pushState({}, '', url);
+            
+            // Fetch content via AJAX with loading bar
+            NProgress.start();
+            
+            fetch(url, {
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+            .then(response => response.text())
+            .then(html => {
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(html, 'text/html');
+                const newSection = doc.getElementById('work-orders-section');
+                
+                if (newSection) {
+                    document.getElementById('work-orders-section').innerHTML = newSection.innerHTML;
+                    setupPagination('work-orders-pagination-container', 'work-orders-section');
+                    
+                    // Scroll to filter section
+                    setTimeout(() => {
+                        const filterSection = document.getElementById('filter-section');
+                        if (filterSection) {
+                            filterSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                        }
+                    }, 100);
+                }
+                
+                NProgress.done();
+                
+                // Restore focus and cursor position
+                if (searchInputFocused && this.$refs.searchInput) {
+                    this.$nextTick(() => {
+                        this.$refs.searchInput.focus();
+                        if (cursorPosition !== null) {
+                            this.$refs.searchInput.setSelectionRange(cursorPosition, cursorPosition);
+                        }
+                    });
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                NProgress.done();
+            });
         }
     }" class="space-y-6">
 
@@ -152,33 +219,33 @@
             </div>
 
             {{-- ================= SECTION 2: FILTER & ACTIONS ================= --}}
-            <div class="bg-white border border-gray-200 rounded-lg p-5 mt-6">
+            <div id="filter-section" class="bg-white border border-gray-200 rounded-lg p-5 mt-6">
                 {{-- Mobile: Vertikal | Desktop (1280px+): Horizontal dengan filter kiri, actions kanan --}}
                 <div class="flex flex-col xl:flex-row xl:items-center gap-4">
 
                     {{-- Left: Filter Buttons --}}
                     <div class="grid grid-cols-3 md:flex md:flex-wrap gap-2">
                         {{-- All - Green (Primary) --}}
-                        <a href="{{ route('admin.work-orders.index', ['filter' => 'all'] + request()->except('filter')) }}"
+                        <button @click="activeFilter = 'all'; applyFilter();"
                             :class="activeFilter === 'all' ? 'bg-primary text-white' :
                                 'bg-gray-100 text-gray-700 hover:bg-gray-200'"
                             class="px-4 py-2 rounded-md text-sm font-medium transition-colors text-center">
                             All
-                        </a>
+                        </button>
                         {{-- Pending - Yellow --}}
-                        <a href="{{ route('admin.work-orders.index', ['filter' => 'pending'] + request()->except('filter')) }}"
+                        <button @click="activeFilter = 'pending'; applyFilter();"
                             :class="activeFilter === 'pending' ? 'bg-yellow-500 text-white' :
                                 'bg-gray-100 text-gray-700 hover:bg-yellow-50'"
                             class="px-4 py-2 rounded-md text-sm font-medium transition-colors text-center">
                             Pending
-                        </a>
+                        </button>
                         {{-- Created - Green --}}
-                        <a href="{{ route('admin.work-orders.index', ['filter' => 'created'] + request()->except('filter')) }}"
+                        <button @click="activeFilter = 'created'; applyFilter();"
                             :class="activeFilter === 'created' ? 'bg-green-500 text-white' :
                                 'bg-gray-100 text-gray-700 hover:bg-green-50'"
                             class="px-4 py-2 rounded-md text-sm font-medium transition-colors text-center">
                             Created
-                        </a>
+                        </button>
                     </div>
 
                     {{-- Right: Search & Date Filter --}}
@@ -187,27 +254,19 @@
                         {{-- Search & Date Filter - Same row on mobile --}}
                         <div class="flex gap-2 items-center xl:flex-1 xl:min-w-0">
                             {{-- Search - Flexible width yang bisa menyesuaikan --}}
-                            <form method="GET" action="{{ route('admin.work-orders.index') }}"
-                                class="flex-1 xl:min-w-[180px]" x-ref="searchForm">
-                                <input type="hidden" name="filter" value="{{ request('filter', 'all') }}">
-                                @if (request('start_date'))
-                                    <input type="hidden" name="start_date" value="{{ request('start_date') }}">
-                                @endif
-                                @if (request('end_date'))
-                                    <input type="hidden" name="end_date" value="{{ request('end_date') }}">
-                                @endif
+                            <div class="flex-1 xl:min-w-[180px]">
                                 <div class="relative">
                                     <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400"
                                         fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                             d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                                     </svg>
-                                    <input type="text" name="search" value="{{ request('search') }}"
-                                        @input.debounce.500ms="$refs.searchForm.submit()"
-                                        placeholder="Search invoice, customer..."
+                                    <input type="text" x-model="searchQuery" x-ref="searchInput"
+                                        @input="applyFilter()"
+                                        placeholder="Search invoice, customer, product..."
                                         class="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary">
                                 </div>
-                            </form>
+                            </div>
 
                             {{-- Date Filter - Icon only di mobile, with text di desktop --}}
                             <div class="relative flex-shrink-0">
@@ -222,16 +281,6 @@
                                     {{-- Text hidden di mobile, visible di desktop --}}
                                     <span x-text="getDateLabel()" class="hidden lg:inline whitespace-nowrap"></span>
                                 </button>
-
-                                {{-- Hidden Form for Date Presets --}}
-                                <form x-ref="dateForm" method="GET" action="{{ route('admin.work-orders.index') }}"
-                                    class="hidden">
-                                    <input type="hidden" name="filter" :value="activeFilter">
-                                    <input type="hidden" name="search" :value="searchQuery">
-                                    <input type="hidden" name="date_range" :value="dateRange">
-                                    <input type="hidden" name="start_date" :value="startDate">
-                                    <input type="hidden" name="end_date" :value="endDate">
-                                </form>
 
                                 {{-- Date Filter Modal --}}
                                 <div x-show="showDateFilter"
@@ -280,28 +329,22 @@
                                     </div>
 
                                     {{-- Custom Range Form --}}
-                                    <form x-show="showDateCustomRange" method="GET"
-                                        action="{{ route('admin.work-orders.index') }}" class="p-4"
-                                        @submit="dateRange = 'custom'">
-                                        <input type="hidden" name="filter" :value="activeFilter">
-                                        <input type="hidden" name="search" :value="searchQuery">
-                                        <input type="hidden" name="date_range" value="custom">
-
+                                    <div x-show="showDateCustomRange" class="p-4">
                                         <div class="space-y-3">
                                             <div>
                                                 <label class="block text-sm font-medium text-gray-700 mb-1">Start
                                                     Date</label>
-                                                <input type="date" name="start_date" x-model="startDate"
+                                                <input type="date" x-model="startDate"
                                                     class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm">
                                             </div>
                                             <div>
                                                 <label class="block text-sm font-medium text-gray-700 mb-1">End
                                                     Date</label>
-                                                <input type="date" name="end_date" x-model="endDate"
+                                                <input type="date" x-model="endDate"
                                                     class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm">
                                             </div>
                                             <div class="flex gap-2 pt-2">
-                                                <button type="submit"
+                                                <button type="button" @click="dateRange = 'custom'; applyFilter();"
                                                     class="flex-1 px-4 py-2 bg-primary text-white rounded-md text-sm font-medium hover:bg-primary-dark">
                                                     Apply
                                                 </button>
@@ -310,12 +353,12 @@
                                                     Back
                                                 </button>
                                             </div>
-                                            <a href="{{ route('admin.work-orders.index', ['filter' => request('filter', 'all')]) }}"
+                                            <button type="button" @click="startDate = ''; endDate = ''; dateRange = ''; applyFilter();"
                                                 class="block w-full px-4 py-2 bg-gray-100 text-gray-700 rounded-md text-sm font-medium hover:bg-gray-200 text-center">
                                                 Reset Filter
-                                            </a>
+                                            </button>
                                         </div>
-                                    </form>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -339,7 +382,10 @@
                         </thead>
                         <tbody class="divide-y divide-gray-200">
                             @forelse ($orders as $order)
-                                <tr class="hover:bg-gray-50">
+                                <tr class="hover:bg-gray-50" x-show="matchesSearch($el)"
+                                    data-invoice="{{ $order->invoice->invoice_no ?? '' }}"
+                                    data-customer="{{ $order->customer->customer_name ?? '' }} {{ $order->customer->phone ?? '' }}"
+                                    data-product="{{ $order->productCategory->product_name ?? '' }}">
                                     {{-- Invoice No with Priority --}}
                                     <td class="py-3 px-4">
                                         <div class="flex items-center gap-1.5 flex-wrap">
@@ -473,27 +519,36 @@
                                     </td>
                                 </tr>
                             @empty
-                                <tr>
+                                <tr x-show="!searchQuery">
                                     <td colspan="8" class="py-8 text-center text-gray-400">
                                         <svg class="w-16 h-16 mx-auto mb-3 opacity-50" fill="none"
                                             stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                                 d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                                         </svg>
-                                        <p class="text-sm">No WIP orders found</p>
+                                        <p class="text-sm">No work orders found</p>
                                         <p class="text-xs text-gray-500 mt-1">Orders in WIP status will appear here</p>
                                     </td>
                                 </tr>
                             @endforelse
+                            
+                            {{-- Client-side No Results Message --}}
+                            <tr x-show="!hasVisibleRows && searchQuery" x-cloak>
+                                <td colspan="8" class="py-8 text-center text-gray-400">
+                                    <svg class="w-16 h-16 mx-auto mb-3 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                                    </svg>
+                                    <p class="text-sm">No results found for "<span x-text="searchQuery"></span>"</p>
+                                    <p class="text-xs text-gray-500 mt-1">Try searching with different keywords</p>
+                                </td>
+                            </tr>
                         </tbody>
                     </table>
                 </div>
 
-                {{-- Pagination --}}
+                {{-- Pagination - Always visible --}}
                 <div id="work-orders-pagination-container" class="mt-5">
-                    @if ($orders->hasPages())
-                        <x-custom-pagination :paginator="$orders" />
-                    @endif
+                    <x-custom-pagination :paginator="$orders" />
                 </div>
             </div>
         </section>
