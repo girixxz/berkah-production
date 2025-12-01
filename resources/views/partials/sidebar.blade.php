@@ -34,7 +34,7 @@
 
                     <!-- Manage Data -->
                     <li x-data="{
-                        open: @js(request()->routeIs('owner.manage-data.products.*') || request()->is('owner/manage-data/products/*') || request()->routeIs('owner.manage-data.work-orders.*') || request()->is('owner/manage-data/work-orders/*') || request()->routeIs('owner.manage-data.users-sales.*') || request()->is('owner/manage-data/users-sales/*'))
+                        open: @js(request()->routeIs('owner.manage-data.products.*') || request()->is('owner/manage-data/products/*') || request()->routeIs('owner.manage-data.work-orders.*') || request()->is('owner/manage-data/work-orders/*') || request()->routeIs('owner.manage-data.users.*') || request()->is('owner/manage-data/users/*') || request()->routeIs('owner.manage-data.sales.*') || request()->is('owner/manage-data/sales/*'))
                     }">
                         <button type="button" @click="open = !open"
                             class="flex items-center justify-between w-full pl-6 pr-4 py-3 hover:bg-gray-light focus:outline-none cursor-pointer">
@@ -45,8 +45,10 @@
                                         request()->is('owner/manage-data/products.*') ||
                                         request()->routeIs('owner.manage-data.work-orders.*') ||
                                         request()->is('owner/manage-data/work-orders.*') ||
-                                        request()->routeIs('owner.manage-data.users-sales.*') ||
-                                        request()->is('owner/manage-data/users-sales.*');
+                                        request()->routeIs('owner.manage-data.users.*') ||
+                                        request()->is('owner/manage-data/users/*') ||
+                                        request()->routeIs('owner.manage-data.sales.*') ||
+                                        request()->is('owner/manage-data/sales/*');
                                 @endphp
                                 <x-icons.manage-data />
                                 <span class="ml-2">Manage Data</span>
@@ -70,9 +72,15 @@
                                 </x-sidebar-menu.sub-menu>
                             </li>
                             <li>
-                                <x-sidebar-menu.sub-menu href="{{ route('owner.manage-data.users-sales.index') }}"
-                                    :pattern="['owner.manage-data.users-sales.*', 'owner/manage-data/users-sales/*']">
-                                    Users & Sales
+                                <x-sidebar-menu.sub-menu href="{{ route('owner.manage-data.users.index') }}"
+                                    :pattern="['owner.manage-data.users.*', 'owner/manage-data/users/*']">
+                                    Users
+                                </x-sidebar-menu.sub-menu>
+                            </li>
+                            <li>
+                                <x-sidebar-menu.sub-menu href="{{ route('owner.manage-data.sales.index') }}"
+                                    :pattern="['owner.manage-data.sales.*', 'owner/manage-data/sales/*']">
+                                    Sales
                                 </x-sidebar-menu.sub-menu>
                             </li>
                         </ul>

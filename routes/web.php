@@ -106,13 +106,20 @@ Route::middleware(['auth'])->group(function () {
                 Route::resource('stickers', StickerController::class)->except(['index', 'create', 'show', 'edit']);
             });
 
-            // Users & Sales
-            Route::prefix('users-sales')->name('users-sales.')->group(function () {
-                Route::get('/', [ManageUsersSalesController::class, 'index'])->name('index');
-                Route::get('/fetch-users', [ManageUsersSalesController::class, 'fetchUsers'])->name('fetch-users');
-                Route::get('/fetch-sales', [ManageUsersSalesController::class, 'fetchSales'])->name('fetch-sales');
-                Route::resource('users', UserController::class)->except(['index', 'create', 'show', 'edit']);
-                Route::resource('sales', SalesController::class)->except(['index', 'create', 'show', 'edit']);
+            // Users Management
+            Route::prefix('users')->name('users.')->group(function () {
+                Route::get('/', [\App\Http\Controllers\Main\UserController::class, 'index'])->name('index');
+                Route::post('/', [\App\Http\Controllers\Main\UserController::class, 'store'])->name('store');
+                Route::put('/{user}', [\App\Http\Controllers\Main\UserController::class, 'update'])->name('update');
+                Route::delete('/{user}', [\App\Http\Controllers\Main\UserController::class, 'destroy'])->name('destroy');
+            });
+
+            // Sales Management
+            Route::prefix('sales')->name('sales.')->group(function () {
+                Route::get('/', [\App\Http\Controllers\Main\SalesController::class, 'index'])->name('index');
+                Route::post('/', [\App\Http\Controllers\Main\SalesController::class, 'store'])->name('store');
+                Route::put('/{sale}', [\App\Http\Controllers\Main\SalesController::class, 'update'])->name('update');
+                Route::delete('/{sale}', [\App\Http\Controllers\Main\SalesController::class, 'destroy'])->name('destroy');
             });
         });
     });
