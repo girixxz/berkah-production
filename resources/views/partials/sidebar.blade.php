@@ -170,8 +170,8 @@
                     @endif
                     <li>
                         <x-sidebar-menu.main-menu
-                            href="{{ route($role === 'admin' ? 'admin.manage-task' : 'pm.manage-task') }}"
-                            :pattern="$role === 'admin' ? 'admin.manage-task' : 'pm.manage-task'">
+                            href="{{ route('pm.manage-task') }}"
+                            pattern="pm.manage-task">
                             <x-icons.manage-task class="text-current" />
                             <span class="ml-2">Task Manager</span>
                         </x-sidebar-menu.main-menu>

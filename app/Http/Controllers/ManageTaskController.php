@@ -22,8 +22,8 @@ class ManageTaskController extends Controller
         $endDate = $request->input('end_date');
         $dateRange = $request->input('date_range');
 
-        // Check if user is admin (view only mode)
-        $isViewOnly = Auth::check() && Auth::user()->role === 'admin';
+        // Admin can also edit tasks now
+        $isViewOnly = false;
 
         // Get all production stages
         $productionStages = ProductionStage::orderBy('id')->get();

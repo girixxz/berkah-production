@@ -1,8 +1,11 @@
 @extends('layouts.app')
 @section('title', 'Manage Customers')
 @section('content')
-
-    <x-nav-locate :items="['Menu', 'Customers']" />
+    @php
+        $role = auth()->user()?->role;
+        $root = $role === 'owner' ? 'Admin' : 'Menu';
+    @endphp
+    <x-nav-locate :items="[$root, 'Customers']" />
 
     {{-- Root Alpine State --}}
     <div x-data="{

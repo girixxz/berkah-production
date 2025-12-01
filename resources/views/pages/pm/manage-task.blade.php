@@ -5,11 +5,11 @@
 @section('content')
     @php
         $role = auth()->user()?->role;
-        $root = $role === 'owner' ? 'Admin' : ($role === 'admin' ? 'Admin' : 'Menu');
-        $routeName = $role === 'admin' ? 'admin.manage-task' : 'pm.manage-task';
+        // Task Manage is PM's feature, Owner/Admin can access as super users
+        $routeName = 'pm.manage-task'; // Everyone uses PM route
     @endphp
 
-    <x-nav-locate :items="[$root, 'Task Manage']" />
+    <x-nav-locate :items="['PM', 'Task Manage']" />
 
     {{-- Root Alpine State --}}
     <div x-data="{
@@ -132,7 +132,7 @@
                     formData.append('order_stage_id', stageId);
                     formData.append('status', newStatus);
                     
-                    const response = await fetch('{{ route('pm.manage-task.update-stage-status') }}', {
+                    const response = await fetch('{{ route($routeName . '.update-stage-status') }}', {
                         method: 'POST',
                         body: formData
                     });
@@ -166,9 +166,6 @@
                 
                 // Refresh table data
                 this.refreshTableData();
-                
-                // Close modal after successful update
-                this.showEditStageModal = false;
             }
             
             if (errorCount > 0) {
@@ -824,7 +821,7 @@
                     formData.append('start_date', stageStartDate);
                     formData.append('deadline', stageDeadline);
                     
-                    fetch('{{ route('pm.manage-task.update-stage') }}', {
+                    fetch('{{ route($routeName . '.update-stage') }}', {
                         method: 'POST',
                         body: formData
                     })
@@ -931,26 +928,23 @@
                                                     'bg-blue-500': stage.status === 'in_progress',
                                                     'bg-primary': stage.status === 'done'
                                                 }">
-                                                {{-- Done Icon --}}
-                                                <svg x-show="stage.status === 'done'" class="w-5 h-5 text-white"
+                                                <svg class="w-5 h-5 text-white"
                                                     fill="currentColor" viewBox="0 0 20 20">
-                                                    <path fill-rule="evenodd"
-                                                        d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                                                        clip-rule="evenodd" />
-                                                </svg>
-                                                {{-- In Progress Icon --}}
-                                                <svg x-show="stage.status === 'in_progress'" class="w-5 h-5 text-white"
-                                                    fill="currentColor" viewBox="0 0 20 20">
-                                                    <path fill-rule="evenodd"
-                                                        d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z"
-                                                        clip-rule="evenodd" />
-                                                </svg>
-                                                {{-- Pending Icon --}}
-                                                <svg x-show="stage.status === 'pending'" class="w-5 h-5 text-white"
-                                                    fill="currentColor" viewBox="0 0 20 20">
-                                                    <path fill-rule="evenodd"
-                                                        d="M10 18a8 8 0 100-16 8 8 0 000 16zM8 7a1 1 0 00-1 1v4a1 1 0 001 1h4a1 1 0 001-1V8a1 1 0 00-1-1H8z"
-                                                        clip-rule="evenodd" />
+                                                    <template x-if="stage.status === 'done'">
+                                                        <path fill-rule="evenodd"
+                                                            d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                                                            clip-rule="evenodd" />
+                                                    </template>
+                                                    <template x-if="stage.status === 'in_progress'">
+                                                        <path fill-rule="evenodd"
+                                                            d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z"
+                                                            clip-rule="evenodd" />
+                                                    </template>
+                                                    <template x-if="stage.status === 'pending'">
+                                                        <path fill-rule="evenodd"
+                                                            d="M10 18a8 8 0 100-16 8 8 0 000 16zM8 7a1 1 0 00-1 1v4a1 1 0 001 1h4a1 1 0 001-1V8a1 1 0 00-1-1H8z"
+                                                            clip-rule="evenodd" />
+                                                    </template>
                                                 </svg>
                                             </div>
                                             <div>

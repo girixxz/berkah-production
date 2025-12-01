@@ -171,9 +171,6 @@ Route::middleware(['auth'])->group(function () {
         // Customers
         Route::resource('customers', CustomerController::class)->except(['show']);
         
-        // Task Manage (View Only for Admin)
-        Route::get('manage-task', [ManageTaskController::class, 'index'])->name('manage-task');
-        
         // API for cascading dropdowns
         Route::get('customers/api/provinces', [CustomerController::class, 'getProvinces'])->name('customers.api.provinces');
         Route::get('customers/api/cities/{provinceId}', [CustomerController::class, 'getCities'])->name('customers.api.cities');
@@ -182,7 +179,7 @@ Route::middleware(['auth'])->group(function () {
     });
 
     /* ---------- PROJECT MANAGER ---------- */
-    Route::prefix('pm')->name('pm.')->middleware('role:pm')->group(function () {
+    Route::prefix('pm')->name('pm.')->middleware('role:pm,admin,owner')->group(function () {
         Route::get('dashboard', fn() => view('pages.pm.dashboard'))->name('dashboard');
         
         // Manage Task
