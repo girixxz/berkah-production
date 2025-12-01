@@ -10,32 +10,51 @@ class FinishingController extends Controller
 {
     public function store(Request $request)
     {
-        $validated = $request->validateWithBag('addFinishing', [
-            'name' => 'required|max:100|unique:finishings,name',
-        ]);
+        try {
+            $validated = $request->validateWithBag('addFinishing', [
+                'name' => 'required|max:100|unique:finishings,name',
+            ]);
 
-        Finishing::create($validated);
+            Finishing::create($validated);
 
-        Cache::forget('finishings');
+            Cache::forget('finishings');
 
-        return redirect()->to(route('owner.manage-data.work-orders.index') . '#finishings')
-            ->with('message', 'Finishing added successfully.')
-            ->with('alert-type', 'success');
+            return redirect()->route('owner.manage-data.work-orders.index')
+                ->with('message', 'Finishing added successfully.')
+                ->with('alert-type', 'success')
+                ->with('scrollToSection', 'finishings');
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return redirect()->route('owner.manage-data.work-orders.index')
+                ->withErrors($e->errors(), 'addFinishing')
+                ->withInput()
+                ->with('openModal', 'addFinishing')
+                ->with('scrollToSection', 'finishings');
+        }
     }
 
     public function update(Request $request, Finishing $finishing)
     {
-        $validated = $request->validateWithBag('editFinishing', [
-            'name' => 'required|max:100|unique:finishings,name,' . $finishing->id,
-        ]);
+        try {
+            $validated = $request->validateWithBag('editFinishing', [
+                'name' => 'required|max:100|unique:finishings,name,' . $finishing->id,
+            ]);
 
-        $finishing->update(array_filter($validated));
+            $finishing->update(array_filter($validated));
 
-        Cache::forget('finishings');
+            Cache::forget('finishings');
 
-        return redirect()->to(route('owner.manage-data.work-orders.index') . '#finishings')
-            ->with('message', 'Finishing updated successfully.')
-            ->with('alert-type', 'success');
+            return redirect()->route('owner.manage-data.work-orders.index')
+                ->with('message', 'Finishing updated successfully.')
+                ->with('alert-type', 'success')
+                ->with('scrollToSection', 'finishings');
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return redirect()->route('owner.manage-data.work-orders.index')
+                ->withErrors($e->errors(), 'editFinishing')
+                ->withInput()
+                ->with('openModal', 'editFinishing')
+                ->with('editFinishingId', $finishing->id)
+                ->with('scrollToSection', 'finishings');
+        }
     }
 
     public function destroy(Finishing $finishing)
@@ -44,8 +63,9 @@ class FinishingController extends Controller
 
         Cache::forget('finishings');
 
-        return redirect()->to(route('owner.manage-data.work-orders.index') . '#finishings')
+        return redirect()->route('owner.manage-data.work-orders.index')
             ->with('message', 'Finishing deleted successfully.')
-            ->with('alert-type', 'success');
+            ->with('alert-type', 'success')
+            ->with('scrollToSection', 'finishings');
     }
 }

@@ -10,32 +10,51 @@ class NeckOverdeckController extends Controller
 {
     public function store(Request $request)
     {
-        $validated = $request->validateWithBag('addNeckOverdeck', [
-            'name' => 'required|max:100|unique:neck_overdecks,name',
-        ]);
+        try {
+            $validated = $request->validateWithBag('addNeckOverdeck', [
+                'name' => 'required|max:100|unique:neck_overdecks,name',
+            ]);
 
-        NeckOverdeck::create($validated);
+            NeckOverdeck::create($validated);
 
-        Cache::forget('neck_overdecks');
+            Cache::forget('neck_overdecks');
 
-        return redirect()->to(route('owner.manage-data.work-orders.index') . '#neck-overdecks')
-            ->with('message', 'Neck Overdeck added successfully.')
-            ->with('alert-type', 'success');
+            return redirect()->route('owner.manage-data.work-orders.index')
+                ->with('message', 'Neck Overdeck added successfully.')
+                ->with('alert-type', 'success')
+                ->with('scrollToSection', 'neck-overdecks');
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return redirect()->route('owner.manage-data.work-orders.index')
+                ->withErrors($e->errors(), 'addNeckOverdeck')
+                ->withInput()
+                ->with('openModal', 'addNeckOverdeck')
+                ->with('scrollToSection', 'neck-overdecks');
+        }
     }
 
     public function update(Request $request, NeckOverdeck $neckOverdeck)
     {
-        $validated = $request->validateWithBag('editNeckOverdeck', [
-            'name' => 'required|max:100|unique:neck_overdecks,name,' . $neckOverdeck->id,
-        ]);
+        try {
+            $validated = $request->validateWithBag('editNeckOverdeck', [
+                'name' => 'required|max:100|unique:neck_overdecks,name,' . $neckOverdeck->id,
+            ]);
 
-        $neckOverdeck->update(array_filter($validated));
+            $neckOverdeck->update(array_filter($validated));
 
-        Cache::forget('neck_overdecks');
+            Cache::forget('neck_overdecks');
 
-        return redirect()->to(route('owner.manage-data.work-orders.index') . '#neck-overdecks')
-            ->with('message', 'Neck Overdeck updated successfully.')
-            ->with('alert-type', 'success');
+            return redirect()->route('owner.manage-data.work-orders.index')
+                ->with('message', 'Neck Overdeck updated successfully.')
+                ->with('alert-type', 'success')
+                ->with('scrollToSection', 'neck-overdecks');
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return redirect()->route('owner.manage-data.work-orders.index')
+                ->withErrors($e->errors(), 'editNeckOverdeck')
+                ->withInput()
+                ->with('openModal', 'editNeckOverdeck')
+                ->with('editNeckOverdeckId', $neckOverdeck->id)
+                ->with('scrollToSection', 'neck-overdecks');
+        }
     }
 
     public function destroy(NeckOverdeck $neckOverdeck)
@@ -44,8 +63,9 @@ class NeckOverdeckController extends Controller
 
         Cache::forget('neck_overdecks');
 
-        return redirect()->to(route('owner.manage-data.work-orders.index') . '#neck-overdecks')
+        return redirect()->route('owner.manage-data.work-orders.index')
             ->with('message', 'Neck Overdeck deleted successfully.')
-            ->with('alert-type', 'success');
+            ->with('alert-type', 'success')
+            ->with('scrollToSection', 'neck-overdecks');
     }
 }

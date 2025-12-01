@@ -10,32 +10,51 @@ class ChainClothController extends Controller
 {
     public function store(Request $request)
     {
-        $validated = $request->validateWithBag('addChainCloth', [
-            'name' => 'required|max:100|unique:chain_cloths,name',
-        ]);
+        try {
+            $validated = $request->validateWithBag('addChainCloth', [
+                'name' => 'required|max:100|unique:chain_cloths,name',
+            ]);
 
-        ChainCloth::create($validated);
+            ChainCloth::create($validated);
 
-        Cache::forget('chain_cloths');
+            Cache::forget('chain_cloths');
 
-        return redirect()->to(route('owner.manage-data.work-orders.index') . '#chain-cloths')
-            ->with('message', 'Chain Cloth added successfully.')
-            ->with('alert-type', 'success');
+            return redirect()->route('owner.manage-data.work-orders.index')
+                ->with('message', 'Chain Cloth added successfully.')
+                ->with('alert-type', 'success')
+                ->with('scrollToSection', 'chain-cloths');
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return redirect()->route('owner.manage-data.work-orders.index')
+                ->withErrors($e->errors(), 'addChainCloth')
+                ->withInput()
+                ->with('openModal', 'addChainCloth')
+                ->with('scrollToSection', 'chain-cloths');
+        }
     }
 
     public function update(Request $request, ChainCloth $chainCloth)
     {
-        $validated = $request->validateWithBag('editChainCloth', [
-            'name' => 'required|max:100|unique:chain_cloths,name,' . $chainCloth->id,
-        ]);
+        try {
+            $validated = $request->validateWithBag('editChainCloth', [
+                'name' => 'required|max:100|unique:chain_cloths,name,' . $chainCloth->id,
+            ]);
 
-        $chainCloth->update(array_filter($validated));
+            $chainCloth->update(array_filter($validated));
 
-        Cache::forget('chain_cloths');
+            Cache::forget('chain_cloths');
 
-        return redirect()->to(route('owner.manage-data.work-orders.index') . '#chain-cloths')
-            ->with('message', 'Chain Cloth updated successfully.')
-            ->with('alert-type', 'success');
+            return redirect()->route('owner.manage-data.work-orders.index')
+                ->with('message', 'Chain Cloth updated successfully.')
+                ->with('alert-type', 'success')
+                ->with('scrollToSection', 'chain-cloths');
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return redirect()->route('owner.manage-data.work-orders.index')
+                ->withErrors($e->errors(), 'editChainCloth')
+                ->withInput()
+                ->with('openModal', 'editChainCloth')
+                ->with('editChainClothId', $chainCloth->id)
+                ->with('scrollToSection', 'chain-cloths');
+        }
     }
 
     public function destroy(ChainCloth $chainCloth)
@@ -44,8 +63,9 @@ class ChainClothController extends Controller
 
         Cache::forget('chain_cloths');
 
-        return redirect()->to(route('owner.manage-data.work-orders.index') . '#chain-cloths')
+        return redirect()->route('owner.manage-data.work-orders.index')
             ->with('message', 'Chain Cloth deleted successfully.')
-            ->with('alert-type', 'success');
+            ->with('alert-type', 'success')
+            ->with('scrollToSection', 'chain-cloths');
     }
 }

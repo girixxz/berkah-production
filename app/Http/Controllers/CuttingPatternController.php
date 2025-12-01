@@ -10,32 +10,51 @@ class CuttingPatternController extends Controller
 {
     public function store(Request $request)
     {
-        $validated = $request->validateWithBag('addCuttingPattern', [
-            'name' => 'required|max:100|unique:cutting_patterns,name',
-        ]);
+        try {
+            $validated = $request->validateWithBag('addCuttingPattern', [
+                'name' => 'required|max:100|unique:cutting_patterns,name',
+            ]);
 
-        CuttingPattern::create($validated);
+            CuttingPattern::create($validated);
 
-        Cache::forget('cutting_patterns');
+            Cache::forget('cutting_patterns');
 
-        return redirect()->to(route('owner.manage-data.work-orders.index') . '#cutting-patterns')
-            ->with('message', 'Cutting Pattern added successfully.')
-            ->with('alert-type', 'success');
+            return redirect()->route('owner.manage-data.work-orders.index')
+                ->with('message', 'Cutting Pattern added successfully.')
+                ->with('alert-type', 'success')
+                ->with('scrollToSection', 'cutting-patterns');
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return redirect()->route('owner.manage-data.work-orders.index')
+                ->withErrors($e->errors(), 'addCuttingPattern')
+                ->withInput()
+                ->with('openModal', 'addCuttingPattern')
+                ->with('scrollToSection', 'cutting-patterns');
+        }
     }
 
     public function update(Request $request, CuttingPattern $cuttingPattern)
     {
-        $validated = $request->validateWithBag('editCuttingPattern', [
-            'name' => 'required|max:100|unique:cutting_patterns,name,' . $cuttingPattern->id,
-        ]);
+        try {
+            $validated = $request->validateWithBag('editCuttingPattern', [
+                'name' => 'required|max:100|unique:cutting_patterns,name,' . $cuttingPattern->id,
+            ]);
 
-        $cuttingPattern->update(array_filter($validated));
+            $cuttingPattern->update(array_filter($validated));
 
-        Cache::forget('cutting_patterns');
+            Cache::forget('cutting_patterns');
 
-        return redirect()->to(route('owner.manage-data.work-orders.index') . '#cutting-patterns')
-            ->with('message', 'Cutting Pattern updated successfully.')
-            ->with('alert-type', 'success');
+            return redirect()->route('owner.manage-data.work-orders.index')
+                ->with('message', 'Cutting Pattern updated successfully.')
+                ->with('alert-type', 'success')
+                ->with('scrollToSection', 'cutting-patterns');
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return redirect()->route('owner.manage-data.work-orders.index')
+                ->withErrors($e->errors(), 'editCuttingPattern')
+                ->withInput()
+                ->with('openModal', 'editCuttingPattern')
+                ->with('editCuttingPatternId', $cuttingPattern->id)
+                ->with('scrollToSection', 'cutting-patterns');
+        }
     }
 
     public function destroy(CuttingPattern $cuttingPattern)
@@ -44,8 +63,9 @@ class CuttingPatternController extends Controller
 
         Cache::forget('cutting_patterns');
 
-        return redirect()->to(route('owner.manage-data.work-orders.index') . '#cutting-patterns')
+        return redirect()->route('owner.manage-data.work-orders.index')
             ->with('message', 'Cutting Pattern deleted successfully.')
-            ->with('alert-type', 'success');
+            ->with('alert-type', 'success')
+            ->with('scrollToSection', 'cutting-patterns');
     }
 }

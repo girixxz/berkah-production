@@ -10,32 +10,51 @@ class UnderarmOverdeckController extends Controller
 {
     public function store(Request $request)
     {
-        $validated = $request->validateWithBag('addUnderarmOverdeck', [
-            'name' => 'required|max:100|unique:underarm_overdecks,name',
-        ]);
+        try {
+            $validated = $request->validateWithBag('addUnderarmOverdeck', [
+                'name' => 'required|max:100|unique:underarm_overdecks,name',
+            ]);
 
-        UnderarmOverdeck::create($validated);
+            UnderarmOverdeck::create($validated);
 
-        Cache::forget('underarm_overdecks');
+            Cache::forget('underarm_overdecks');
 
-        return redirect()->to(route('owner.manage-data.work-orders.index') . '#underarm-overdecks')
-            ->with('message', 'Underarm Overdeck added successfully.')
-            ->with('alert-type', 'success');
+            return redirect()->route('owner.manage-data.work-orders.index')
+                ->with('message', 'Underarm Overdeck added successfully.')
+                ->with('alert-type', 'success')
+                ->with('scrollToSection', 'underarm-overdecks');
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return redirect()->route('owner.manage-data.work-orders.index')
+                ->withErrors($e->errors(), 'addUnderarmOverdeck')
+                ->withInput()
+                ->with('openModal', 'addUnderarmOverdeck')
+                ->with('scrollToSection', 'underarm-overdecks');
+        }
     }
 
     public function update(Request $request, UnderarmOverdeck $underarmOverdeck)
     {
-        $validated = $request->validateWithBag('editUnderarmOverdeck', [
-            'name' => 'required|max:100|unique:underarm_overdecks,name,' . $underarmOverdeck->id,
-        ]);
+        try {
+            $validated = $request->validateWithBag('editUnderarmOverdeck', [
+                'name' => 'required|max:100|unique:underarm_overdecks,name,' . $underarmOverdeck->id,
+            ]);
 
-        $underarmOverdeck->update(array_filter($validated));
+            $underarmOverdeck->update(array_filter($validated));
 
-        Cache::forget('underarm_overdecks');
+            Cache::forget('underarm_overdecks');
 
-        return redirect()->to(route('owner.manage-data.work-orders.index') . '#underarm-overdecks')
-            ->with('message', 'Underarm Overdeck updated successfully.')
-            ->with('alert-type', 'success');
+            return redirect()->route('owner.manage-data.work-orders.index')
+                ->with('message', 'Underarm Overdeck updated successfully.')
+                ->with('alert-type', 'success')
+                ->with('scrollToSection', 'underarm-overdecks');
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return redirect()->route('owner.manage-data.work-orders.index')
+                ->withErrors($e->errors(), 'editUnderarmOverdeck')
+                ->withInput()
+                ->with('openModal', 'editUnderarmOverdeck')
+                ->with('editUnderarmOverdeckId', $underarmOverdeck->id)
+                ->with('scrollToSection', 'underarm-overdecks');
+        }
     }
 
     public function destroy(UnderarmOverdeck $underarmOverdeck)
@@ -44,8 +63,9 @@ class UnderarmOverdeckController extends Controller
 
         Cache::forget('underarm_overdecks');
 
-        return redirect()->to(route('owner.manage-data.work-orders.index') . '#underarm-overdecks')
+        return redirect()->route('owner.manage-data.work-orders.index')
             ->with('message', 'Underarm Overdeck deleted successfully.')
-            ->with('alert-type', 'success');
+            ->with('alert-type', 'success')
+            ->with('scrollToSection', 'underarm-overdecks');
     }
 }

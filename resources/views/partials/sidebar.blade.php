@@ -68,19 +68,19 @@
                             <li>
                                 <x-sidebar-menu.sub-menu href="{{ route('owner.manage-data.work-orders.index') }}"
                                     :pattern="['owner.manage-data.work-orders.*', 'owner/manage-data/work-orders/*']">
-                                    WO Data
+                                    Master WO
                                 </x-sidebar-menu.sub-menu>
                             </li>
                             <li>
                                 <x-sidebar-menu.sub-menu href="{{ route('owner.manage-data.users.index') }}"
                                     :pattern="['owner.manage-data.users.*', 'owner/manage-data/users/*']">
-                                    Users
+                                    Users Account
                                 </x-sidebar-menu.sub-menu>
                             </li>
                             <li>
                                 <x-sidebar-menu.sub-menu href="{{ route('owner.manage-data.sales.index') }}"
                                     :pattern="['owner.manage-data.sales.*', 'owner/manage-data/sales/*']">
-                                    Sales
+                                    Data Sales
                                 </x-sidebar-menu.sub-menu>
                             </li>
                         </ul>

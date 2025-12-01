@@ -10,32 +10,51 @@ class SideSplitController extends Controller
 {
     public function store(Request $request)
     {
-        $validated = $request->validateWithBag('addSideSplit', [
-            'name' => 'required|max:100|unique:side_splits,name',
-        ]);
+        try {
+            $validated = $request->validateWithBag('addSideSplit', [
+                'name' => 'required|max:100|unique:side_splits,name',
+            ]);
 
-        SideSplit::create($validated);
+            SideSplit::create($validated);
 
-        Cache::forget('side_splits');
+            Cache::forget('side_splits');
 
-        return redirect()->to(route('owner.manage-data.work-orders.index') . '#side-splits')
-            ->with('message', 'Side Split added successfully.')
-            ->with('alert-type', 'success');
+            return redirect()->route('owner.manage-data.work-orders.index')
+                ->with('message', 'Side Split added successfully.')
+                ->with('alert-type', 'success')
+                ->with('scrollToSection', 'side-splits');
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return redirect()->route('owner.manage-data.work-orders.index')
+                ->withErrors($e->errors(), 'addSideSplit')
+                ->withInput()
+                ->with('openModal', 'addSideSplit')
+                ->with('scrollToSection', 'side-splits');
+        }
     }
 
     public function update(Request $request, SideSplit $sideSplit)
     {
-        $validated = $request->validateWithBag('editSideSplit', [
-            'name' => 'required|max:100|unique:side_splits,name,' . $sideSplit->id,
-        ]);
+        try {
+            $validated = $request->validateWithBag('editSideSplit', [
+                'name' => 'required|max:100|unique:side_splits,name,' . $sideSplit->id,
+            ]);
 
-        $sideSplit->update(array_filter($validated));
+            $sideSplit->update(array_filter($validated));
 
-        Cache::forget('side_splits');
+            Cache::forget('side_splits');
 
-        return redirect()->to(route('owner.manage-data.work-orders.index') . '#side-splits')
-            ->with('message', 'Side Split updated successfully.')
-            ->with('alert-type', 'success');
+            return redirect()->route('owner.manage-data.work-orders.index')
+                ->with('message', 'Side Split updated successfully.')
+                ->with('alert-type', 'success')
+                ->with('scrollToSection', 'side-splits');
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return redirect()->route('owner.manage-data.work-orders.index')
+                ->withErrors($e->errors(), 'editSideSplit')
+                ->withInput()
+                ->with('openModal', 'editSideSplit')
+                ->with('editSideSplitId', $sideSplit->id)
+                ->with('scrollToSection', 'side-splits');
+        }
     }
 
     public function destroy(SideSplit $sideSplit)
@@ -44,8 +63,9 @@ class SideSplitController extends Controller
 
         Cache::forget('side_splits');
 
-        return redirect()->to(route('owner.manage-data.work-orders.index') . '#side-splits')
+        return redirect()->route('owner.manage-data.work-orders.index')
             ->with('message', 'Side Split deleted successfully.')
-            ->with('alert-type', 'success');
+            ->with('alert-type', 'success')
+            ->with('scrollToSection', 'side-splits');
     }
 }

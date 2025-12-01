@@ -207,6 +207,17 @@
     
         // ==================== Initialization ====================
         init() {
+            // Auto scroll to section after Add/Edit/Delete operations
+            const scrollTarget = '{{ session('scrollToSection') }}';
+            if (scrollTarget) {
+                setTimeout(() => {
+                    const section = document.getElementById(scrollTarget);
+                    if (section) {
+                        section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    }
+                }, 100);
+            }
+
             this.$watch('openModal', value => {
                 if (value) {
                     setTimeout(() => {
@@ -3116,43 +3127,39 @@
 
         {{-- AJAX Pagination Script --}}
         <script>
-            document.addEventListener('DOMContentLoaded', function() {
-                // Smooth scroll to hash if present (after redirect from add/edit/delete)
-                if (window.location.hash) {
-                    setTimeout(() => {
-                        const target = document.querySelector(window.location.hash);
-                        if (target) {
-                            target.scrollIntoView({
-                                behavior: 'smooth',
-                                block: 'start'
-                            });
-                        }
-                    }, 100);
-                }
+            // Global function to setup all pagination containers
+            function setupAllPagination() {
+                const paginationContainers = [
+                    'cutting-pattern-pagination-container',
+                    'chain-cloth-pagination-container',
+                    'rib-size-pagination-container',
+                    'print-ink-pagination-container',
+                    'finishing-pagination-container',
+                    'neck-overdeck-pagination-container',
+                    'underarm-overdeck-pagination-container',
+                    'side-split-pagination-container',
+                    'sewing-label-pagination-container',
+                    'plastic-packing-pagination-container',
+                    'sticker-pagination-container'
+                ];
 
-                // Setup pagination for all sections
-                setupPagination('cutting-pattern-pagination-container', 'cutting-patterns');
-                setupPagination('chain-cloth-pagination-container', 'chain-cloths');
-                setupPagination('rib-size-pagination-container', 'rib-sizes');
-                setupPagination('print-ink-pagination-container', 'print-inks');
-                setupPagination('finishing-pagination-container', 'finishings');
-                setupPagination('neck-overdeck-pagination-container', 'neck-overdecks');
-                setupPagination('underarm-overdeck-pagination-container', 'underarm-overdecks');
-                setupPagination('side-split-pagination-container', 'side-splits');
-                setupPagination('sewing-label-pagination-container', 'sewing-labels');
-                setupPagination('plastic-packing-pagination-container', 'plastic-packings');
-                setupPagination('sticker-pagination-container', 'stickers');
-
-                function setupPagination(containerId, sectionId) {
+                paginationContainers.forEach(containerId => {
                     const container = document.getElementById(containerId);
                     if (!container) return;
+
+                    // Prevent duplicate listeners
+                    if (container._paginationListener) return;
+                    container._paginationListener = true;
 
                     container.addEventListener('click', function(e) {
                         const link = e.target.closest('a[href*="page="]');
                         if (!link) return;
 
                         e.preventDefault();
-                        const url = link.getAttribute('href');
+                        const url = link.href;
+
+                        // Show loading indicator
+                        if (typeof NProgress !== 'undefined') NProgress.start();
 
                         fetch(url, {
                                 headers: {
@@ -3163,29 +3170,39 @@
                             .then(html => {
                                 const parser = new DOMParser();
                                 const doc = parser.parseFromString(html, 'text/html');
+                                const newContent = doc.getElementById(containerId);
 
-                                // Update the section content
-                                const newSection = doc.getElementById(sectionId);
-                                const currentSection = document.getElementById(sectionId);
-                                if (newSection && currentSection) {
-                                    currentSection.innerHTML = newSection.innerHTML;
+                                if (newContent) {
+                                    container.innerHTML = newContent.innerHTML;
+
+                                    // Scroll to section top
+                                    const sectionId = containerId.replace('-pagination-container', 's');
+                                    const section = document.getElementById(sectionId) || document.getElementById(
+                                        containerId.replace('-pagination-container', ''));
+                                    if (section) {
+                                        setTimeout(() => {
+                                            section.scrollIntoView({
+                                                behavior: 'smooth',
+                                                block: 'start'
+                                            });
+                                        }, 100);
+                                    }
                                 }
 
-                                // Scroll to section
-                                currentSection.scrollIntoView({
-                                    behavior: 'smooth',
-                                    block: 'start'
-                                });
-
-                                // Re-setup pagination for this section after update
-                                setupPagination(containerId, sectionId);
+                                if (typeof NProgress !== 'undefined') NProgress.done();
                             })
                             .catch(error => {
-                                console.error('Error loading pagination:', error);
+                                console.error('Pagination error:', error);
+                                if (typeof NProgress !== 'undefined') NProgress.done();
                             });
                     });
-                }
-            });
+                });
+            }
+
+            // Setup pagination on different events to handle Turbo navigation
+            document.addEventListener('DOMContentLoaded', setupAllPagination);
+            document.addEventListener('turbo:load', setupAllPagination);
+            document.addEventListener('turbo:render', setupAllPagination);
         </script>
 
     </div>

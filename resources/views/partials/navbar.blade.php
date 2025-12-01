@@ -23,7 +23,7 @@
         @endphp
 
         <nav class="flex-1 flex items-center justify-center">
-            <ul class="flex items-center text-sm md:text-[14px]">
+            <ul class="flex items-center text-sm md:text-[14px] sm:gap-2">
                 <li>
                     <a href="{{ route('highlights') }}" class="{{ $navClasses('highlights') }}">
                         Highlights
