@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Customer extends Model
 {
@@ -26,8 +27,8 @@ class Customer extends Model
     }
 
     /**
-     * Get location names from API (lazy loading)
-     * Note: province_id, city_id, district_id, village_id are string IDs from emsifa API
+     * Get location names from external API
+     * Note: province_id, city_id, district_id, village_id are stored as strings from external API
+     * Location data is fetched from API when needed, not from local database
      */
-    // No direct relationships - location data fetched from API when needed
 }

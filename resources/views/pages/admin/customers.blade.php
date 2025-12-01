@@ -413,8 +413,7 @@
                                             class="rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-[9999]">
                                             <div class="py-1">
                                                 {{-- Detail --}}
-                                                <button
-                                                    @click="detailCustomer = {{ $customer->toJson() }}; openModal = 'detailCustomer'; open = false"
+                                                <a href="{{ route('admin.customers.show', $customer->id) }}"
                                                     class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2">
                                                     <svg class="w-4 h-4" fill="none" stroke="currentColor"
                                                         viewBox="0 0 24 24">
@@ -425,7 +424,7 @@
                                                             d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                                                     </svg>
                                                     Detail
-                                                </button>
+                                                </a>
 
                                                 {{-- Edit --}}
                                                 <button
@@ -475,82 +474,6 @@
                 @endif
             </div>
         </section>
-
-        {{-- ===================== MODAL DETAIL CUSTOMER ===================== --}}
-        <div x-show="openModal === 'detailCustomer'" x-transition.opacity x-cloak
-            class="fixed inset-0 z-50 overflow-y-auto bg-gray-500/50 backdrop-blur-sm">
-            <div class="flex items-center justify-center min-h-screen p-4">
-                <div @click.away="openModal = ''" class="bg-white rounded-xl shadow-lg w-full max-w-md">
-                    {{-- Header --}}
-                    <div class="flex items-center justify-between p-5 border-b border-gray-200">
-                        <h3 class="text-lg font-semibold text-gray-900">Customer Detail</h3>
-                        <button @click="openModal = ''" class="text-gray-400 hover:text-gray-600 cursor-pointer">
-                            ✕
-                        </button>
-                    </div>
-
-                    {{-- Body --}}
-                    <div class="p-5 space-y-4">
-                        <div>
-                            <p class="text-xs text-gray-500">Customer Name</p>
-                            <p class="text-sm font-medium" x-text="detailCustomer.customer_name || '-'"></p>
-                        </div>
-
-                        <div>
-                            <p class="text-xs text-gray-500">Phone</p>
-                            <p class="text-sm" x-text="detailCustomer.phone || '-'"></p>
-                        </div>
-
-                        <div>
-                            <p class="text-xs text-gray-500">Province</p>
-                            <p class="text-sm" x-text="detailCustomer.province?.province_name || '-'"></p>
-                        </div>
-
-                        <div>
-                            <p class="text-xs text-gray-500">City</p>
-                            <p class="text-sm" x-text="detailCustomer.city?.city_name || '-'"></p>
-                        </div>
-
-                        <div>
-                            <p class="text-xs text-gray-500">District</p>
-                            <p class="text-sm" x-text="detailCustomer.district?.district_name || '-'"></p>
-                        </div>
-
-                        <div>
-                            <p class="text-xs text-gray-500">Village</p>
-                            <p class="text-sm" x-text="detailCustomer.village?.village_name || '-'"></p>
-                        </div>
-
-                        <div>
-                            <p class="text-xs text-gray-500">Address</p>
-                            <p class="text-sm" x-text="detailCustomer.address || '-'"></p>
-                        </div>
-
-                        <div>
-                            <p class="text-xs text-gray-500">Total Orders</p>
-                            <p class="text-sm font-medium">
-                                <span x-text="detailCustomer.orders_count || 0"></span> Orders
-                            </p>
-                        </div>
-
-                        <div>
-                            <p class="text-xs text-gray-500">Total Quantity</p>
-                            <p class="text-sm font-medium">
-                                <span x-text="detailCustomer.orders_sum_total_qty || 0"></span> pcs
-                            </p>
-                        </div>
-                    </div>
-
-                    {{-- Footer --}}
-                    <div class="flex justify-end gap-3 p-5 border-t border-gray-200">
-                        <button @click="openModal = ''"
-                            class="px-4 py-2 rounded-md bg-gray-100 hover:bg-gray-200 text-gray-700 cursor-pointer">
-                            Close
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
 
         {{-- ===================== MODAL ADD CUSTOMER ===================== --}}
         <div x-show="openModal === 'addCustomer'" x-transition.opacity x-cloak

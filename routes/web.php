@@ -172,6 +172,7 @@ Route::middleware(['auth'])->group(function () {
         Route::get('payment-history', [\App\Http\Controllers\PaymentHistoryController::class, 'index'])->name('payment-history');
 
         // Customers
+        Route::get('customers/{customer}', [CustomerController::class, 'show'])->name('customers.show');
         Route::resource('customers', CustomerController::class)->except(['show']);
         
         // API for cascading dropdowns

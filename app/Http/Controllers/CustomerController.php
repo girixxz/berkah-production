@@ -31,6 +31,63 @@ class CustomerController extends Controller
     }
 
     /**
+     * Display the specified resource (Customer Detail Page).
+     */
+    public function show(Customer $customer, Request $request)
+    {
+        // Base query for customer's orders
+        $query = $customer->orders()
+            ->with([
+                'productCategory',
+                'materialCategory',
+                'materialTexture',
+                'invoice',
+                'designVariants',
+                'orderStages'
+            ])
+            ->whereIn('production_status', ['wip', 'finished']);
+
+        // Apply search
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->whereHas('productCategory', function ($q) use ($search) {
+                    $q->where('product_name', 'like', "%{$search}%");
+                })
+                ->orWhereHas('invoice', function ($q) use ($search) {
+                    $q->where('invoice_no', 'like', "%{$search}%");
+                })
+                ->orWhere('notes', 'like', "%{$search}%");
+            });
+        }
+
+        // Apply date filter - Default to This Month
+        $startDate = null;
+        $endDate = null;
+        $dateRange = $request->get('date_range', 'this_month');
+
+        if ($request->filled('start_date') && $request->filled('end_date')) {
+            $startDate = \Carbon\Carbon::parse($request->start_date)->startOfDay();
+            $endDate = \Carbon\Carbon::parse($request->end_date)->endOfDay();
+        } elseif (!$request->filled('start_date') && !$request->filled('end_date')) {
+            $startDate = \Carbon\Carbon::now()->startOfMonth();
+            $endDate = \Carbon\Carbon::now()->endOfMonth();
+        }
+        
+        if ($startDate && $endDate) {
+            $query->whereBetween('order_date', [$startDate, $endDate]);
+        }
+
+        // Apply sorting - WIP by wip_date, others by order_date
+        $query->orderBy('wip_date', 'desc');
+
+        // Get orders with pagination
+        $orders = $query->paginate(15);
+
+        return view('pages.admin.customers.show', compact('customer', 'orders', 'startDate', 'endDate', 'dateRange'));
+    }
+
+    /**
      * Store a newly created resource in storage.
      */
     public function store(Request $request)
