@@ -35,6 +35,8 @@
             orderStages: [],
             orderNotes: ''
         },
+        originalStages: {},
+        pendingChanges: {},
         isUpdatingStatus: false,
         matchesSearch(row) {
             if (!this.searchQuery || this.searchQuery.trim() === '') return true;
@@ -83,6 +85,9 @@
             this.stageDeadline = deadline || '';
             this.showStageModal = true;
         },
+        get hasChanges() {
+            return Object.keys(this.pendingChanges).length > 0;
+        },
         openEditStageModal(orderId, invoiceNo, orderStages, orderNotes) {
             this.editStageData = {
                 orderId: orderId,
@@ -90,51 +95,90 @@
                 orderStages: orderStages,
                 orderNotes: orderNotes || ''
             };
+            // Store original stages for comparison
+            this.originalStages = {};
+            orderStages.forEach(stage => {
+                this.originalStages[stage.id] = stage.status;
+            });
+            this.pendingChanges = {};
             this.showEditStageModal = true;
         },
-        updateStageStatus(orderStageId, newStatus) {
+        changeStageStatus(stageId, newStatus) {
+            // Update local state only
+            const stageIndex = this.editStageData.orderStages.findIndex(s => s.id === stageId);
+            if (stageIndex !== -1) {
+                this.editStageData.orderStages[stageIndex].status = newStatus;
+                
+                // Track if this is different from original
+                if (this.originalStages[stageId] !== newStatus) {
+                    this.pendingChanges[stageId] = newStatus;
+                } else {
+                    delete this.pendingChanges[stageId];
+                }
+            }
+        },
+        async saveStageChanges() {
+            if (!this.hasChanges) return;
+            
             this.isUpdatingStatus = true;
-            const formData = new FormData();
-            formData.append('_token', '{{ csrf_token() }}');
-            formData.append('order_stage_id', orderStageId);
-            formData.append('status', newStatus);
-    
-            fetch('{{ route('pm.manage-task.update-stage-status') }}', {
-                    method: 'POST',
-                    body: formData
-                })
-                .then(res => res.json())
-                .then(data => {
+            let successCount = 0;
+            let errorCount = 0;
+            
+            // Process all pending changes
+            for (const [stageId, newStatus] of Object.entries(this.pendingChanges)) {
+                try {
+                    const formData = new FormData();
+                    formData.append('_token', '{{ csrf_token() }}');
+                    formData.append('order_stage_id', stageId);
+                    formData.append('status', newStatus);
+                    
+                    const response = await fetch('{{ route('pm.manage-task.update-stage-status') }}', {
+                        method: 'POST',
+                        body: formData
+                    });
+                    
+                    const data = await response.json();
                     if (data.success) {
-                        // Update local data in modal
-                        const stageIndex = this.editStageData.orderStages.findIndex(s => s.id === orderStageId);
-                        if (stageIndex !== -1) {
-                            this.editStageData.orderStages[stageIndex].status = newStatus;
-                        }
-    
-                        // Show toast notification
-                        window.dispatchEvent(new CustomEvent('show-toast', {
-                            detail: { message: data.message, type: 'success' }
-                        }));
-    
-                        this.isUpdatingStatus = false;
-    
-                        // Refresh table data in background without closing modal
-                        this.refreshTableData();
+                        successCount++;
+                        // Update original state
+                        this.originalStages[stageId] = newStatus;
                     } else {
-                        window.dispatchEvent(new CustomEvent('show-toast', {
-                            detail: { message: data.message || 'Failed to update status', type: 'error' }
-                        }));
-                        this.isUpdatingStatus = false;
+                        errorCount++;
                     }
-                })
-                .catch(err => {
-                    window.dispatchEvent(new CustomEvent('show-toast', {
-                        detail: { message: 'Network error. Please try again.', type: 'error' }
-                    }));
-                    this.isUpdatingStatus = false;
-                    console.error(err);
-                });
+                } catch (err) {
+                    errorCount++;
+                    console.error('Error updating stage:', err);
+                }
+            }
+            
+            // Clear pending changes after processing
+            this.pendingChanges = {};
+            this.isUpdatingStatus = false;
+            
+            // Show result notification
+            if (successCount > 0) {
+                window.dispatchEvent(new CustomEvent('show-toast', {
+                    detail: { 
+                        message: `Successfully updated ${successCount} stage${successCount > 1 ? 's' : ''}`,
+                        type: 'success' 
+                    }
+                }));
+                
+                // Refresh table data
+                this.refreshTableData();
+                
+                // Close modal after successful update
+                this.showEditStageModal = false;
+            }
+            
+            if (errorCount > 0) {
+                window.dispatchEvent(new CustomEvent('show-toast', {
+                    detail: { 
+                        message: `Failed to update ${errorCount} stage${errorCount > 1 ? 's' : ''}`,
+                        type: 'error' 
+                    }
+                }));
+            }
         },
         refreshTableData() {
             // Refresh table content without closing modal
@@ -883,65 +927,74 @@
                                         <div class="flex items-center gap-3">
                                             <div class="w-10 h-10 rounded-full flex items-center justify-center"
                                                 :class="{
-                                                    'bg-gray-100': stage.status === 'pending',
-                                                    'bg-yellow-100': stage.status === 'in_progress',
-                                                    'bg-green-100': stage.status === 'done'
+                                                    'bg-yellow-500': stage.status === 'pending',
+                                                    'bg-blue-500': stage.status === 'in_progress',
+                                                    'bg-primary': stage.status === 'done'
                                                 }">
-                                                <svg class="w-5 h-5"
-                                                    :class="{
-                                                        'text-gray-400': stage.status === 'pending',
-                                                        'text-yellow-500': stage.status === 'in_progress',
-                                                        'text-green-500': stage.status === 'done'
-                                                    }"
+                                                {{-- Done Icon --}}
+                                                <svg x-show="stage.status === 'done'" class="w-5 h-5 text-white"
                                                     fill="currentColor" viewBox="0 0 20 20">
-                                                    <template x-if="stage.status === 'done'">
-                                                        <path fill-rule="evenodd"
-                                                            d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                                                            clip-rule="evenodd" />
-                                                    </template>
-                                                    <template x-if="stage.status === 'in_progress'">
-                                                        <path fill-rule="evenodd"
-                                                            d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z"
-                                                            clip-rule="evenodd" />
-                                                    </template>
-                                                    <template x-if="stage.status === 'pending'">
-                                                        <path fill-rule="evenodd"
-                                                            d="M10 18a8 8 0 100-16 8 8 0 000 16zM8 7a1 1 0 00-1 1v4a1 1 0 001 1h4a1 1 0 001-1V8a1 1 0 00-1-1H8z"
-                                                            clip-rule="evenodd" />
-                                                    </template>
+                                                    <path fill-rule="evenodd"
+                                                        d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                                                        clip-rule="evenodd" />
+                                                </svg>
+                                                {{-- In Progress Icon --}}
+                                                <svg x-show="stage.status === 'in_progress'" class="w-5 h-5 text-white"
+                                                    fill="currentColor" viewBox="0 0 20 20">
+                                                    <path fill-rule="evenodd"
+                                                        d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z"
+                                                        clip-rule="evenodd" />
+                                                </svg>
+                                                {{-- Pending Icon --}}
+                                                <svg x-show="stage.status === 'pending'" class="w-5 h-5 text-white"
+                                                    fill="currentColor" viewBox="0 0 20 20">
+                                                    <path fill-rule="evenodd"
+                                                        d="M10 18a8 8 0 100-16 8 8 0 000 16zM8 7a1 1 0 00-1 1v4a1 1 0 001 1h4a1 1 0 001-1V8a1 1 0 00-1-1H8z"
+                                                        clip-rule="evenodd" />
                                                 </svg>
                                             </div>
                                             <div>
-                                                <p class="font-medium text-gray-900" x-text="stage.stage_name"></p>
+                                                {{-- Always show full name --}}
+                                                <p class="font-medium text-gray-900 text-sm" x-text="stage.stage_name"></p>
                                                 <p class="text-xs text-gray-500">
-                                                    Current: <span class="font-medium capitalize"
+                                                    <span class="hidden sm:inline">Current: </span>
+                                                    <span class="font-medium capitalize"
                                                         x-text="stage.status.replace('_', ' ')"></span>
                                                 </p>
                                             </div>
                                         </div>
 
-                                        {{-- Status Buttons - PENDING, IN PROGRESS, and DONE --}}
-                                        <div class="flex gap-2">
-                                            <button type="button" @click="updateStageStatus(stage.id, 'pending')"
+                                        {{-- Status Buttons - PENDING (Yellow), IN PROGRESS (Blue), and DONE (Green) - SOLID --}}
+                                        <div class="flex flex-wrap gap-1.5 sm:gap-2">
+                                            <button type="button" @click="changeStageStatus(stage.id, 'pending')"
                                                 :disabled="isUpdatingStatus || {{ $isViewOnly ? 'true' : 'false' }}"
-                                                :class="stage.status === 'pending' ? 'bg-gray-200 border-gray-300' :
-                                                    'bg-white hover:bg-gray-100'"
-                                                class="px-3 py-1.5 border border-gray-300 rounded-md text-xs font-medium text-gray-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
-                                                Pending
+                                                :class="[
+                                                    stage.status === 'pending' ? 'bg-yellow-500 text-white' : 'bg-gray-200 hover:bg-yellow-400 text-gray-700 hover:text-white',
+                                                    pendingChanges[stage.id] === 'pending' ? 'shadow-lg shadow-yellow-500/50' : ''
+                                                ]"
+                                                class="px-2 sm:px-3 py-1.5 rounded-md text-[10px] sm:text-xs font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed">
+                                                <span class="hidden sm:inline">Pending</span>
+                                                <span class="sm:hidden">P</span>
                                             </button>
-                                            <button type="button" @click="updateStageStatus(stage.id, 'in_progress')"
+                                            <button type="button" @click="changeStageStatus(stage.id, 'in_progress')"
                                                 :disabled="isUpdatingStatus || {{ $isViewOnly ? 'true' : 'false' }}"
-                                                :class="stage.status === 'in_progress' ? 'bg-blue-100 border-blue-300' :
-                                                    'bg-white hover:bg-blue-50'"
-                                                class="px-3 py-1.5 border border-gray-300 rounded-md text-xs font-medium text-gray-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
-                                                In Progress
+                                                :class="[
+                                                    stage.status === 'in_progress' ? 'bg-blue-500 text-white' : 'bg-gray-200 hover:bg-blue-400 text-gray-700 hover:text-white',
+                                                    pendingChanges[stage.id] === 'in_progress' ? 'shadow-lg shadow-blue-500/50' : ''
+                                                ]"
+                                                class="px-2 sm:px-3 py-1.5 rounded-md text-[10px] sm:text-xs font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed">
+                                                <span class="hidden sm:inline">In Progress</span>
+                                                <span class="sm:hidden">IP</span>
                                             </button>
-                                            <button type="button" @click="updateStageStatus(stage.id, 'done')"
+                                            <button type="button" @click="changeStageStatus(stage.id, 'done')"
                                                 :disabled="isUpdatingStatus || {{ $isViewOnly ? 'true' : 'false' }}"
-                                                :class="stage.status === 'done' ? 'bg-green-100 border-green-300' :
-                                                    'bg-white hover:bg-green-50'"
-                                                class="px-3 py-1.5 border border-gray-300 rounded-md text-xs font-medium text-gray-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
-                                                Done
+                                                :class="[
+                                                    stage.status === 'done' ? 'bg-primary text-white' : 'bg-gray-200 hover:bg-primary text-gray-700 hover:text-white',
+                                                    pendingChanges[stage.id] === 'done' ? 'shadow-lg shadow-primary/50' : ''
+                                                ]"
+                                                class="px-2 sm:px-3 py-1.5 rounded-md text-[10px] sm:text-xs font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed">
+                                                <span class="hidden sm:inline">Done</span>
+                                                <span class="sm:hidden">D</span>
                                             </button>
                                         </div>
                                     </div>
@@ -952,9 +1005,20 @@
                 </div>
 
                 {{-- Footer --}}
-                <div class="flex justify-end gap-3 p-5 border-t border-gray-200 flex-shrink-0">
-                    <button @click="showEditStageModal = false"
-                        class="px-4 py-2 rounded-md bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-medium cursor-pointer">
+                <div class="flex justify-between sm:justify-end gap-3 p-5 border-t border-gray-200 flex-shrink-0">
+                    <button @click="saveStageChanges()" 
+                        :disabled="!hasChanges || isUpdatingStatus || {{ $isViewOnly ? 'true' : 'false' }}"
+                        :class="hasChanges && !isUpdatingStatus ? 'bg-primary hover:bg-primary-dark text-white' : 'bg-gray-300 text-gray-500 cursor-not-allowed'"
+                        class="px-4 py-2 rounded-md text-sm font-medium transition-colors disabled:cursor-not-allowed flex items-center gap-2">
+                        <svg x-show="isUpdatingStatus" class="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        <span x-text="isUpdatingStatus ? 'Updating...' : 'Update'"></span>
+                    </button>
+                    <button @click="showEditStageModal = false; pendingChanges = {};"
+                        :disabled="isUpdatingStatus"
+                        class="px-4 py-2 rounded-md bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-medium cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed">
                         Close
                     </button>
                 </div>
