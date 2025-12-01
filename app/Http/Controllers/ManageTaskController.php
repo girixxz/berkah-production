@@ -109,17 +109,23 @@ class ManageTaskController extends Controller
             $query->whereDate('order_date', '<=', $endDate);
         }
 
-        // Sort by first payment date (DP/payment pertama kali)
-        // Join with payments table and get the earliest payment date
+        // Sort by wip_date for default & wip filter, finished_date for finished filter
         // DESC = data baru di atas (dari bawah ke atas)
-        $orders = $query
-            ->leftJoin('invoices', 'orders.id', '=', 'invoices.order_id')
-            ->leftJoin('payments', 'invoices.id', '=', 'payments.invoice_id')
-            ->select('orders.*', DB::raw('MIN(payments.created_at) as first_payment_date'))
-            ->groupBy('orders.id')
-            ->orderByRaw('first_payment_date DESC, orders.created_at DESC')
-            ->paginate(15)
-            ->appends($request->except('page'));
+        if ($filter === 'finished') {
+            // For finished orders, sort by finished_date (newest first)
+            $orders = $query
+                ->orderBy('finished_date', 'desc')
+                ->orderBy('created_at', 'desc')
+                ->paginate(15)
+                ->appends($request->except('page'));
+        } else {
+            // For default & wip, sort by wip_date (newest first)
+            $orders = $query
+                ->orderBy('wip_date', 'desc')
+                ->orderBy('created_at', 'desc')
+                ->paginate(15)
+                ->appends($request->except('page'));
+        }
 
         // Calculate statistics
         $stats = [
