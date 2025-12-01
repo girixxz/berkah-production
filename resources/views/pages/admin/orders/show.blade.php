@@ -403,40 +403,49 @@
                                 </div>
                             </div>
 
-                            {{-- Table --}}
-                            <div class="overflow-x-auto">
-                                <table class="w-full text-sm" style="table-layout: fixed;">
-                                    <thead class="bg-primary-light text-gray-600">
-                                        <tr>
-                                            <th class="py-2 px-4 text-left rounded-l-lg" style="width: 8%;">No</th>
-                                            <th class="py-2 px-4 text-left" style="width: 20%;">Size</th>
-                                            <th class="py-2 px-4 text-left" style="width: 25%;">Unit Price</th>
-                                            <th class="py-2 px-4 text-left" style="width: 15%;">QTY</th>
-                                            <th class="py-2 px-4 text-left rounded-r-lg" style="width: 32%;">Total Price</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        @foreach ($sleeveData['items'] as $index => $item)
-                                            <tr class="border-t border-gray-200">
-                                                <td class="py-2 px-4">{{ $index + 1 }}</td>
-                                                <td class="py-2 px-4">
-                                                    {{ $item->size->size_name ?? 'N/A' }}
-                                                    @if (($item->size->extra_price ?? 0) > 0)
-                                                        <span class="text-xs text-gray-500">
-                                                            (+Rp
-                                                            {{ number_format($item->size->extra_price, 0, ',', '.') }})
-                                                        </span>
-                                                    @endif
-                                                </td>
-                                                <td class="py-2 px-4">Rp
-                                                    {{ number_format($item->unit_price, 0, ',', '.') }}</td>
-                                                <td class="py-2 px-4">{{ $item->qty }}</td>
-                                                <td class="py-2 px-4 font-medium">Rp
-                                                    {{ number_format($item->unit_price * $item->qty, 0, ',', '.') }}</td>
-                                            </tr>
-                                        @endforeach
-                                    </tbody>
-                                </table>
+                            {{-- Table with responsive scrolling --}}
+                            <div class="overflow-x-auto -mx-4 md:mx-0">
+                                <div class="inline-block min-w-full align-middle">
+                                    <div class="overflow-hidden">
+                                        <table class="min-w-full text-sm">
+                                            <thead class="bg-primary-light text-gray-600">
+                                                <tr>
+                                                    <th class="py-3 px-4 text-left rounded-l-lg whitespace-nowrap min-w-[60px]">No</th>
+                                                    <th class="py-3 px-4 text-left whitespace-nowrap min-w-[140px]">Size</th>
+                                                    <th class="py-3 px-4 text-left whitespace-nowrap min-w-[150px]">Unit Price</th>
+                                                    <th class="py-3 px-4 text-left whitespace-nowrap min-w-[80px]">QTY</th>
+                                                    <th class="py-3 px-4 text-left rounded-r-lg whitespace-nowrap min-w-[170px]">Total Price</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                @foreach ($sleeveData['items'] as $index => $item)
+                                                    <tr class="border-t border-gray-200 hover:bg-gray-50">
+                                                        <td class="py-3 px-4 whitespace-nowrap">{{ $index + 1 }}</td>
+                                                        <td class="py-3 px-4">
+                                                            <div class="flex flex-col">
+                                                                <span class="font-medium">{{ $item->size->size_name ?? 'N/A' }}</span>
+                                                                @if (($item->size->extra_price ?? 0) > 0)
+                                                                    <span class="text-xs text-gray-500 mt-0.5">
+                                                                        +Rp {{ number_format($item->size->extra_price, 0, ',', '.') }}
+                                                                    </span>
+                                                                @endif
+                                                            </div>
+                                                        </td>
+                                                        <td class="py-3 px-4 whitespace-nowrap">
+                                                            Rp {{ number_format($item->unit_price, 0, ',', '.') }}
+                                                        </td>
+                                                        <td class="py-3 px-4 whitespace-nowrap text-center">
+                                                            {{ $item->qty }}
+                                                        </td>
+                                                        <td class="py-3 px-4 font-semibold whitespace-nowrap">
+                                                            Rp {{ number_format($item->unit_price * $item->qty, 0, ',', '.') }}
+                                                        </td>
+                                                    </tr>
+                                                @endforeach
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     @endforeach
