@@ -80,7 +80,7 @@
                             <li>
                                 <x-sidebar-menu.sub-menu href="{{ route('owner.manage-data.sales.index') }}"
                                     :pattern="['owner.manage-data.sales.*', 'owner/manage-data/sales/*']">
-                                    Data Sales
+                                    Sales Data
                                 </x-sidebar-menu.sub-menu>
                             </li>
                         </ul>

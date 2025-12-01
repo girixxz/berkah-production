@@ -97,7 +97,7 @@
                             @forelse ($sales as $sale)
                                 <tr class="border-t border-gray-200"
                                     x-show="
-                                        '{{ strtolower($sale->sales_name) }} {{ strtolower($sale->phone ?? '') }}'
+                                        {{ Js::from(strtolower($sale->sales_name . ' ' . ($sale->phone ?? ''))) }}
                                         .includes(searchSales.toLowerCase())
                                     ">
                                     <td class="py-2 px-4">
@@ -206,11 +206,9 @@
             </div>
 
             {{-- Pagination Sales --}}
-            @if ($sales->hasPages())
-                <div class="mt-4" id="sales-pagination-container">
-                    <x-custom-pagination :paginator="$sales" />
-                </div>
-            @endif
+            <div class="mt-4" id="sales-pagination-container">
+                <x-custom-pagination :paginator="$sales" />
+            </div>
         </section>
 
         {{-- ===================== MODALS ===================== --}}
@@ -368,55 +366,58 @@
     {{-- AJAX Pagination Script --}}
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            // Setup pagination for sales
-            setupPagination('sales-pagination-container', 'sales-section');
-
-            function setupPagination(containerId, sectionId) {
-                const container = document.getElementById(containerId);
-                if (!container) return;
-
-                container.addEventListener('click', function(e) {
-                    const link = e.target.closest('a[href*="page="]');
-                    if (!link) return;
-
-                    e.preventDefault();
-                    const url = link.getAttribute('href');
-
-                    fetch(url, {
-                            headers: {
-                                'X-Requested-With': 'XMLHttpRequest'
-                            }
-                        })
-                        .then(response => response.text())
-                        .then(html => {
-                            const parser = new DOMParser();
-                            const doc = parser.parseFromString(html, 'text/html');
-
-                            // Update the section content
-                            const newSection = doc.getElementById(sectionId);
-                            const currentSection = document.getElementById(sectionId);
-                            if (newSection && currentSection) {
-                                currentSection.innerHTML = newSection.innerHTML;
-                            }
-
-                            // Scroll to pagination (bottom of table)
-                            const paginationContainer = document.getElementById(containerId);
-                            if (paginationContainer) {
-                                paginationContainer.scrollIntoView({
-                                    behavior: 'smooth',
-                                    block: 'center'
-                                });
-                            }
-
-                            // Re-setup pagination for this section after update
-                            setupPagination(containerId, sectionId);
-                        })
-                        .catch(error => {
-                            console.error('Error loading pagination:', error);
-                        });
-                });
-            }
+            setupPagination();
         });
+
+        document.addEventListener('turbo:load', function() {
+            setupPagination();
+        });
+
+        function setupPagination() {
+            const container = document.getElementById('sales-pagination-container');
+            if (!container) return;
+
+            container.addEventListener('click', function(e) {
+                const link = e.target.closest('a[href*="page="]');
+                if (!link) return;
+
+                e.preventDefault();
+                const url = link.getAttribute('href');
+
+                fetch(url, {
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest'
+                        }
+                    })
+                    .then(response => response.text())
+                    .then(html => {
+                        const parser = new DOMParser();
+                        const doc = parser.parseFromString(html, 'text/html');
+
+                        // Update the section content
+                        const newSection = doc.getElementById('sales-section');
+                        const currentSection = document.getElementById('sales-section');
+                        if (newSection && currentSection) {
+                            currentSection.innerHTML = newSection.innerHTML;
+                        }
+
+                        // Scroll to pagination (bottom of table)
+                        const paginationContainer = document.getElementById('sales-pagination-container');
+                        if (paginationContainer) {
+                            paginationContainer.scrollIntoView({
+                                behavior: 'smooth',
+                                block: 'center'
+                            });
+                        }
+
+                        // Re-setup pagination after update
+                        setupPagination();
+                    })
+                    .catch(error => {
+                        console.error('Error loading pagination:', error);
+                    });
+            });
+        }
     </script>
 
 @endsection

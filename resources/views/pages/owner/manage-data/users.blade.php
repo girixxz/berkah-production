@@ -131,7 +131,7 @@
                             @forelse ($users as $user)
                                 <tr class="border-t border-gray-200"
                                     x-show="
-                                        '{{ strtolower($user->fullname) }} {{ strtolower($user->username) }} {{ strtolower($user->phone_number) }} {{ strtolower($user->role) }}'
+                                        {{ Js::from(strtolower($user->fullname . ' ' . $user->username . ' ' . ($user->phone_number ?? '') . ' ' . $user->role)) }}
                                         .includes(searchUser.toLowerCase())
                                     ">
                                     <td class="py-2 px-4">
