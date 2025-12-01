@@ -166,6 +166,9 @@ Route::middleware(['auth'])->group(function () {
         Route::get('work-orders/sewing/{sewing}/image', [\App\Http\Controllers\WorkOrderController::class, 'serveSewingImage'])->name('work-orders.sewing-image');
         Route::get('work-orders/packing/{packing}/image', [\App\Http\Controllers\WorkOrderController::class, 'servePackingImage'])->name('work-orders.packing-image');
         
+        // Order Image Route
+        Route::get('orders/{order}/image', [\App\Http\Controllers\OrderController::class, 'serveOrderImage'])->name('orders.image');
+        
         Route::get('payment-history', [\App\Http\Controllers\PaymentHistoryController::class, 'index'])->name('payment-history');
 
         // Customers
