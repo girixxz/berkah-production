@@ -106,6 +106,12 @@ class PaymentHistoryController extends Controller
             ->paginate(15)
             ->appends($request->except('page'));
 
+        // AJAX support - return rendered HTML for AJAX requests
+        if ($request->ajax() || $request->wantsJson() || 
+            $request->header('X-Requested-With') === 'XMLHttpRequest') {
+            return view('pages.admin.payment-history', compact('payments', 'stats', 'startDate', 'endDate', 'dateRange'))->render();
+        }
+        
         return view('pages.admin.payment-history', compact('payments', 'stats', 'startDate', 'endDate', 'dateRange'));
     }
 }

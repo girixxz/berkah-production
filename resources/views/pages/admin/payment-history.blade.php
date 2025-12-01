@@ -23,6 +23,23 @@
         selectedImage: '',
         showActionConfirm: null,
         actionType: '',
+        matchesSearch(row) {
+            if (!this.searchQuery || this.searchQuery.trim() === '') return true;
+            const query = this.searchQuery.toLowerCase();
+            const invoice = (row.getAttribute('data-invoice') || '').toLowerCase();
+            const customer = (row.getAttribute('data-customer') || '').toLowerCase();
+            return invoice.includes(query) || customer.includes(query);
+        },
+        get hasVisibleRows() {
+            if (!this.searchQuery || this.searchQuery.trim() === '') return true;
+            const tbody = document.querySelector('tbody');
+            if (!tbody) return true;
+            const rows = tbody.querySelectorAll('tr[data-invoice]');
+            for (let row of rows) {
+                if (this.matchesSearch(row)) return true;
+            }
+            return false;
+        },
         init() {
             // Check for toast message from session
             @if (session('message')) setTimeout(() => {
@@ -35,8 +52,8 @@
                 }, 300); @endif
         },
         getDateLabel() {
-            if (this.dateRange === 'last_month') return 'Bulan Lalu';
-            if (this.dateRange === 'last_7_days') return '1 Minggu Yang Lalu';
+            if (this.dateRange === 'last_month') return 'Last Month';
+            if (this.dateRange === 'last_7_days') return 'Last 7 Days';
             if (this.dateRange === 'yesterday') return 'Yesterday';
             if (this.dateRange === 'today') return 'Today';
             if (this.dateRange === 'this_month') return 'This Month';
@@ -45,58 +62,109 @@
         },
         applyDatePreset(preset) {
             const today = new Date();
-            const form = this.$refs.dateForm;
             if (preset === 'last-month') {
                 const lastMonth = new Date(today.getFullYear(), today.getMonth() - 1, 1);
                 const lastMonthEnd = new Date(today.getFullYear(), today.getMonth(), 0);
                 this.startDate = lastMonth.toISOString().split('T')[0];
                 this.endDate = lastMonthEnd.toISOString().split('T')[0];
                 this.dateRange = 'last_month';
-                form.querySelector('input[name=date_range]').value = 'last_month';
-                form.querySelector('input[name=start_date]').value = this.startDate;
-                form.querySelector('input[name=end_date]').value = this.endDate;
-                form.submit();
+                this.applyFilter();
             } else if (preset === '1-week-ago') {
                 const oneWeekAgo = new Date(today);
                 oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
                 this.startDate = oneWeekAgo.toISOString().split('T')[0];
                 this.endDate = today.toISOString().split('T')[0];
                 this.dateRange = 'last_7_days';
-                form.querySelector('input[name=date_range]').value = 'last_7_days';
-                form.querySelector('input[name=start_date]').value = this.startDate;
-                form.querySelector('input[name=end_date]').value = this.endDate;
-                form.submit();
+                this.applyFilter();
             } else if (preset === 'yesterday') {
                 const yesterday = new Date(today);
                 yesterday.setDate(yesterday.getDate() - 1);
                 this.startDate = yesterday.toISOString().split('T')[0];
                 this.endDate = yesterday.toISOString().split('T')[0];
                 this.dateRange = 'yesterday';
-                form.querySelector('input[name=date_range]').value = 'yesterday';
-                form.querySelector('input[name=start_date]').value = this.startDate;
-                form.querySelector('input[name=end_date]').value = this.endDate;
-                form.submit();
+                this.applyFilter();
             } else if (preset === 'today') {
                 this.startDate = today.toISOString().split('T')[0];
                 this.endDate = today.toISOString().split('T')[0];
                 this.dateRange = 'today';
-                form.querySelector('input[name=date_range]').value = 'today';
-                form.querySelector('input[name=start_date]').value = this.startDate;
-                form.querySelector('input[name=end_date]').value = this.endDate;
-                form.submit();
+                this.applyFilter();
             } else if (preset === 'this-month') {
                 const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
                 const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0);
                 this.startDate = firstDay.toISOString().split('T')[0];
                 this.endDate = lastDay.toISOString().split('T')[0];
                 this.dateRange = 'this_month';
-                form.querySelector('input[name=date_range]').value = 'this_month';
-                form.querySelector('input[name=start_date]').value = this.startDate;
-                form.querySelector('input[name=end_date]').value = this.endDate;
-                form.submit();
+                this.applyFilter();
             } else if (preset === 'custom') {
                 this.showDateCustomRange = true;
             }
+        },
+        applyFilter() {
+            this.showDateFilter = false;
+            this.showDateCustomRange = false;
+            
+            // Save focus state and cursor position
+            const searchInputFocused = document.activeElement === this.$refs.searchInput;
+            const cursorPosition = searchInputFocused ? this.$refs.searchInput.selectionStart : null;
+            
+            // Build URL with query params
+            const params = new URLSearchParams();
+            params.set('filter', this.activeFilter);
+            if (this.searchQuery) params.set('search', this.searchQuery);
+            if (this.dateRange) params.set('date_range', this.dateRange);
+            if (this.startDate) params.set('start_date', this.startDate);
+            if (this.endDate) params.set('end_date', this.endDate);
+            
+            const role = '{{ $role }}';
+            const baseRoute = role === 'owner' ? '{{ route('owner.payment-history') }}' : '{{ route('admin.payment-history') }}';
+            const url = baseRoute + '?' + params.toString();
+            
+            // Update URL without reload
+            window.history.pushState({}, '', url);
+            
+            // Fetch content via AJAX with loading bar
+            NProgress.start();
+            
+            fetch(url, {
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+            .then(response => response.text())
+            .then(html => {
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(html, 'text/html');
+                const newSection = doc.getElementById('payment-history-section');
+                
+                if (newSection) {
+                    document.getElementById('payment-history-section').innerHTML = newSection.innerHTML;
+                    setupPagination('payment-history-pagination-container', 'payment-history-section');
+                    
+                    // Scroll to filter section
+                    setTimeout(() => {
+                        const filterSection = document.getElementById('filter-section');
+                        if (filterSection) {
+                            filterSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                        }
+                    }, 100);
+                }
+                
+                NProgress.done();
+                
+                // Restore focus and cursor position
+                if (searchInputFocused && this.$refs.searchInput) {
+                    this.$nextTick(() => {
+                        this.$refs.searchInput.focus();
+                        if (cursorPosition !== null) {
+                            this.$refs.searchInput.setSelectionRange(cursorPosition, cursorPosition);
+                        }
+                    });
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                NProgress.done();
+            });
         }
     }" class="space-y-6">
 
@@ -186,62 +254,64 @@
             </div>
         </div>
 
+        {{-- Wrap dengan section untuk AJAX reload --}}
+        <section id="payment-history-section">
         {{-- ================= SECTION 2: FILTER & ACTIONS ================= --}}
-        <div class="bg-white border border-gray-200 rounded-lg p-5 mt-6">
+        <div id="filter-section" class="bg-white border border-gray-200 rounded-lg p-5 mt-6">
             {{-- Mobile: Vertikal | Desktop (1280px+): Horizontal dengan filter kiri, actions kanan --}}
             <div class="flex flex-col xl:flex-row xl:items-center gap-4">
 
                 {{-- Left: Filter Buttons - Grid 3 kolom di mobile, flex di desktop --}}
                 <div class="grid grid-cols-3 md:flex md:flex-wrap gap-2">
                     {{-- All - Primary --}}
-                    <a href="{{ route($role === 'owner' ? 'owner.payment-history' : 'admin.payment-history', ['filter' => 'default'] + request()->except('filter')) }}"
+                    <button @click="activeFilter = 'default'; applyFilter();"
                         :class="activeFilter === 'default' ? 'bg-primary text-white' :
                             'bg-gray-100 text-gray-700 hover:bg-gray-200'"
                         class="px-4 py-2 rounded-md text-sm font-medium transition-colors text-center">
                         All
-                    </a>
+                    </button>
                     {{-- Pending - Yellow --}}
-                    <a href="{{ route($role === 'owner' ? 'owner.payment-history' : 'admin.payment-history', ['filter' => 'pending'] + request()->except('filter')) }}"
+                    <button @click="activeFilter = 'pending'; applyFilter();"
                         :class="activeFilter === 'pending' ? 'bg-yellow-500 text-white' :
                             'bg-gray-100 text-gray-700 hover:bg-yellow-50'"
                         class="px-4 py-2 rounded-md text-sm font-medium transition-colors text-center">
                         Pending
-                    </a>
+                    </button>
                     {{-- Approved - Green --}}
-                    <a href="{{ route($role === 'owner' ? 'owner.payment-history' : 'admin.payment-history', ['filter' => 'approved'] + request()->except('filter')) }}"
+                    <button @click="activeFilter = 'approved'; applyFilter();"
                         :class="activeFilter === 'approved' ? 'bg-green-500 text-white' :
                             'bg-gray-100 text-gray-700 hover:bg-green-50'"
                         class="px-4 py-2 rounded-md text-sm font-medium transition-colors text-center">
                         Approved
-                    </a>
+                    </button>
                     {{-- Rejected - Red --}}
-                    <a href="{{ route($role === 'owner' ? 'owner.payment-history' : 'admin.payment-history', ['filter' => 'rejected'] + request()->except('filter')) }}"
+                    <button @click="activeFilter = 'rejected'; applyFilter();"
                         :class="activeFilter === 'rejected' ? 'bg-red-500 text-white' :
                             'bg-gray-100 text-gray-700 hover:bg-red-50'"
                         class="px-4 py-2 rounded-md text-sm font-medium transition-colors text-center">
                         Rejected
-                    </a>
+                    </button>
                     {{-- DP - Primary --}}
-                    <a href="{{ route($role === 'owner' ? 'owner.payment-history' : 'admin.payment-history', ['filter' => 'dp'] + request()->except('filter')) }}"
+                    <button @click="activeFilter = 'dp'; applyFilter();"
                         :class="activeFilter === 'dp' ? 'bg-primary text-white' :
                             'bg-gray-100 text-gray-700 hover:bg-gray-200'"
                         class="px-4 py-2 rounded-md text-sm font-medium transition-colors text-center">
                         DP
-                    </a>
+                    </button>
                     {{-- Repayment - Primary --}}
-                    <a href="{{ route($role === 'owner' ? 'owner.payment-history' : 'admin.payment-history', ['filter' => 'repayment'] + request()->except('filter')) }}"
+                    <button @click="activeFilter = 'repayment'; applyFilter();"
                         :class="activeFilter === 'repayment' ? 'bg-primary text-white' :
                             'bg-gray-100 text-gray-700 hover:bg-gray-200'"
                         class="px-4 py-2 rounded-md text-sm font-medium transition-colors text-center">
                         Repayment
-                    </a>
+                    </button>
                     {{-- Full Payment - Primary --}}
-                    <a href="{{ route($role === 'owner' ? 'owner.payment-history' : 'admin.payment-history', ['filter' => 'full_payment'] + request()->except('filter')) }}"
+                    <button @click="activeFilter = 'full_payment'; applyFilter();"
                         :class="activeFilter === 'full_payment' ? 'bg-primary text-white' :
                             'bg-gray-100 text-gray-700 hover:bg-gray-200'"
                         class="px-4 py-2 rounded-md text-sm font-medium transition-colors text-center">
                         Full
-                    </a>
+                    </button>
                 </div>
 
                 {{-- Right: Search & Date Filter --}}
@@ -250,31 +320,19 @@
                     {{-- Search & Date Filter - Same row on mobile --}}
                     <div class="flex gap-2 items-center xl:flex-1 xl:min-w-0">
                         {{-- Search - Flexible width yang bisa menyesuaikan --}}
-                        <form method="GET"
-                            action="{{ route($role === 'owner' ? 'owner.payment-history' : 'admin.payment-history') }}"
-                            class="flex-1 xl:min-w-[180px]" x-ref="searchForm">
-                            <input type="hidden" name="filter" value="{{ request('filter', 'default') }}">
-                            @if (request('date_range'))
-                                <input type="hidden" name="date_range" value="{{ request('date_range') }}">
-                            @endif
-                            @if (request('start_date'))
-                                <input type="hidden" name="start_date" value="{{ request('start_date') }}">
-                            @endif
-                            @if (request('end_date'))
-                                <input type="hidden" name="end_date" value="{{ request('end_date') }}">
-                            @endif
+                        <div class="flex-1 xl:min-w-[180px]">
                             <div class="relative">
                                 <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none"
                                     stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                         d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                                 </svg>
-                                <input type="text" name="search" value="{{ request('search') }}"
-                                    @input.debounce.500ms="$refs.searchForm.submit()"
+                                <input type="text" x-model="searchQuery" x-ref="searchInput"
+                                    @input="applyFilter()"
                                     placeholder="Search invoice, customer..."
                                     class="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary">
                             </div>
-                        </form>
+                        </div>
 
                         {{-- Date Filter - Icon only di mobile, with text di desktop --}}
                         <div class="relative flex-shrink-0">
@@ -288,20 +346,7 @@
                                 </svg>
                                 {{-- Text hidden di mobile, visible di desktop --}}
                                 <span x-text="getDateLabel()" class="hidden lg:inline whitespace-nowrap"></span>
-                                {{-- Active indicator dot - always visible --}}
-                                <span x-show="dateRange" x-cloak class="w-2 h-2 bg-primary rounded-full"></span>
                             </button>
-
-                            {{-- Hidden Form for Date Presets --}}
-                            <form x-ref="dateForm" method="GET"
-                                action="{{ route($role === 'owner' ? 'owner.payment-history' : 'admin.payment-history') }}"
-                                class="hidden">
-                                <input type="hidden" name="filter" :value="activeFilter">
-                                <input type="hidden" name="search" :value="searchQuery">
-                                <input type="hidden" name="date_range" :value="dateRange">
-                                <input type="hidden" name="start_date" :value="startDate">
-                                <input type="hidden" name="end_date" :value="endDate">
-                            </form>
 
                             {{-- Date Filter Modal --}}
                             <div x-show="showDateFilter" @click.away="showDateFilter = false; showDateCustomRange = false"
@@ -314,13 +359,13 @@
                                         :class="dateRange === 'last_month' ? 'bg-primary/10 text-primary font-medium' :
                                             'text-gray-700 hover:bg-gray-50'"
                                         class="w-full text-left px-4 py-2.5 text-sm rounded-md transition-colors">
-                                        Bulan Lalu
+                                        Last Month
                                     </button>
                                     <button @click="applyDatePreset('1-week-ago')" type="button"
                                         :class="dateRange === 'last_7_days' ? 'bg-primary/10 text-primary font-medium' :
                                             'text-gray-700 hover:bg-gray-50'"
                                         class="w-full text-left px-4 py-2.5 text-sm rounded-md transition-colors">
-                                        1 Minggu Yang Lalu
+                                        Last 7 Days
                                     </button>
                                     <button @click="applyDatePreset('yesterday')" type="button"
                                         :class="dateRange === 'yesterday' ? 'bg-primary/10 text-primary font-medium' :
@@ -342,29 +387,30 @@
                                     </button>
                                     <div class="border-t border-gray-200 my-2"></div>
                                     <button @click="applyDatePreset('custom')" type="button"
-                                        :class="dateRange === 'custom' ? 'bg-primary/10 text-primary font-medium' :
-                                            'text-primary hover:bg-primary/5'"
-                                        class="w-full text-left px-4 py-2.5 text-sm font-medium rounded-md transition-colors">
+                                        :class="dateRange === 'custom' ? 'bg-primary/10 text-primary font-semibold' :
+                                            'text-primary hover:bg-primary/5 font-medium'"
+                                        class="w-full text-left px-4 py-2.5 text-sm rounded-md transition-colors">
                                         Custom Date
                                     </button>
                                 </div>
 
                                 {{-- Custom Range Form --}}
-                                <form x-show="showDateCustomRange" method="GET"
-                                    action="{{ route($role === 'owner' ? 'owner.payment-history' : 'admin.payment-history') }}"
-                                    class="p-4" @submit="dateRange = 'custom'">
+                                <form x-show="showDateCustomRange" class="p-4"
+                                    @submit.prevent="dateRange = 'custom'; applyFilter();">
                                     <input type="hidden" name="filter" :value="activeFilter">
                                     <input type="hidden" name="search" :value="searchQuery">
                                     <input type="hidden" name="date_range" value="custom">
 
                                     <div class="space-y-3">
                                         <div>
-                                            <label class="block text-sm font-medium text-gray-700 mb-1">Start Date</label>
+                                            <label class="block text-sm font-medium text-gray-700 mb-1">Start
+                                                Date</label>
                                             <input type="date" name="start_date" x-model="startDate"
                                                 class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm">
                                         </div>
                                         <div>
-                                            <label class="block text-sm font-medium text-gray-700 mb-1">End Date</label>
+                                            <label class="block text-sm font-medium text-gray-700 mb-1">End
+                                                Date</label>
                                             <input type="date" name="end_date" x-model="endDate"
                                                 class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm">
                                         </div>
@@ -410,7 +456,9 @@
                     </thead>
                     <tbody class="divide-y divide-gray-200">
                         @forelse ($payments as $payment)
-                            <tr class="hover:bg-gray-50">
+                            <tr class="hover:bg-gray-50" x-show="matchesSearch($el)"
+                                data-invoice="{{ $payment->invoice->invoice_no ?? '' }}"
+                                data-customer="{{ $payment->invoice->order->customer->customer_name ?? '' }} {{ $payment->invoice->order->customer->phone ?? '' }}">
                                 {{-- Paid At --}}
                                 <td class="py-3 px-4">
                                     <span
@@ -551,7 +599,7 @@
                                 @endif
                             </tr>
                         @empty
-                            <tr>
+                            <tr x-show="!searchQuery">
                                 <td colspan="{{ $role === 'owner' ? '9' : '8' }}" class="py-8 text-center text-gray-400">
                                     <svg class="w-16 h-16 mx-auto mb-3 opacity-50" fill="none" stroke="currentColor"
                                         viewBox="0 0 24 24">
@@ -562,16 +610,28 @@
                                 </td>
                             </tr>
                         @endforelse
+                        
+                        {{-- Client-side No Results Message --}}
+                        <tr x-show="!hasVisibleRows && searchQuery" x-cloak>
+                            <td colspan="{{ $role === 'owner' ? '9' : '8' }}" class="py-8 text-center text-gray-400">
+                                <svg class="w-16 h-16 mx-auto mb-3 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                                </svg>
+                                <p class="text-sm">No results found for "<span x-text="searchQuery"></span>"</p>
+                                <p class="text-xs text-gray-500 mt-1">Try searching with different keywords</p>
+                            </td>
+                        </tr>
                     </tbody>
                 </table>
             </div>
 
-            {{-- Pagination --}}
-            <div id="pagination-section" class="mt-5">
-                @if ($payments->hasPages())
-                    <x-custom-pagination :paginator="$payments" />
-                @endif
+            {{-- Pagination - Always visible --}}
+            <div id="payment-history-pagination-container" class="mt-5">
+                <x-custom-pagination :paginator="$payments" />
             </div>
+
+        </div>
+        </section>
 
             {{-- ================= IMAGE MODAL ================= --}}
             <div x-show="showImageModal" x-cloak x-transition.opacity
@@ -704,4 +764,52 @@
                 color: white !important;
             }
         </style>
+    @endpush
+
+    @push('scripts')
+        {{-- Pagination AJAX Script --}}
+        <script>
+            document.addEventListener('DOMContentLoaded', function() {
+                setupPagination('payment-history-pagination-container', 'payment-history-section');
+            });
+
+            function setupPagination(containerId, sectionId) {
+                const container = document.getElementById(containerId);
+                if (!container) return;
+
+                container.addEventListener('click', function(e) {
+                    const link = e.target.closest('a[href*="page="]');
+                    if (!link) return;
+
+                    e.preventDefault();
+                    const url = link.getAttribute('href');
+
+                    fetch(url, {
+                            headers: {
+                                'X-Requested-With': 'XMLHttpRequest'
+                            }
+                        })
+                        .then(response => response.text())
+                        .then(html => {
+                            const parser = new DOMParser();
+                            const doc = parser.parseFromString(html, 'text/html');
+                            const newSection = doc.getElementById(sectionId);
+
+                            if (newSection) {
+                                document.getElementById(sectionId).innerHTML = newSection.innerHTML;
+
+                                // Smooth scroll to top of section
+                                document.getElementById(sectionId).scrollIntoView({
+                                    behavior: 'smooth',
+                                    block: 'start'
+                                });
+
+                                // Re-setup pagination after content update
+                                setupPagination(containerId, sectionId);
+                            }
+                        })
+                        .catch(error => console.error('Error:', error));
+                });
+            }
+        </script>
     @endpush
