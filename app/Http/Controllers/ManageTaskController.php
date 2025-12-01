@@ -128,6 +128,12 @@ class ManageTaskController extends Controller
             'order_finished' => Order::where('production_status', 'finished')->count(),
         ];
 
+        // AJAX support - return rendered HTML for AJAX requests
+        if ($request->ajax() || $request->wantsJson() || 
+            $request->header('X-Requested-With') === 'XMLHttpRequest') {
+            return view('pages.pm.manage-task', compact('orders', 'stats', 'productionStages', 'dateRange', 'startDate', 'endDate', 'isViewOnly'))->render();
+        }
+        
         return view('pages.pm.manage-task', compact('orders', 'stats', 'productionStages', 'dateRange', 'startDate', 'endDate', 'isViewOnly'));
     }
 

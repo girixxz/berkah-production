@@ -36,6 +36,23 @@
             orderNotes: ''
         },
         isUpdatingStatus: false,
+        matchesSearch(row) {
+            if (!this.searchQuery || this.searchQuery.trim() === '') return true;
+            const query = this.searchQuery.toLowerCase();
+            const invoice = (row.getAttribute('data-invoice') || '').toLowerCase();
+            const customer = (row.getAttribute('data-customer') || '').toLowerCase();
+            return invoice.includes(query) || customer.includes(query);
+        },
+        get hasVisibleRows() {
+            if (!this.searchQuery || this.searchQuery.trim() === '') return true;
+            const tbody = document.querySelector('tbody');
+            if (!tbody) return true;
+            const rows = tbody.querySelectorAll('tr[data-invoice]');
+            for (let row of rows) {
+                if (this.matchesSearch(row)) return true;
+            }
+            return false;
+        },
         init() {
             const toastMessage = sessionStorage.getItem('toast_message');
             const toastType = sessionStorage.getItem('toast_type');
@@ -143,8 +160,8 @@
                 });
         },
         getDateLabel() {
-            if (this.dateRange === 'last_month') return 'Bulan Lalu';
-            if (this.dateRange === 'last_7_days') return '1 Minggu Yang Lalu';
+            if (this.dateRange === 'last_month') return 'Last Month';
+            if (this.dateRange === 'last_7_days') return 'Last 7 Days';
             if (this.dateRange === 'yesterday') return 'Yesterday';
             if (this.dateRange === 'today') return 'Today';
             if (this.dateRange === 'this_month') return 'This Month';
@@ -153,58 +170,107 @@
         },
         applyDatePreset(preset) {
             const today = new Date();
-            const form = this.$refs.dateForm;
             if (preset === 'last-month') {
                 const lastMonth = new Date(today.getFullYear(), today.getMonth() - 1, 1);
                 const lastMonthEnd = new Date(today.getFullYear(), today.getMonth(), 0);
                 this.startDate = lastMonth.toISOString().split('T')[0];
                 this.endDate = lastMonthEnd.toISOString().split('T')[0];
                 this.dateRange = 'last_month';
-                form.querySelector('input[name=date_range]').value = 'last_month';
-                form.querySelector('input[name=start_date]').value = this.startDate;
-                form.querySelector('input[name=end_date]').value = this.endDate;
-                form.submit();
+                this.applyFilter();
             } else if (preset === '1-week-ago') {
                 const oneWeekAgo = new Date(today);
                 oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
                 this.startDate = oneWeekAgo.toISOString().split('T')[0];
                 this.endDate = today.toISOString().split('T')[0];
                 this.dateRange = 'last_7_days';
-                form.querySelector('input[name=date_range]').value = 'last_7_days';
-                form.querySelector('input[name=start_date]').value = this.startDate;
-                form.querySelector('input[name=end_date]').value = this.endDate;
-                form.submit();
+                this.applyFilter();
             } else if (preset === 'yesterday') {
                 const yesterday = new Date(today);
                 yesterday.setDate(yesterday.getDate() - 1);
                 this.startDate = yesterday.toISOString().split('T')[0];
                 this.endDate = yesterday.toISOString().split('T')[0];
                 this.dateRange = 'yesterday';
-                form.querySelector('input[name=date_range]').value = 'yesterday';
-                form.querySelector('input[name=start_date]').value = this.startDate;
-                form.querySelector('input[name=end_date]').value = this.endDate;
-                form.submit();
+                this.applyFilter();
             } else if (preset === 'today') {
                 this.startDate = today.toISOString().split('T')[0];
                 this.endDate = today.toISOString().split('T')[0];
                 this.dateRange = 'today';
-                form.querySelector('input[name=date_range]').value = 'today';
-                form.querySelector('input[name=start_date]').value = this.startDate;
-                form.querySelector('input[name=end_date]').value = this.endDate;
-                form.submit();
+                this.applyFilter();
             } else if (preset === 'this-month') {
                 const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
                 const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0);
                 this.startDate = firstDay.toISOString().split('T')[0];
                 this.endDate = lastDay.toISOString().split('T')[0];
                 this.dateRange = 'this_month';
-                form.querySelector('input[name=date_range]').value = 'this_month';
-                form.querySelector('input[name=start_date]').value = this.startDate;
-                form.querySelector('input[name=end_date]').value = this.endDate;
-                form.submit();
+                this.applyFilter();
             } else if (preset === 'custom') {
                 this.showDateCustomRange = true;
             }
+        },
+        applyFilter() {
+            this.showDateFilter = false;
+            this.showDateCustomRange = false;
+            
+            // Save focus state and cursor position
+            const searchInputFocused = document.activeElement === this.$refs.searchInput;
+            const cursorPosition = searchInputFocused ? this.$refs.searchInput.selectionStart : null;
+            
+            // Build URL with query params
+            const params = new URLSearchParams();
+            params.set('filter', this.activeFilter);
+            if (this.searchQuery) params.set('search', this.searchQuery);
+            if (this.dateRange) params.set('date_range', this.dateRange);
+            if (this.startDate) params.set('start_date', this.startDate);
+            if (this.endDate) params.set('end_date', this.endDate);
+            
+            const url = '{{ route($routeName) }}?' + params.toString();
+            
+            // Update URL without reload
+            window.history.pushState({}, '', url);
+            
+            // Fetch content via AJAX with loading bar
+            NProgress.start();
+            
+            fetch(url, {
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+            .then(response => response.text())
+            .then(html => {
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(html, 'text/html');
+                const newSection = doc.getElementById('task-manager-section');
+                
+                if (newSection) {
+                    document.getElementById('task-manager-section').innerHTML = newSection.innerHTML;
+                    setupPagination('task-manager-pagination-container', 'task-manager-section');
+                    
+                    // Scroll to filter section
+                    setTimeout(() => {
+                        const filterSection = document.getElementById('filter-section');
+                        if (filterSection) {
+                            filterSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                        }
+                    }, 100);
+                }
+                
+                NProgress.done();
+                
+                // Restore focus and cursor position
+                if (searchInputFocused && this.$refs.searchInput) {
+                    this.$nextTick(() => {
+                        this.$refs.searchInput.focus();
+                        if (cursorPosition !== null) {
+                            this.$refs.searchInput.setSelectionRange(cursorPosition, cursorPosition);
+                        }
+                    });
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                NProgress.done();
+            });
         }
     }" class="space-y-6">
 
@@ -277,55 +343,49 @@
             </div>
         </div>
 
+        {{-- Wrap dengan section untuk AJAX reload --}}
+        <section id="task-manager-section">
         {{-- ================= SECTION 2: FILTER, SEARCH & TABLE ================= --}}
-        <div class="bg-white border border-gray-200 rounded-lg p-5 mt-6">
+        <div id="filter-section" class="bg-white border border-gray-200 rounded-lg p-5 mt-6">
             {{-- Filter & Search Section --}}
             <div class="flex flex-col xl:flex-row xl:items-center gap-4">
                 {{-- Left: Filter Buttons --}}
                 <div class="grid grid-cols-3 md:flex md:flex-wrap gap-2">
-                    <a href="{{ route($routeName, ['filter' => 'default'] + request()->except('filter')) }}"
+                    <button @click="activeFilter = 'default'; applyFilter();"
                         :class="activeFilter === 'default' ? 'bg-primary text-white' :
                             'bg-gray-100 text-gray-700 hover:bg-gray-200'"
                         class="px-4 py-2 rounded-md text-sm font-medium transition-colors text-center">
                         Default
-                    </a>
-                    <a href="{{ route($routeName, ['filter' => 'wip'] + request()->except('filter')) }}"
+                    </button>
+                    <button @click="activeFilter = 'wip'; applyFilter();"
                         :class="activeFilter === 'wip' ? 'bg-primary text-white' :
                             'bg-gray-100 text-gray-700 hover:bg-gray-200'"
                         class="px-4 py-2 rounded-md text-sm font-medium transition-colors text-center">
                         WIP
-                    </a>
-                    <a href="{{ route($routeName, ['filter' => 'finished'] + request()->except('filter')) }}"
+                    </button>
+                    <button @click="activeFilter = 'finished'; applyFilter();"
                         :class="activeFilter === 'finished' ? 'bg-primary text-white' :
                             'bg-gray-100 text-gray-700 hover:bg-gray-200'"
                         class="px-4 py-2 rounded-md text-sm font-medium transition-colors text-center">
                         Finished
-                    </a>
+                    </button>
                 </div>
 
                 {{-- Right: Search & Date Filter --}}
                 <div class="flex gap-2 items-center xl:flex-1 xl:ml-auto xl:min-w-0">
                     {{-- Search --}}
-                    <form method="GET" action="{{ route($routeName) }}" class="flex-1 xl:min-w-[180px]"
-                        x-ref="searchForm">
-                        <input type="hidden" name="filter" value="{{ request('filter', 'default') }}">
-                        @if (request('start_date'))
-                            <input type="hidden" name="start_date" value="{{ request('start_date') }}">
-                        @endif
-                        @if (request('end_date'))
-                            <input type="hidden" name="end_date" value="{{ request('end_date') }}">
-                        @endif
+                    <div class="flex-1 xl:min-w-[180px]">
                         <div class="relative">
                             <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none"
                                 stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                     d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                             </svg>
-                            <input type="text" name="search" value="{{ request('search') }}"
-                                @input.debounce.500ms="$refs.searchForm.submit()" placeholder="Search invoice, customer..."
+                            <input type="text" x-model="searchQuery" x-ref="searchInput"
+                                @input="applyFilter()" placeholder="Search invoice, customer..."
                                 class="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary">
                         </div>
-                    </form>
+                    </div>
 
                     {{-- Date Filter --}}
                     <div class="relative flex-shrink-0">
@@ -340,15 +400,6 @@
                             <span x-text="getDateLabel()" class="hidden lg:inline whitespace-nowrap"></span>
                         </button>
 
-                        {{-- Hidden Form for Date Presets --}}
-                        <form x-ref="dateForm" method="GET" action="{{ route($routeName) }}" class="hidden">
-                            <input type="hidden" name="filter" :value="activeFilter">
-                            <input type="hidden" name="search" :value="searchQuery">
-                            <input type="hidden" name="date_range" :value="dateRange">
-                            <input type="hidden" name="start_date" :value="startDate">
-                            <input type="hidden" name="end_date" :value="endDate">
-                        </form>
-
                         {{-- Date Filter Modal --}}
                         <div x-show="showDateFilter" @click.away="showDateFilter = false; showDateCustomRange = false"
                             x-cloak
@@ -357,47 +408,61 @@
                             {{-- Main Preset Options --}}
                             <div x-show="!showDateCustomRange" class="p-2">
                                 <button @click="applyDatePreset('last-month')" type="button"
-                                    class="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 rounded-md transition-colors">
-                                    Bulan Lalu
+                                    :class="dateRange === 'last_month' ? 'bg-primary/10 text-primary font-medium' :
+                                        'text-gray-700 hover:bg-gray-50'"
+                                    class="w-full text-left px-4 py-2.5 text-sm rounded-md transition-colors">
+                                    Last Month
                                 </button>
                                 <button @click="applyDatePreset('1-week-ago')" type="button"
-                                    class="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 rounded-md transition-colors">
-                                    1 Minggu Yang Lalu
+                                    :class="dateRange === 'last_7_days' ? 'bg-primary/10 text-primary font-medium' :
+                                        'text-gray-700 hover:bg-gray-50'"
+                                    class="w-full text-left px-4 py-2.5 text-sm rounded-md transition-colors">
+                                    Last 7 Days
                                 </button>
                                 <button @click="applyDatePreset('yesterday')" type="button"
-                                    class="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 rounded-md transition-colors">
+                                    :class="dateRange === 'yesterday' ? 'bg-primary/10 text-primary font-medium' :
+                                        'text-gray-700 hover:bg-gray-50'"
+                                    class="w-full text-left px-4 py-2.5 text-sm rounded-md transition-colors">
                                     Yesterday
                                 </button>
                                 <button @click="applyDatePreset('today')" type="button"
-                                    class="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 rounded-md transition-colors">
+                                    :class="dateRange === 'today' ? 'bg-primary/10 text-primary font-medium' :
+                                        'text-gray-700 hover:bg-gray-50'"
+                                    class="w-full text-left px-4 py-2.5 text-sm rounded-md transition-colors">
                                     Today
                                 </button>
                                 <button @click="applyDatePreset('this-month')" type="button"
-                                    class="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 rounded-md transition-colors">
+                                    :class="dateRange === 'this_month' ? 'bg-primary/10 text-primary font-medium' :
+                                        'text-gray-700 hover:bg-gray-50'"
+                                    class="w-full text-left px-4 py-2.5 text-sm rounded-md transition-colors">
                                     This Month
                                 </button>
                                 <div class="border-t border-gray-200 my-2"></div>
                                 <button @click="applyDatePreset('custom')" type="button"
-                                    class="w-full text-left px-4 py-2.5 text-sm font-medium text-primary hover:bg-primary/5 rounded-md transition-colors">
+                                    :class="dateRange === 'custom' ? 'bg-primary/10 text-primary font-semibold' :
+                                        'text-primary hover:bg-primary/5 font-medium'"
+                                    class="w-full text-left px-4 py-2.5 text-sm rounded-md transition-colors">
                                     Custom Date
                                 </button>
                             </div>
 
                             {{-- Custom Range Form --}}
-                            <form x-show="showDateCustomRange" method="GET" action="{{ route($routeName) }}"
-                                class="p-4" @submit="dateRange = 'custom'">
+                            <form x-show="showDateCustomRange" class="p-4"
+                                @submit.prevent="dateRange = 'custom'; applyFilter();">
                                 <input type="hidden" name="filter" :value="activeFilter">
                                 <input type="hidden" name="search" :value="searchQuery">
                                 <input type="hidden" name="date_range" value="custom">
 
                                 <div class="space-y-3">
                                     <div>
-                                        <label class="block text-sm font-medium text-gray-700 mb-1">Start Date</label>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">Start
+                                            Date</label>
                                         <input type="date" name="start_date" x-model="startDate"
                                             class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm">
                                     </div>
                                     <div>
-                                        <label class="block text-sm font-medium text-gray-700 mb-1">End Date</label>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">End
+                                            Date</label>
                                         <input type="date" name="end_date" x-model="endDate"
                                             class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm">
                                     </div>
@@ -443,7 +508,10 @@
                                 // Get all order stages for this order
                                 $orderStagesMap = $order->orderStages->keyBy('stage_id');
                             @endphp
-                            <tr class="hover:bg-gray-50">
+                            <tr class="hover:bg-gray-50"
+                                x-show="matchesSearch($el)"
+                                data-invoice="{{ $order->invoice->invoice_no ?? '' }}"
+                                data-customer="{{ $order->customer->customer_name ?? '' }} {{ $order->customer->phone ?? '' }}">
                                 {{-- Customer --}}
                                 <td class="py-3 px-3">
                                     <div>
@@ -647,7 +715,7 @@
                                 </td>
                             </tr>
                         @empty
-                            <tr>
+                            <tr x-show="!searchQuery" x-cloak>
                                 <td colspan="{{ 4 + count($productionStages) + 1 }}"
                                     class="py-8 text-center text-gray-400">
                                     <svg class="w-16 h-16 mx-auto mb-3 opacity-50" fill="none" stroke="currentColor"
@@ -659,17 +727,28 @@
                                 </td>
                             </tr>
                         @endforelse
+                        <tr x-show="!hasVisibleRows && searchQuery" x-cloak>
+                            <td colspan="{{ 4 + count($productionStages) + 1 }}"
+                                class="py-8 text-center text-gray-400">
+                                <svg class="w-16 h-16 mx-auto mb-3 opacity-50" fill="none" stroke="currentColor"
+                                    viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                                <p class="text-sm">No orders found for "<span x-text="searchQuery"></span>"</p>
+                                <p class="text-xs mt-1">Try searching with a different keyword</p>
+                            </td>
+                        </tr>
                     </tbody>
                 </table>
             </div>
 
             {{-- Pagination --}}
-            <div id="pagination-section" class="mt-5">
-                @if ($orders->hasPages())
-                    <x-custom-pagination :paginator="$orders" />
-                @endif
+            <div id="task-manager-pagination-container" class="mt-5">
+                <x-custom-pagination :paginator="$orders" />
             </div>
         </div>
+    </section>
 
         {{-- ================= STAGE DATE MODAL ================= --}}
         <div x-show="showStageModal" x-cloak x-transition.opacity
@@ -884,3 +963,68 @@
 
     </div>
 @endsection
+
+@push('scripts')
+    <script>
+        function setupPagination(paginationContainerId, contentSectionId) {
+            const paginationContainer = document.getElementById(paginationContainerId);
+            if (!paginationContainer) return;
+
+            paginationContainer.addEventListener('click', function(e) {
+                const link = e.target.closest('a');
+                if (!link || !link.href) return;
+
+                // Ignore disabled links
+                if (link.classList.contains('disabled') || link.getAttribute('aria-disabled') === 'true') {
+                    e.preventDefault();
+                    return;
+                }
+
+                e.preventDefault();
+                const url = link.href;
+
+                NProgress.start();
+
+                fetch(url, {
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest'
+                        }
+                    })
+                    .then(response => response.text())
+                    .then(html => {
+                        const parser = new DOMParser();
+                        const doc = parser.parseFromString(html, 'text/html');
+                        const newContent = doc.getElementById(contentSectionId);
+
+                        if (newContent) {
+                            document.getElementById(contentSectionId).innerHTML = newContent.innerHTML;
+                            window.history.pushState({}, '', url);
+
+                            // Scroll to filter section
+                            const filterSection = document.getElementById('filter-section');
+                            if (filterSection) {
+                                filterSection.scrollIntoView({
+                                    behavior: 'smooth',
+                                    block: 'start'
+                                });
+                            }
+
+                            // Re-setup pagination after content update
+                            setTimeout(() => setupPagination(paginationContainerId, contentSectionId), 100);
+                        }
+
+                        NProgress.done();
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        NProgress.done();
+                    });
+            });
+        }
+
+        // Initialize pagination on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            setupPagination('task-manager-pagination-container', 'task-manager-section');
+        });
+    </script>
+@endpush
