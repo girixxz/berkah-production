@@ -61,7 +61,7 @@ Route::middleware(['auth'])->group(function () {
     /* ---------- OWNER ---------- */
     Route::prefix('owner')->name('owner.')->middleware('role:owner')->group(function () {
         // Dashboard
-        Route::get('dashboard', fn() => view('pages.owner.dashboard'))->name('dashboard');
+        Route::get('dashboard', [\App\Http\Controllers\Owner\DashboardController::class, 'index'])->name('dashboard');
 
         // Revenue
         Route::get('revenue', fn() => view('pages.owner.revenue'))->name('revenue');
