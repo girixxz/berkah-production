@@ -10,36 +10,53 @@ class ServiceController extends Controller
 {
     public function store(Request $request)
     {
-        $validated = $request->validateWithBag('addService', [
-            'service_name' => 'required|string|max:100|unique:services,service_name',
-        ]);
+        try {
+            $validated = $request->validateWithBag('addService', [
+                'service_name' => 'required|max:255|unique:services,service_name',
+            ]);
 
-        Service::create($validated);
+            Service::create($validated);
 
-        // Clear cache
-        Cache::forget('services');
+            // Clear cache
+            Cache::forget('services');
 
-        return redirect()
-            ->to(url()->previous() . '#services')
-            ->with('message', 'Service added successfully.')
-            ->with('alert-type', 'success');
+            return redirect()->route('owner.manage-data.products.index')
+                ->with('message', 'Service added successfully.')
+                ->with('alert-type', 'success')
+                ->with('scrollToSection', 'services');
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return redirect()->route('owner.manage-data.products.index')
+                ->withErrors($e->errors(), 'addService')
+                ->withInput()
+                ->with('openModal', 'addService')
+                ->with('scrollToSection', 'services');
+        }
     }
 
     public function update(Request $request, Service $service)
     {
-        $validated = $request->validateWithBag('editService', [
-            'service_name' => 'required|string|max:100|unique:services,service_name,' . $service->id,
-        ]);
+        try {
+            $validated = $request->validateWithBag('editService', [
+                'service_name' => 'required|max:255|unique:services,service_name,' . $service->id,
+            ]);
 
-        $service->update($validated);
+            $service->update(array_filter($validated));
 
-        // Clear cache
-        Cache::forget('services');
+            // Clear cache
+            Cache::forget('services');
 
-        return redirect()
-            ->to(url()->previous() . '#services')
-            ->with('message', 'Service updated successfully.')
-            ->with('alert-type', 'success');
+            return redirect()->route('owner.manage-data.products.index')
+                ->with('message', 'Service updated successfully.')
+                ->with('alert-type', 'success')
+                ->with('scrollToSection', 'services');
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return redirect()->route('owner.manage-data.products.index')
+                ->withErrors($e->errors(), 'editService')
+                ->withInput()
+                ->with('openModal', 'editService')
+                ->with('editServiceId', $service->id)
+                ->with('scrollToSection', 'services');
+        }
     }
 
     public function destroy(Service $service)
@@ -49,9 +66,9 @@ class ServiceController extends Controller
         // Clear cache
         Cache::forget('services');
 
-        return redirect()
-            ->to(url()->previous() . '#services')
+        return redirect()->route('owner.manage-data.products.index')
             ->with('message', 'Service deleted successfully.')
-            ->with('alert-type', 'success');
+            ->with('alert-type', 'success')
+            ->with('scrollToSection', 'services');
     }
 }

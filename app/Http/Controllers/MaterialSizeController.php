@@ -11,36 +11,55 @@ class MaterialSizeController extends Controller
 
     public function store(Request $request)
     {
-        $validated = $request->validateWithBag('addSize', [
-            'size_name' => 'required|max:255|unique:material_sizes,size_name',
-            'extra_price' => 'required|numeric|min:0',
-        ]);
+        try {
+            $validated = $request->validateWithBag('addSize', [
+                'size_name' => 'required|max:255|unique:material_sizes,size_name',
+                'extra_price' => 'required|numeric|min:0',
+            ]);
 
-        MaterialSize::create($validated);
+            MaterialSize::create($validated);
 
-        // Clear cache
-        Cache::forget('material_sizes');
+            // Clear cache
+            Cache::forget('material_sizes');
 
-        return redirect()->to(route('owner.manage-data.products.index') . '#material-sizes')
-            ->with('message', 'Material Size added successfully.')
-            ->with('alert-type', 'success');
+            return redirect()->route('owner.manage-data.products.index')
+                ->with('message', 'Material Size added successfully.')
+                ->with('alert-type', 'success')
+                ->with('scrollToSection', 'material-sizes');
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return redirect()->route('owner.manage-data.products.index')
+                ->withErrors($e->errors(), 'addSize')
+                ->withInput()
+                ->with('openModal', 'addSize')
+                ->with('scrollToSection', 'material-sizes');
+        }
     }
 
     public function update(Request $request, MaterialSize $materialSize)
     {
-        $validated = $request->validateWithBag('editSize', [
-            'size_name' => 'required|max:255|unique:material_sizes,size_name,' . $materialSize->id,
-            'extra_price' => 'required|numeric|min:0',
-        ]);
+        try {
+            $validated = $request->validateWithBag('editSize', [
+                'size_name' => 'required|max:255|unique:material_sizes,size_name,' . $materialSize->id,
+                'extra_price' => 'required|numeric|min:0',
+            ]);
 
-        $materialSize->update($validated);
+            $materialSize->update($validated);
 
-        // Clear cache
-        Cache::forget('material_sizes');
+            // Clear cache
+            Cache::forget('material_sizes');
 
-        return redirect()->to(route('owner.manage-data.products.index') . '#material-sizes')
-            ->with('message', 'Material Size updated successfully.')
-            ->with('alert-type', 'success');
+            return redirect()->route('owner.manage-data.products.index')
+                ->with('message', 'Material Size updated successfully.')
+                ->with('alert-type', 'success')
+                ->with('scrollToSection', 'material-sizes');
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return redirect()->route('owner.manage-data.products.index')
+                ->withErrors($e->errors(), 'editSize')
+                ->withInput()
+                ->with('openModal', 'editSize')
+                ->with('editSizeId', $materialSize->id)
+                ->with('scrollToSection', 'material-sizes');
+        }
     }
 
     public function destroy(MaterialSize $materialSize)
@@ -50,8 +69,9 @@ class MaterialSizeController extends Controller
         // Clear cache
         Cache::forget('material_sizes');
 
-        return redirect()->to(route('owner.manage-data.products.index') . '#material-sizes')
+        return redirect()->route('owner.manage-data.products.index')
             ->with('message', 'Material Size deleted successfully.')
-            ->with('alert-type', 'success');
+            ->with('alert-type', 'success')
+            ->with('scrollToSection', 'material-sizes');
     }
 }

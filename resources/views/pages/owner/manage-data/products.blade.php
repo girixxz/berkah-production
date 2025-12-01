@@ -113,6 +113,17 @@
     
         // ==================== Initialization ====================
         init() {
+            // Scroll to appropriate section after Add/Edit/Delete
+            const scrollToSection = '{{ session('scrollToSection') }}';
+            if (scrollToSection) {
+                setTimeout(() => {
+                    const section = document.getElementById(scrollToSection);
+                    if (section) {
+                        section.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    }
+                }, 300);
+            }
+            
             this.$watch('openModal', value => {
                 if (value) {
                     setTimeout(() => {
@@ -1724,57 +1735,87 @@
 
         {{-- AJAX Pagination Script --}}
         <script>
-            document.addEventListener('DOMContentLoaded', function() {
-                // Setup pagination for all sections
+            // Global setup function
+            function setupAllPagination() {
                 setupPagination('product-pagination-container', 'product-categories');
                 setupPagination('material-pagination-container', 'material-categories');
                 setupPagination('texture-pagination-container', 'material-textures');
                 setupPagination('sleeve-pagination-container', 'material-sleeves');
                 setupPagination('size-pagination-container', 'material-sizes');
                 setupPagination('service-pagination-container', 'services');
+            }
 
-                function setupPagination(containerId, sectionId) {
-                    const container = document.getElementById(containerId);
-                    if (!container) return;
+            function setupPagination(containerId, sectionId) {
+                const container = document.getElementById(containerId);
+                if (!container) return;
 
-                    container.addEventListener('click', function(e) {
-                        const link = e.target.closest('a[href*="page="]');
-                        if (!link) return;
-
-                        e.preventDefault();
-                        const url = link.getAttribute('href');
-
-                        fetch(url, {
-                                headers: {
-                                    'X-Requested-With': 'XMLHttpRequest'
-                                }
-                            })
-                            .then(response => response.text())
-                            .then(html => {
-                                const parser = new DOMParser();
-                                const doc = parser.parseFromString(html, 'text/html');
-
-                                // Update the section content
-                                const newSection = doc.getElementById(sectionId);
-                                const currentSection = document.getElementById(sectionId);
-                                if (newSection && currentSection) {
-                                    currentSection.innerHTML = newSection.innerHTML;
-                                }
-
-                                // Scroll to section
-                                currentSection.scrollIntoView({
-                                    behavior: 'smooth',
-                                    block: 'start'
-                                });
-
-                                // Re-setup pagination for this section after update
-                                setupPagination(containerId, sectionId);
-                            })
-                            .catch(error => {
-                                console.error('Error loading pagination:', error);
-                            });
-                    });
+                // Remove existing listener to prevent duplicates
+                const oldListener = container._paginationListener;
+                if (oldListener) {
+                    container.removeEventListener('click', oldListener);
                 }
+
+                // Create new listener
+                const listener = function(e) {
+                    const link = e.target.closest('a[href*="page="]');
+                    if (!link) return;
+
+                    e.preventDefault();
+                    const url = link.getAttribute('href');
+
+                    fetch(url, {
+                            headers: {
+                                'X-Requested-With': 'XMLHttpRequest'
+                            }
+                        })
+                        .then(response => response.text())
+                        .then(html => {
+                            const parser = new DOMParser();
+                            const doc = parser.parseFromString(html, 'text/html');
+
+                            // Update the section content
+                            const newSection = doc.getElementById(sectionId);
+                            const currentSection = document.getElementById(sectionId);
+                            if (newSection && currentSection) {
+                                currentSection.innerHTML = newSection.innerHTML;
+                            }
+
+                            // Scroll to top of section
+                            if (currentSection) {
+                                setTimeout(() => {
+                                    currentSection.scrollIntoView({
+                                        behavior: 'smooth',
+                                        block: 'start'
+                                    });
+                                }, 100);
+                            }
+
+                            // Re-setup pagination for this section after update
+                            setupPagination(containerId, sectionId);
+                        })
+                        .catch(error => {
+                            console.error('Error loading pagination:', error);
+                        });
+                };
+
+                // Attach listener and store reference
+                container.addEventListener('click', listener);
+                container._paginationListener = listener;
+            }
+
+            // Setup on initial load
+            document.addEventListener('DOMContentLoaded', function() {
+                setupAllPagination();
+            });
+
+            // Setup after Turbo navigation
+            document.addEventListener('turbo:load', function() {
+                setupAllPagination();
+            });
+
+            // Setup after Turbo render (for cached pages)
+            document.addEventListener('turbo:render', function() {
+                setupAllPagination();
             });
         </script>
 

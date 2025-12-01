@@ -11,34 +11,53 @@ class MaterialTextureController extends Controller
 
     public function store(Request $request)
     {
-        $validated = $request->validateWithBag('addTexture', [
-            'texture_name' => 'required|max:255|unique:material_textures,texture_name',
-        ]);
+        try {
+            $validated = $request->validateWithBag('addTexture', [
+                'texture_name' => 'required|max:255|unique:material_textures,texture_name',
+            ]);
 
-        MaterialTexture::create($validated);
+            MaterialTexture::create($validated);
 
-        // Clear cache
-        Cache::forget('material_textures');
+            // Clear cache
+            Cache::forget('material_textures');
 
-        return redirect()->to(route('owner.manage-data.products.index') . '#material-textures')
-            ->with('message', 'Material Texture added successfully.')
-            ->with('alert-type', 'success');
+            return redirect()->route('owner.manage-data.products.index')
+                ->with('message', 'Material Texture added successfully.')
+                ->with('alert-type', 'success')
+                ->with('scrollToSection', 'material-textures');
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return redirect()->route('owner.manage-data.products.index')
+                ->withErrors($e->errors(), 'addTexture')
+                ->withInput()
+                ->with('openModal', 'addTexture')
+                ->with('scrollToSection', 'material-textures');
+        }
     }
 
     public function update(Request $request, MaterialTexture $material_texture)
     {
-        $validated = $request->validateWithBag('editTexture', [
-            'texture_name' => 'required|max:255|unique:material_textures,texture_name,' . $material_texture->id,
-        ]);
+        try {
+            $validated = $request->validateWithBag('editTexture', [
+                'texture_name' => 'required|max:255|unique:material_textures,texture_name,' . $material_texture->id,
+            ]);
 
-        $material_texture->update(array_filter($validated));
+            $material_texture->update(array_filter($validated));
 
-        // Clear cache
-        Cache::forget('material_textures');
+            // Clear cache
+            Cache::forget('material_textures');
 
-        return redirect()->to(route('owner.manage-data.products.index') . '#material-textures')
-            ->with('message', 'Material Texture updated successfully.')
-            ->with('alert-type', 'success');
+            return redirect()->route('owner.manage-data.products.index')
+                ->with('message', 'Material Texture updated successfully.')
+                ->with('alert-type', 'success')
+                ->with('scrollToSection', 'material-textures');
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return redirect()->route('owner.manage-data.products.index')
+                ->withErrors($e->errors(), 'editTexture')
+                ->withInput()
+                ->with('openModal', 'editTexture')
+                ->with('editTextureId', $material_texture->id)
+                ->with('scrollToSection', 'material-textures');
+        }
     }
 
     public function destroy(MaterialTexture $material_texture)
@@ -48,8 +67,9 @@ class MaterialTextureController extends Controller
         // Clear cache
         Cache::forget('material_textures');
 
-        return redirect()->to(route('owner.manage-data.products.index') . '#material-textures')
+        return redirect()->route('owner.manage-data.products.index')
             ->with('message', 'Material Texture deleted successfully.')
-            ->with('alert-type', 'success');
+            ->with('alert-type', 'success')
+            ->with('scrollToSection', 'material-textures');
     }
 }

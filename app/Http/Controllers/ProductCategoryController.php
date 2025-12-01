@@ -11,35 +11,53 @@ class ProductCategoryController extends Controller
 
     public function store(Request $request)
     {
-        $validated = $request->validateWithBag('addProduct', [
-            'product_name' => 'required|max:255|unique:product_categories,product_name',
-        ]);
+        try {
+            $validated = $request->validateWithBag('addProduct', [
+                'product_name' => 'required|max:255|unique:product_categories,product_name',
+            ]);
 
-        ProductCategory::create($validated);
+            ProductCategory::create($validated);
 
-        // Clear cache
-        Cache::forget('product_categories');
+            // Clear cache
+            Cache::forget('product_categories');
 
-        return redirect()->to(
-            route('owner.manage-data.products.index') . '#product-categories'
-        )->with('message', 'Product added successfully.')
-            ->with('alert-type', 'success');
+            return redirect()->route('owner.manage-data.products.index')
+                ->with('message', 'Product added successfully.')
+                ->with('alert-type', 'success')
+                ->with('scrollToSection', 'product-categories');
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return redirect()->route('owner.manage-data.products.index')
+                ->withErrors($e->errors(), 'addProduct')
+                ->withInput()
+                ->with('openModal', 'addProduct')
+                ->with('scrollToSection', 'product-categories');
+        }
     }
 
     public function update(Request $request, ProductCategory $productCategory)
     {
-        $validated = $request->validateWithBag('editProduct', [
-            'product_name' => 'required|max:255|unique:product_categories,product_name,' . $productCategory->id,
-        ]);
+        try {
+            $validated = $request->validateWithBag('editProduct', [
+                'product_name' => 'required|max:255|unique:product_categories,product_name,' . $productCategory->id,
+            ]);
 
-        $productCategory->update(array_filter($validated));
+            $productCategory->update(array_filter($validated));
 
-        // Clear cache
-        Cache::forget('product_categories');
+            // Clear cache
+            Cache::forget('product_categories');
 
-        return redirect()->to(route('owner.manage-data.products.index') . '#product-categories')
-            ->with('message', 'Product updated successfully.')
-            ->with('alert-type', 'success');
+            return redirect()->route('owner.manage-data.products.index')
+                ->with('message', 'Product updated successfully.')
+                ->with('alert-type', 'success')
+                ->with('scrollToSection', 'product-categories');
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return redirect()->route('owner.manage-data.products.index')
+                ->withErrors($e->errors(), 'editProduct')
+                ->withInput()
+                ->with('openModal', 'editProduct')
+                ->with('editProductId', $productCategory->id)
+                ->with('scrollToSection', 'product-categories');
+        }
     }
 
     public function destroy(ProductCategory $productCategory)
@@ -49,8 +67,9 @@ class ProductCategoryController extends Controller
         // Clear cache
         Cache::forget('product_categories');
 
-        return redirect()->to(route('owner.manage-data.products.index') . '#product-categories')
+        return redirect()->route('owner.manage-data.products.index')
             ->with('message', 'Product Category deleted successfully.')
-            ->with('alert-type', 'success');
+            ->with('alert-type', 'success')
+            ->with('scrollToSection', 'product-categories');
     }
 }

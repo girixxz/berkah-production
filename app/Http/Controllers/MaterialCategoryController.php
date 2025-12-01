@@ -10,34 +10,53 @@ class MaterialCategoryController extends Controller
 {
     public function store(Request $request)
     {
-        $validated = $request->validateWithBag('addMaterial', [
-            'material_name' => 'required|max:255|unique:material_categories,material_name',
-        ]);
+        try {
+            $validated = $request->validateWithBag('addMaterial', [
+                'material_name' => 'required|max:255|unique:material_categories,material_name',
+            ]);
 
-        MaterialCategory::create($validated);
+            MaterialCategory::create($validated);
 
-        // Clear cache after material category created
-        Cache::forget('material_categories');
+            // Clear cache after material category created
+            Cache::forget('material_categories');
 
-        return redirect()->to(route('owner.manage-data.products.index') . '#material-categories')
-            ->with('message', 'Material added successfully.')
-            ->with('alert-type', 'success');
+            return redirect()->route('owner.manage-data.products.index')
+                ->with('message', 'Material added successfully.')
+                ->with('alert-type', 'success')
+                ->with('scrollToSection', 'material-categories');
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return redirect()->route('owner.manage-data.products.index')
+                ->withErrors($e->errors(), 'addMaterial')
+                ->withInput()
+                ->with('openModal', 'addMaterial')
+                ->with('scrollToSection', 'material-categories');
+        }
     }
 
     public function update(Request $request, MaterialCategory $materialCategory)
     {
-        $validated = $request->validateWithBag('editMaterial', [
-            'material_name' => 'required|max:255|unique:material_categories,material_name,' . $materialCategory->id,
-        ]);
+        try {
+            $validated = $request->validateWithBag('editMaterial', [
+                'material_name' => 'required|max:255|unique:material_categories,material_name,' . $materialCategory->id,
+            ]);
 
-        $materialCategory->update(array_filter($validated));
+            $materialCategory->update(array_filter($validated));
 
-        // Clear cache after material category updated
-        Cache::forget('material_categories');
+            // Clear cache after material category updated
+            Cache::forget('material_categories');
 
-        return redirect()->to(route('owner.manage-data.products.index') . '#material-categories')
-            ->with('message', 'Material updated successfully.')
-            ->with('alert-type', 'success');
+            return redirect()->route('owner.manage-data.products.index')
+                ->with('message', 'Material updated successfully.')
+                ->with('alert-type', 'success')
+                ->with('scrollToSection', 'material-categories');
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return redirect()->route('owner.manage-data.products.index')
+                ->withErrors($e->errors(), 'editMaterial')
+                ->withInput()
+                ->with('openModal', 'editMaterial')
+                ->with('editMaterialId', $materialCategory->id)
+                ->with('scrollToSection', 'material-categories');
+        }
     }
 
     public function destroy(MaterialCategory $materialCategory)
@@ -47,8 +66,9 @@ class MaterialCategoryController extends Controller
         // Clear cache after material category deleted
         Cache::forget('material_categories');
 
-        return redirect()->to(route('owner.manage-data.products.index') . '#material-categories')
+        return redirect()->route('owner.manage-data.products.index')
             ->with('message', 'Material Category deleted successfully.')
-            ->with('alert-type', 'success');
+            ->with('alert-type', 'success')
+            ->with('scrollToSection', 'material-categories');
     }
 }

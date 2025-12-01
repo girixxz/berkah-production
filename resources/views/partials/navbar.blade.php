@@ -23,7 +23,7 @@
         @endphp
 
         <nav class="flex-1 flex items-center justify-center">
-            <ul class="flex items-center text-sm md:text-[14px] gap-1">
+            <ul class="flex items-center text-sm md:text-[14px]">
                 <li>
                     <a href="{{ route('highlights') }}" class="{{ $navClasses('highlights') }}">
                         Highlights
@@ -52,7 +52,7 @@
                     : \Illuminate\Support\Facades\Storage::url($raw))
                 : 'https://i.pravatar.cc/40?u=' . urlencode(auth()->user()->id ?? auth()->user()->username);
         @endphp
-        <div class="flex items-center space-x-2 sm:space-x-4">
+        <div class="flex items-center sm:space-x-4">
             
             {{-- Notification Bell (Owner Only) --}}
             @if($user_role === 'owner')

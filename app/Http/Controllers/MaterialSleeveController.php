@@ -10,35 +10,53 @@ class MaterialSleeveController extends Controller
 {
     public function store(Request $request)
     {
-        $validated = $request->validateWithBag('addSleeve', [
-            'sleeve_name' => 'required|string|max:100|unique:material_sleeves,sleeve_name',
-        ]);
+        try {
+            $validated = $request->validateWithBag('addSleeve', [
+                'sleeve_name' => 'required|string|max:100|unique:material_sleeves,sleeve_name',
+            ]);
 
-        MaterialSleeve::create($validated);
+            MaterialSleeve::create($validated);
 
-        // Clear cache
-        Cache::forget('material_sleeves');
+            // Clear cache
+            Cache::forget('material_sleeves');
 
-        return redirect()
-            ->to(url()->previous() . '#material-sleeves')
-            ->with('message', 'Material Sleeve added successfully.')
-            ->with('alert-type', 'success');
+            return redirect()->route('owner.manage-data.products.index')
+                ->with('message', 'Material Sleeve added successfully.')
+                ->with('alert-type', 'success')
+                ->with('scrollToSection', 'material-sleeves');
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return redirect()->route('owner.manage-data.products.index')
+                ->withErrors($e->errors(), 'addSleeve')
+                ->withInput()
+                ->with('openModal', 'addSleeve')
+                ->with('scrollToSection', 'material-sleeves');
+        }
     }
 
     public function update(Request $request, MaterialSleeve $materialSleeve)
     {
-        $validated = $request->validateWithBag('editSleeve', [
-            'sleeve_name' => 'required|string|max:100|unique:material_sleeves,sleeve_name,' . $materialSleeve->id,
-        ]);
+        try {
+            $validated = $request->validateWithBag('editSleeve', [
+                'sleeve_name' => 'required|string|max:100|unique:material_sleeves,sleeve_name,' . $materialSleeve->id,
+            ]);
 
-        $materialSleeve->update(array_filter($validated));
+            $materialSleeve->update(array_filter($validated));
 
-        // Clear cache
-        Cache::forget('material_sleeves');
+            // Clear cache
+            Cache::forget('material_sleeves');
 
-        return redirect()->to(route('owner.manage-data.products.index') . '#material-sleeves')
-            ->with('message', 'Material Sleeve updated successfully.')
-            ->with('alert-type', 'success');
+            return redirect()->route('owner.manage-data.products.index')
+                ->with('message', 'Material Sleeve updated successfully.')
+                ->with('alert-type', 'success')
+                ->with('scrollToSection', 'material-sleeves');
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return redirect()->route('owner.manage-data.products.index')
+                ->withErrors($e->errors(), 'editSleeve')
+                ->withInput()
+                ->with('openModal', 'editSleeve')
+                ->with('editSleeveId', $materialSleeve->id)
+                ->with('scrollToSection', 'material-sleeves');
+        }
     }
 
     public function destroy(MaterialSleeve $materialSleeve)
@@ -48,9 +66,9 @@ class MaterialSleeveController extends Controller
         // Clear cache
         Cache::forget('material_sleeves');
 
-        return redirect()
-            ->to(url()->previous() . '#material-sleeves')
+        return redirect()->route('owner.manage-data.products.index')
             ->with('message', 'Material Sleeve deleted successfully.')
-            ->with('alert-type', 'success');
+            ->with('alert-type', 'success')
+            ->with('scrollToSection', 'material-sleeves');
     }
 }
