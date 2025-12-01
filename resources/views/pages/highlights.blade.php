@@ -16,6 +16,27 @@
         showDateFilter: false,
         showDateCustomRange: false,
         datePreset: '',
+        matchesSearch(row) {
+            if (!this.searchQuery || this.searchQuery.trim() === '') return true;
+            const query = this.searchQuery.toLowerCase();
+            const invoiceNo = (row.getAttribute('data-invoice') || '').toLowerCase();
+            const customer = (row.getAttribute('data-customer') || '').toLowerCase();
+            const product = (row.getAttribute('data-product') || '').toLowerCase();
+            return invoiceNo.includes(query) || customer.includes(query) || product.includes(query);
+        },
+        get hasVisibleRows() {
+            if (!this.searchQuery || this.searchQuery.trim() === '') return true;
+            const desktopRows = document.querySelectorAll('tbody tr[data-invoice]');
+            const mobileCards = document.querySelectorAll('.xl\\:hidden > div[data-invoice]');
+            
+            for (let row of desktopRows) {
+                if (this.matchesSearch(row)) return true;
+            }
+            for (let card of mobileCards) {
+                if (this.matchesSearch(card)) return true;
+            }
+            return false;
+        },
         getDateLabel() {
             if (this.dateRange === 'last_month') return 'Last Month';
             if (this.dateRange === 'last_7_days') return 'Last 7 Days';
@@ -205,8 +226,7 @@
                                     <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                                     </svg>
-                                    <input type="text" x-model="searchQuery"
-                                        @input.debounce.500ms="applyFilter()"
+                                    <input type="text" x-model="searchQuery" x-ref="searchInput"
                                         placeholder="Search customer, product, invoice..."
                                         class="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary">
                                 </div>
@@ -342,7 +362,11 @@
                                     
                                     $totalDesigns = $order->designVariants->count();
                                 @endphp
-                                <tr class="border-t border-gray-200 hover:bg-gray-50" x-data="{ showImageModal: false }">
+                                <tr class="border-t border-gray-200 hover:bg-gray-50" x-data="{ showImageModal: false }"
+                                    x-show="matchesSearch($el)"
+                                    data-invoice="{{ $order->invoice->invoice_number ?? '' }}"
+                                    data-customer="{{ $order->customer->customer_name ?? '' }}"
+                                    data-product="{{ $order->productCategory->product_name ?? '' }}">
                                     {{-- Mockup Column --}}
                                     <td class="py-2 px-2 text-left">
                                         <div @click="showImageModal = true" 
@@ -478,12 +502,25 @@
                                     </td>
                                 </tr>
                             @empty
-                                <tr>
+                                <tr x-show="!searchQuery">
                                     <td colspan="5" class="py-8 text-center text-gray-500">
                                         No orders found
                                     </td>
                                 </tr>
                             @endforelse
+                            
+                            {{-- No Search Results Message --}}
+                            <tr x-show="searchQuery && !hasVisibleRows" x-cloak>
+                                <td colspan="5" class="py-8 text-center text-gray-400">
+                                    <svg class="w-16 h-16 mx-auto mb-3 opacity-50" fill="none"
+                                        stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                                    </svg>
+                                    <p class="text-sm font-medium text-gray-700">No results found for "<span x-text="searchQuery"></span>"</p>
+                                    <p class="text-xs text-gray-500 mt-1">Try different keywords or filters</p>
+                                </td>
+                            </tr>
                         </tbody>
                     </table>
                 </div>
@@ -507,7 +544,11 @@
                             $totalDesigns = $order->designVariants->count();
                         @endphp
                         
-                        <div x-data="{ showImageModal: false }" class="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
+                        <div x-data="{ showImageModal: false }" class="bg-white border border-gray-200 rounded-lg p-4 shadow-sm"
+                             x-show="matchesSearch($el)"
+                             data-invoice="{{ $order->invoice->invoice_number ?? '' }}"
+                             data-customer="{{ $order->customer->customer_name ?? '' }}"
+                             data-product="{{ $order->productCategory->product_name ?? '' }}">
                             {{-- Header: Customer Name & Status --}}
                             <div class="flex items-start justify-between mb-3">
                                 <div class="flex-1">
@@ -628,10 +669,21 @@
                             @endif
                         </div>
                     @empty
-                        <div class="text-center py-8 text-gray-500">
+                        <div x-show="!searchQuery" class="text-center py-8 text-gray-500">
                             No orders found
                         </div>
                     @endforelse
+                    
+                    {{-- No Search Results Message for Mobile --}}
+                    <div x-show="searchQuery && !hasVisibleRows" x-cloak class="text-center py-8">
+                        <svg class="w-16 h-16 mx-auto mb-3 text-gray-400 opacity-50" fill="none"
+                            stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                        </svg>
+                        <p class="text-sm font-medium text-gray-700">No results found for "<span x-text="searchQuery"></span>"</p>
+                        <p class="text-xs text-gray-500 mt-1">Try different keywords or filters</p>
+                    </div>
                 </div>
 
                 {{-- Pagination --}}
