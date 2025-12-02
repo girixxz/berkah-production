@@ -200,7 +200,7 @@
                         </li>
                     @endif
                     <li>
-                        <x-sidebar-menu.main-menu href="{{ route('karyawan.task') }}" :pattern="'karyawan.task'">
+                        <x-sidebar-menu.main-menu href="{{ route('karyawan.task') }}" :pattern="['karyawan.task', 'karyawan.task.work-order']">
                             <x-icons.task class="text-current" />
                             <span class="ml-2">Task</span>
                         </x-sidebar-menu.main-menu>
