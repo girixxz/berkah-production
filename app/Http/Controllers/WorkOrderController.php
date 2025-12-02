@@ -778,4 +778,74 @@ class WorkOrderController extends Controller
             return false;
         }
     }
+
+    /**
+     * Download work order as PDF.
+     */
+    public function downloadPdf(\App\Models\WorkOrder $workOrder)
+    {
+        // Load work order with all relationships
+        $workOrder->load([
+            'designVariant.order.customer',
+            'designVariant.order.productCategory',
+            'designVariant.order.materialCategory',
+            'designVariant.order.materialTexture',
+            'designVariant.order.invoice',
+            'designVariant.order.orderItems.size',
+            'designVariant.order.orderItems.sleeve',
+            'cutting.cuttingPattern',
+            'cutting.chainCloth',
+            'cutting.ribSize',
+            'printing.printInk',
+            'printing.finishing',
+            'printingPlacement',
+            'sewing.neckOverdeck',
+            'sewing.underarmOverdeck',
+            'sewing.sideSplit',
+            'sewing.sewingLabel',
+            'packing.plasticPacking',
+            'packing.sticker',
+        ]);
+
+        $order = $workOrder->designVariant->order;
+        $designVariant = $workOrder->designVariant;
+
+        // Prepare data for sleeves and sizes (same logic as show button)
+        $designOrderItems = $order->orderItems->where('design_variant_id', $designVariant->id);
+        
+        $usedSleeves = $designOrderItems->pluck('sleeve.name')->unique()->filter()->values()->toArray();
+        $usedSizes = $designOrderItems->pluck('size.name')->unique()->filter()->values()->toArray();
+
+        // Fill to minimum counts
+        while (count($usedSleeves) < 4) {
+            $usedSleeves[] = '';
+        }
+        while (count($usedSizes) < 6) {
+            $usedSizes[] = '';
+        }
+
+        $displaySleeves = array_slice($usedSleeves, 0, 4);
+        $displaySizes = array_slice($usedSizes, 0, 6);
+
+        // Transform order items data
+        $orderItemsData = $designOrderItems->map(function ($item) {
+            return [
+                'size_name' => $item->size->name ?? '',
+                'sleeve_name' => $item->sleeve->name ?? '',
+                'qty' => $item->qty,
+            ];
+        })->values();
+
+        // Generate PDF using Spatie Laravel PDF
+        return \Spatie\LaravelPdf\Facades\Pdf::view('pages.admin.work-orders.partials.pdf-template', [
+            'order' => $order,
+            'workOrder' => $workOrder,
+            'designVariant' => $designVariant,
+            'displaySleeves' => $displaySleeves,
+            'displaySizes' => $displaySizes,
+            'orderItemsData' => $orderItemsData,
+        ])
+        ->format('a4')
+        ->name("WO-{$order->invoice->invoice_no}-{$designVariant->design_name}.pdf");
+    }
 }

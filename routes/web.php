@@ -166,6 +166,9 @@ Route::middleware(['auth'])->group(function () {
             ->name('work-orders.update');
         Route::get('work-orders/{order}/finalize', [\App\Http\Controllers\WorkOrderController::class, 'finalize'])->name('work-orders.finalize');
         
+        // Work Order PDF Download
+        Route::get('work-orders/{workOrder}/download-pdf', [\App\Http\Controllers\WorkOrderController::class, 'downloadPdf'])->name('work-orders.download-pdf');
+        
         // Work Order Image Routes - USING MODEL BINDING (same pattern as Payment)
         Route::get('work-orders/{workOrder}/mockup-image', [\App\Http\Controllers\WorkOrderController::class, 'serveMockupImage'])->name('work-orders.mockup-image');
         Route::get('work-orders/cutting/{cutting}/image', [\App\Http\Controllers\WorkOrderController::class, 'serveCuttingImage'])->name('work-orders.cutting-image');

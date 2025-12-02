@@ -556,7 +556,12 @@
             {{-- Modal Footer --}}
             <div class="px-6 py-4 border-t border-gray-200 bg-gray-50 flex justify-end items-center gap-3">
                 {{-- Download PDF Button --}}
-                <button @click="alert('Download PDF feature coming soon!')" type="button"
+                <a :href="(() => {
+                    const workOrder = showData?.work_order;
+                    if (!workOrder || !workOrder.id) return '#';
+                    return '{{ route('admin.work-orders.download-pdf', ['workOrder' => '__ID__']) }}'.replace('__ID__', workOrder.id);
+                })()"
+                    target="_blank"
                     class="inline-flex items-center px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500">
                     {{-- Icon --}}
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -565,7 +570,7 @@
                     </svg>
                     {{-- Text (Hidden on mobile, shown on md+) --}}
                     <span class="hidden md:inline ml-2">Download PDF</span>
-                </button>
+                </a>
 
                 {{-- Close Button --}}
                 <button @click="closeShowModal()" type="button"
