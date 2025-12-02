@@ -100,4 +100,34 @@ class TaskController extends Controller
             ], 500);
         }
     }
+
+    /**
+     * View work order details (read-only)
+     */
+    public function viewWorkOrder($orderId)
+    {
+        $order = \App\Models\Order::with([
+            'invoice',
+            'customer',
+            'productCategory',
+            'materialCategory',
+            'materialTexture',
+            'designVariants.workOrder.cutting.cuttingPattern',
+            'designVariants.workOrder.cutting.chainCloth',
+            'designVariants.workOrder.cutting.ribSize',
+            'designVariants.workOrder.printing.printInk',
+            'designVariants.workOrder.printing.finishing',
+            'designVariants.workOrder.printingPlacement',
+            'designVariants.workOrder.sewing.neckOverdeck',
+            'designVariants.workOrder.sewing.underarmOverdeck',
+            'designVariants.workOrder.sewing.sideSplit',
+            'designVariants.workOrder.sewing.sewingLabel',
+            'designVariants.workOrder.packing.plasticPacking',
+            'designVariants.workOrder.packing.sticker',
+            'orderItems.size',
+            'orderItems.sleeve',
+        ])->findOrFail($orderId);
+
+        return view('pages.karyawan.view-work-order', compact('order'));
+    }
 }

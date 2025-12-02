@@ -205,6 +205,7 @@ Route::middleware(['auth'])->group(function () {
         Route::get('dashboard', fn() => view('pages.karyawan.dashboard'))->name('dashboard');
         Route::get('task', [App\Http\Controllers\Karyawan\TaskController::class, 'index'])->name('task');
         Route::post('task/mark-done', [App\Http\Controllers\Karyawan\TaskController::class, 'markAsDone'])->name('task.mark-done');
+        Route::get('task/work-order/{order}', [App\Http\Controllers\Karyawan\TaskController::class, 'viewWorkOrder'])->name('task.work-order');
     });
 
     /* ---------- ALL ROLE ---------- */

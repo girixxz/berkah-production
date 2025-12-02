@@ -161,8 +161,8 @@
                                                     <div x-show="showDropdown" @click.away="showDropdown = false" x-cloak
                                                         class="absolute right-0 {{ $isLast ? 'bottom-full mb-1' : 'top-full mt-1' }} w-40 bg-white rounded-lg shadow-lg border border-gray-200 z-[9999] py-1">
                                                         {{-- View Detail --}}
-                                                        <button type="button"
-                                                            @click="showDropdown = false; alert('View Detail - Coming Soon')"
+                                                        <a href="{{ route('karyawan.task.work-order', ['order' => $orderStage->order->id]) }}"
+                                                            @click="showDropdown = false"
                                                             class="w-full text-left px-4 py-2 text-xs text-gray-700 hover:bg-gray-50 flex items-center gap-2 cursor-pointer">
                                                             <svg class="w-3 h-3" fill="none" stroke="currentColor"
                                                                 viewBox="0 0 24 24">
@@ -173,7 +173,7 @@
                                                                     d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                                                             </svg>
                                                             View Detail
-                                                        </button>
+                                                        </a>
                                                         {{-- Mark as Done --}}
                                                         <button type="button"
                                                             @click="showDropdown = false; markAsDone({{ $orderStage->id }}, '{{ $orderStage->order->invoice->invoice_no ?? 'N/A' }}', '{{ $orderStage->order->productCategory->product_name ?? 'N/A' }}', '{{ $orderStage->order->customer->customer_name ?? 'N/A' }}', {{ $orderStage->order->total_qty ?? 0 }}, '{{ strtolower($orderStage->order->priority ?? 'normal') }}')"
@@ -307,8 +307,8 @@
                                                 class="absolute right-0 w-40 bg-white rounded-lg shadow-lg border border-gray-200 z-[9999] py-1"
                                                 :class="index >= modalOrders.length - 3 ? 'bottom-full mb-1' : 'top-full mt-1'">
                                                 {{-- View Detail --}}
-                                                <button type="button"
-                                                    @click="showDropdown = false; alert('View Detail - Coming Soon')"
+                                                <a href="{{ route('karyawan.task.work-order', ['order' => $orderStage->order->id]) }}"
+                                                    @click="showDropdown = false"
                                                     class="w-full text-left px-4 py-2 text-xs text-gray-700 hover:bg-gray-50 flex items-center gap-2 cursor-pointer">
                                                     <svg class="w-3 h-3" fill="none" stroke="currentColor"
                                                         viewBox="0 0 24 24">
@@ -319,7 +319,7 @@
                                                             d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                                                     </svg>
                                                     View Detail
-                                                </button>
+                                                </a>
                                                 {{-- Mark as Done --}}
                                                 <button type="button"
                                                     @click="showDropdown = false; markAsDone(order.id, order.invoice, order.product, order.customer, order.qty, order.priority)"
