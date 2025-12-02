@@ -1,26 +1,5 @@
-{{-- ================= CREATE/EDIT WORK ORDER MODAL ================= --}}
-<div x-show="openModal" x-cloak x-transition.opacity
-    class="fixed inset-0 z-50 overflow-y-auto bg-gray-500/50 backdrop-blur-sm">
-    <div class="flex items-center justify-center min-h-screen p-4">
-        <div @click.away="closeModal()" class="bg-white rounded-xl shadow-lg w-full max-w-5xl">
-
-            {{-- Modal Header --}}
-            <div class="flex items-center justify-between p-5 border-b border-gray-200">
-                <h3 class="text-lg font-semibold text-gray-900">
-                    Work Order - <span
-                        x-text="selectedDesign ? 'Variant Design ' + (@json($order->designVariants->pluck('id')->toArray()).indexOf(selectedDesign.id) + 1) : ''"></span>
-                    <span x-show="selectedDesign?.design_name" class="text-gray-600 font-normal">
-                        (<span x-text="selectedDesign?.design_name"></span>)
-                    </span>
-                </h3>
-                <button @click="closeModal()" type="button"
-                    class="text-gray-400 hover:text-gray-600 cursor-pointer">
-                    ✕
-                </button>
-            </div>
-
-            {{-- Modal Body --}}
-            <form x-ref="workOrderForm" method="POST" action="{{ route('admin.work-orders.store') }}"
+{{-- ================= WORK ORDER FORM BODY ================= --}}
+<form x-ref="workOrderForm" method="POST" action="{{ route('admin.work-orders.store') }}"
                 enctype="multipart/form-data">
                 @csrf
                 <input type="hidden" name="order_id" value="{{ $order->id }}">
@@ -1245,6 +1224,3 @@
                     </button>
                 </div>
             </form>
-        </div>
-    </div>
-</div>
