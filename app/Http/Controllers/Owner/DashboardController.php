@@ -81,7 +81,7 @@ class DashboardController extends Controller
     }
 
     /**
-     * Get Order By Sales data with date filter
+     * Get Order By Sales data with date filter and pagination
      */
     private function getOrderBySalesData($startDate = null, $endDate = null)
     {
@@ -123,14 +123,31 @@ class DashboardController extends Controller
                 'revenue' => $revenue,
             ];
         })
-        ->filter(function($sale) {
-            // Only include sales yang punya order
-            return $sale->total_orders > 0;
-        })
+        // TIDAK filter sales dengan 0 order - tampilkan semua
         ->sortByDesc('revenue')
         ->values();
         
-        return $salesData;
+        // Manual pagination
+        $perPage = 4;
+        $currentPage = request()->input('sales_page', 1);
+        $total = $salesData->count();
+        $lastPage = (int) ceil($total / $perPage);
+        $currentPage = max(1, min($currentPage, $lastPage));
+        
+        // Create Laravel paginator manually
+        $offset = ($currentPage - 1) * $perPage;
+        $items = $salesData->slice($offset, $perPage)->values();
+        
+        return new \Illuminate\Pagination\LengthAwarePaginator(
+            $items,
+            $total,
+            $perPage,
+            $currentPage,
+            [
+                'path' => request()->url(),
+                'pageName' => 'sales_page',
+            ]
+        );
     }
 
     /**

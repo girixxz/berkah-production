@@ -88,10 +88,10 @@
             .then(html => {
                 const parser = new DOMParser();
                 const doc = parser.parseFromString(html, 'text/html');
-                const newSection = doc.getElementById('dashboard-stats');
+                const newSection = doc.getElementById('dashboard-content');
                 
                 if (newSection) {
-                    document.getElementById('dashboard-stats').outerHTML = newSection.outerHTML;
+                    document.getElementById('dashboard-content').innerHTML = newSection.innerHTML;
                 }
                 
                 NProgress.done();
@@ -101,7 +101,9 @@
                 NProgress.done();
             });
         }
-    }" class="space-y-6">
+    }" 
+    x-cloak 
+    class="space-y-6">
 
         {{-- ================= DATE FILTER - Top Right ================= --}}
         <div class="flex justify-end">
@@ -191,8 +193,9 @@
             </div>
         </div>
 
+        {{-- ================= DASHBOARD CONTENT (Will be replaced via AJAX) ================= --}}
+        <div id="dashboard-content">
         {{-- ================= STATISTICS CARDS ================= --}}
-        <div id="dashboard-stats">
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {{-- Total Orders --}}
             <div class="bg-white border border-gray-200 rounded-lg p-4">
@@ -334,7 +337,7 @@
             {{-- Line Chart Order Trend --}}
             <x-charts.order-trend-chart />
         </div>
-        </div>
+        </div>{{-- End dashboard-content --}}
 
     </div>
 @endsection

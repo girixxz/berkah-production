@@ -1,5 +1,5 @@
 {{-- Component: Order By Sales Table --}}
-<div class="bg-white border border-gray-200 rounded-lg p-6">
+<div id="sales-table-section" class="bg-white border border-gray-200 rounded-lg p-6">
     {{-- Header --}}
     <div class="mb-5">
         <h3 class="text-center md:text-left text-lg font-bold text-gray-900">Order By Sales</h3>
@@ -74,23 +74,71 @@
         </table>
     </div>
     
-    {{-- Summary Footer (Optional) --}}
-    @if(count($salesData) > 0)
-        <div class="mt-5 pt-4 border-t border-gray-200">
-            <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 text-sm">
-                <span class="text-gray-600">Total: <span class="font-semibold text-gray-900">{{ count($salesData) }}</span> Sales</span>
-                <div class="flex flex-wrap gap-4 sm:gap-6">
-                    <span class="text-gray-600">
-                        Orders: <span class="font-semibold text-gray-900">{{ number_format($salesData->sum('total_orders')) }}</span>
-                    </span>
-                    <span class="text-gray-600">
-                        QTY: <span class="font-semibold text-gray-900">{{ number_format($salesData->sum('total_qty')) }}</span>
-                    </span>
-                    <span class="text-gray-600">
-                        Revenue: <span class="font-semibold text-gray-900">Rp {{ number_format($salesData->sum('revenue'), 0, ',', '.') }}</span>
-                    </span>
-                </div>
-            </div>
+    {{-- Pagination --}}
+    @if($salesData->hasPages())
+        <div class="mt-5" id="sales-pagination-container">
+            <x-custom-pagination :paginator="$salesData" />
         </div>
     @endif
 </div>
+
+@push('scripts')
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    setupSalesPagination();
+});
+
+function setupSalesPagination() {
+    const paginationContainer = document.getElementById('sales-pagination-container');
+    if (!paginationContainer) return;
+    
+    paginationContainer.addEventListener('click', function(e) {
+        const link = e.target.closest('a[href]');
+        if (!link || !link.href.includes('sales_page=')) return;
+        
+        e.preventDefault();
+        
+        // Store current scroll position of sales table
+        const salesSection = document.getElementById('sales-table-section');
+        const scrollOffset = salesSection ? salesSection.getBoundingClientRect().top + window.pageYOffset - 20 : 0;
+        
+        // Show loading bar
+        NProgress.start();
+        
+        fetch(link.href, {
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(response => response.text())
+        .then(html => {
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(html, 'text/html');
+            const newContent = doc.getElementById('dashboard-content');
+            
+            if (newContent) {
+                document.getElementById('dashboard-content').innerHTML = newContent.innerHTML;
+                
+                // Update URL without reload
+                window.history.pushState({}, '', link.href);
+                
+                // Re-setup pagination listener after content replacement
+                setupSalesPagination();
+                
+                // Scroll back to sales table position
+                window.scrollTo({
+                    top: scrollOffset,
+                    behavior: 'smooth'
+                });
+            }
+            
+            NProgress.done();
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            NProgress.done();
+        });
+    });
+}
+</script>
+@endpush
