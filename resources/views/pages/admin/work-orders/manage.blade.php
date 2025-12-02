@@ -788,12 +788,13 @@
             </div>
         </div>
 
-        {{-- ================= CREATE/EDIT WORK ORDER MODAL (Separated File) ================= --}}
-        @include('pages.admin.work-orders.partials.create-edit-modal')
+        {{-- ================= CREATE MODAL (Separated File) ================= --}}
+        @include('pages.admin.work-orders.partials.create-modal')
 
-        {{-- ================= SHOW WORK ORDER MODAL (Separated File) ================= --}}
+        {{-- ================= EDIT MODAL (Separated File) ================= --}}
+        @include('pages.admin.work-orders.partials.edit-modal')
 
-        {{-- Include Show Modal (Separated File) --}}
+        {{-- ================= SHOW MODAL (Separated File) ================= --}}
         @include('pages.admin.work-orders.partials.show-modal')
 
     </div>
