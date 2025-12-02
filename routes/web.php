@@ -127,6 +127,8 @@ Route::middleware(['auth'])->group(function () {
         Route::prefix('dashboard/chart')->name('dashboard.chart.')->group(function () {
             Route::get('order-trend', [\App\Http\Controllers\Owner\DashboardController::class, 'getOrderTrendData'])->name('order-trend');
             Route::get('product-sales', [\App\Http\Controllers\Owner\DashboardController::class, 'getProductSalesData'])->name('product-sales');
+            Route::get('customer-trend', [\App\Http\Controllers\Owner\DashboardController::class, 'getCustomerTrendData'])->name('customer-trend');
+            Route::get('customer-province', [\App\Http\Controllers\Owner\DashboardController::class, 'getCustomerProvinceData'])->name('customer-province');
         });
     });
 

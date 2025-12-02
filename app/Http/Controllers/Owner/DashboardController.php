@@ -217,4 +217,111 @@ class DashboardController extends Controller
             'values' => $values,
         ]);
     }
+
+    /**
+     * Get Customer Trend data for chart (per day in a month)
+     */
+    public function getCustomerTrendData(Request $request)
+    {
+        $year = $request->input('year', now()->year);
+        $month = $request->input('month', now()->month);
+        
+        // Get number of days in the selected month
+        $daysInMonth = cal_days_in_month(CAL_GREGORIAN, $month, $year);
+        
+        // Initialize arrays for labels and values
+        $labels = [];
+        $values = [];
+        
+        // Loop through each day of the month
+        for ($day = 1; $day <= $daysInMonth; $day++) {
+            $date = sprintf('%04d-%02d-%02d', $year, $month, $day);
+            
+            // Count customers created on this specific date
+            $customerCount = Customer::whereDate('created_at', $date)->count();
+            
+            $labels[] = (string)$day; // Day number (1, 2, 3, ...)
+            $values[] = $customerCount;
+        }
+        
+        return response()->json([
+            'labels' => $labels,
+            'values' => $values,
+        ]);
+    }
+
+    /**
+     * Get Customer by Province data for chart
+     */
+    public function getCustomerProvinceData(Request $request)
+    {
+        $year = $request->input('year', now()->year);
+        $month = $request->input('month', now()->month);
+        
+        $startDate = sprintf('%04d-%02d-01', $year, $month);
+        $endDate = date('Y-m-t', strtotime($startDate));
+        
+        // Query orders grouped by customer's province
+        $provinceOrders = Order::join('customers', 'orders.customer_id', '=', 'customers.id')
+            ->whereIn('orders.production_status', ['wip', 'finished'])
+            ->whereBetween('orders.order_date', [$startDate, $endDate])
+            ->whereNotNull('customers.province_id')
+            ->select('customers.province_id', DB::raw('COUNT(orders.id) as order_count'))
+            ->groupBy('customers.province_id')
+            ->orderByDesc('order_count')
+            ->get();
+        
+        // Province ID to Name mapping (Indonesian provinces)
+        $provinceMap = [
+            '11' => 'Aceh',
+            '12' => 'Sumatera Utara',
+            '13' => 'Sumatera Barat',
+            '14' => 'Riau',
+            '15' => 'Jambi',
+            '16' => 'Sumatera Selatan',
+            '17' => 'Bengkulu',
+            '18' => 'Lampung',
+            '19' => 'Kepulauan Bangka Belitung',
+            '21' => 'Kepulauan Riau',
+            '31' => 'DKI Jakarta',
+            '32' => 'Jawa Barat',
+            '33' => 'Jawa Tengah',
+            '34' => 'DI Yogyakarta',
+            '35' => 'Jawa Timur',
+            '36' => 'Banten',
+            '51' => 'Bali',
+            '52' => 'Nusa Tenggara Barat',
+            '53' => 'Nusa Tenggara Timur',
+            '61' => 'Kalimantan Barat',
+            '62' => 'Kalimantan Tengah',
+            '63' => 'Kalimantan Selatan',
+            '64' => 'Kalimantan Timur',
+            '65' => 'Kalimantan Utara',
+            '71' => 'Sulawesi Utara',
+            '72' => 'Sulawesi Tengah',
+            '73' => 'Sulawesi Selatan',
+            '74' => 'Sulawesi Tenggara',
+            '75' => 'Gorontalo',
+            '76' => 'Sulawesi Barat',
+            '81' => 'Maluku',
+            '82' => 'Maluku Utara',
+            '91' => 'Papua Barat',
+            '94' => 'Papua',
+        ];
+        
+        // Build categories and values with province names
+        $categories = [];
+        $values = [];
+        
+        foreach ($provinceOrders as $item) {
+            $provinceName = $provinceMap[$item->province_id] ?? 'Province ' . $item->province_id;
+            $categories[] = $provinceName;
+            $values[] = (int)$item->order_count;
+        }
+        
+        return response()->json([
+            'categories' => $categories,
+            'values' => $values
+        ]);
+    }
 }

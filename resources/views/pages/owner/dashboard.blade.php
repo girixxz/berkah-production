@@ -343,11 +343,14 @@
             {{-- Bar Chart Product Sales --}}
             <x-charts.product-sales-chart />
             
-            {{-- Placeholder for next chart --}}
-            <div class="bg-white border border-gray-200 rounded-lg p-6">
-                <h3 class="text-lg font-semibold text-gray-900">Customer Trend</h3>
-                <p class="text-sm text-gray-500 mt-2">Coming soon...</p>
-            </div>
+            {{-- Line Chart Customer Trend --}}
+            <x-charts.customer-trend-chart />
+        </div>
+        
+        {{-- ================= ROW 3: BAR CHART PROVINCE (Full Width) ================= --}}
+        <div class="mt-6">
+            {{-- Bar Chart Customer by Province --}}
+            <x-charts.customer-province-chart />
         </div>
         </div>{{-- End dashboard-content --}}
 
