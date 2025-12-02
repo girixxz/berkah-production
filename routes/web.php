@@ -126,6 +126,7 @@ Route::middleware(['auth'])->group(function () {
         // AJAX endpoints for dashboard charts
         Route::prefix('dashboard/chart')->name('dashboard.chart.')->group(function () {
             Route::get('order-trend', [\App\Http\Controllers\Owner\DashboardController::class, 'getOrderTrendData'])->name('order-trend');
+            Route::get('product-sales', [\App\Http\Controllers\Owner\DashboardController::class, 'getProductSalesData'])->name('product-sales');
         });
     });
 

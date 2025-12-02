@@ -337,6 +337,18 @@
             {{-- Line Chart Order Trend --}}
             <x-charts.order-trend-chart />
         </div>
+        
+        {{-- ================= ROW 2: CHART + CHART (Grid 2) ================= --}}
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
+            {{-- Bar Chart Product Sales --}}
+            <x-charts.product-sales-chart />
+            
+            {{-- Placeholder for next chart --}}
+            <div class="bg-white border border-gray-200 rounded-lg p-6">
+                <h3 class="text-lg font-semibold text-gray-900">Customer Trend</h3>
+                <p class="text-sm text-gray-500 mt-2">Coming soon...</p>
+            </div>
+        </div>
         </div>{{-- End dashboard-content --}}
 
     </div>

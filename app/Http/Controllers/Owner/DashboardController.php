@@ -181,4 +181,40 @@ class DashboardController extends Controller
             'values' => $values,
         ]);
     }
+
+    /**
+     * Get Product Sales data for chart (per month)
+     */
+    public function getProductSalesData(Request $request)
+    {
+        $year = $request->input('year', now()->year);
+        $month = $request->input('month', now()->month);
+        
+        // Get start and end date of the month
+        $startDate = sprintf('%04d-%02d-01', $year, $month);
+        $endDate = date('Y-m-t', strtotime($startDate)); // Last day of month
+        
+        // Get all products with their sales count
+        $products = ProductCategory::all();
+        
+        $categories = [];
+        $values = [];
+        
+        foreach ($products as $product) {
+            // Count total QTY sold for this product in the selected month
+            $totalSold = Order::whereBetween('order_date', [$startDate, $endDate])
+                ->whereIn('production_status', ['wip', 'finished']) // Only count WIP and Finished
+                ->where('product_category_id', $product->id)
+                ->join('order_items', 'orders.id', '=', 'order_items.order_id')
+                ->sum('order_items.qty');
+            
+            $categories[] = $product->product_name;
+            $values[] = (int)$totalSold;
+        }
+        
+        return response()->json([
+            'categories' => $categories,
+            'values' => $values,
+        ]);
+    }
 }
