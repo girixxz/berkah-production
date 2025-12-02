@@ -326,9 +326,13 @@
             </div>
         </div>
         
-        {{-- ================= ORDER BY SALES TABLE ================= --}}
-        <div class="mt-6">
+        {{-- ================= ROW 1: TABEL + CHART (Grid 2) ================= --}}
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
+            {{-- Tabel Order By Sales --}}
             <x-charts.order-by-sales-table :salesData="$salesData" />
+            
+            {{-- Line Chart Order Trend --}}
+            <x-charts.order-trend-chart />
         </div>
         </div>
 

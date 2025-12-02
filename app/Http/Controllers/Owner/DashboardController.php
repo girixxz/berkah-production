@@ -132,4 +132,36 @@ class DashboardController extends Controller
         
         return $salesData;
     }
+
+    /**
+     * Get Order Trend data for chart (per day in a month)
+     */
+    public function getOrderTrendData(Request $request)
+    {
+        $year = $request->input('year', now()->year);
+        $month = $request->input('month', now()->month);
+        
+        // Get number of days in the selected month
+        $daysInMonth = cal_days_in_month(CAL_GREGORIAN, $month, $year);
+        
+        // Initialize arrays for labels and values
+        $labels = [];
+        $values = [];
+        
+        // Loop through each day of the month
+        for ($day = 1; $day <= $daysInMonth; $day++) {
+            $date = sprintf('%04d-%02d-%02d', $year, $month, $day);
+            
+            // Count orders for this specific date
+            $orderCount = Order::whereDate('order_date', $date)->count();
+            
+            $labels[] = (string)$day; // Day number (1, 2, 3, ...)
+            $values[] = $orderCount;
+        }
+        
+        return response()->json([
+            'labels' => $labels,
+            'values' => $values,
+        ]);
+    }
 }

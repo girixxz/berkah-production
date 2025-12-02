@@ -2,7 +2,7 @@
 <div class="bg-white border border-gray-200 rounded-lg p-6">
     {{-- Header --}}
     <div class="mb-5">
-        <h3 class="text-lg font-semibold text-gray-900">Order By Sales</h3>
+        <h3 class="text-center md:text-left text-lg font-bold text-gray-900">Order By Sales</h3>
     </div>
     
     {{-- Table --}}

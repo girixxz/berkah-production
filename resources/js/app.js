@@ -67,6 +67,12 @@ document.addEventListener("turbo:fetch-request-error", () => {
     isNavigating = false;
 });
 
+// ApexCharts
+import ApexCharts from "apexcharts";
+
+// Expose ApexCharts to global scope
+window.ApexCharts = ApexCharts;
+
 // Alpine.js
 import Alpine from "alpinejs";
 

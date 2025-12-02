@@ -122,6 +122,11 @@ Route::middleware(['auth'])->group(function () {
                 Route::delete('/{sale}', [\App\Http\Controllers\Main\SalesController::class, 'destroy'])->name('destroy');
             });
         });
+        
+        // AJAX endpoints for dashboard charts
+        Route::prefix('dashboard/chart')->name('dashboard.chart.')->group(function () {
+            Route::get('order-trend', [\App\Http\Controllers\Owner\DashboardController::class, 'getOrderTrendData'])->name('order-trend');
+        });
     });
 
     Route::prefix('admin')->name('admin.')->middleware('role:admin')->group(function () {
