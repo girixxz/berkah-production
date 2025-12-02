@@ -1513,42 +1513,43 @@
                                     @dragleave="handleDragLeave()"
                                     @click="$refs.fileInput.click()"
                                     :class="{
-                                        'border-primary bg-primary/5': isDragging,
-                                        'border-red-500 bg-red-50': paymentErrors.image,
-                                        'border-gray-300 bg-gray-50': !isDragging && !paymentErrors.image
+                                        'border-primary bg-primary/5': isDragging && !imagePreview,
+                                        'border-red-500 bg-red-50': paymentErrors.image && !imagePreview,
+                                        'border-gray-300 bg-gray-50': !isDragging && !paymentErrors.image && !imagePreview,
+                                        'border-gray-200 bg-white p-2': imagePreview,
+                                        'p-6': !imagePreview
                                     }"
-                                    class="border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-all hover:border-primary hover:bg-primary/5">
+                                    class="border-2 border-dashed rounded-lg text-center cursor-pointer transition-all hover:border-primary"
+                                    :style="imagePreview ? 'min-height: 200px;' : ''">
                                     <input type="file" x-ref="fileInput" name="image" accept="image/jpeg,image/png,image/jpg"
                                         @change="handleFileChange($event)"
                                         class="hidden">
                                     
-                                    {{-- Image Preview (Inside Container) --}}
-                                    <div x-show="imagePreview" x-cloak class="mb-4">
-                                        <div class="relative inline-block">
-                                            <img :src="imagePreview" alt="Preview"
-                                                class="w-full max-w-sm h-48 object-cover rounded-lg border-2 border-gray-200">
-                                            <button type="button" @click.stop="imagePreview = null; fileName = ''; $refs.fileInput.value = ''"
-                                                class="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1.5 hover:bg-red-600 shadow-lg">
-                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                        d="M6 18L18 6M6 6l12 12" />
-                                                </svg>
-                                            </button>
-                                        </div>
+                                    {{-- Image Preview (Full Container) --}}
+                                    <div x-show="imagePreview" x-cloak class="relative w-full h-full flex items-center justify-center">
+                                        <img :src="imagePreview" alt="Preview"
+                                            class="w-full h-auto max-h-80 object-contain rounded-lg">
+                                        <button type="button" @click.stop="imagePreview = null; fileName = ''; $refs.fileInput.value = ''"
+                                            class="absolute top-2 right-2 bg-red-500 text-white rounded-full p-2 hover:bg-red-600 shadow-lg transition-colors">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                    d="M6 18L18 6M6 6l12 12" />
+                                            </svg>
+                                        </button>
                                     </div>
                                     
-                                    {{-- Upload Icon --}}
-                                    <svg x-show="!imagePreview" class="w-12 h-12 mx-auto mb-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                            d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-                                    </svg>
-
-                                    {{-- Text Instructions --}}
-                                    <div x-show="!imagePreview" class="space-y-1">
-                                        <p class="text-sm font-medium text-gray-700">
-                                            <span class="text-primary font-semibold">Click to upload</span> or drag and drop
-                                        </p>
-                                        <p class="text-xs text-gray-500">PNG, JPG, JPEG (Max 10MB)</p>
+                                    {{-- Upload Icon & Text (Only when no preview) --}}
+                                    <div x-show="!imagePreview">
+                                        <svg class="w-12 h-12 mx-auto mb-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                                        </svg>
+                                        <div class="space-y-1">
+                                            <p class="text-sm font-medium text-gray-700">
+                                                <span class="text-primary font-semibold">Click to upload</span> or drag and drop
+                                            </p>
+                                            <p class="text-xs text-gray-500">PNG, JPG, JPEG (Max 10MB)</p>
+                                        </div>
                                     </div>
 
                                     {{-- File Name Display --}}
