@@ -91,7 +91,7 @@
                 const newSection = doc.getElementById('dashboard-stats');
                 
                 if (newSection) {
-                    document.getElementById('dashboard-stats').innerHTML = newSection.innerHTML;
+                    document.getElementById('dashboard-stats').outerHTML = newSection.outerHTML;
                 }
                 
                 NProgress.done();
@@ -192,7 +192,8 @@
         </div>
 
         {{-- ================= STATISTICS CARDS ================= --}}
-        <div id="dashboard-stats" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div id="dashboard-stats">
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {{-- Total Orders --}}
             <div class="bg-white border border-gray-200 rounded-lg p-4">
                 <div class="flex items-center justify-between">
@@ -323,6 +324,12 @@
                     </div>
                 </div>
             </div>
+        </div>
+        
+        {{-- ================= ORDER BY SALES TABLE ================= --}}
+        <div class="mt-6">
+            <x-charts.order-by-sales-table :salesData="$salesData" />
+        </div>
         </div>
 
     </div>

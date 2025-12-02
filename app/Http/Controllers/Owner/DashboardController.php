@@ -8,6 +8,7 @@ use App\Models\Customer;
 use App\Models\Sale;
 use App\Models\ProductCategory;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class DashboardController extends Controller
 {
@@ -73,6 +74,62 @@ class DashboardController extends Controller
             'total_products' => ProductCategory::count(),
         ];
 
-        return view('pages.owner.dashboard', compact('stats', 'dateRange', 'startDate', 'endDate'));
+        // Get Order By Sales Data (using same date filter as stats)
+        $salesData = $this->getOrderBySalesData($startDate, $endDate);
+
+        return view('pages.owner.dashboard', compact('stats', 'salesData', 'dateRange', 'startDate', 'endDate'));
+    }
+
+    /**
+     * Get Order By Sales data with date filter
+     */
+    private function getOrderBySalesData($startDate = null, $endDate = null)
+    {
+        // Get all sales first
+        $sales = Sale::all();
+        
+        $salesData = $sales->map(function($sale) use ($startDate, $endDate) {
+            // Query orders for this sales with date filter
+            $ordersQuery = Order::where('sales_id', $sale->id);
+            
+            if ($startDate) {
+                $ordersQuery->whereDate('order_date', '>=', $startDate);
+            }
+            if ($endDate) {
+                $ordersQuery->whereDate('order_date', '<=', $endDate);
+            }
+            
+            $orders = $ordersQuery->with(['orderItems', 'invoice'])->get();
+            
+            // Filter hanya WIP dan Finished (exclude pending & cancelled)
+            $validOrders = $orders->whereIn('production_status', ['wip', 'finished']);
+            
+            // Calculate totals hanya dari WIP & Finished
+            $totalOrders = $validOrders->count();
+            $totalQty = $validOrders->sum(function($order) {
+                return $order->orderItems->sum('qty');
+            });
+            
+            // Revenue dari order WIP dan Finished
+            $revenue = $validOrders->sum(function($order) {
+                return $order->invoice->total_bill ?? 0;
+            });
+            
+            return (object) [
+                'id' => $sale->id,
+                'sales_name' => $sale->sales_name,
+                'total_orders' => $totalOrders,
+                'total_qty' => $totalQty,
+                'revenue' => $revenue,
+            ];
+        })
+        ->filter(function($sale) {
+            // Only include sales yang punya order
+            return $sale->total_orders > 0;
+        })
+        ->sortByDesc('revenue')
+        ->values();
+        
+        return $salesData;
     }
 }
