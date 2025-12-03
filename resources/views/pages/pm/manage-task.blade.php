@@ -792,10 +792,15 @@
     </section>
 
         {{-- ================= STAGE DATE MODAL ================= --}}
-        <div x-show="showStageModal" x-cloak x-transition.opacity
-            class="fixed inset-0 z-50 overflow-y-auto bg-gray-900/80 backdrop-blur-sm flex items-center justify-center p-4">
-            <div @click.away="showStageModal = false; resetStageForm()"
-                class="relative bg-white rounded-xl shadow-2xl max-w-md w-full">
+        <div x-show="showStageModal" x-cloak class="fixed inset-0 z-50 overflow-y-auto">
+            {{-- Background Overlay --}}
+            <div x-show="showStageModal" x-transition.opacity @click="showStageModal = false; resetStageForm()"
+                class="fixed inset-0 bg-gray-900/80 backdrop-blur-sm"></div>
+            
+            {{-- Modal Container --}}
+            <div class="flex items-center justify-center min-h-screen p-4">
+                <div @click.away="showStageModal = false; resetStageForm()" x-transition
+                    class="relative bg-white rounded-xl shadow-2xl max-w-md w-full z-10">
                 {{-- Header --}}
                 <div class="flex items-center justify-between p-5 border-b border-gray-200">
                     <h3 class="text-lg font-semibold text-gray-900">Set Stage Date - <span
@@ -846,8 +851,10 @@
                         {{-- Start Date --}}
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-2">Start Date</label>
-                            <input type="date" x-model="stageStartDate"
-                                class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-primary focus:ring-primary/20 focus:outline-none focus:ring-2">
+                            <div class="relative cursor-pointer" @click="$refs.startDateInput.showPicker()">
+                                <input x-ref="startDateInput" type="date" x-model="stageStartDate"
+                                    class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-primary focus:ring-primary/20 focus:outline-none focus:ring-2 cursor-pointer">
+                            </div>
                             <p x-show="stageErrors.start_date" x-text="stageErrors.start_date"
                                 class="text-xs text-red-600 mt-1"></p>
                         </div>
@@ -855,8 +862,10 @@
                         {{-- Deadline --}}
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-2">Deadline</label>
-                            <input type="date" x-model="stageDeadline"
-                                class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-primary focus:ring-primary/20 focus:outline-none focus:ring-2">
+                            <div class="relative cursor-pointer" @click="$refs.deadlineInput.showPicker()">
+                                <input x-ref="deadlineInput" type="date" x-model="stageDeadline"
+                                    class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-primary focus:ring-primary/20 focus:outline-none focus:ring-2 cursor-pointer">
+                            </div>
                             <p x-show="stageErrors.deadline" x-text="stageErrors.deadline"
                                 class="text-xs text-red-600 mt-1"></p>
                         </div>
@@ -879,14 +888,20 @@
                         </button>
                     </div>
                 </form>
+                </div>
             </div>
         </div>
 
         {{-- ================= EDIT STAGE MODAL ================= --}}
-        <div x-show="showEditStageModal" x-cloak x-transition.opacity
-            class="fixed inset-0 z-50 overflow-y-auto bg-gray-900/80 backdrop-blur-sm flex items-center justify-center p-4">
-            <div @click.away="showEditStageModal = false"
-                class="relative bg-white rounded-xl shadow-2xl max-w-3xl w-full max-h-[90vh] flex flex-col">
+        <div x-show="showEditStageModal" x-cloak class="fixed inset-0 z-50 overflow-y-auto">
+            {{-- Background Overlay --}}
+            <div x-show="showEditStageModal" x-transition.opacity @click="showEditStageModal = false"
+                class="fixed inset-0 bg-gray-900/80 backdrop-blur-sm"></div>
+            
+            {{-- Modal Container --}}
+            <div class="flex items-center justify-center min-h-screen p-4">
+                <div @click.away="showEditStageModal = false" x-transition
+                    class="relative bg-white rounded-xl shadow-2xl max-w-3xl w-full max-h-[90vh] flex flex-col z-10">
                 {{-- Header --}}
                 <div class="flex items-center justify-between p-5 border-b border-gray-200 flex-shrink-0">
                     <div>
@@ -1015,6 +1030,7 @@
                         class="px-4 py-2 rounded-md bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-medium cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed">
                         Close
                     </button>
+                </div>
                 </div>
             </div>
         </div>
