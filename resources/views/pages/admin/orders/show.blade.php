@@ -921,7 +921,7 @@
 
         {{-- ================= INVOICE MODAL ================= --}}
         <div x-show="openInvoiceModal" x-cloak
-            class="fixed inset-0 z-50 overflow-y-auto"
+            class="fixed inset-0 z-50 "
             @keydown.escape.window="openInvoiceModal && (openInvoiceModal = false)"
             aria-labelledby="modal-title" role="dialog" aria-modal="true">
 
@@ -931,7 +931,7 @@
             </div>
 
             {{-- Modal Panel --}}
-            <div class="flex items-center justify-center h-screen px-4 py-8">
+            <div class="flex items-center justify-center h-screen py-8">
                 <div x-show="openInvoiceModal"
                     class="relative w-full max-w-4xl bg-white rounded-lg shadow-xl transform transition-all flex flex-col"
                     style="max-height: 95vh;" @click.away="openInvoiceModal = false">
@@ -957,35 +957,350 @@
                         </div>
                     </div>
 
-                    {{-- Modal Content - In Progress Notice --}}
-                    <div class="p-6 bg-gray-100 flex-1 overflow-y-auto flex items-center justify-center">
-                        <div class="text-center">
-                            <div class="inline-flex items-center justify-center w-20 h-20 bg-yellow-100 rounded-full mb-4">
-                                <svg class="w-10 h-10 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                </svg>
+                    {{-- Modal Content - Invoice Preview --}}
+                    <div class="p-4 bg-gray-100 flex-1 overflow-y-auto">
+                        
+                        {{-- Invoice Paper --}}
+                        <div class="bg-white border-2 mx-auto shadow-lg" style="width: 210mm; min-height: 297mm; font-family: 'Times New Roman', Times, serif;">
+                            
+                            <div style="padding: 10mm;">
+                                
+                                {{-- Header Section --}}
+                                <div class="border-b-2 border-black pb-4 mb-6">
+                                    <div class="flex justify-between items-center mb-2">
+                                        {{-- Logo --}}
+                                        <div class="flex-shrink-0">
+                                            <img src="{{ asset('images/logo-invoice.png') }}" alt="STGR Logo" class="h-24 w-auto object-contain">
+                                        </div>
+                                        
+                                        {{-- Invoice Info --}}
+                                        <div class="">
+                                            <p class="text-4xl font-bold text-black mb-2 text-right">INVOICE</p>
+                                            <table class="text-[11px]">
+                                                <tr>
+                                                    <td class="text-black font-semibold py-0.5">No</td>
+                                                    <td class="text-black font-semibold px-2">:</td>
+                                                    <td class="text-gray-600 text-right">{{ $order->invoice->invoice_no }}</td>
+                                                </tr>
+                                                <tr>
+                                                    <td class="text-black font-semibold py-0.5">Order Date</td>
+                                                    <td class="text-black font-semibold px-2">:</td>
+                                                    <td class="text-gray-600 text-right">{{ \Carbon\Carbon::parse($order->order_date)->format('d F Y') }}</td>
+                                                </tr>
+                                                <tr>
+                                                    <td class="text-black font-semibold py-0.5">Deadline</td>
+                                                    <td class="text-black font-semibold px-2">:</td>
+                                                    <td class="text-gray-600 text-right">{{ $order->deadline ? \Carbon\Carbon::parse($order->deadline)->format('d F Y') : '-' }}</td>
+                                                </tr>
+                                            </table>
+                                        </div>
+                                    </div>
+
+                                    {{-- Company Address --}}
+                                    <div class="text-center text-sm text-black">
+                                        <p>Jl. KH Muhdi Demangan, Maguwoharjo, Depok, Sleman, Yogyakarta</p>
+                                        <p>0823 1377 8296 - 0858 7067 1741</p>
+                                    </div>
+                                </div>
+
+                                {{-- Bill To & Detail Product (2 Columns) --}}
+                                <div class="grid grid-cols-2 gap-6 mb-8">
+                                    {{-- Bill To --}}
+                                    <div>
+                                        <h3 class="text-sm font-bold text-black mb-3 uppercase border-b border-black pb-1">Bill To:</h3>
+                                        <div class="text-sm space-y-1.5">
+                                            <div>
+                                                <p class="text-black font-semibold">{{ $order->customer->customer_name }}</p>
+                                            </div>
+                                            <div>
+                                                <p class="text-gray-600">{{ $order->customer->phone }}</p>
+                                            </div>
+                                            <div>
+                                                <p class="text-gray-600 leading-relaxed">{{ $order->customer->address }}</p>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {{-- Detail Product --}}
+                                    <div>
+                                        <h3 class="text-sm font-bold text-black mb-3 uppercase border-b border-black pb-1">Detail Product:</h3>
+                                        <table class="w-full text-sm">
+                                            <tr>
+                                                <td class="text-black font-semibold py-1" style="width: 35%;">Product</td>
+                                                <td class="text-black font-semibold px-2">:</td>
+                                                <td class="text-gray-600">{{ $order->productCategory->name ?? '-' }}</td>
+                                            </tr>
+                                            <tr>
+                                                <td class="text-black font-semibold py-1">Material</td>
+                                                <td class="text-black font-semibold px-2">:</td>
+                                                <td class="text-gray-600">{{ $order->materialCategory->name ?? '-' }} - {{ $order->materialTexture->name ?? '-' }}</td>
+                                            </tr>
+                                            <tr>
+                                                <td class="text-black font-semibold py-1">Color</td>
+                                                <td class="text-black font-semibold px-2">:</td>
+                                                <td class="text-gray-600">{{ $order->product_color ?? '-' }}</td>
+                                            </tr>
+                                            <tr>
+                                                <td class="text-black font-semibold py-1">Total QTY</td>
+                                                <td class="text-black font-semibold px-2">:</td>
+                                                <td class="text-gray-600 font-semibold">{{ $order->orderItems->sum('qty') }} pcs</td>
+                                            </tr>
+                                        </table>
+                                    </div>
+                                </div>
+
+                                {{-- Order Items Table --}}
+                                <div class="mb-6">
+                                    <h3 class="text-sm font-bold text-black mb-3 uppercase border-b border-black pb-1">Order Items:</h3>
+
+                                    @php
+                                        // Group by design variant
+                                        $groupedByDesign = $order->orderItems->groupBy('design_variant_id');
+                                    @endphp
+
+                                    @foreach($groupedByDesign as $designVariantId => $designItems)
+                                        @php
+                                            $designVariant = $designItems->first()->designVariant;
+                                            // Group by sleeve within design
+                                            $groupedBySleeve = $designItems->groupBy('material_sleeve_id');
+                                        @endphp
+
+                                        {{-- Design Variant Header --}}
+                                        <div class="mb-5">
+                                            <div class="bg-gray-100 border-l-4 border-black px-3 py-1.5 mb-2">
+                                                <p class="font-semibold text-black text-sm">Design: {{ $designVariant->design_name ?? 'N/A' }}</p>
+                                            </div>
+
+                                            @foreach($groupedBySleeve as $sleeveId => $sleeveItems)
+                                                @php
+                                                    $sleeve = $sleeveItems->first()->sleeve;
+                                                    $basePrice = $sleeveItems->first()->unit_price - ($sleeveItems->first()->size->extra_price ?? 0);
+                                                @endphp
+
+                                                {{-- Sleeve Type Header --}}
+                                                <div class="ml-3 mb-3">
+                                                    <div class="flex items-center gap-3 mb-2">
+                                                        <span class="text-xs font-semibold text-black">Sleeve:</span>
+                                                        <span class="text-xs font-medium text-gray-600">
+                                                            {{ $sleeve->name ?? 'N/A' }} (Base Price: Rp {{ number_format($basePrice, 0, ',', '.') }})
+                                                        </span>
+                                                    </div>
+
+                                                    {{-- Items Table --}}
+                                                    <table class="w-full text-xs border border-black">
+                                                        <thead>
+                                                            <tr class="bg-gray-200">
+                                                                <th class="py-1.5 px-2 text-left border-r border-black font-semibold text-black" style="width: 40px;">No</th>
+                                                                <th class="py-1.5 px-2 text-left border-r border-black font-semibold text-black">Size</th>
+                                                                <th class="py-1.5 px-2 text-right border-r border-black font-semibold text-black" style="width: 110px;">Unit Price</th>
+                                                                <th class="py-1.5 px-2 text-center border-r border-black font-semibold text-black" style="width: 60px;">Qty</th>
+                                                                <th class="py-1.5 px-2 text-right font-semibold text-black" style="width: 120px;">Total</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody class="bg-white">
+                                                            @foreach($sleeveItems as $index => $item)
+                                                            <tr class="border-t border-gray-300">
+                                                                <td class="py-1.5 px-2 text-black border-r border-gray-300">{{ $index + 1 }}</td>
+                                                                <td class="py-1.5 px-2 border-r border-gray-300">
+                                                                    <span class="text-black">{{ $item->size->name ?? 'N/A' }}</span>
+                                                                    @if(($item->size->extra_price ?? 0) > 0)
+                                                                        <span class="text-[10px] text-gray-500 ml-1">
+                                                                            +Rp {{ number_format($item->size->extra_price, 0, ',', '.') }}
+                                                                        </span>
+                                                                    @endif
+                                                                </td>
+                                                                <td class="py-1.5 px-2 text-right text-gray-600 border-r border-gray-300">
+                                                                    Rp {{ number_format($item->unit_price, 0, ',', '.') }}
+                                                                </td>
+                                                                <td class="py-1.5 px-2 text-center text-black border-r border-gray-300">{{ $item->qty }}</td>
+                                                                <td class="py-1.5 px-2 text-right text-black">
+                                                                    Rp {{ number_format($item->unit_price * $item->qty, 0, ',', '.') }}
+                                                                </td>
+                                                            </tr>
+                                                            @endforeach
+                                                            {{-- Subtotal per Sleeve --}}
+                                                            <tr class="bg-gray-100 font-semibold border-t-2 border-black">
+                                                                <td colspan="3" class="py-1.5 px-2 text-right text-black border-r border-gray-300">Subtotal {{ $sleeve->name ?? '' }}:</td>
+                                                                <td class="py-1.5 px-2 text-center text-black border-r border-gray-300">{{ $sleeveItems->sum('qty') }}</td>
+                                                                <td class="py-1.5 px-2 text-right text-black">
+                                                                    Rp {{ number_format($sleeveItems->sum(fn($i) => $i->unit_price * $i->qty), 0, ',', '.') }}
+                                                                </td>
+                                                            </tr>
+                                                        </tbody>
+                                                    </table>
+                                                </div>
+                                            @endforeach
+                                        </div>
+                                    @endforeach
+
+                                    {{-- Additional Services Section --}}
+                                    @if($order->extraServices && $order->extraServices->count() > 0)
+                                    <div class="mb-5">
+                                        <div class="bg-gray-100 border-l-4 border-black px-3 py-1.5 mb-2">
+                                            <p class="font-semibold text-black text-sm">Additionals</p>
+                                        </div>
+
+                                        <div class="ml-3">
+                                            <table class="w-full text-xs border border-black">
+                                                <thead>
+                                                    <tr class="bg-gray-200">
+                                                        <th class="py-1.5 px-2 text-left border-r border-black font-semibold text-black" style="width: 40px;">No</th>
+                                                        <th class="py-1.5 px-2 text-left border-r border-black font-semibold text-black">Service Name</th>
+                                                        <th class="py-1.5 px-2 text-right font-semibold text-black" style="width: 130px;">Price</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody class="bg-white">
+                                                    @foreach($order->extraServices as $index => $service)
+                                                    <tr class="border-t border-gray-300">
+                                                        <td class="py-1.5 px-2 text-black border-r border-gray-300">{{ $index + 1 }}</td>
+                                                        <td class="py-1.5 px-2 text-black border-r border-gray-300">{{ $service->service->service_name ?? 'N/A' }}</td>
+                                                        <td class="py-1.5 px-2 text-right text-gray-600">Rp {{ number_format($service->price, 0, ',', '.') }}</td>
+                                                    </tr>
+                                                    @endforeach
+                                                    {{-- Subtotal Additional --}}
+                                                    <tr class="bg-gray-100 font-semibold border-t-2 border-black">
+                                                        <td colspan="2" class="py-1.5 px-2 text-right text-black border-r border-gray-300">Subtotal Additionals:</td>
+                                                        <td class="py-1.5 px-2 text-right text-black">
+                                                            Rp {{ number_format($order->extraServices->sum('price'), 0, ',', '.') }}
+                                                        </td>
+                                                    </tr>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                    @endif
+                                </div>
+
+                                {{-- Summary Section --}}
+                                <div class="border-t-2 border-black pt-4 mb-6">
+                                    <div class="flex justify-end">
+                                        <div class="w-96">
+                                            <table class="w-full text-sm">
+                                                {{-- Subtotal Items --}}
+                                                <tr class="border-b border-gray-300">
+                                                    <td class="py-2 text-black font-semibold">Subtotal Items</td>
+                                                    <td class="py-2 text-right text-gray-600">Rp {{ number_format($order->orderItems->sum('subtotal'), 0, ',', '.') }}</td>
+                                                </tr>
+                                                
+                                                {{-- Subtotal Additional --}}
+                                                @if($order->extraServices && $order->extraServices->count() > 0)
+                                                <tr class="border-b border-gray-300">
+                                                    <td class="py-2 text-black font-semibold">Subtotal Additionals</td>
+                                                    <td class="py-2 text-right text-gray-600">Rp {{ number_format($order->extraServices->sum('price'), 0, ',', '.') }}</td>
+                                                </tr>
+                                                @endif
+
+                                                {{-- Discount --}}
+                                                @if(($order->discount ?? 0) > 0)
+                                                <tr class="border-b border-gray-300">
+                                                    <td class="py-2 text-black font-semibold">Discount</td>
+                                                    <td class="py-2 text-right text-gray-600">- Rp {{ number_format($order->discount, 0, ',', '.') }}</td>
+                                                </tr>
+                                                @endif
+
+                                                {{-- Total --}}
+                                                <tr class="border-t-2 border-black bg-gray-100">
+                                                    <td class="py-3 px-2 text-black font-bold text-base">TOTAL</td>
+                                                    <td class="py-3 px-2 text-right text-black font-bold text-lg">Rp {{ number_format($order->invoice->total_bill, 0, ',', '.') }}</td>
+                                                </tr>
+
+                                                {{-- Dibayar --}}
+                                                <tr class="border-b border-gray-300">
+                                                    <td class="py-2 text-black font-semibold">Dibayar</td>
+                                                    <td class="py-2 text-right text-gray-600">Rp {{ number_format($order->invoice->amount_paid, 0, ',', '.') }}</td>
+                                                </tr>
+
+                                                {{-- Sisa --}}
+                                                <tr class="border-b-2 border-black">
+                                                    <td class="py-2 text-black font-semibold">Sisa</td>
+                                                    <td class="py-2 text-right text-gray-600">Rp {{ number_format($order->invoice->amount_due, 0, ',', '.') }}</td>
+                                                </tr>
+
+                                                {{-- Status --}}
+                                                <tr>
+                                                    <td colspan="2" class="py-3 text-center">
+                                                        @php
+                                                            $invoiceStatus = $order->invoice->status;
+                                                            $statusLabel = 'UNKNOWN';
+                                                            $statusColor = 'bg-gray-200 text-gray-800';
+                                                            
+                                                            if ($invoiceStatus === 'unpaid') {
+                                                                $statusLabel = 'PENDING';
+                                                                $statusColor = 'bg-red-100 text-red-800 border border-red-300';
+                                                            } elseif ($invoiceStatus === 'dp') {
+                                                                $statusLabel = 'DP';
+                                                                $statusColor = 'bg-yellow-100 text-yellow-800 border border-yellow-300';
+                                                            } elseif ($invoiceStatus === 'paid') {
+                                                                $statusLabel = 'PAID';
+                                                                $statusColor = 'bg-green-100 text-green-800 border border-green-300';
+                                                            }
+                                                        @endphp
+                                                        <span class="inline-block px-6 py-2 rounded font-bold text-sm {{ $statusColor }}">
+                                                            {{ $statusLabel }}
+                                                        </span>
+                                                    </td>
+                                                </tr>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {{-- Payment History --}}
+                                @if($order->invoice->payments && $order->invoice->payments->count() > 0)
+                                <div class="mb-6">
+                                    <h3 class="text-sm font-bold text-black mb-3 uppercase border-b border-black pb-1">Payment History:</h3>
+                                    <table class="w-full text-xs border border-black">
+                                        <thead>
+                                            <tr class="bg-gray-200">
+                                                <th class="py-1.5 px-2 text-left border-r border-black font-semibold text-black">Tanggal</th>
+                                                <th class="py-1.5 px-2 text-left border-r border-black font-semibold text-black">Metode</th>
+                                                <th class="py-1.5 px-2 text-left border-r border-black font-semibold text-black">Tipe</th>
+                                                <th class="py-1.5 px-2 text-right font-semibold text-black">Jumlah</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody class="bg-white">
+                                            @foreach($order->invoice->payments as $payment)
+                                            <tr class="border-t border-gray-300">
+                                                <td class="py-1.5 px-2 text-black border-r border-gray-300">{{ \Carbon\Carbon::parse($payment->payment_date)->format('d M Y') }}</td>
+                                                <td class="py-1.5 px-2 text-gray-600 border-r border-gray-300">{{ ucfirst(str_replace('_', ' ', $payment->payment_method)) }}</td>
+                                                <td class="py-1.5 px-2 text-gray-600 border-r border-gray-300">{{ strtoupper($payment->payment_type) }}</td>
+                                                <td class="py-1.5 px-2 text-right text-gray-600">Rp {{ number_format($payment->amount, 0, ',', '.') }}</td>
+                                            </tr>
+                                            @endforeach
+                                        </tbody>
+                                    </table>
+                                </div>
+                                @endif
+
+                                {{-- Notes --}}
+                                @if($order->invoice->notes)
+                                <div class="mb-6">
+                                    <h3 class="text-sm font-bold text-black mb-2 uppercase">Notes:</h3>
+                                    <p class="text-xs text-gray-600 border border-gray-300 p-2">{{ $order->invoice->notes }}</p>
+                                </div>
+                                @endif
+
+                                {{-- Footer --}}
+                                <div class="border-t-2 border-black pt-4 mt-8 text-center">
+                                    <p class="text-xs text-gray-600 mb-1">Terima kasih atas kepercayaan Anda</p>
+                                    <p class="text-xs text-black font-semibold">STGR PRODUCTION</p>
+                                </div>
                             </div>
-                            <h4 class="text-2xl font-bold text-gray-900 mb-2">In Progress</h4>
-                            <p class="text-lg text-yellow-600 font-semibold mb-1">(PENDING)</p>
-                            <p class="text-sm text-gray-500 max-w-md">
-                                Invoice preview feature is currently under development and will be available soon.
-                            </p>
+
                         </div>
                     </div>
 
                     {{-- Modal Footer --}}
                     <div class="px-6 py-4 border-t border-gray-200 bg-gray-50 flex justify-end items-center gap-3">
-                        {{-- Download PDF Button --}}
-                        <a href="{{ route('admin.orders.invoice.download', $order->id) }}" target="_blank"
-                            class="inline-flex items-center px-4 py-2 text-sm font-medium text-white bg-primary rounded-md hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary">
-                            {{-- Icon --}}
+                        {{-- Download PDF Button (Coming Soon) --}}
+                        <button disabled
+                            class="inline-flex items-center px-4 py-2 text-sm font-medium text-gray-400 bg-gray-200 rounded-md cursor-not-allowed opacity-60">
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                     d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                             </svg>
-                            {{-- Text (Hidden on mobile, shown on md+) --}}
-                            <span class="hidden md:inline ml-2">Download PDF</span>
-                        </a>
+                            <span class="hidden md:inline ml-2">Download PDF (Soon)</span>
+                        </button>
 
                         {{-- Close Button --}}
                         <button @click="openInvoiceModal = false" type="button"
