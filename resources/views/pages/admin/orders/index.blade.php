@@ -1080,10 +1080,16 @@
 
         {{-- ================= CANCEL CONFIRMATION MODAL ================= --}}
         <div x-show="showCancelConfirm !== null" x-cloak
-            class="fixed inset-0 z-50 overflow-y-auto flex items-center justify-center"
-            style="background-color: rgba(0, 0, 0, 0.5);">
-            <div @click.away="showCancelConfirm = null"
-                class="relative bg-white rounded-lg shadow-xl max-w-md w-full mx-4 p-6">
+            class="fixed inset-0 z-50 overflow-y-auto">
+            
+            {{-- Background Overlay --}}
+            <div x-show="showCancelConfirm !== null" @click="showCancelConfirm = null"
+                class="fixed inset-0 bg-black/50"></div>
+            
+            {{-- Modal Container --}}
+            <div class="flex items-center justify-center min-h-screen p-4">
+                <div @click.away="showCancelConfirm = null"
+                    class="relative bg-white rounded-lg shadow-xl max-w-md w-full mx-4 p-6 z-10">
                 {{-- Icon --}}
                 <div class="flex items-center justify-center w-12 h-12 mx-auto mb-4 bg-red-100 rounded-full">
                     <svg class="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1121,58 +1127,72 @@
                 </div>
             </div>
         </div>
+        </div>
 
         {{-- ================= MOVE TO SHIPPING CONFIRMATION MODAL ================= --}}
         <div x-show="showMoveToShippingConfirm !== null" x-cloak
-            class="fixed inset-0 z-50 overflow-y-auto flex items-center justify-center"
-            style="background-color: rgba(0, 0, 0, 0.5);">
-            <div @click.away="showMoveToShippingConfirm = null"
-                class="relative bg-white rounded-lg shadow-xl max-w-md w-full mx-4 p-6">
-                {{-- Icon --}}
-                <div class="flex items-center justify-center w-12 h-12 mx-auto mb-4 bg-green-100 rounded-full">
-                    <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
-                    </svg>
-                </div>
+            class="fixed inset-0 z-50 overflow-y-auto">
+            
+            {{-- Background Overlay --}}
+            <div x-show="showMoveToShippingConfirm !== null" @click="showMoveToShippingConfirm = null"
+                class="fixed inset-0 bg-black/50"></div>
+            
+            {{-- Modal Container --}}
+            <div class="flex items-center justify-center min-h-screen p-4">
+                <div @click.away="showMoveToShippingConfirm = null"
+                    class="relative bg-white rounded-lg shadow-xl max-w-md w-full mx-4 p-6 z-10">
+                    {{-- Icon --}}
+                    <div class="flex items-center justify-center w-12 h-12 mx-auto mb-4 bg-green-100 rounded-full">
+                        <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
+                        </svg>
+                    </div>
 
-                {{-- Title --}}
-                <h3 class="text-lg font-semibold text-gray-900 text-center mb-2">
-                    Move Order to Shippings?
-                </h3>
+                    {{-- Title --}}
+                    <h3 class="text-lg font-semibold text-gray-900 text-center mb-2">
+                        Move Order to Shippings?
+                    </h3>
 
-                {{-- Message --}}
-                <p class="text-sm text-gray-600 text-center mb-6">
-                    Are you sure you want to move this finished order to the shipping page? The shipping status will be
-                    changed to <span class="font-semibold text-green-600">Shipped</span> and the order will be available on
-                    the Shippings page.
-                </p>
+                    {{-- Message --}}
+                    <p class="text-sm text-gray-600 text-center mb-6">
+                        Are you sure you want to move this finished order to the shipping page? The shipping status will be
+                        changed to <span class="font-semibold text-green-600">Shipped</span> and the order will be available on
+                        the Shippings page.
+                    </p>
 
-                {{-- Actions --}}
-                <div class="flex gap-3">
-                    <button type="button" @click="showMoveToShippingConfirm = null"
-                        class="flex-1 px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">
-                        Cancel
-                    </button>
-                    <form :action="`{{ url('admin/orders') }}/${showMoveToShippingConfirm}/move-to-shipping`"
-                        method="POST" class="flex-1">
-                        @csrf
-                        @method('PATCH')
-                        <button type="submit"
-                            class="w-full px-4 py-2 bg-green-600 text-white rounded-md text-sm font-medium hover:bg-green-700 transition-colors">
-                            Yes, Move to Shippings
+                    {{-- Actions --}}
+                    <div class="flex gap-3">
+                        <button type="button" @click="showMoveToShippingConfirm = null"
+                            class="flex-1 px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">
+                            Cancel
                         </button>
-                    </form>
+                        <form :action="`{{ url('admin/orders') }}/${showMoveToShippingConfirm}/move-to-shipping`"
+                            method="POST" class="flex-1">
+                            @csrf
+                            @method('PATCH')
+                            <button type="submit"
+                                class="w-full px-4 py-2 bg-green-600 text-white rounded-md text-sm font-medium hover:bg-green-700 transition-colors">
+                                Yes, Move to Shippings
+                            </button>
+                        </form>
+                    </div>
                 </div>
             </div>
         </div>
 
         {{-- ================= ADD PAYMENT MODAL ================= --}}
-        <div x-show="showAddPaymentModal" x-cloak x-transition.opacity
-            class="fixed inset-0 z-50 overflow-y-auto bg-gray-500/50 backdrop-blur-sm">
+        <div x-show="showAddPaymentModal" x-cloak
+            class="fixed inset-0 z-50 overflow-y-auto">
+            
+            {{-- Background Overlay --}}
+            <div x-show="showAddPaymentModal" x-transition.opacity @click="showAddPaymentModal = false; resetPaymentForm()"
+                class="fixed inset-0 bg-black/50"></div>
+            
+            {{-- Modal Container --}}
             <div class="flex items-center justify-center min-h-screen p-4">
                 <div @click.away="showAddPaymentModal = false; resetPaymentForm()"
-                    class="bg-white rounded-xl shadow-lg w-full max-w-3xl">
+                    class="bg-white rounded-xl shadow-lg w-full max-w-3xl z-10">
                     {{-- Header --}}
                     <div class="flex items-center justify-between p-5 border-b border-gray-200">
                         <h3 class="text-lg font-semibold text-gray-900">Add Payment</h3>
