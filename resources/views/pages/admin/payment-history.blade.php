@@ -634,37 +634,21 @@
         </section>
 
             {{-- ================= IMAGE MODAL ================= --}}
-            <div x-show="showImageModal" x-cloak x-transition.opacity
-                class="fixed inset-0 z-50 overflow-y-auto bg-gray-900/80 backdrop-blur-sm flex items-center justify-center p-4">
-                <div @click.away="showImageModal = false; selectedImage = ''"
-                    class="relative bg-white rounded-xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden">
-                    {{-- Header --}}
-                    <div class="flex items-center justify-between p-4 border-b border-gray-200">
-                        <h3 class="text-lg font-semibold text-gray-900">Payment Proof</h3>
-                        <button @click="showImageModal = false; selectedImage = ''"
-                            class="text-gray-400 hover:text-gray-600 cursor-pointer">
-                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="M6 18L18 6M6 6l12 12" />
+            <div x-show="showImageModal" x-cloak
+                class="fixed inset-0 z-50">
+                
+                {{-- Background Overlay --}}
+                <div x-show="showImageModal" @click="showImageModal = false; selectedImage = ''" class="fixed inset-0 bg-gray-500 bg-opacity-50 backdrop-blur-sm transition-opacity"></div>
+                
+                {{-- Modal Panel --}}
+                <div class="flex items-center justify-center min-h-screen p-4">
+                    <div @click.stop class="relative max-w-4xl w-full flex justify-center">
+                        <button @click="showImageModal = false; selectedImage = ''" class="absolute -top-10 right-0 text-white hover:text-gray-300">
+                            <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
                             </svg>
                         </button>
-                    </div>
-
-                    {{-- Image --}}
-                    <div class="p-4 overflow-auto max-h-[calc(90vh-80px)]">
-                        <img :src="selectedImage" alt="Payment Proof" class="w-full h-auto rounded-lg">
-                    </div>
-
-                    {{-- Footer --}}
-                    <div class="flex justify-end gap-3 p-4 border-t border-gray-200">
-                        <a :href="selectedImage" target="_blank"
-                            class="px-4 py-2 rounded-md bg-primary text-white hover:bg-primary-dark text-sm font-medium">
-                            Open in New Tab
-                        </a>
-                        <button @click="showImageModal = false; selectedImage = ''"
-                            class="px-4 py-2 rounded-md bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-medium cursor-pointer">
-                            Close
-                        </button>
+                        <img :src="selectedImage" class="max-h-[85vh] w-auto max-w-full rounded-lg shadow-2xl object-contain" alt="Payment proof">
                     </div>
                 </div>
             </div>
