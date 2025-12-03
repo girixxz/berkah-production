@@ -394,7 +394,7 @@
                                                     x-text="'Rp ' + (row.unitPrice * row.qty).toLocaleString('id-ID')">
                                                 </td>
                                                 <td class="py-2 px-4 text-right">
-                                                    <button type="button" @click="variant.rows.splice(rIndex, 1)"
+                                                    <button type="button" @click="showDeleteSizeConfirm = { dIndex, vIndex, rIndex }"
                                                         class="p-2 rounded-md bg-red-500 text-white hover:bg-red-600">
                                                         <svg class="w-4 h-4" fill="none" stroke="currentColor"
                                                             viewBox="0 0 24 24">
@@ -438,17 +438,17 @@
                     <div x-show="design.sleeveVariants.length > 0" class="mt-4 overflow-x-auto -mx-4 md:mx-0">
                         <table class="w-full text-sm min-w-[640px]" style="table-layout: fixed;">
                             <tbody>
-                                <tr class="bg-alert-danger ">
+                                <tr class="bg-gradient-to-br from-red-100 to-red-50 rounded-lg p-4 shadow-sm ">
                                     <td class="py-3 px-4 font-bold text-white rounded-l-md" style="width: 5%;"></td>
                                     <td class="py-3 px-4 font-bold text-white" style="width: 12%;"></td>
-                                    <td class="py-3 px-4 font-bold text-white text-left" style="width: 22%;">
+                                    <td class="py-3 px-4 font-bold text-red-600 text-left" style="width: 22%;">
                                         <span>TOTAL (</span><span x-text="design.name || 'Design ' + (dIndex + 1)"></span><span>)</span>
                                     </td>
-                                    <td class="py-3 px-4 font-bold text-white text-left" style="width: 15%;" 
+                                    <td class="py-3 px-4 font-bold text-red-600 text-left" style="width: 15%;" 
                                         x-text="design.sleeveVariants.reduce((total, variant) => 
                                             total + variant.rows.reduce((sum, row) => sum + (row.qty || 0), 0), 0)">
                                     </td>
-                                    <td class="py-3 px-4 font-bold text-white text-left" style="width: 20%;" 
+                                    <td class="py-3 px-4 font-bold text-red-600 text-left" style="width: 20%;" 
                                         x-text="'Rp ' + design.sleeveVariants.reduce((total, variant) => 
                                             total + variant.rows.reduce((sum, row) => 
                                                 sum + ((row.unitPrice || 0) * (row.qty || 0)), 0), 0).toLocaleString('id-ID')">
@@ -885,6 +885,44 @@
         <input type="hidden" name="discount" :value="discount || 0">
         <input type="hidden" name="grand_total" :value="getFinalPrice()">
 
+        {{-- ================= DELETE SIZE CONFIRMATION MODAL ================= --}}
+        <div x-show="showDeleteSizeConfirm !== null" x-cloak
+            class="fixed inset-0 z-50 overflow-y-auto flex items-center justify-center"
+            style="background-color: rgba(0, 0, 0, 0.5);">
+            <div @click.away="showDeleteSizeConfirm = null"
+                class="relative bg-white rounded-lg shadow-xl max-w-md w-full mx-4 p-6">
+                {{-- Icon --}}
+                <div class="flex items-center justify-center w-12 h-12 mx-auto mb-4 bg-red-100 rounded-full">
+                    <svg class="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                    </svg>
+                </div>
+
+                {{-- Title --}}
+                <h3 class="text-lg font-semibold text-gray-900 text-center mb-2">
+                    Delete Size?
+                </h3>
+
+                {{-- Message --}}
+                <p class="text-sm text-gray-600 text-center mb-6">
+                    Are you sure you want to delete this size? This action cannot be undone.
+                </p>
+
+                {{-- Actions --}}
+                <div class="flex gap-3">
+                    <button type="button" @click="showDeleteSizeConfirm = null"
+                        class="flex-1 px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">
+                        Cancel
+                    </button>
+                    <button type="button" @click="confirmDeleteSize()"
+                        class="flex-1 px-4 py-2 bg-red-600 text-white rounded-md text-sm font-medium hover:bg-red-700 transition-colors">
+                        Yes, Delete
+                    </button>
+                </div>
+            </div>
+        </div>
+
     </form>
 
 @endsection
@@ -1011,6 +1049,7 @@
                 selectedDesign: null,
                 selectedVariant: null,
                 selectedSizes: [],
+                showDeleteSizeConfirm: null,
 
                 // ERROR & SUBMIT STATE
                 errors: {},
@@ -1435,6 +1474,15 @@
                         this.isSubmitting = true;
                         // Submit form natively
                         e.target.submit();
+                    }
+                },
+
+                // ====== DELETE SIZE ======
+                confirmDeleteSize() {
+                    if (this.showDeleteSizeConfirm) {
+                        const { dIndex, vIndex, rIndex } = this.showDeleteSizeConfirm;
+                        this.designVariants[dIndex].sleeveVariants[vIndex].rows.splice(rIndex, 1);
+                        this.showDeleteSizeConfirm = null;
                     }
                 }
             }
