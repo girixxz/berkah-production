@@ -819,6 +819,10 @@
                     @submit.prevent="
                     isSubmittingStage = true;
                     stageErrors = {};
+                    
+                    // Save current scroll position
+                    const scrollPosition = window.scrollY || document.documentElement.scrollTop;
+                    
                     const formData = new FormData();
                     formData.append('_token', '{{ csrf_token() }}');
                     formData.append('order_id', selectedOrderId);
@@ -833,9 +837,41 @@
                     .then(res => res.json())
                     .then(data => {
                         if (data.success) {
-                            sessionStorage.setItem('toast_message', data.message);
-                            sessionStorage.setItem('toast_type', 'success');
-                            window.location.reload();
+                            // Close modal
+                            showStageModal = false;
+                            resetStageForm();
+                            
+                            // Show toast
+                            window.dispatchEvent(new CustomEvent('show-toast', {
+                                detail: { message: data.message, type: 'success' }
+                            }));
+                            
+                            // Refresh table content without full reload
+                            const currentUrl = window.location.href;
+                            fetch(currentUrl, {
+                                headers: {
+                                    'X-Requested-With': 'XMLHttpRequest'
+                                }
+                            })
+                            .then(res => res.text())
+                            .then(html => {
+                                const parser = new DOMParser();
+                                const doc = parser.parseFromString(html, 'text/html');
+                                const newSection = doc.getElementById('task-manager-section');
+                                
+                                if (newSection) {
+                                    document.getElementById('task-manager-section').innerHTML = newSection.innerHTML;
+                                    setupPagination('task-manager-pagination-container', 'task-manager-section');
+                                    
+                                    // Restore scroll position after a short delay
+                                    setTimeout(() => {
+                                        window.scrollTo({ top: scrollPosition, behavior: 'smooth' });
+                                    }, 100);
+                                }
+                            })
+                            .catch(err => {
+                                console.error('Failed to refresh table:', err);
+                            });
                         } else {
                             stageErrors = data.errors || { general: data.message };
                             isSubmittingStage = false;
