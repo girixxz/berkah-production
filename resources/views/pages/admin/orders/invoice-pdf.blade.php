@@ -1,547 +1,744 @@
 <!DOCTYPE html>
 <html lang="id">
-
 <head>
-    <meta charset="UTF-8" />
-    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    <title>Invoice - {{ $order->invoice->invoice_no }}</title>
-
-    <!-- Google Font: Lora -->
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400..700;1,400..700&display=swap"
-        rel="stylesheet" />
-
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Invoice {{ $order->invoice->invoice_no }}</title>
     <style>
-        /* ===================== DOMPDF OPTIMIZED - CLEAN & PRECISE ===================== */
         * {
             margin: 0;
             padding: 0;
+            box-sizing: border-box;
         }
-
-        @page {
-            size: A4 portrait;
-            margin: 20mm 25mm;
-        }
-
+        
         body {
-            font-family: "Lora", serif;
-            color: #333;
-            font-size: 10pt;
-            line-height: 1.4;
-            padding: 20px 30px 20px 30px;
+            font-family: 'Times New Roman', Times, serif;
+            background: white;
+            padding: 10mm;
+            width: 210mm;
+            min-height: 297mm;
         }
 
-        /* ===================== HEADER - SIMPLIFIED ===================== */
-        .header-table {
-            width: 100%;
-            border-collapse: collapse;
+        /* Header Section */
+        .header {
+            border-bottom: 2px solid black;
+            padding-bottom: 15px;
+            margin-bottom: 25px;
+        }
+
+        .header-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
             margin-bottom: 10px;
-        }
-
-        .header-table>tbody>tr>td {
-            padding: 0;
-            vertical-align: middle;
         }
 
         .logo {
-            width: 85px;
-            height: auto;
-            display: block;
+            flex-shrink: 0;
+        }
+
+        .logo img {
+            height: 96px;
+            width: auto;
+            object-fit: contain;
+        }
+
+        .invoice-info {
+            text-align: right;
         }
 
         .invoice-title {
-            font-size: 26pt;
-            font-weight: 700;
-            color: #2c2c2c;
+            font-size: 36px;
+            font-weight: bold;
+            color: black;
+            margin-bottom: 8px;
+        }
+
+        .invoice-table {
+            font-size: 11px;
+        }
+
+        .invoice-table tr td:first-child {
+            color: black;
+            font-weight: 600;
+            padding: 2px 0;
+        }
+
+        .invoice-table tr td:nth-child(2) {
+            color: black;
+            font-weight: 600;
+            padding: 0 8px;
+        }
+
+        .invoice-table tr td:last-child {
+            color: #4b5563;
             text-align: right;
+        }
+
+        .company-address {
+            text-align: center;
+            font-size: 14px;
+            color: black;
+            margin-top: 10px;
+        }
+
+        .company-address p {
+            margin: 2px 0;
+        }
+
+        /* Bill To & Detail Product Section */
+        .two-columns {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 35px;
+        }
+
+        .section-title {
+            font-size: 14px;
+            font-weight: bold;
+            color: black;
+            text-transform: uppercase;
+            border-bottom: 1px solid black;
+            padding-bottom: 4px;
+            margin-bottom: 12px;
+        }
+
+        .bill-to-content {
+            font-size: 14px;
+        }
+
+        .bill-to-content > div {
             margin-bottom: 6px;
         }
 
-        /* Meta dengan Float Right untuk Alignment Lebih Baik */
-        .meta-info {
-            text-align: right;
-            font-size: 9pt;
-            color: #666;
+        .bill-to-content .customer-name {
+            color: black;
+            font-weight: 600;
+        }
+
+        .bill-to-content .customer-phone,
+        .bill-to-content .customer-address {
+            color: #4b5563;
+        }
+
+        .bill-to-content .customer-address {
             line-height: 1.6;
         }
 
-        .meta-info strong {
-            color: #333;
-            font-weight: 600;
+        .detail-product-table {
+            width: 100%;
+            font-size: 14px;
         }
 
-        /* ===================== COMPANY ADDRESS ===================== */
-        .company-address {
-            font-size: 8.5pt;
-            color: #666;
-            text-align: center;
-            padding: 6px 0 8px 0;
-            border-bottom: 1px solid #d0d0d0;
+        .detail-product-table tr td:first-child {
+            color: black;
+            font-weight: 600;
+            padding: 4px 0;
+            width: 35%;
+        }
+
+        .detail-product-table tr td:nth-child(2) {
+            color: black;
+            font-weight: 600;
+            padding: 0 8px;
+        }
+
+        .detail-product-table tr td:last-child {
+            color: #4b5563;
+        }
+
+        /* Order Items Section */
+        .order-items {
+            margin-bottom: 25px;
+        }
+
+        .design-header {
+            background: #f3f4f6;
+            border-left: 4px solid black;
+            padding: 6px 12px;
+            margin-bottom: 8px;
+        }
+
+        .design-header p {
+            font-weight: 600;
+            color: black;
+            font-size: 14px;
+        }
+
+        .design-group {
+            margin-bottom: 20px;
+        }
+
+        .sleeve-section {
+            margin-left: 12px;
             margin-bottom: 12px;
         }
 
-        /* ===================== RECIPIENT ===================== */
-        .recipient-label {
-            font-size: 10pt;
+        .sleeve-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 8px;
+        }
+
+        .sleeve-info .label {
+            font-size: 12px;
             font-weight: 600;
-            margin-bottom: 6px;
-            color: #333;
+            color: black;
         }
 
-        .recipient-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-bottom: 12px;
+        .sleeve-info .value {
+            font-size: 12px;
+            font-weight: 500;
+            color: #4b5563;
         }
 
-        .recipient-table>tbody>tr>td {
-            vertical-align: top;
-            padding: 0;
-            font-size: 9pt;
-            line-height: 1.4;
-        }
-
-        .customer-name {
-            font-weight: 600;
-            margin-bottom: 3px;
-            color: #333;
-        }
-
-        .customer-info p {
-            color: #666;
-            margin: 0 0 2px 0;
-        }
-
-        /* Order Info - Table for Perfect Alignment */
-        .order-table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-
-        .order-table td {
-            padding: 1px 0;
-            font-size: 9pt;
-            line-height: 1.5;
-        }
-
-        .order-label {
-            width: 105px;
-            color: #666;
-        }
-
-        .order-colon {
-            width: 12px;
-            color: #666;
-            text-align: center;
-        }
-
-        .order-value {
-            font-weight: 600;
-            color: #333;
-            text-align: left;
-        }
-
-        /* ===================== ITEMS TABLE - ULTRA PRECISE ===================== */
+        /* Tables */
         .items-table {
             width: 100%;
+            font-size: 12px;
+            border: 1px solid black;
             border-collapse: collapse;
-            margin: 10px 0;
-            font-size: 9pt;
         }
 
-        .items-table thead {
-            background-color: #5a5a5a;
-            color: #ffffff;
+        .items-table thead tr {
+            background: #e5e7eb;
         }
 
-        .items-table th {
-            padding: 7px 8px;
+        .items-table thead th {
+            padding: 6px 8px;
+            text-align: left;
+            border-right: 1px solid black;
             font-weight: 600;
-            font-size: 8.5pt;
-            text-transform: uppercase;
-            letter-spacing: 0.3px;
+            color: black;
+        }
+
+        .items-table thead th:last-child {
+            border-right: none;
+        }
+
+        .items-table thead th.text-right {
+            text-align: right;
+        }
+
+        .items-table thead th.text-center {
+            text-align: center;
+        }
+
+        .items-table tbody {
+            background: white;
         }
 
         .items-table tbody tr {
-            border-bottom: 1px solid #e8e8e8;
+            border-top: 1px solid #d1d5db;
         }
 
-        .items-table td {
+        .items-table tbody td {
             padding: 6px 8px;
-            color: #333;
+            border-right: 1px solid #d1d5db;
         }
 
-        /* Variant Row */
-        .variant-row {
-            background-color: #f0f0f0;
+        .items-table tbody td:last-child {
+            border-right: none;
         }
 
-        .variant-row td {
+        .items-table tbody td.text-right {
+            text-align: right;
+        }
+
+        .items-table tbody td.text-center {
+            text-align: center;
+        }
+
+        .items-table tbody td.text-black {
+            color: black;
+        }
+
+        .items-table tbody td.text-gray {
+            color: #4b5563;
+        }
+
+        .extra-price {
+            font-size: 10px;
+            color: #6b7280;
+            margin-left: 4px;
+        }
+
+        .subtotal-row {
+            background: #f3f4f6;
             font-weight: 600;
-            padding: 5px 8px;
+            border-top: 2px solid black;
         }
 
-        /* Sleeve Row */
-        .sleeve-row td {
-            font-style: italic;
-            color: #888;
-            font-size: 8.5pt;
-            padding-left: 15px;
+        .subtotal-row td {
+            color: black;
         }
 
-        /* Size Row with Indent */
-        .size-indent {
-            padding-left: 25px !important;
-        }
-
-        /* ===================== FOOTER - SPACED & CLEAN ===================== */
-        .footer-wrapper {
-            width: 100%;
-            margin-top: 20px;
-            padding-top: 15px;
-            border-top: 1px solid #d0d0d0;
-        }
-
-        .footer-table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-
-        .footer-table>tbody>tr>td {
-            vertical-align: top;
-            padding: 0;
-        }
-
-        /* Bank Section */
-        .bank-wrapper {
-            border: 1px solid #d0d0d0;
-            padding: 12px;
-            background-color: #fafafa;
-            margin-right: 10px;
-        }
-
-        .bank-title {
-            font-size: 7.5pt;
-            color: #888;
-            margin-bottom: 4px;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-
-        .bank-account {
-            font-size: 16pt;
-            font-weight: 700;
-            color: #2c2c2c;
-            margin-bottom: 3px;
-            letter-spacing: 1.5px;
-        }
-
-        .bank-name {
-            font-size: 9pt;
-            font-weight: 600;
-            color: #333;
-            margin-bottom: 10px;
-            padding-bottom: 8px;
-            border-bottom: 1px solid #e0e0e0;
-        }
-
-        .bank-notes {
-            font-size: 7.5pt;
-            color: #666;
-            line-height: 1.6;
-            padding-left: 14px;
-            margin-top: 8px;
-        }
-
-        .bank-notes li {
-            margin-bottom: 5px;
+        /* Additionals Section */
+        .additionals-section {
+            margin-bottom: 20px;
         }
 
         /* Summary Section */
+        .summary-section {
+            border-top: 2px solid black;
+            padding-top: 15px;
+            margin-bottom: 25px;
+        }
+
         .summary-wrapper {
-            border: 1px solid #d0d0d0;
-            margin-left: 10px;
+            display: flex;
+            justify-content: flex-end;
+        }
+
+        .summary-table-container {
+            width: 400px;
         }
 
         .summary-table {
             width: 100%;
-            border-collapse: collapse;
+            font-size: 14px;
         }
 
-        .summary-table td {
-            padding: 7px 12px;
-            font-size: 9pt;
-            border-bottom: 1px solid #e8e8e8;
+        .summary-table tr {
+            border-bottom: 1px solid #d1d5db;
         }
 
-        .summary-table tr:last-child td {
-            border-bottom: none;
-        }
-
-        .summary-label {
-            color: #666;
-        }
-
-        .summary-value {
+        .summary-table tr td:first-child {
+            padding: 8px 0;
+            color: black;
             font-weight: 600;
-            color: #333;
+        }
+
+        .summary-table tr td:last-child {
+            padding: 8px 0;
             text-align: right;
+            color: #4b5563;
         }
 
-        /* Total Row */
-        .total-row {
-            background-color: #2c2c2c;
+        .summary-table tr.total-row {
+            border-top: 2px solid black;
+            background: #f3f4f6;
         }
 
-        .total-row td {
-            font-weight: 700;
-            font-size: 10pt;
-            color: #ffffff;
-            padding: 9px 12px;
+        .summary-table tr.total-row td:first-child {
+            padding: 12px 8px;
+            color: black;
+            font-weight: bold;
+            font-size: 16px;
+        }
+
+        .summary-table tr.total-row td:last-child {
+            padding: 12px 8px;
+            color: black;
+            font-weight: bold;
+            font-size: 18px;
+        }
+
+        .summary-table tr.status-row {
+            border: none;
+        }
+
+        .summary-table tr.status-row td {
+            padding: 12px 0;
+            text-align: center;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 8px 24px;
+            border-radius: 4px;
+            font-weight: bold;
+            font-size: 14px;
+        }
+
+        .status-pending {
+            background: #fee2e2;
+            color: #991b1b;
+            border: 1px solid #fca5a5;
+        }
+
+        .status-dp {
+            background: #fef3c7;
+            color: #92400e;
+            border: 1px solid #fcd34d;
+        }
+
+        .status-paid {
+            background: #d1fae5;
+            color: #065f46;
+            border: 1px solid #6ee7b7;
+        }
+
+        /* Payment History Section */
+        .payment-history {
+            margin-bottom: 25px;
+        }
+
+        /* Notes Section */
+        .notes-section {
+            margin-bottom: 25px;
+        }
+
+        .notes-title {
+            font-size: 14px;
+            font-weight: bold;
+            color: black;
+            text-transform: uppercase;
+            margin-bottom: 8px;
+        }
+
+        .notes-content {
+            font-size: 12px;
+            color: #4b5563;
+            border: 1px solid #d1d5db;
+            padding: 8px;
+        }
+
+        /* Footer */
+        .footer {
+            border-top: 2px solid black;
+            padding-top: 15px;
+            margin-top: 30px;
+            text-align: center;
+        }
+
+        .footer p {
+            font-size: 12px;
+        }
+
+        .footer .thank-you {
+            color: #4b5563;
+            margin-bottom: 4px;
+        }
+
+        .footer .company-name {
+            color: black;
+            font-weight: 600;
         }
     </style>
 </head>
-
 <body>
-    <!-- HEADER - SIMPLIFIED -->
-    <table class="header-table">
-        <tr>
-            <td style="width: 30%">
-                <img src="{{ public_path('images/logo-invoice.png') }}" alt="STGR Logo" class="logo" />
-            </td>
-            <td style="width: 70%">
+    {{-- Header Section --}}
+    <div class="header">
+        <div class="header-top">
+            {{-- Logo --}}
+            <div class="logo">
+                <img src="{{ asset('images/logo-invoice.png') }}" alt="STGR Logo">
+            </div>
+            
+            {{-- Invoice Info --}}
+            <div class="invoice-info">
                 <div class="invoice-title">INVOICE</div>
-                <div class="meta-info">
-                    Invoice Number : <strong>{{ $order->invoice->invoice_no }}</strong><br />
-                    Invoice Date :
-                    <strong>{{ \Carbon\Carbon::parse($order->invoice->created_at)->format('d F Y') }}</strong><br />
-                    Finish Date :
-                    <strong>{{ $order->deadline ? \Carbon\Carbon::parse($order->deadline)->format('d F Y') : '-' }}</strong>
-                </div>
-            </td>
-        </tr>
-    </table>
-
-    <!-- COMPANY ADDRESS -->
-    <div class="company-address">
-        Jl. KH Muhdi Demangan, Maguwoharjo, Depok, Sleman, Daerah Istimewa Yogyakarta // 0823 1377 8296 - 0858 7067 1741
-    </div>
-
-    <!-- RECIPIENT -->
-    <div class="recipient-label">Recipient :</div>
-    <div style="width: 100%; margin-bottom: 12px; overflow: hidden;">
-        <!-- Customer Info (Left) -->
-        <div style="width: 48%; float: left; font-size: 9pt; line-height: 1.4;">
-            <p style="font-weight: 600; margin-bottom: 3px; color: #333;">{{ $order->customer->customer_name }}</p>
-            <p style="color: #666; margin: 0 0 2px 0;">{{ $order->customer->address }}</p>
-            <p style="color: #666; margin: 0 0 2px 0;">
-                {{ $locationData['village_name'] ?? '-' }},
-                {{ $locationData['district_name'] ?? '-' }},
-                {{ $locationData['city_name'] ?? '-' }},
-                {{ $locationData['province_name'] ?? '-' }}
-            </p>
-            <p style="color: #666; margin: 0;">{{ $order->customer->phone }}</p>
-        </div>
-
-        <!-- Order Info (Right) -->
-        <div style="width: 48%; float: right; font-size: 9pt; text-align: right;">
-            <div style="display: inline-block; text-align: left;">
-                <p style="margin: 1px 0; color: #666;">Order Quantity: <span
-                        style="font-weight: 600; color: #333;">{{ $order->total_qty ?? $order->orderItems->sum('qty') }}</span>
-                </p>
-                <p style="margin: 1px 0; color: #666;">Product: <span
-                        style="font-weight: 600; color: #333;">{{ $order->productCategory->product_name ?? '-' }}</span>
-                </p>
-                <p style="margin: 1px 0; color: #666;">Material: <span
-                        style="font-weight: 600; color: #333;">{{ $order->materialCategory->material_name ?? '-' }} -
-                        {{ $order->materialTexture->texture_name ?? '-' }}</span></p>
-                <p style="margin: 1px 0; color: #666;">Color: <span
-                        style="font-weight: 600; color: #333;">{{ $order->product_color ?? '-' }}</span></p>
+                <table class="invoice-table">
+                    <tr>
+                        <td>No</td>
+                        <td>:</td>
+                        <td>{{ $order->invoice->invoice_no }}</td>
+                    </tr>
+                    <tr>
+                        <td>Order Date</td>
+                        <td>:</td>
+                        <td>{{ \Carbon\Carbon::parse($order->order_date)->format('d F Y') }}</td>
+                    </tr>
+                    <tr>
+                        <td>Deadline</td>
+                        <td>:</td>
+                        <td>{{ $order->deadline ? \Carbon\Carbon::parse($order->deadline)->format('d F Y') : '-' }}</td>
+                    </tr>
+                </table>
             </div>
         </div>
 
-        <div style="clear: both;"></div>
+        {{-- Company Address --}}
+        <div class="company-address">
+            <p>Jl. KH Muhdi Demangan, Maguwoharjo, Depok, Sleman, Yogyakarta</p>
+            <p>0823 1377 8296 - 0858 7067 1741</p>
+        </div>
     </div>
 
-    <!-- ITEMS TABLE - INLINE WIDTH FOR PRECISION -->
-    <table class="items-table">
-        <thead>
-            <tr>
-                <th style="width: 50%; text-align: left">PRODUCT & SIZE</th>
-                <th style="width: 15%; text-align: center">QTY</th>
-                <th style="width: 17.5%; text-align: right">PRICE</th>
-                <th style="width: 17.5%; text-align: right">TOTAL</th>
-            </tr>
-        </thead>
-        <tbody>
-            @foreach ($order->designVariants as $variant)
-                <!-- Variant Header -->
-                <tr style="background-color: #f0f0f0">
-                    <td colspan="4" style="padding: 5px 8px; font-weight: 600; color: #333; font-size: 9pt;">
-                        Variant : {{ $variant->design_name }}
-                    </td>
-                </tr>
-
-                @php
-                    $itemsBySleeve = $variant->orderItems->groupBy('sleeve_id');
-                @endphp
-
-                @foreach ($itemsBySleeve as $sleeveId => $items)
-                    <!-- Sleeve Header -->
-                    <tr>
-                        <td colspan="4"
-                            style="font-style: italic; color: #888; font-size: 8.5pt; padding-left: 15px;">
-                            Sleeve : {{ $items->first()->sleeve->sleeve_name ?? 'Unknown' }}
-                        </td>
-                    </tr>
-
-                    <!-- Items -->
-                    @foreach ($items as $item)
-                        <tr>
-                            <td style="width: 50%; padding-left: 25px">{{ $item->size->size_name ?? '-' }}</td>
-                            <td style="width: 15%; text-align: center">{{ $item->qty }}</td>
-                            <td style="width: 17.5%; text-align: right">
-                                Rp {{ number_format($item->unit_price, 0, ',', '.') }}</td>
-                            <td style="width: 17.5%; text-align: right">
-                                Rp {{ number_format($item->subtotal, 0, ',', '.') }}</td>
-                        </tr>
-                    @endforeach
-                @endforeach
-            @endforeach
-
-            @if ($order->extraServices->count() > 0)
-                <!-- Additional Services Header -->
-                <tr style="background-color: #f0f0f0">
-                    <td colspan="4" style="padding: 5px 8px; font-weight: 600; color: #333; font-size: 9pt;">
-                        Additional Services
-                    </td>
-                </tr>
-
-                @foreach ($order->extraServices as $extra)
-                    <tr>
-                        <td style="width: 50%; padding-left: 15px">{{ $extra->service->service_name ?? 'Service' }}
-                        </td>
-                        <td style="width: 15%; text-align: center">1</td>
-                        <td style="width: 17.5%; text-align: right">Rp {{ number_format($extra->price, 0, ',', '.') }}
-                        </td>
-                        <td style="width: 17.5%; text-align: right">Rp {{ number_format($extra->price, 0, ',', '.') }}
-                        </td>
-                    </tr>
-                @endforeach
-            @endif
-        </tbody>
-    </table>
-
-    <!-- FOOTER - SPACED & CLEAN -->
-    @php
-        $subtotal = $order->orderItems->sum('subtotal');
-        $additional = $order->extraServices->sum('price');
-        $discount = $order->discount ?? 0;
-        $total = $subtotal + $additional - $discount;
-    @endphp
-
-    <div style="width: 100%; margin-top: 20px; padding-top: 15px; border-top: 1px solid #d0d0d0; overflow: hidden;">
-        <!-- Bank Info (Left Column) -->
-        <div style="width: 55%; float: left; margin-right: 3%;">
-            <div style="border: 1px solid #d0d0d0; padding: 12px; background-color: #fafafa;">
-                <div
-                    style="font-size: 7.5pt; color: #888; margin-bottom: 4px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">
-                    REKENING BANK CENTRAL ASIA
+    {{-- Bill To & Detail Product (2 Columns) --}}
+    <div class="two-columns">
+        {{-- Bill To --}}
+        <div>
+            <h3 class="section-title">Bill To:</h3>
+            <div class="bill-to-content">
+                <div>
+                    <p class="customer-name">{{ $order->customer->customer_name }}</p>
                 </div>
-                <div
-                    style="font-size: 16pt; font-weight: 700; color: #2c2c2c; margin-bottom: 3px; letter-spacing: 1.5px;">
-                    7315 40 1313
+                <div>
+                    <p class="customer-phone">{{ $order->customer->phone }}</p>
                 </div>
-                <div
-                    style="font-size: 9pt; font-weight: 600; color: #333; margin-bottom: 10px; padding-bottom: 8px; border-bottom: 1px solid #e0e0e0;">
-                    APRI KUSUMA PRAWIRA
+                <div>
+                    <p class="customer-address">{{ $order->customer->address }}</p>
                 </div>
-                <ul style="font-size: 7.5pt; color: #666; line-height: 1.6; padding-left: 14px; margin-top: 8px;">
-                    <li style="margin-bottom: 5px">Untuk pembayaran DP minimal 60% dari total harga, pelunasan dilakukan
-                        saat pengambilan barang.</li>
-                    <li style="margin-bottom: 5px">Jangan lupa mengirimkan bukti transfer DP untuk konfirmasi orderan.
-                    </li>
-                    <li style="margin-bottom: 5px">Pastikan sudah mengecek keseluruhan detail sesuai dengan pesanannya.
-                    </li>
-                </ul>
             </div>
         </div>
 
-        <!-- Price Summary (Right Column) - USING TABLE -->
-        <div style="width: 42%; float: right;">
-            <table style="width: 100%; border-collapse: collapse; border: 1px solid #d0d0d0;">
+        {{-- Detail Product --}}
+        <div>
+            <h3 class="section-title">Detail Product:</h3>
+            <table class="detail-product-table">
                 <tr>
-                    <td style="padding: 8px 10px; font-size: 9pt; color: #666; border-bottom: 1px solid #e8e8e8;">Sub
-                        Total</td>
-                    <td
-                        style="padding: 8px 10px; font-size: 9pt; font-weight: 600; color: #333; text-align: right; border-bottom: 1px solid #e8e8e8;">
-                        Rp {{ number_format($subtotal, 0, ',', '.') }}</td>
-                </tr>
-                <tr>
-                    <td style="padding: 8px 10px; font-size: 9pt; color: #666; border-bottom: 1px solid #e8e8e8;">
-                        Additional</td>
-                    <td
-                        style="padding: 8px 10px; font-size: 9pt; font-weight: 600; color: #333; text-align: right; border-bottom: 1px solid #e8e8e8;">
-                        {{ $additional > 0 ? 'Rp ' . number_format($additional, 0, ',', '.') : '-' }}</td>
+                    <td>Product</td>
+                    <td>:</td>
+                    <td>{{ $order->productCategory->name ?? '-' }}</td>
                 </tr>
                 <tr>
-                    <td style="padding: 8px 10px; font-size: 9pt; color: #666; border-bottom: 1px solid #e8e8e8;">
-                        Discount</td>
-                    <td
-                        style="padding: 8px 10px; font-size: 9pt; font-weight: 600; color: #333; text-align: right; border-bottom: 1px solid #e8e8e8;">
-                        {{ $discount > 0 ? '- Rp ' . number_format($discount, 0, ',', '.') : '-' }}</td>
+                    <td>Material</td>
+                    <td>:</td>
+                    <td>{{ $order->materialCategory->name ?? '-' }} - {{ $order->materialTexture->name ?? '-' }}</td>
                 </tr>
-                <tr style="background-color: #2c2c2c;">
-                    <td style="padding: 10px; font-size: 10pt; font-weight: 700; color: #ffffff;">Total Price</td>
-                    <td style="padding: 10px; font-size: 10pt; font-weight: 700; color: #ffffff; text-align: right;">
-                        Rp {{ number_format($total, 0, ',', '.') }}</td>
+                <tr>
+                    <td>Color</td>
+                    <td>:</td>
+                    <td>{{ $order->product_color ?? '-' }}</td>
                 </tr>
-
-                @php
-                    $approvedPayments = $order->invoice->payments->where('status', 'approved')->sortBy('paid_at');
-                    $totalPaid = $approvedPayments->sum('amount');
-                    $remainingDue = $total - $totalPaid;
-                @endphp
-
-                @if ($approvedPayments->count() > 0)
-                    <!-- Payment Activity Header -->
-                    <tr style="background-color: #f5f5f5;">
-                        <td colspan="2"
-                            style="padding: 8px 10px; font-size: 8.5pt; font-weight: 600; color: #555; border-bottom: 1px solid #e8e8e8;">
-                            PAYMENT ACTIVITY
-                        </td>
-                    </tr>
-
-                    @foreach ($approvedPayments as $index => $payment)
-                        <tr>
-                            <td
-                                style="padding: 6px 10px; font-size: 8.5pt; color: #666; border-bottom: 1px solid #e8e8e8;">
-                                Payment #{{ $index + 1 }}
-                                ({{ \Carbon\Carbon::parse($payment->paid_at)->format('d/m/Y') }})
-                            </td>
-                            <td
-                                style="padding: 6px 10px; font-size: 8.5pt; font-weight: 600; color: #333; text-align: right; border-bottom: 1px solid #e8e8e8;">
-                                - Rp {{ number_format($payment->amount, 0, ',', '.') }}
-                            </td>
-                        </tr>
-                    @endforeach
-                @endif
-
-                <!-- Remaining Due -->
-                <tr style="background-color: #fef3c7;">
-                    <td style="padding: 10px; font-size: 10pt; font-weight: 700; color: #92400e;">Remaining Due</td>
-                    <td style="padding: 10px; font-size: 10pt; font-weight: 700; color: #92400e; text-align: right;">
-                        Rp {{ number_format($remainingDue, 0, ',', '.') }}
-                    </td>
+                <tr>
+                    <td>Total QTY</td>
+                    <td>:</td>
+                    <td style="font-weight: 600;">{{ $order->orderItems->sum('qty') }} pcs</td>
                 </tr>
             </table>
         </div>
+    </div>
 
-        <!-- Clear Float -->
-        <div style="clear: both;"></div>
+    {{-- Order Items Table --}}
+    <div class="order-items">
+        <h3 class="section-title">Order Items:</h3>
+
+        @php
+            // Group by design variant
+            $groupedByDesign = $order->orderItems->groupBy('design_variant_id');
+        @endphp
+
+        @foreach($groupedByDesign as $designVariantId => $designItems)
+            @php
+                $designVariant = $designItems->first()->designVariant;
+                // Group by sleeve within design
+                $groupedBySleeve = $designItems->groupBy('material_sleeve_id');
+            @endphp
+
+            {{-- Design Variant Header --}}
+            <div class="design-group">
+                <div class="design-header">
+                    <p>Design: {{ $designVariant->design_name ?? 'N/A' }}</p>
+                </div>
+
+                @foreach($groupedBySleeve as $sleeveId => $sleeveItems)
+                    @php
+                        $sleeve = $sleeveItems->first()->sleeve;
+                        $basePrice = $sleeveItems->first()->unit_price - ($sleeveItems->first()->size->extra_price ?? 0);
+                    @endphp
+
+                    {{-- Sleeve Type Header --}}
+                    <div class="sleeve-section">
+                        <div class="sleeve-info">
+                            <span class="label">Sleeve:</span>
+                            <span class="value">
+                                {{ $sleeve->name ?? 'N/A' }} (Base Price: Rp {{ number_format($basePrice, 0, ',', '.') }})
+                            </span>
+                        </div>
+
+                        {{-- Items Table --}}
+                        <table class="items-table">
+                            <thead>
+                                <tr>
+                                    <th style="width: 40px;">No</th>
+                                    <th>Size</th>
+                                    <th class="text-right" style="width: 110px;">Unit Price</th>
+                                    <th class="text-center" style="width: 60px;">Qty</th>
+                                    <th class="text-right" style="width: 120px;">Total</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach($sleeveItems as $index => $item)
+                                <tr>
+                                    <td class="text-black">{{ $index + 1 }}</td>
+                                    <td>
+                                        <span class="text-black">{{ $item->size->name ?? 'N/A' }}</span>
+                                        @if(($item->size->extra_price ?? 0) > 0)
+                                            <span class="extra-price">
+                                                +Rp {{ number_format($item->size->extra_price, 0, ',', '.') }}
+                                            </span>
+                                        @endif
+                                    </td>
+                                    <td class="text-right text-gray">
+                                        Rp {{ number_format($item->unit_price, 0, ',', '.') }}
+                                    </td>
+                                    <td class="text-center text-black">{{ $item->qty }}</td>
+                                    <td class="text-right text-black">
+                                        Rp {{ number_format($item->unit_price * $item->qty, 0, ',', '.') }}
+                                    </td>
+                                </tr>
+                                @endforeach
+                                {{-- Subtotal per Sleeve --}}
+                                <tr class="subtotal-row">
+                                    <td colspan="3" class="text-right">Subtotal {{ $sleeve->name ?? '' }}:</td>
+                                    <td class="text-center">{{ $sleeveItems->sum('qty') }}</td>
+                                    <td class="text-right">
+                                        Rp {{ number_format($sleeveItems->sum(fn($i) => $i->unit_price * $i->qty), 0, ',', '.') }}
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                @endforeach
+            </div>
+        @endforeach
+
+        {{-- Additional Services Section --}}
+        @if($order->extraServices && $order->extraServices->count() > 0)
+        <div class="additionals-section">
+            <div class="design-header">
+                <p>Additionals</p>
+            </div>
+
+            <div class="sleeve-section">
+                <table class="items-table">
+                    <thead>
+                        <tr>
+                            <th style="width: 40px;">No</th>
+                            <th>Service Name</th>
+                            <th class="text-right" style="width: 130px;">Price</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach($order->extraServices as $index => $service)
+                        <tr>
+                            <td class="text-black">{{ $index + 1 }}</td>
+                            <td class="text-black">{{ $service->service->service_name ?? 'N/A' }}</td>
+                            <td class="text-right text-gray">Rp {{ number_format($service->price, 0, ',', '.') }}</td>
+                        </tr>
+                        @endforeach
+                        {{-- Subtotal Additional --}}
+                        <tr class="subtotal-row">
+                            <td colspan="2" class="text-right">Subtotal Additionals:</td>
+                            <td class="text-right">
+                                Rp {{ number_format($order->extraServices->sum('price'), 0, ',', '.') }}
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        @endif
+    </div>
+
+    {{-- Summary Section --}}
+    <div class="summary-section">
+        <div class="summary-wrapper">
+            <div class="summary-table-container">
+                <table class="summary-table">
+                    {{-- Subtotal Items --}}
+                    <tr>
+                        <td>Subtotal Items</td>
+                        <td>Rp {{ number_format($order->orderItems->sum('subtotal'), 0, ',', '.') }}</td>
+                    </tr>
+                    
+                    {{-- Subtotal Additional --}}
+                    @if($order->extraServices && $order->extraServices->count() > 0)
+                    <tr>
+                        <td>Subtotal Additionals</td>
+                        <td>Rp {{ number_format($order->extraServices->sum('price'), 0, ',', '.') }}</td>
+                    </tr>
+                    @endif
+
+                    {{-- Discount --}}
+                    @if(($order->discount ?? 0) > 0)
+                    <tr>
+                        <td>Discount</td>
+                        <td>- Rp {{ number_format($order->discount, 0, ',', '.') }}</td>
+                    </tr>
+                    @endif
+
+                    {{-- Total --}}
+                    <tr class="total-row">
+                        <td>TOTAL</td>
+                        <td>Rp {{ number_format($order->invoice->total_bill, 0, ',', '.') }}</td>
+                    </tr>
+
+                    {{-- Dibayar --}}
+                    <tr>
+                        <td>Dibayar</td>
+                        <td>Rp {{ number_format($order->invoice->amount_paid, 0, ',', '.') }}</td>
+                    </tr>
+
+                    {{-- Sisa --}}
+                    <tr>
+                        <td>Sisa</td>
+                        <td>Rp {{ number_format($order->invoice->amount_due, 0, ',', '.') }}</td>
+                    </tr>
+
+                    {{-- Status --}}
+                    <tr class="status-row">
+                        <td colspan="2">
+                            @php
+                                $invoiceStatus = $order->invoice->status;
+                                $statusLabel = 'UNKNOWN';
+                                $statusClass = 'status-pending';
+                                
+                                if ($invoiceStatus === 'unpaid') {
+                                    $statusLabel = 'PENDING';
+                                    $statusClass = 'status-pending';
+                                } elseif ($invoiceStatus === 'dp') {
+                                    $statusLabel = 'DP';
+                                    $statusClass = 'status-dp';
+                                } elseif ($invoiceStatus === 'paid') {
+                                    $statusLabel = 'PAID';
+                                    $statusClass = 'status-paid';
+                                }
+                            @endphp
+                            <span class="status-badge {{ $statusClass }}">
+                                {{ $statusLabel }}
+                            </span>
+                        </td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    {{-- Payment History --}}
+    @if($order->invoice->payments && $order->invoice->payments->count() > 0)
+    <div class="payment-history">
+        <h3 class="section-title">Payment History:</h3>
+        <table class="items-table">
+            <thead>
+                <tr>
+                    <th>Tanggal</th>
+                    <th>Metode</th>
+                    <th>Tipe</th>
+                    <th class="text-right">Jumlah</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach($order->invoice->payments as $payment)
+                <tr>
+                    <td class="text-black">{{ \Carbon\Carbon::parse($payment->payment_date)->format('d M Y') }}</td>
+                    <td class="text-gray">{{ ucfirst(str_replace('_', ' ', $payment->payment_method)) }}</td>
+                    <td class="text-gray">{{ strtoupper($payment->payment_type) }}</td>
+                    <td class="text-right text-gray">Rp {{ number_format($payment->amount, 0, ',', '.') }}</td>
+                </tr>
+                @endforeach
+            </tbody>
+        </table>
+    </div>
+    @endif
+
+    {{-- Notes --}}
+    @if($order->invoice->notes)
+    <div class="notes-section">
+        <h3 class="notes-title">Notes:</h3>
+        <p class="notes-content">{{ $order->invoice->notes }}</p>
+    </div>
+    @endif
+
+    {{-- Footer --}}
+    <div class="footer">
+        <p class="thank-you">Terima kasih atas kepercayaan Anda</p>
+        <p class="company-name">STGR PRODUCTION</p>
     </div>
 </body>
-
 </html>

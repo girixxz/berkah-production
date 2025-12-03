@@ -1292,15 +1292,15 @@
 
                     {{-- Modal Footer --}}
                     <div class="px-6 py-4 border-t border-gray-200 bg-gray-50 flex justify-end items-center gap-3">
-                        {{-- Download PDF Button (Coming Soon) --}}
-                        <button disabled
-                            class="inline-flex items-center px-4 py-2 text-sm font-medium text-gray-400 bg-gray-200 rounded-md cursor-not-allowed opacity-60">
+                        {{-- Download PDF Button --}}
+                        <a href="{{ route('admin.orders.invoice.download', $order->id) }}" target="_blank"
+                            class="inline-flex items-center px-4 py-2 text-sm font-medium text-white bg-primary hover:bg-primary/90 rounded-md transition duration-150">
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                     d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                             </svg>
-                            <span class="hidden md:inline ml-2">Download PDF (Soon)</span>
-                        </button>
+                            <span class="hidden md:inline ml-2">Download PDF</span>
+                        </a>
 
                         {{-- Close Button --}}
                         <button @click="openInvoiceModal = false" type="button"

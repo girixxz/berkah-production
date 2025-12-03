@@ -759,8 +759,11 @@ class OrderController extends Controller
     public function downloadInvoice(Order $order)
     {
         $order->load([
-            'invoice',
+            'invoice.payments',
             'customer',
+            'productCategory',
+            'materialCategory',
+            'materialTexture',
             'sale',
             'orderItems.designVariant',
             'orderItems.size',
@@ -768,17 +771,12 @@ class OrderController extends Controller
             'extraServices.service'
         ]);
 
-        // Get customer location from API with cache
-        $locationData = Cache::remember("customer_location_{$order->customer->id}", 86400, function () use ($order) {
-            return $this->getCustomerLocationNames($order->customer);
-        });
-
-        $pdf = Pdf::loadView('pages.admin.orders.invoice-pdf', [
+        // Generate PDF using Spatie Laravel PDF
+        return \Spatie\LaravelPdf\Facades\Pdf::view('pages.admin.orders.invoice-pdf', [
             'order' => $order,
-            'locationData' => $locationData
-        ]);
-
-        return $pdf->download('invoice-' . $order->invoice->invoice_no . '.pdf');
+        ])
+        ->format('a4')
+        ->name("Invoice-{$order->invoice->invoice_no}.pdf");
     }
 
     /**
