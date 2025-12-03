@@ -210,6 +210,7 @@
                                                     $isHigh = strtolower($os->order->priority ?? '') === 'high';
                                                     return [
                                                         'id' => $os->id,
+                                                        'order_id' => $os->order->id,
                                                         'invoice' => $os->order->invoice->invoice_no ?? 'N/A',
                                                         'product' => $os->order->productCategory->product_name ?? 'N/A',
                                                         'customer' => $os->order->customer->customer_name ?? 'N/A',
@@ -307,7 +308,7 @@
                                                 class="absolute right-0 w-40 bg-white rounded-lg shadow-lg border border-gray-200 z-[9999] py-1"
                                                 :class="index >= modalOrders.length - 3 ? 'bottom-full mb-1' : 'top-full mt-1'">
                                                 {{-- View Detail --}}
-                                                <a href="{{ route('karyawan.task.work-order', ['order' => $orderStage->order->id]) }}"
+                                                <a :href="`{{ route('karyawan.task.work-order', ['order' => '__ORDER_ID__']) }}`.replace('__ORDER_ID__', order.order_id)"
                                                     @click="showDropdown = false"
                                                     class="w-full text-left px-4 py-2 text-xs text-gray-700 hover:bg-gray-50 flex items-center gap-2 cursor-pointer">
                                                     <svg class="w-3 h-3" fill="none" stroke="currentColor"
