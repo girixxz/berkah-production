@@ -188,8 +188,8 @@ class OrderController extends Controller
             'productCategories' => Cache::remember('product_categories', 86400, fn() => ProductCategory::orderBy('product_name')->get()),
             'materialCategories' => Cache::remember('material_categories', 86400, fn() => MaterialCategory::orderBy('material_name')->get()),
             'materialTextures' => Cache::remember('material_textures', 86400, fn() => MaterialTexture::orderBy('texture_name')->get()),
-            'materialSleeves' => Cache::remember('material_sleeves', 86400, fn() => MaterialSleeve::orderBy('sleeve_name')->get()),
-            'materialSizes' => Cache::remember('material_sizes', 86400, fn() => MaterialSize::orderBy('size_name')->get()),
+            'materialSleeves' => Cache::remember('material_sleeves', 86400, fn() => MaterialSleeve::orderBy('id')->get()),
+            'materialSizes' => Cache::remember('material_sizes', 86400, fn() => MaterialSize::orderBy('id')->get()),
             'services' => Cache::remember('services', 86400, fn() => Service::orderBy('service_name')->get()),
             'provinces' => $this->getProvinces(),
         ];
@@ -452,8 +452,8 @@ class OrderController extends Controller
             'productCategories' => Cache::remember('product_categories', 86400, fn() => ProductCategory::orderBy('product_name')->get()),
             'materialCategories' => Cache::remember('material_categories', 86400, fn() => MaterialCategory::orderBy('material_name')->get()),
             'materialTextures' => Cache::remember('material_textures', 86400, fn() => MaterialTexture::orderBy('texture_name')->get()),
-            'materialSleeves' => Cache::remember('material_sleeves', 86400, fn() => MaterialSleeve::orderBy('sleeve_name')->get()),
-            'materialSizes' => Cache::remember('material_sizes', 86400, fn() => MaterialSize::orderBy('size_name')->get()),
+            'materialSleeves' => Cache::remember('material_sleeves', 86400, fn() => MaterialSleeve::orderBy('id')->get()),
+            'materialSizes' => Cache::remember('material_sizes', 86400, fn() => MaterialSize::orderBy('id')->get()),
             'services' => Cache::remember('services', 86400, fn() => Service::orderBy('service_name')->get()),
         ];
 
