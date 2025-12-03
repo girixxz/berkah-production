@@ -82,8 +82,6 @@ use Illuminate\Support\Facades\Storage;
             gap: 12px;
         }
         .content-wrapper {
-            padding: 20px;
-            padding-bottom: 50px;
         }
     </style>
 </head>
@@ -95,7 +93,7 @@ use Illuminate\Support\Facades\Storage;
     <div style="clear: both;"></div>
     
     <div class="content-wrapper">
-        {{-- Title Bar: MOCKUP DESAIN --}}
+        {{-- Title Bar: MOCKUP DESIGN --}}
         <div class="section-title">MOCKUP DESIGN</div>
         
         {{-- Mockup Image --}}
@@ -183,7 +181,7 @@ use Illuminate\Support\Facades\Storage;
                                         return $i['size_name'] === $size && $i['sleeve_name'] === $sleeve;
                                     });
                                 @endphp
-                                {{ $item ? $item['qty'] : '' }}
+                                {{ ($item && $item['qty']) ? $item['qty'] : '' }}
                             </td>
                         @endforeach
                         <td class="bg-cyan" style="font-weight: bold;">
@@ -192,7 +190,7 @@ use Illuminate\Support\Facades\Storage;
                                     return $i['size_name'] === $size;
                                 })->sum('qty');
                             @endphp
-                            {{ $total ?: '' }}
+                            {{ $total ? $total : '' }}
                         </td>
                     </tr>
                     @endforeach
@@ -236,9 +234,9 @@ use Illuminate\Support\Facades\Storage;
         
         <div style="text-align: center; padding: 20px 0;">
             @if($workOrder->printing && $workOrder->printing->detail_img_url)
-                <img src="{{ Storage::disk('local')->path($workOrder->printing->detail_img_url) }}" alt="Printing Detail" style="max-height: 600px;">
+                <img src="{{ Storage::disk('local')->path($workOrder->printing->detail_img_url) }}" alt="Printing Detail" style="height: 900px;">
             @else
-                <img src="{{ public_path('images/work-order-null.png') }}" alt="Printing Detail" style="max-height: 600px;">
+                <img src="{{ public_path('images/work-order-null.png') }}" alt="Printing Detail" style="height: 600px;">
             @endif
         </div>
     </div>
@@ -256,7 +254,7 @@ use Illuminate\Support\Facades\Storage;
         
         <div style="text-align: center; padding: 20px 0;">
             @if($workOrder->printingPlacement && $workOrder->printingPlacement->detail_img_url)
-                <img src="{{ Storage::disk('local')->path($workOrder->printingPlacement->detail_img_url) }}" alt="Placement Detail" style="max-height: 600px;">
+                <img src="{{ Storage::disk('local')->path($workOrder->printingPlacement->detail_img_url) }}" alt="Placement Detail" style="max-height: 800px;">
             @else
                 <img src="{{ public_path('images/work-order-null.png') }}" alt="Placement Detail" style="max-height: 600px;">
             @endif

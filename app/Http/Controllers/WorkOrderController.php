@@ -816,16 +816,31 @@ class WorkOrderController extends Controller
         $usedSleeves = $designOrderItems->pluck('sleeve.name')->unique()->filter()->values()->toArray();
         $usedSizes = $designOrderItems->pluck('size.name')->unique()->filter()->values()->toArray();
 
-        // Fill to minimum counts
-        while (count($usedSleeves) < 4) {
-            $usedSleeves[] = '';
-        }
-        while (count($usedSizes) < 6) {
-            $usedSizes[] = '';
+        // Get all sleeves and sizes from database
+        $allSleeves = \App\Models\MaterialSleeve::all()->pluck('name')->toArray();
+        $allSizes = \App\Models\MaterialSize::all()->pluck('name')->toArray();
+
+        // Fill sleeves to minimum 4
+        $displaySleeves = $usedSleeves;
+        if (count($displaySleeves) < 4) {
+            $remainingSleeves = array_diff($allSleeves, $usedSleeves);
+            $neededCount = 4 - count($displaySleeves);
+            $displaySleeves = array_merge(
+                $displaySleeves,
+                array_slice($remainingSleeves, 0, $neededCount)
+            );
         }
 
-        $displaySleeves = array_slice($usedSleeves, 0, 4);
-        $displaySizes = array_slice($usedSizes, 0, 6);
+        // Fill sizes to minimum 6
+        $displaySizes = $usedSizes;
+        if (count($displaySizes) < 6) {
+            $remainingSizes = array_diff($allSizes, $usedSizes);
+            $neededCount = 6 - count($displaySizes);
+            $displaySizes = array_merge(
+                $displaySizes,
+                array_slice($remainingSizes, 0, $neededCount)
+            );
+        }
 
         // Transform order items data
         $orderItemsData = $designOrderItems->map(function ($item) {
