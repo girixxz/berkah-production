@@ -319,13 +319,14 @@
                                     @php
                                         $totalDesigns = $order->designVariants->count();
                                     @endphp
-                                    <tr class="border-t border-gray-200 hover:bg-gray-50" x-data="{ showImageModal: false }"
+                                    <tr class="border-t border-gray-200 hover:bg-gray-50 cursor-pointer" x-data="{ showImageModal: false }"
                                         x-show="matchesSearch($el)"
                                         data-invoice="{{ $order->invoice->invoice_number ?? '' }}"
-                                        data-product="{{ $order->productCategory->product_name ?? '' }}">
+                                        data-product="{{ $order->productCategory->product_name ?? '' }}"
+                                        onclick="window.open('{{ route('admin.orders.show', $order->id) }}', '_blank')">
                                         {{-- Mockup Column --}}
                                         <td class="py-2 px-2 text-left">
-                                            <div @click="showImageModal = true" 
+                                            <div @click="showImageModal = true; $event.stopPropagation()" 
                                                 class="inline-block w-40 h-25 bg-gray-100 rounded-lg overflow-hidden border border-gray-200 cursor-pointer hover:opacity-80 transition-opacity">
                                                 @if ($order->img_url)
                                                     <img src="{{ route('admin.orders.image', $order) }}" alt="Order Image" 
@@ -468,10 +469,11 @@
                                 $totalDesigns = $order->designVariants->count();
                             @endphp
                             
-                            <div x-data="{ showImageModal: false }" class="bg-white border border-gray-200 rounded-lg p-4 shadow-sm"
+                            <div x-data="{ showImageModal: false }" class="bg-white border border-gray-200 rounded-lg p-4 shadow-sm hover:bg-gray-50 cursor-pointer"
                                 x-show="matchesSearch($el)"
                                 data-invoice="{{ $order->invoice->invoice_number ?? '' }}"
-                                data-product="{{ $order->productCategory->product_name ?? '' }}">
+                                data-product="{{ $order->productCategory->product_name ?? '' }}"
+                                onclick="window.open('{{ route('admin.orders.show', $order->id) }}', '_blank')">
                                 {{-- Header: Invoice & Status --}}
                                 <div class="flex items-start justify-between mb-3">
                                     <div class="flex-1">
@@ -498,7 +500,7 @@
                                 {{-- Content: Image & Info --}}
                                 <div class="flex gap-3 mb-3">
                                     {{-- Mockup Image --}}
-                                    <div @click="showImageModal = true" 
+                                    <div @click="showImageModal = true; $event.stopPropagation()" 
                                         class="flex-shrink-0 w-24 h-24 bg-gray-100 rounded-lg overflow-hidden border border-gray-200 cursor-pointer hover:opacity-80 transition-opacity">
                                         @if ($order->img_url)
                                             <img src="{{ route('admin.orders.image', $order) }}" alt="Order Image" 
