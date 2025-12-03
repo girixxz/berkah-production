@@ -50,7 +50,7 @@
 
                         {{-- Upload Area with Drag & Drop & Preview Inside --}}
                         <div @drop.prevent="handleDrop($event)" @dragover.prevent="handleDragOver($event)"
-                            @dragleave="handleDragLeave()" @click="$refs.mockupInput.click()" 
+                            @dragleave="handleDragLeave()" @click.stop="$refs.mockupInput.click()" 
                             :class="{
                                 'border-primary bg-primary/5': isDragging && !mockupPreview,
                                 'border-red-500 bg-red-50': errors.mockup_img && !mockupPreview,
