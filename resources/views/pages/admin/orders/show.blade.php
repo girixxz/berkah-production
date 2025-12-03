@@ -392,7 +392,17 @@
             <h2 class="text-lg font-semibold text-gray-900 mb-4">Detail Order Items</h2>
 
             {{-- Design Variants --}}
+            @php
+                $grandTotalQty = 0;
+                $grandTotalPrice = 0;
+            @endphp
+
             @foreach ($designVariants as $designName => $variants)
+                @php
+                    $designTotalQty = 0;
+                    $designTotalPrice = 0;
+                @endphp
+
                 <div class="border border-gray-300 rounded-lg p-4 mb-4">
                     {{-- Label Design Variant - Row Layout --}}
                     <div class="flex items-center gap-2 mb-4">
@@ -401,6 +411,17 @@
                     </div>
 
                     @foreach ($variants as $sleeveData)
+                        @php
+                            $sleeveTotalQty = 0;
+                            $sleeveTotalPrice = 0;
+                            foreach ($sleeveData['items'] as $item) {
+                                $sleeveTotalQty += $item->qty;
+                                $sleeveTotalPrice += $item->unit_price * $item->qty;
+                            }
+                            $designTotalQty += $sleeveTotalQty;
+                            $designTotalPrice += $sleeveTotalPrice;
+                        @endphp
+
                         <div class="mb-6 last:mb-0">
                             {{-- Label Sleeve Type - Row Layout --}}
                             <div class="flex items-center gap-4 mb-3">
@@ -452,6 +473,21 @@
                                                         </td>
                                                     </tr>
                                                 @endforeach
+
+                                                {{-- Row TOTAL per Sleeve --}}
+                                                @if (count($sleeveData['items']) > 0)
+                                                    <tr class="bg-primary-light/50">
+                                                        <td colspan="3" class="py-3 px-4 text-center font-bold text-gray-800">
+                                                            TOTAL
+                                                        </td>
+                                                        <td class="py-3 px-4 font-bold text-gray-900 text-center">
+                                                            {{ $sleeveTotalQty }}
+                                                        </td>
+                                                        <td class="py-3 px-4 font-bold text-gray-900 text-right">
+                                                            Rp {{ number_format($sleeveTotalPrice, 0, ',', '.') }}
+                                                        </td>
+                                                    </tr>
+                                                @endif
                                             </tbody>
                                         </table>
                                     </div>
@@ -459,8 +495,81 @@
                             </div>
                         </div>
                     @endforeach
+
+                    {{-- TOTAL per Design (Gabungan semua sleeve) --}}
+                    @if (count($variants) > 0)
+                        <div class="mt-4 overflow-x-auto -mx-4 md:mx-0">
+                            <div class="inline-block min-w-full align-middle">
+                                <div class="overflow-hidden">
+                                    <table class="min-w-full text-sm">
+                                        <thead class="invisible">
+                                            <tr>
+                                                <th class="py-0 px-4 whitespace-nowrap min-w-[60px]"></th>
+                                                <th class="py-0 px-4 whitespace-nowrap min-w-[140px]"></th>
+                                                <th class="py-0 px-4 whitespace-nowrap min-w-[150px]"></th>
+                                                <th class="py-0 px-4 whitespace-nowrap min-w-[80px]"></th>
+                                                <th class="py-0 px-4 whitespace-nowrap min-w-[170px]"></th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr class="bg-gradient-to-br from-red-100 to-red-50">
+                                                <td colspan="3" class="py-3 px-4 text-center font-bold text-red-600">
+                                                    TOTAL ({{ $designName }})
+                                                </td>
+                                                <td class="py-3 px-4 font-bold text-red-600 text-center whitespace-nowrap">
+                                                    {{ $designTotalQty }}
+                                                </td>
+                                                <td class="py-3 px-4 font-bold text-red-600 text-right whitespace-nowrap">
+                                                    Rp {{ number_format($designTotalPrice, 0, ',', '.') }}
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    @endif
                 </div>
+
+                @php
+                    $grandTotalQty += $designTotalQty;
+                    $grandTotalPrice += $designTotalPrice;
+                @endphp
             @endforeach
+
+            {{-- GRAND TOTAL (Seluruh Design) --}}
+            @if (count($designVariants) > 0)
+                <div class="mt-4 overflow-x-auto -mx-4 md:mx-0 mb-6">
+                    <div class="inline-block min-w-full align-middle">
+                        <div class="overflow-hidden">
+                            <table class="min-w-full text-sm">
+                                <thead class="invisible">
+                                    <tr>
+                                        <th class="py-0 px-4 whitespace-nowrap min-w-[60px]"></th>
+                                        <th class="py-0 px-4 whitespace-nowrap min-w-[140px]"></th>
+                                        <th class="py-0 px-4 whitespace-nowrap min-w-[150px]"></th>
+                                        <th class="py-0 px-4 whitespace-nowrap min-w-[80px]"></th>
+                                        <th class="py-0 px-4 whitespace-nowrap min-w-[170px]"></th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr class="bg-primary-light">
+                                        <td colspan="3" class="py-4 px-4 text-center font-bold text-gray-600">
+                                            GRAND TOTAL
+                                        </td>
+                                        <td class="py-4 px-4 font-bold text-gray-600 text-center text-lg whitespace-nowrap">
+                                            {{ $grandTotalQty }}
+                                        </td>
+                                        <td class="py-4 px-4 font-bold text-gray-600 text-right text-lg whitespace-nowrap">
+                                            Rp {{ number_format($grandTotalPrice, 0, ',', '.') }}
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            @endif
 
             {{-- Additional Services --}}
             <div class="mt-6 border-t pt-6">
@@ -908,15 +1017,22 @@
         @include('pages.admin.work-orders.partials.show-modal')
 
         {{-- ================= IMAGE VIEWER MODAL ================= --}}
-        <div x-show="showImageModal" x-cloak @click="showImageModal = false"
-            class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-            <div @click.stop class="relative max-w-4xl w-full">
+        <div x-show="showImageModal" x-cloak
+            class="fixed inset-0 z-50">
+            
+            {{-- Background Overlay --}}
+            <div x-show="showImageModal" @click="showImageModal = false" class="fixed inset-0 bg-gray-500 bg-opacity-50 backdrop-blur-sm transition-opacity"></div>
+            
+            {{-- Modal Panel --}}
+            <div class="flex items-center justify-center min-h-screen p-4">
+                <div @click.stop class="relative max-w-4xl w-full">
                 <button @click="showImageModal = false" class="absolute -top-10 right-0 text-white hover:text-gray-300">
                     <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                </button>
-                <img :src="currentImage" class="w-full h-auto rounded-lg shadow-2xl" alt="Payment proof">
+                        </svg>
+                    </button>
+                    <img :src="currentImage" class="w-full h-auto rounded-lg shadow-2xl" alt="Payment proof">
+                </div>
             </div>
         </div>
 
@@ -1228,298 +1344,452 @@
             </div>
         </div>
 
-        {{-- ================= ADD PAYMENT MODAL (Reuse from index) ================= --}}
-        <div x-show="openPaymentModal" x-cloak
-            class="fixed inset-0 z-50 flex items-center justify-center bg-gray-500/50 backdrop-blur-sm px-4 overflow-y-auto py-8">
-            <div @click.away="openPaymentModal = false" class="bg-white rounded-xl shadow-lg w-full max-w-2xl my-8"
-                x-data="{
-                    payment_method: '',
-                    payment_type: '',
-                    amount: '',
-                    amountDisplay: '',
-                    notes: '',
-                    image: null,
-                    imagePreview: null,
-                    uploading: false,
-                    errors: {},
-                
-                    formatRupiah(value) {
-                        let number = value.replace(/[^0-9]/g, '');
-                        if (number) {
-                            return Number(number).toLocaleString('id-ID');
+        {{-- ================= ADD PAYMENT MODAL ================= --}}
+        <div x-show="openPaymentModal" x-cloak x-transition.opacity
+            class="fixed inset-0 z-50 overflow-y-auto">
+            
+            {{-- Background Overlay --}}
+            <div x-show="openPaymentModal" class="fixed inset-0 bg-gray-500 bg-opacity-50 backdrop-blur-sm transition-opacity"></div>
+            
+            {{-- Modal Panel --}}
+            <div class="flex items-center justify-center min-h-screen p-4">
+                <div @click.away="openPaymentModal = false"
+                    class="relative bg-white rounded-xl shadow-lg w-full max-w-3xl"
+                    x-data="{
+                        paymentAmount: '',
+                        isSubmittingPayment: false,
+                        paymentErrors: {},
+                        
+                        resetPaymentForm() {
+                            this.paymentAmount = '';
+                            this.isSubmittingPayment = false;
+                            this.paymentErrors = {};
                         }
-                        return '';
-                    },
-                
-                    handleAmountInput(event) {
-                        const value = event.target.value;
-                        this.amount = value.replace(/[^0-9]/g, '');
-                        this.amountDisplay = this.formatRupiah(value);
-                        event.target.value = this.amountDisplay;
-                    },
-                
-                    addImage(event) {
-                        const file = event.target.files[0];
-                        if (file && file.type.startsWith('image/')) {
-                            this.image = file;
-                            const reader = new FileReader();
-                            reader.onload = (e) => {
-                                this.imagePreview = e.target.result;
-                            };
-                            reader.readAsDataURL(file);
-                            this.errors.image = null;
-                        }
-                        event.target.value = '';
-                    },
-                
-                    removeImage() {
-                        this.image = null;
-                        this.imagePreview = null;
-                    },
-                
-                    validateForm() {
-                        this.errors = {};
-                        let isValid = true;
-                
-                        if (!this.payment_method) {
-                            this.errors.payment_method = 'Payment method is required';
-                            isValid = false;
-                        }
-                
-                        if (!this.payment_type) {
-                            this.errors.payment_type = 'Payment type is required';
-                            isValid = false;
-                        }
-                
-                        if (!this.amount || this.amount <= 0) {
-                            this.errors.amount = 'Please enter a valid amount (greater than 0)';
-                            isValid = false;
-                        }
-                
-                        const amountDue = {{ $order->invoice->amount_due }};
-                        if (this.amount > amountDue) {
-                            this.errors.amount = `Payment amount cannot exceed remaining due (Rp ${amountDue.toLocaleString('id-ID')})`;
-                            isValid = false;
-                        }
-                
-                        if (!this.image) {
-                            this.errors.image = 'Payment proof image is required';
-                            isValid = false;
-                        }
-                
-                        return isValid;
-                    },
-                
-                    async submitPayment() {
-                        if (!this.validateForm()) {
-                            return;
-                        }
-                
-                        this.uploading = true;
-                        const formData = new FormData();
-                        formData.append('invoice_id', {{ $order->invoice->id }});
-                        formData.append('payment_method', this.payment_method);
-                        formData.append('payment_type', this.payment_type);
-                        formData.append('amount', this.amount);
-                
-                        if (this.notes && this.notes.trim() !== '') {
-                            formData.append('notes', this.notes.trim());
-                        }
-                
-                        if (this.image) {
-                            formData.append('image', this.image);
-                        }
-                
-                        try {
-                            const response = await fetch('{{ route('admin.payments.store') }}', {
-                                method: 'POST',
-                                headers: {
-                                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
-                                },
-                                body: formData
-                            });
-                
-                            const data = await response.json();
-                
-                            if (response.ok && data.success) {
-                                openPaymentModal = false;
-                
-                                window.dispatchEvent(new CustomEvent('show-toast', {
-                                    detail: {
-                                        message: '✅ Payment added successfully! Amount: Rp ' + Number(this.amount).toLocaleString('id-ID'),
-                                        type: 'success'
-                                    }
-                                }));
-                
-                                setTimeout(() => window.location.reload(), 1500);
-                            } else {
-                                if (data.errors) {
-                                    this.errors = data.errors;
-                                } else {
-                                    window.dispatchEvent(new CustomEvent('show-toast', {
-                                        detail: {
-                                            message: '❌ Error: ' + (data.message || 'Failed to add payment'),
-                                            type: 'error'
-                                        }
-                                    }));
-                                }
-                            }
-                        } catch (error) {
-                            console.error('Error:', error);
-                            window.dispatchEvent(new CustomEvent('show-toast', {
-                                detail: {
-                                    message: '❌ Network Error: ' + error.message,
-                                    type: 'error'
-                                }
-                            }));
-                        } finally {
-                            this.uploading = false;
-                        }
-                    }
-                }">
+                    }">
 
-                {{-- Header --}}
-                <div class="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 rounded-t-xl">
-                    <div class="flex items-center justify-between">
-                        <div>
-                            <h3 class="text-lg font-semibold text-gray-900">Add Payment</h3>
-                            <p class="text-sm text-gray-500 mt-1">
-                                Invoice: <span class="font-medium">{{ $order->invoice->invoice_no }}</span> |
-                                Amount Due: <span class="font-medium text-red-600">Rp
-                                    {{ number_format($order->invoice->amount_due, 0, ',', '.') }}</span>
-                            </p>
-                        </div>
-                        <button @click="openPaymentModal = false" type="button"
-                            class="text-gray-400 hover:text-gray-600">
-                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="M6 18L18 6M6 6l12 12" />
-                            </svg>
+                    {{-- Header --}}
+                    <div class="flex items-center justify-between p-5 border-b border-gray-200">
+                        <h3 class="text-lg font-semibold text-gray-900">Add Payment</h3>
+                        <button @click="openPaymentModal = false" class="text-gray-400 hover:text-gray-600 cursor-pointer">
+                            ✕
                         </button>
                     </div>
-                </div>
 
-                {{-- Body --}}
-                <div class="p-6 space-y-5 max-h-[calc(100vh-200px)] overflow-y-auto">
-                    {{-- Payment Method --}}
-                    <div class="space-y-2">
-                        <label class="block text-sm font-medium text-gray-700">Payment Method <span
-                                class="text-red-500">*</span></label>
-                        <select x-model="payment_method"
-                            :class="errors.payment_method ? 'border-red-500' : 'border-gray-300'"
-                            class="w-full rounded-md border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary">
-                            <option value="">Select payment method</option>
-                            <option value="tranfer">Transfer</option>
-                            <option value="cash">Cash</option>
-                        </select>
-                        <p x-show="errors.payment_method" x-text="errors.payment_method"
-                            class="text-xs text-red-600 mt-1" x-cloak></p>
-                    </div>
+                    {{-- Form --}}
+                    <form id="addPaymentForm"
+                        @submit.prevent="
+                            // Frontend validation
+                            paymentErrors = {};
+                            let hasValidationError = false;
+                            const formData = new FormData($event.target);
+                            
+                            if (!formData.get('payment_method')) {
+                                paymentErrors.payment_method = ['Payment method is required'];
+                                hasValidationError = true;
+                            }
+                            
+                            if (!formData.get('payment_type')) {
+                                paymentErrors.payment_type = ['Payment type is required'];
+                                hasValidationError = true;
+                            }
+                            
+                            const amount = formData.get('amount');
+                            if (!amount || amount === '0' || amount === '') {
+                                paymentErrors.amount = ['Amount is required'];
+                                hasValidationError = true;
+                            }
+                            
+                            const imageFile = formData.get('image');
+                            if (!imageFile || imageFile.size === 0) {
+                                paymentErrors.image = ['Payment proof image is required'];
+                                hasValidationError = true;
+                            }
+                            
+                            if (hasValidationError) {
+                                return;
+                            }
+                            
+                            // Proceed with submission
+                            isSubmittingPayment = true;
+                            
+                            fetch('{{ route('admin.payments.store') }}', {
+                                method: 'POST',
+                                headers: {
+                                    'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                                    'Accept': 'application/json',
+                                },
+                                body: formData
+                            })
+                            .then(response => response.json())
+                            .then(data => {
+                                isSubmittingPayment = false;
+                                
+                                if (data.success) {
+                                    // Show success toast
+                                    window.dispatchEvent(new CustomEvent('show-toast', {
+                                        detail: {
+                                            message: '✅ Payment added successfully!',
+                                            type: 'success'
+                                        }
+                                    }));
+                                    
+                                    // Close modal and reload after short delay
+                                    setTimeout(() => {
+                                        openPaymentModal = false;
+                                        window.location.reload();
+                                    }, 1000);
+                                } else {
+                                    // Handle validation errors
+                                    if (data.errors) {
+                                        paymentErrors = data.errors;
+                                    }
+                                    
+                                    // Show error message if available
+                                    if (data.message) {
+                                        window.dispatchEvent(new CustomEvent('show-toast', {
+                                            detail: {
+                                                message: '❌ ' + data.message,
+                                                type: 'error'
+                                            }
+                                        }));
+                                    }
+                                }
+                            })
+                            .catch(error => {
+                                isSubmittingPayment = false;
+                                console.error('Error:', error);
+                                
+                                window.dispatchEvent(new CustomEvent('show-toast', {
+                                    detail: {
+                                        message: '❌ Failed to add payment. Please try again.',
+                                        type: 'error'
+                                    }
+                                }));
+                            });
+                        ">
+                        <input type="hidden" name="invoice_id" value="{{ $order->invoice->id }}">
 
-                    {{-- Payment Type --}}
-                    <div class="space-y-2">
-                        <label class="block text-sm font-medium text-gray-700">Payment Type <span
-                                class="text-red-500">*</span></label>
-                        <select x-model="payment_type" :class="errors.payment_type ? 'border-red-500' : 'border-gray-300'"
-                            class="w-full rounded-md border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary">
-                            <option value="">Select payment type</option>
-                            <option value="dp">Down Payment (DP)</option>
-                            <option value="repayment">Repayment</option>
-                            <option value="full_payment">Full Payment</option>
-                        </select>
-                        <p x-show="errors.payment_type" x-text="errors.payment_type" class="text-xs text-red-600 mt-1"
-                            x-cloak></p>
-                    </div>
+                        <div class="p-5 space-y-4 max-h-[calc(100vh-250px)] overflow-y-auto">
+                            {{-- Invoice Info --}}
+                            <div class="bg-gray-50 border border-gray-200 rounded-md p-3 space-y-3">
+                                <div class="flex items-start justify-between gap-4">
+                                    <div class="flex-1">
+                                        <p class="text-xs text-gray-500">Invoice No</p>
+                                        <p class="text-sm font-semibold text-gray-900">{{ $order->invoice->invoice_no }}</p>
+                                    </div>
+                                    <div class="flex-1 text-right">
+                                        <p class="text-xs text-gray-500">Remaining Due</p>
+                                        <p class="text-sm font-semibold text-red-600">Rp {{ number_format($order->invoice->amount_due, 0, ',', '.') }}</p>
+                                    </div>
+                                </div>
 
-                    {{-- Amount --}}
-                    <div class="space-y-2">
-                        <label class="block text-sm font-medium text-gray-700">Amount <span
-                                class="text-red-500">*</span></label>
-                        <div class="relative">
-                            <span
-                                class="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-500 text-sm font-medium">
-                                Rp
-                            </span>
-                            <input type="text" @input="handleAmountInput($event)" :value="amountDisplay"
-                                placeholder="0" :class="errors.amount ? 'border-red-500' : 'border-gray-300'"
-                                class="w-full rounded-md border pl-10 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary" />
-                        </div>
-                        <p x-show="errors.amount" x-text="errors.amount" class="text-xs text-red-600 mt-1" x-cloak></p>
-                    </div>
+                                @php
+                                    $pendingPayments = $order->invoice->payments->where('status', 'pending');
+                                    $pendingCount = $pendingPayments->count();
+                                    $pendingAmount = $pendingPayments->sum('amount');
+                                @endphp
 
-                    {{-- Notes --}}
-                    <div class="space-y-2">
-                        <label class="block text-sm font-medium text-gray-700">Notes (Optional)</label>
-                        <textarea x-model="notes" rows="3" placeholder="Additional notes..."
-                            class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"></textarea>
-                    </div>
+                                <div class="flex items-start justify-between gap-4 pt-2 border-t border-gray-300">
+                                    <div class="flex-1">
+                                        <p class="text-xs text-gray-500">Pending Transaction</p>
+                                        <p class="text-sm font-semibold text-gray-900">{{ $pendingCount }} Transaction(s)</p>
+                                    </div>
+                                    <div class="flex-1 text-right">
+                                        <p class="text-xs text-gray-500">Pending Amount</p>
+                                        <p class="text-sm font-semibold text-orange-600">Rp {{ number_format($pendingAmount, 0, ',', '.') }}</p>
+                                    </div>
+                                </div>
+                            </div>
 
-                    {{-- Upload Image --}}
-                    <div class="space-y-2">
-                        <label class="block text-sm font-medium text-gray-700">Payment Proof <span class="text-red-500">*
-                                (1 image required)</span></label>
-                        <div :class="errors.image ? 'border-red-500' : 'border-gray-300'"
-                            class="border-2 border-dashed rounded-lg p-4 text-center hover:border-primary transition-colors">
-                            <input type="file" @change="addImage($event)" accept="image/*" class="hidden"
-                                id="payment-image-detail">
-                            <label for="payment-image-detail" class="cursor-pointer">
-                                <svg class="w-12 h-12 mx-auto text-gray-400 mb-2" fill="none" stroke="currentColor"
-                                    viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                        d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                                </svg>
-                                <p class="text-sm text-gray-600">Click to upload image</p>
-                                <p class="text-xs text-gray-400 mt-1">PNG, JPG up to 10MB</p>
-                            </label>
-                        </div>
-                        <p x-show="errors.image" x-text="errors.image" class="text-xs text-red-600 mt-1" x-cloak></p>
+                            {{-- Payment Method & Type (1 Row) --}}
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                {{-- Payment Method --}}
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">
+                                        Payment Method <span class="text-red-600">*</span>
+                                    </label>
+                                    <div x-data="{
+                                        open: false,
+                                        options: [
+                                            { value: 'tranfer', name: 'Transfer' },
+                                            { value: 'cash', name: 'Cash' }
+                                        ],
+                                        selected: null,
+                                        selectedValue: '',
+                                        
+                                        select(option) {
+                                            this.selected = option;
+                                            this.selectedValue = option.value;
+                                            this.open = false;
+                                            if (paymentErrors.payment_method) {
+                                                delete paymentErrors.payment_method;
+                                            }
+                                        }
+                                    }" class="relative w-full">
+                                        <button type="button" @click="open = !open"
+                                            :class="paymentErrors.payment_method ? 'border-red-500 focus:border-red-500 focus:ring-red-200' : 'border-gray-200 focus:border-primary focus:ring-primary/20'"
+                                            class="w-full flex justify-between items-center rounded-md border px-4 py-2 text-sm bg-white focus:outline-none focus:ring-2 transition-colors">
+                                            <span x-text="selected ? selected.name : 'Select Method'" :class="!selected ? 'text-gray-400' : 'text-gray-500'"></span>
+                                            <svg class="w-4 h-4 text-gray-400 transition-transform" :class="open && 'rotate-180'" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                                            </svg>
+                                        </button>
 
-                        {{-- Image Preview --}}
-                        <div x-show="imagePreview" class="mt-3">
-                            <div class="relative inline-block">
-                                <img :src="imagePreview"
-                                    class="w-full max-w-xs h-48 object-cover rounded-lg border-2 border-gray-200">
-                                <button type="button" @click="removeImage()"
-                                    class="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-2 hover:bg-red-600 shadow-lg">
+                                        <input type="hidden" name="payment_method" x-model="selectedValue">
+
+                                        <div x-show="open" @click.away="open = false" x-cloak x-transition:enter="transition ease-out duration-100"
+                                            x-transition:enter-start="opacity-0 scale-95" x-transition:enter-end="opacity-100 scale-100"
+                                            x-transition:leave="transition ease-in duration-75" x-transition:leave-start="opacity-100 scale-100"
+                                            x-transition:leave-end="opacity-0 scale-95"
+                                            class="absolute z-20 mt-1 w-full bg-white border border-gray-200 rounded-md shadow-lg">
+                                            <ul class="max-h-60 overflow-y-auto py-1">
+                                                <template x-for="option in options" :key="option.value">
+                                                    <li @click="select(option)"
+                                                        class="px-4 py-2 cursor-pointer text-sm text-gray-700 hover:bg-primary/5 transition-colors"
+                                                        :class="{ 'bg-primary/10 font-medium text-primary': selected && selected.value === option.value }">
+                                                        <span x-text="option.name"></span>
+                                                    </li>
+                                                </template>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                    <p x-show="paymentErrors.payment_method" x-cloak x-text="paymentErrors.payment_method?.[0]" class="mt-1 text-sm text-red-600"></p>
+                                </div>
+
+                                {{-- Payment Type --}}
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">
+                                        Payment Type <span class="text-red-600">*</span>
+                                    </label>
+                                    <div x-data="{
+                                        open: false,
+                                        options: [
+                                            { value: 'dp', name: 'DP (Down Payment)' },
+                                            { value: 'repayment', name: 'Repayment' },
+                                            { value: 'full_payment', name: 'Full Payment' }
+                                        ],
+                                        selected: null,
+                                        selectedValue: '',
+                                        
+                                        select(option) {
+                                            this.selected = option;
+                                            this.selectedValue = option.value;
+                                            this.open = false;
+                                            
+                                            if (option.value === 'repayment' || option.value === 'full_payment') {
+                                                const remainingDue = {{ $order->invoice->amount_due }};
+                                                paymentAmount = Math.floor(remainingDue).toLocaleString('id-ID');
+                                            }
+                                            
+                                            if (paymentErrors.payment_type) {
+                                                delete paymentErrors.payment_type;
+                                            }
+                                        }
+                                    }" class="relative w-full">
+                                        <button type="button" @click="open = !open"
+                                            :class="paymentErrors.payment_type ? 'border-red-500 focus:border-red-500 focus:ring-red-200' : 'border-gray-200 focus:border-primary focus:ring-primary/20'"
+                                            class="w-full flex justify-between items-center rounded-md border px-4 py-2 text-sm bg-white focus:outline-none focus:ring-2 transition-colors">
+                                            <span x-text="selected ? selected.name : 'Select Type'" :class="!selected ? 'text-gray-400' : 'text-gray-500'"></span>
+                                            <svg class="w-4 h-4 text-gray-400 transition-transform" :class="open && 'rotate-180'" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                                            </svg>
+                                        </button>
+
+                                        <input type="hidden" name="payment_type" x-model="selectedValue">
+
+                                        <div x-show="open" @click.away="open = false" x-cloak x-transition:enter="transition ease-out duration-100"
+                                            x-transition:enter-start="opacity-0 scale-95" x-transition:enter-end="opacity-100 scale-100"
+                                            x-transition:leave="transition ease-in duration-75" x-transition:leave-start="opacity-100 scale-100"
+                                            x-transition:leave-end="opacity-0 scale-95"
+                                            class="absolute z-20 mt-1 w-full bg-white border border-gray-200 rounded-md shadow-lg">
+                                            <ul class="max-h-60 overflow-y-auto py-1">
+                                                <template x-for="option in options" :key="option.value">
+                                                    <li @click="select(option)"
+                                                        class="px-4 py-2 cursor-pointer text-sm text-gray-700 hover:bg-primary/5 transition-colors"
+                                                        :class="{ 'bg-primary/10 font-medium text-primary': selected && selected.value === option.value }">
+                                                        <span x-text="option.name"></span>
+                                                    </li>
+                                                </template>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                    <p x-show="paymentErrors.payment_type" x-cloak x-text="paymentErrors.payment_type?.[0]" class="mt-1 text-sm text-red-600"></p>
+                                </div>
+                            </div>
+
+                            {{-- Amount --}}
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">
+                                    Amount <span class="text-red-600">*</span>
+                                </label>
+                                <div class="relative">
+                                    <span class="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-gray-500">Rp</span>
+                                    <input type="text" x-model="paymentAmount"
+                                        @input="
+                                            let value = $event.target.value.replace(/[^\d]/g, '');
+                                            paymentAmount = parseInt(value || 0).toLocaleString('id-ID');
+                                            $event.target.nextElementSibling.value = value;
+                                        "
+                                        placeholder="0"
+                                        :class="paymentErrors.amount ? 'border-red-500 focus:border-red-500 focus:ring-red-200' : 'border-gray-200 focus:border-primary focus:ring-primary/20'"
+                                        class="w-full rounded-md pl-10 pr-4 py-2 text-sm border focus:outline-none focus:ring-2 text-gray-700">
+                                    <input type="hidden" name="amount" :value="paymentAmount.replace(/[^\d]/g, '')">
+                                </div>
+                                <p x-show="paymentErrors.amount" x-cloak x-text="paymentErrors.amount?.[0]" class="mt-1 text-sm text-red-600"></p>
+                            </div>
+
+                            {{-- Payment Proof Image --}}
+                            <div x-data="{
+                                imagePreview: null,
+                                fileName: '',
+                                isDragging: false,
+                                handleFileChange(event) {
+                                    const file = event.target.files[0];
+                                    this.processFile(file);
+                                },
+                                processFile(file) {
+                                    if (file && file.type.startsWith('image/')) {
+                                        this.fileName = file.name;
+                                        const reader = new FileReader();
+                                        reader.onload = (e) => {
+                                            this.imagePreview = e.target.result;
+                                        };
+                                        reader.readAsDataURL(file);
+                                    }
+                                },
+                                handleDrop(event) {
+                                    this.isDragging = false;
+                                    const file = event.dataTransfer.files[0];
+                                    if (file) {
+                                        const dataTransfer = new DataTransfer();
+                                        dataTransfer.items.add(file);
+                                        this.$refs.fileInput.files = dataTransfer.files;
+                                        this.processFile(file);
+                                    }
+                                },
+                                handleDragOver(event) {
+                                    this.isDragging = true;
+                                },
+                                handleDragLeave() {
+                                    this.isDragging = false;
+                                }
+                            }">
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Payment Proof <span
+                                        class="text-red-500">*</span></label>
+
+                        {{-- Drag & Drop Area --}}
+                        <div @drop.prevent="handleDrop($event)"
+                            @dragover.prevent="handleDragOver($event)"
+                            @dragleave="handleDragLeave()"
+                            @click="$refs.fileInput.click()"
+                            :class="{
+                                'border-primary bg-primary/5': isDragging && !imagePreview,
+                                'border-red-500 bg-red-50': paymentErrors.image && !imagePreview,
+                                'border-gray-300 bg-gray-50': !isDragging && !paymentErrors.image && !imagePreview,
+                                'border-gray-200 bg-white p-2': imagePreview,
+                                'p-6': !imagePreview
+                            }"
+                            class="border-2 border-dashed rounded-lg text-center cursor-pointer transition-all hover:border-primary"
+                            :style="imagePreview ? 'min-height: 200px;' : ''">
+                            <input type="file" x-ref="fileInput" name="image" accept="image/jpeg,image/png,image/jpg"
+                                @change="handleFileChange($event)"
+                                class="hidden">
+                            
+                            {{-- Image Preview (Full Container) --}}
+                            <div x-show="imagePreview" x-cloak class="relative w-full h-full flex items-center justify-center">
+                                <img :src="imagePreview" alt="Preview"
+                                    class="w-full h-auto max-h-80 object-contain rounded-lg">
+                                <button type="button" @click.stop="imagePreview = null; fileName = ''; $refs.fileInput.value = ''"
+                                    class="absolute top-2 right-2 bg-red-500 text-white rounded-full p-2 hover:bg-red-600 shadow-lg transition-colors">
                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                             d="M6 18L18 6M6 6l12 12" />
                                     </svg>
                                 </button>
                             </div>
-                        </div>
-                    </div>
-                </div>
+                            
+                            {{-- Upload Icon & Text (Only when no preview) --}}
+                            <div x-show="!imagePreview">
+                                <svg class="w-12 h-12 mx-auto mb-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                                </svg>
+                                <div class="space-y-1">
+                                    <p class="text-sm font-medium text-gray-700">
+                                        <span class="text-primary font-semibold">Click to upload</span> or drag and drop
+                                    </p>
+                                    <p class="text-xs text-gray-500">PNG, JPG, JPEG (Max 10MB)</p>
+                                </div>
+                            </div>
 
-                {{-- Footer --}}
-                <div
-                    class="sticky bottom-0 bg-gray-50 border-t border-gray-200 px-6 py-4 flex justify-end gap-3 rounded-b-xl">
-                    <button @click="openPaymentModal = false" type="button"
-                        class="px-4 py-2 rounded-md border border-gray-300 bg-white text-gray-700 hover:bg-gray-50">
-                        Cancel
-                    </button>
-                    <button @click="submitPayment()" type="button" :disabled="uploading"
-                        :class="uploading ? 'opacity-50 cursor-not-allowed' : ''"
-                        class="px-6 py-2 rounded-md bg-primary text-white hover:bg-primary-dark flex items-center gap-2">
-                        <svg x-show="uploading" class="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
-                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor"
-                                stroke-width="4"></circle>
-                            <path class="opacity-75" fill="currentColor"
-                                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
-                            </path>
-                        </svg>
-                        <span x-text="uploading ? 'Uploading...' : 'Add Payment'"></span>
-                    </button>
+                            {{-- File Name Display --}}
+                            <div x-show="fileName && !imagePreview" x-cloak class="mt-3 pt-3 border-t border-gray-200">
+                                <div class="flex items-center justify-center gap-2 text-sm text-gray-700">
+                                    <svg class="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                    </svg>
+                                    <span x-text="fileName" class="font-medium truncate max-w-xs"></span>
+                                </div>
+                            </div>
+                        </div>
+
+                                <p class="mt-1 text-xs text-gray-500">Drag and drop your image here or click to browse</p>
+                                <p x-show="paymentErrors.image" x-cloak x-text="paymentErrors.image?.[0]"
+                                    class="mt-1 text-sm text-red-600"></p>
+                            </div>
+
+                            {{-- Notes --}}
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Notes</label>
+                                <textarea name="notes" rows="3"
+                                    :class="paymentErrors.notes ?
+                                        'border-red-500 focus:border-red-500 focus:ring-red-200' :
+                                        'border-gray-200 focus:border-primary focus:ring-primary/20'"
+                                    placeholder="Optional payment notes..."
+                                    class="w-full rounded-md px-4 py-2 text-sm border focus:outline-none focus:ring-2 text-gray-700"></textarea>
+                                <p x-show="paymentErrors.notes" x-cloak x-text="paymentErrors.notes?.[0]"
+                                    class="mt-1 text-sm text-red-600"></p>
+                            </div>
+                        </div>
+
+                        {{-- Footer --}}
+                        <div class="flex justify-end gap-3 p-5 border-t border-gray-200">
+                            <button type="button" @click="openPaymentModal = false; resetPaymentForm()"
+                                :disabled="isSubmittingPayment"
+                                class="px-4 py-2 rounded-md bg-gray-100 hover:bg-gray-200 text-gray-700 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed">
+                                Cancel
+                            </button>
+                            <button type="submit" :disabled="isSubmittingPayment"
+                                class="px-4 py-2 rounded-md bg-primary text-white hover:bg-primary-dark cursor-pointer disabled:opacity-70 disabled:cursor-not-allowed flex items-center gap-2">
+                                {{-- Loading Spinner --}}
+                                <svg x-show="isSubmittingPayment" x-cloak class="animate-spin h-4 w-4 text-white"
+                                    xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                    <circle class="opacity-25" cx="12" cy="12" r="10"
+                                        stroke="currentColor" stroke-width="4"></circle>
+                                    <path class="opacity-75" fill="currentColor"
+                                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
+                                    </path>
+                                </svg>
+                                <span x-text="isSubmittingPayment ? 'Processing...' : 'Add Payment'"></span>
+                            </button>
+                        </div>
+                    </form>
                 </div>
             </div>
         </div>
 
         {{-- ================= CANCEL CONFIRMATION MODAL ================= --}}
         <div x-show="showCancelConfirm" x-cloak
-            class="fixed inset-0 z-50 overflow-y-auto flex items-center justify-center"
-            style="background-color: rgba(0, 0, 0, 0.5);">
-            <div @click.away="showCancelConfirm = false"
-                class="relative bg-white rounded-lg shadow-xl max-w-md w-full mx-4 p-6">
+            class="fixed inset-0 z-50 overflow-y-auto">
+            
+            {{-- Background Overlay --}}
+            <div x-show="showCancelConfirm" class="fixed inset-0 bg-gray-500 bg-opacity-50 backdrop-blur-sm transition-opacity"></div>
+            
+            {{-- Modal Panel --}}
+            <div class="flex items-center justify-center min-h-screen p-4">
+                <div @click.away="showCancelConfirm = false"
+                    class="relative bg-white rounded-lg shadow-xl max-w-md w-full p-6">
                 {{-- Icon --}}
                 <div class="flex items-center justify-center w-12 h-12 mx-auto mb-4 bg-red-100 rounded-full">
                     <svg class="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1559,10 +1829,15 @@
 
         {{-- ================= MOVE TO SHIPPING CONFIRMATION MODAL ================= --}}
         <div x-show="showMoveToShippingConfirm" x-cloak
-            class="fixed inset-0 z-50 overflow-y-auto flex items-center justify-center"
-            style="background-color: rgba(0, 0, 0, 0.5);">
-            <div @click.away="showMoveToShippingConfirm = false"
-                class="relative bg-white rounded-lg shadow-xl max-w-md w-full mx-4 p-6">
+            class="fixed inset-0 z-50 overflow-y-auto">
+            
+            {{-- Background Overlay --}}
+            <div x-show="showMoveToShippingConfirm" class="fixed inset-0 bg-gray-500 bg-opacity-50 backdrop-blur-sm transition-opacity"></div>
+            
+            {{-- Modal Panel --}}
+            <div class="flex items-center justify-center min-h-screen p-4">
+                <div @click.away="showMoveToShippingConfirm = false"
+                    class="relative bg-white rounded-lg shadow-xl max-w-md w-full p-6">
                 {{-- Icon --}}
                 <div class="flex items-center justify-center w-12 h-12 mx-auto mb-4 bg-green-100 rounded-full">
                     <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
