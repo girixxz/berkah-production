@@ -1031,7 +1031,7 @@
         {{-- ===================== MODALS ===================== --}}
         {{-- ========== Add & Edit Product Category Modal ========== --}}
         <div x-show="openModal === 'addProduct'" x-cloak
-            class="fixed inset-0 z-50 flex items-center justify-center bg-gray-500/50 backdrop-blur-sm px-4">
+            class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 bg-opacity-50 backdrop-blur-xs transition-opacity px-4">
             <div @click.away="openModal=null" class="bg-white rounded-xl shadow-lg w-full max-w-lg">
                 <div class="flex justify-between items-center px-6 py-4 border-b border-gray-200">
                     <h3 class="text-lg font-semibold text-gray-900">Add Product Category</h3>
@@ -1072,7 +1072,7 @@
             </div>
         </div>
         <div x-show="openModal === 'editProduct'" x-cloak x-init="@if (session('openModal') === 'editProduct' && session('editProductId')) editProduct = {{ \App\Models\ProductCategory::find(session('editProductId'))->toJson() }}; @endif"
-            class="fixed inset-0 z-50 flex items-center justify-center bg-gray-500/50 backdrop-blur-sm px-4">
+            class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 bg-opacity-50 backdrop-blur-xs transition-opacity px-4">
             <div @click.away="openModal=null" class="bg-white rounded-xl shadow-lg w-full max-w-lg">
                 <div class="flex justify-between items-center border-b border-gray-200 px-6 py-4">
                     <h3 class="text-lg font-semibold text-gray-900">Edit Product Category</h3>
@@ -1105,7 +1105,7 @@
 
         {{-- ========== Add & Edit Material Category Modal ========== --}}
         <div x-show="openModal === 'addMaterial'" x-cloak
-            class="fixed inset-0 z-50 flex items-center justify-center bg-gray-500/50 backdrop-blur-sm px-4">
+            class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 bg-opacity-50 backdrop-blur-xs transition-opacity px-4">
             <div @click.away="openModal=null" class="bg-white rounded-xl shadow-lg w-full max-w-lg">
                 <div class="flex justify-between items-center px-6 py-4 border-b border-gray-200">
                     <h3 class="text-lg font-semibold text-gray-900">Add Material Category</h3>
@@ -1149,7 +1149,7 @@
             </div>
         </div>
         <div x-show="openModal === 'editMaterial'" x-cloak x-init="@if (session('openModal') === 'editMaterial' && session('editMaterialId')) editMaterial = {{ \App\Models\MaterialCategory::find(session('editMaterialId'))->toJson() }}; @endif"
-            class="fixed inset-0 z-50 flex items-center justify-center bg-gray-500/50 backdrop-blur-sm px-4">
+            class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 bg-opacity-50 backdrop-blur-xs transition-opacity px-4">
             <div @click.away="openModal=null" class="bg-white rounded-xl shadow-lg w-full max-w-lg">
                 <div class="flex justify-between items-center border-b border-gray-200 px-6 py-4">
                     <h3 class="text-lg font-semibold text-gray-900">Edit Material Category</h3>
@@ -1182,7 +1182,7 @@
 
         {{-- ========== Add & Edit Material Texture Modal ========== --}}
         <div x-show="openModal === 'addTexture'" x-cloak
-            class="fixed inset-0 z-50 flex items-center justify-center bg-gray-500/50 backdrop-blur-sm px-4">
+            class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 bg-opacity-50 backdrop-blur-xs transition-opacity px-4">
             <div @click.away="openModal=null" class="bg-white rounded-xl shadow-lg w-full max-w-lg">
                 <div class="flex justify-between items-center px-6 py-4 border-b border-gray-200">
                     <h3 class="text-lg font-semibold text-gray-900">Add Material Texture</h3>
@@ -1223,7 +1223,7 @@
             </div>
         </div>
         <div x-show="openModal === 'editTexture'" x-cloak x-init="@if (session('openModal') === 'editTexture' && session('editTextureId')) editTexture = {{ \App\Models\MaterialTexture::find(session('editTextureId'))->toJson() }}; @endif"
-            class="fixed inset-0 z-50 flex items-center justify-center bg-gray-500/50 backdrop-blur-sm px-4">
+            class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 bg-opacity-50 backdrop-blur-xs transition-opacity px-4">
             <div @click.away="openModal=null" class="bg-white rounded-xl shadow-lg w-full max-w-lg">
                 <div class="flex justify-between items-center border-b border-gray-200 px-6 py-4">
                     <h3 class="text-lg font-semibold text-gray-900">Edit Material Texture</h3>
@@ -1256,7 +1256,7 @@
 
         {{-- ========== Add & Edit Material Sleeve Modal ========== --}}
         <div x-show="openModal === 'addSleeve'" x-cloak
-            class="fixed inset-0 z-50 flex items-center justify-center bg-gray-500/50 backdrop-blur-sm px-4">
+            class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 bg-opacity-50 backdrop-blur-xs transition-opacity px-4">
             <div @click.away="openModal=null" class="bg-white rounded-xl shadow-lg w-full max-w-lg">
                 <div class="flex justify-between items-center px-6 py-4 border-b border-gray-200">
                     <h3 class="text-lg font-semibold text-gray-900">Add Material Sleeve</h3>
@@ -1297,7 +1297,7 @@
             </div>
         </div>
         <div x-show="openModal === 'editSleeve'" x-cloak x-init="@if (session('openModal') === 'editSleeve' && session('editSleeveId')) editSleeve = {{ \App\Models\MaterialSleeve::find(session('editSleeveId'))->toJson() }}; @endif"
-            class="fixed inset-0 z-50 flex items-center justify-center bg-gray-500/50 backdrop-blur-sm px-4">
+            class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 bg-opacity-50 backdrop-blur-xs transition-opacity px-4">
             <div @click.away="openModal=null" class="bg-white rounded-xl shadow-lg w-full max-w-lg">
                 <div class="flex justify-between items-center border-b border-gray-200 px-6 py-4">
                     <h3 class="text-lg font-semibold text-gray-900">Edit Material Sleeve</h3>
@@ -1330,7 +1330,7 @@
 
         {{-- ========== Add & Edit Material Size Modal ========== --}}
         <div x-show="openModal === 'addSize'" x-cloak
-            class="fixed inset-0 z-50 flex items-center justify-center bg-gray-500/50 backdrop-blur-sm px-4">
+            class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 bg-opacity-50 backdrop-blur-xs transition-opacity px-4">
             <div @click.away="openModal=null" class="bg-white rounded-xl shadow-lg w-full max-w-lg">
                 <div class="flex justify-between items-center px-6 py-4 border-b border-gray-200">
                     <h3 class="text-lg font-semibold text-gray-900">Add Material Size</h3>
@@ -1396,7 +1396,7 @@
             </div>
         </div>
         <div x-show="openModal === 'editSize'" x-cloak x-init="@if (session('openModal') === 'editSize' && session('editSizeId')) editSize = {{ \App\Models\MaterialSize::find(session('editSizeId'))->toJson() }}; @endif"
-            class="fixed inset-0 z-50 flex items-center justify-center bg-gray-500/50 backdrop-blur-sm px-4">
+            class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 bg-opacity-50 backdrop-blur-xs transition-opacity px-4">
             <div @click.away="openModal=null" class="bg-white rounded-xl shadow-lg w-full max-w-lg">
                 <div class="flex justify-between items-center border-b border-gray-200 px-6 py-4">
                     <h3 class="text-lg font-semibold text-gray-900">Edit Material Size</h3>
@@ -1449,7 +1449,7 @@
 
         {{-- ========== Add & Edit Service Modal ========== --}}
         <div x-show="openModal === 'addService'" x-cloak
-            class="fixed inset-0 z-50 flex items-center justify-center bg-gray-500/50 backdrop-blur-sm px-4">
+            class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 bg-opacity-50 backdrop-blur-xs transition-opacity px-4">
             <div @click.away="openModal=null" class="bg-white rounded-xl shadow-lg w-full max-w-lg">
                 <div class="flex justify-between items-center px-6 py-4 border-b border-gray-200">
                     <h3 class="text-lg font-semibold text-gray-900">Add Service</h3>
@@ -1490,7 +1490,7 @@
             </div>
         </div>
         <div x-show="openModal === 'editService'" x-cloak x-init="@if (session('openModal') === 'editService' && session('editServiceId')) editService = {{ \App\Models\Service::find(session('editServiceId'))->toJson() }}; @endif"
-            class="fixed inset-0 z-50 flex items-center justify-center bg-gray-500/50 backdrop-blur-sm px-4">
+            class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 bg-opacity-50 backdrop-blur-xs transition-opacity px-4">
             <div @click.away="openModal=null" class="bg-white rounded-xl shadow-lg w-full max-w-lg">
                 <div class="flex justify-between items-center border-b border-gray-200 px-6 py-4">
                     <h3 class="text-lg font-semibold text-gray-900">Edit Service</h3>

@@ -364,7 +364,7 @@
 
         {{-- Confirmation Modal - Mark as Done --}}
         <div x-show="showConfirmDone" x-cloak x-transition.opacity
-            class="fixed inset-0 z-50 overflow-y-auto bg-gray-500/50 backdrop-blur-sm">
+            class="fixed inset-0 z-50 overflow-y-auto bg-black/50 bg-opacity-50 backdrop-blur-xs transition-opacity">
             <div class="flex items-center justify-center min-h-screen p-4">
                 <div @click.away="showConfirmDone = false; isSubmitting = false"
                     class="bg-white rounded-xl shadow-lg w-full max-w-md">

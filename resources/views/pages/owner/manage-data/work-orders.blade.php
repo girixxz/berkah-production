@@ -1894,7 +1894,7 @@
         {{-- ===================== MODALS ===================== --}}
         {{-- ========== Add & Edit Cutting Pattern Modal ========== --}}
         <div x-show="openModal === 'addCuttingPattern'" x-cloak
-            class="fixed inset-0 z-50 flex items-center justify-center bg-gray-500/50 backdrop-blur-sm px-4">
+            class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 bg-opacity-50 backdrop-blur-xs transition-opacity px-4">
             <div @click.away="openModal=null" class="bg-white rounded-xl shadow-lg w-full max-w-lg">
                 <div class="flex justify-between items-center px-6 py-4 border-b border-gray-200">
                     <h3 class="text-lg font-semibold text-gray-900">Add Cutting Pattern</h3>
@@ -1935,7 +1935,7 @@
             </div>
         </div>
         <div x-show="openModal === 'editCuttingPattern'" x-cloak x-init="@if (session('openModal') === 'editCuttingPattern' && session('editCuttingPatternId')) editCuttingPattern = {{ \App\Models\CuttingPattern::find(session('editCuttingPatternId'))->toJson() }}; @endif"
-            class="fixed inset-0 z-50 flex items-center justify-center bg-gray-500/50 backdrop-blur-sm px-4">
+            class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 bg-opacity-50 backdrop-blur-xs transition-opacity px-4">
             <div @click.away="openModal=null" class="bg-white rounded-xl shadow-lg w-full max-w-lg">
                 <div class="flex justify-between items-center border-b border-gray-200 px-6 py-4">
                     <h3 class="text-lg font-semibold text-gray-900">Edit Cutting Pattern</h3>
@@ -1968,7 +1968,7 @@
 
         {{-- ========== Add & Edit Chain Cloth Modal ========== --}}
         <div x-show="openModal === 'addChainCloth'" x-cloak
-            class="fixed inset-0 z-50 flex items-center justify-center bg-gray-500/50 backdrop-blur-sm px-4">
+            class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 bg-opacity-50 backdrop-blur-xs transition-opacity px-4">
             <div @click.away="openModal=null" class="bg-white rounded-xl shadow-lg w-full max-w-lg">
                 <div class="flex justify-between items-center px-6 py-4 border-b border-gray-200">
                     <h3 class="text-lg font-semibold text-gray-900">Add Chain Cloth</h3>
@@ -2011,7 +2011,7 @@
             </div>
         </div>
         <div x-show="openModal === 'editChainCloth'" x-cloak x-init="@if (session('openModal') === 'editChainCloth' && session('editChainClothId')) editChainCloth = {{ \App\Models\ChainCloth::find(session('editChainClothId'))->toJson() }}; @endif"
-            class="fixed inset-0 z-50 flex items-center justify-center bg-gray-500/50 backdrop-blur-sm px-4">
+            class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 bg-opacity-50 backdrop-blur-xs transition-opacity px-4">
             <div @click.away="openModal=null" class="bg-white rounded-xl shadow-lg w-full max-w-lg">
                 <div class="flex justify-between items-center border-b border-gray-200 px-6 py-4">
                     <h3 class="text-lg font-semibold text-gray-900">Edit Chain Cloth</h3>
@@ -2044,7 +2044,7 @@
 
         {{-- ========== Add & Edit Material Texture Modal ========== --}}
         <div x-show="openModal === 'addRibSize'" x-cloak
-            class="fixed inset-0 z-50 flex items-center justify-center bg-gray-500/50 backdrop-blur-sm px-4">
+            class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 bg-opacity-50 backdrop-blur-xs transition-opacity px-4">
             <div @click.away="openModal=null" class="bg-white rounded-xl shadow-lg w-full max-w-lg">
                 <div class="flex justify-between items-center px-6 py-4 border-b border-gray-200">
                     <h3 class="text-lg font-semibold text-gray-900">Add Material Texture</h3>
@@ -2085,7 +2085,7 @@
             </div>
         </div>
         <div x-show="openModal === 'editRibSize'" x-cloak x-init="@if (session('openModal') === 'editRibSize' && session('editRibSizeId')) editRibSize = {{ \App\Models\RibSize::find(session('editRibSizeId'))->toJson() }}; @endif"
-            class="fixed inset-0 z-50 flex items-center justify-center bg-gray-500/50 backdrop-blur-sm px-4">
+            class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 bg-opacity-50 backdrop-blur-xs transition-opacity px-4">
             <div @click.away="openModal=null" class="bg-white rounded-xl shadow-lg w-full max-w-lg">
                 <div class="flex justify-between items-center border-b border-gray-200 px-6 py-4">
                     <h3 class="text-lg font-semibold text-gray-900">Edit Material Texture</h3>
@@ -2118,7 +2118,7 @@
 
         {{-- ========== Add & Edit Material Sleeve Modal ========== --}}
         <div x-show="openModal === 'addPrintInk'" x-cloak
-            class="fixed inset-0 z-50 flex items-center justify-center bg-gray-500/50 backdrop-blur-sm px-4">
+            class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 bg-opacity-50 backdrop-blur-xs transition-opacity px-4">
             <div @click.away="openModal=null" class="bg-white rounded-xl shadow-lg w-full max-w-lg">
                 <div class="flex justify-between items-center px-6 py-4 border-b border-gray-200">
                     <h3 class="text-lg font-semibold text-gray-900">Add Material Sleeve</h3>
@@ -2160,7 +2160,7 @@
             </div>
         </div>
         <div x-show="openModal === 'editPrintInk'" x-cloak x-init="@if (session('openModal') === 'editPrintInk' && session('editPrintInkId')) editPrintInk = {{ \App\Models\PrintInk::find(session('editPrintInkId'))->toJson() }}; @endif"
-            class="fixed inset-0 z-50 flex items-center justify-center bg-gray-500/50 backdrop-blur-sm px-4">
+            class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 bg-opacity-50 backdrop-blur-xs transition-opacity px-4">
             <div @click.away="openModal=null" class="bg-white rounded-xl shadow-lg w-full max-w-lg">
                 <div class="flex justify-between items-center border-b border-gray-200 px-6 py-4">
                     <h3 class="text-lg font-semibold text-gray-900">Edit Material Sleeve</h3>
@@ -2193,7 +2193,7 @@
 
         {{-- ========== Add & Edit Material Size Modal ========== --}}
         <div x-show="openModal === 'addFinishing'" x-cloak
-            class="fixed inset-0 z-50 flex items-center justify-center bg-gray-500/50 backdrop-blur-sm px-4">
+            class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 bg-opacity-50 backdrop-blur-xs transition-opacity px-4">
             <div @click.away="openModal=null" class="bg-white rounded-xl shadow-lg w-full max-w-lg">
                 <div class="flex justify-between items-center px-6 py-4 border-b border-gray-200">
                     <h3 class="text-lg font-semibold text-gray-900">Add Material Size</h3>
@@ -2235,7 +2235,7 @@
             </div>
         </div>
         <div x-show="openModal === 'editFinishing'" x-cloak x-init="@if (session('openModal') === 'editFinishing' && session('editFinishingId')) editFinishing = {{ \App\Models\Finishing::find(session('editFinishingId'))->toJson() }}; @endif"
-            class="fixed inset-0 z-50 flex items-center justify-center bg-gray-500/50 backdrop-blur-sm px-4">
+            class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 bg-opacity-50 backdrop-blur-xs transition-opacity px-4">
             <div @click.away="openModal=null" class="bg-white rounded-xl shadow-lg w-full max-w-lg">
                 <div class="flex justify-between items-center border-b border-gray-200 px-6 py-4">
                     <h3 class="text-lg font-semibold text-gray-900">Edit Material Size</h3>
@@ -2288,7 +2288,7 @@
 
         {{-- ========== Add & Edit NeckOverdeck Modal ========== --}}
         <div x-show="openModal === 'addNeckOverdeck'" x-cloak
-            class="fixed inset-0 z-50 flex items-center justify-center bg-gray-500/50 backdrop-blur-sm px-4">
+            class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 bg-opacity-50 backdrop-blur-xs transition-opacity px-4">
             <div @click.away="openModal=null" class="bg-white rounded-xl shadow-lg w-full max-w-lg">
                 <div class="flex justify-between items-center px-6 py-4 border-b border-gray-200">
                     <h3 class="text-lg font-semibold text-gray-900">Add NeckOverdeck</h3>
@@ -2329,7 +2329,7 @@
             </div>
         </div>
         <div x-show="openModal === 'editNeckOverdeck'" x-cloak x-init="@if (session('openModal') === 'editNeckOverdeck' && session('editNeckOverdeckId')) editNeckOverdeck = {{ \App\Models\NeckOverdeck::find(session('editNeckOverdeckId'))->toJson() }}; @endif"
-            class="fixed inset-0 z-50 flex items-center justify-center bg-gray-500/50 backdrop-blur-sm px-4">
+            class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 bg-opacity-50 backdrop-blur-xs transition-opacity px-4">
             <div @click.away="openModal=null" class="bg-white rounded-xl shadow-lg w-full max-w-lg">
                 <div class="flex justify-between items-center border-b border-gray-200 px-6 py-4">
                     <h3 class="text-lg font-semibold text-gray-900">Edit NeckOverdeck</h3>
@@ -2362,7 +2362,7 @@
 
         {{-- Underarm Overdeck Add Modal --}}
         <div x-show="openModal === 'addUnderarmOverdeck'" x-cloak
-            class="fixed inset-0 z-50 flex items-center justify-center bg-gray-500/50 backdrop-blur-sm px-4">
+            class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 bg-opacity-50 backdrop-blur-xs transition-opacity px-4">
             <div @click.away="openModal=null" class="bg-white rounded-xl shadow-lg w-full max-w-lg">
                 <div class="flex justify-between items-center px-6 py-4 border-b border-gray-200">
                     <h3 class="text-lg font-semibold text-gray-900">Add UnderarmOverdeck</h3>
@@ -2403,7 +2403,7 @@
             </div>
         </div>
         <div x-show="openModal === 'editUnderarmOverdeck'" x-cloak x-init="@if (session('openModal') === 'editUnderarmOverdeck' && session('editUnderarmOverdeckId')) editUnderarmOverdeck = {{ \App\Models\UnderarmOverdeck::find(session('editUnderarmOverdeckId'))->toJson() }}; @endif"
-            class="fixed inset-0 z-50 flex items-center justify-center bg-gray-500/50 backdrop-blur-sm px-4">
+            class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 bg-opacity-50 backdrop-blur-xs transition-opacity px-4">
             <div @click.away="openModal=null" class="bg-white rounded-xl shadow-lg w-full max-w-lg">
                 <div class="flex justify-between items-center border-b border-gray-200 px-6 py-4">
                     <h3 class="text-lg font-semibold text-gray-900">Edit UnderarmOverdeck</h3>
@@ -2436,7 +2436,7 @@
 
         {{-- Side Split Add Modal --}}
         <div x-show="openModal === 'addSideSplit'" x-cloak
-            class="fixed inset-0 z-50 flex items-center justify-center bg-gray-500/50 backdrop-blur-sm px-4">
+            class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 bg-opacity-50 backdrop-blur-xs transition-opacity px-4">
             <div @click.away="openModal=null" class="bg-white rounded-xl shadow-lg w-full max-w-lg">
                 <div class="flex justify-between items-center px-6 py-4 border-b border-gray-200">
                     <h3 class="text-lg font-semibold text-gray-900">Add SideSplit</h3>
@@ -2477,7 +2477,7 @@
             </div>
         </div>
         <div x-show="openModal === 'editSideSplit'" x-cloak x-init="@if (session('openModal') === 'editSideSplit' && session('editSideSplitId')) editSideSplit = {{ \App\Models\SideSplit::find(session('editSideSplitId'))->toJson() }}; @endif"
-            class="fixed inset-0 z-50 flex items-center justify-center bg-gray-500/50 backdrop-blur-sm px-4">
+            class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 bg-opacity-50 backdrop-blur-xs transition-opacity px-4">
             <div @click.away="openModal=null" class="bg-white rounded-xl shadow-lg w-full max-w-lg">
                 <div class="flex justify-between items-center border-b border-gray-200 px-6 py-4">
                     <h3 class="text-lg font-semibold text-gray-900">Edit SideSplit</h3>
@@ -2510,7 +2510,7 @@
 
         {{-- Sewing Label Add Modal --}}
         <div x-show="openModal === 'addSewingLabel'" x-cloak
-            class="fixed inset-0 z-50 flex items-center justify-center bg-gray-500/50 backdrop-blur-sm px-4">
+            class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 bg-opacity-50 backdrop-blur-xs transition-opacity px-4">
             <div @click.away="openModal=null" class="bg-white rounded-xl shadow-lg w-full max-w-lg">
                 <div class="flex justify-between items-center px-6 py-4 border-b border-gray-200">
                     <h3 class="text-lg font-semibold text-gray-900">Add SewingLabel</h3>
@@ -2551,7 +2551,7 @@
             </div>
         </div>
         <div x-show="openModal === 'editSewingLabel'" x-cloak x-init="@if (session('openModal') === 'editSewingLabel' && session('editSewingLabelId')) editSewingLabel = {{ \App\Models\SewingLabel::find(session('editSewingLabelId'))->toJson() }}; @endif"
-            class="fixed inset-0 z-50 flex items-center justify-center bg-gray-500/50 backdrop-blur-sm px-4">
+            class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 bg-opacity-50 backdrop-blur-xs transition-opacity px-4">
             <div @click.away="openModal=null" class="bg-white rounded-xl shadow-lg w-full max-w-lg">
                 <div class="flex justify-between items-center border-b border-gray-200 px-6 py-4">
                     <h3 class="text-lg font-semibold text-gray-900">Edit SewingLabel</h3>
@@ -2584,7 +2584,7 @@
 
         {{-- Plastic Packing Add Modal --}}
         <div x-show="openModal === 'addPlasticPacking'" x-cloak
-            class="fixed inset-0 z-50 flex items-center justify-center bg-gray-500/50 backdrop-blur-sm px-4">
+            class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 bg-opacity-50 backdrop-blur-xs transition-opacity px-4">
             <div @click.away="openModal=null" class="bg-white rounded-xl shadow-lg w-full max-w-lg">
                 <div class="flex justify-between items-center px-6 py-4 border-b border-gray-200">
                     <h3 class="text-lg font-semibold text-gray-900">Add PlasticPacking</h3>
@@ -2625,7 +2625,7 @@
             </div>
         </div>
         <div x-show="openModal === 'editPlasticPacking'" x-cloak x-init="@if (session('openModal') === 'editPlasticPacking' && session('editPlasticPackingId')) editPlasticPacking = {{ \App\Models\PlasticPacking::find(session('editPlasticPackingId'))->toJson() }}; @endif"
-            class="fixed inset-0 z-50 flex items-center justify-center bg-gray-500/50 backdrop-blur-sm px-4">
+            class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 bg-opacity-50 backdrop-blur-xs transition-opacity px-4">
             <div @click.away="openModal=null" class="bg-white rounded-xl shadow-lg w-full max-w-lg">
                 <div class="flex justify-between items-center border-b border-gray-200 px-6 py-4">
                     <h3 class="text-lg font-semibold text-gray-900">Edit PlasticPacking</h3>
@@ -2659,7 +2659,7 @@
 
         {{-- Sticker Add Modal --}}
         <div x-show="openModal === 'addSticker'" x-cloak
-            class="fixed inset-0 z-50 flex items-center justify-center bg-gray-500/50 backdrop-blur-sm px-4">
+            class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 bg-opacity-50 backdrop-blur-xs transition-opacity px-4">
             <div @click.away="openModal=null" class="bg-white rounded-xl shadow-lg w-full max-w-lg">
                 <div class="flex justify-between items-center px-6 py-4 border-b border-gray-200">
                     <h3 class="text-lg font-semibold text-gray-900">Add Sticker</h3>
@@ -2700,7 +2700,7 @@
             </div>
         </div>
         <div x-show="openModal === 'editSticker'" x-cloak x-init="@if (session('openModal') === 'editSticker' && session('editStickerId')) editSticker = {{ \App\Models\Sticker::find(session('editStickerId'))->toJson() }}; @endif"
-            class="fixed inset-0 z-50 flex items-center justify-center bg-gray-500/50 backdrop-blur-sm px-4">
+            class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 bg-opacity-50 backdrop-blur-xs transition-opacity px-4">
             <div @click.away="openModal=null" class="bg-white rounded-xl shadow-lg w-full max-w-lg">
                 <div class="flex justify-between items-center border-b border-gray-200 px-6 py-4">
                     <h3 class="text-lg font-semibold text-gray-900">Edit Sticker</h3>

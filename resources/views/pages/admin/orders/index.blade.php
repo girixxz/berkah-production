@@ -1084,7 +1084,7 @@
             
             {{-- Background Overlay --}}
             <div x-show="showCancelConfirm !== null" @click="showCancelConfirm = null"
-                class="fixed inset-0 bg-black/50"></div>
+                class="fixed inset-0 bg-black/50 bg-opacity-50 backdrop-blur-xs transition-opacity"></div>
             
             {{-- Modal Container --}}
             <div class="flex items-center justify-center min-h-screen p-4">
@@ -1135,7 +1135,7 @@
             
             {{-- Background Overlay --}}
             <div x-show="showMoveToShippingConfirm !== null" @click="showMoveToShippingConfirm = null"
-                class="fixed inset-0 bg-black/50"></div>
+                class="fixed inset-0 bg-black/50 bg-opacity-50 backdrop-blur-xs transition-opacity"></div>
             
             {{-- Modal Container --}}
             <div class="flex items-center justify-center min-h-screen p-4">
@@ -1173,7 +1173,7 @@
                             @method('PATCH')
                             <button type="submit"
                                 class="w-full px-4 py-2 bg-green-600 text-white rounded-md text-sm font-medium hover:bg-green-700 transition-colors">
-                                Yes, Move to Shippings
+                                Yes, Move
                             </button>
                         </form>
                     </div>
@@ -1187,7 +1187,7 @@
             
             {{-- Background Overlay --}}
             <div x-show="showAddPaymentModal" x-transition.opacity @click="showAddPaymentModal = false; resetPaymentForm()"
-                class="fixed inset-0 bg-black/50"></div>
+                class="fixed inset-0 bg-black/50 bg-opacity-50 backdrop-blur-xs transition-opacity"></div>
             
             {{-- Modal Container --}}
             <div class="flex items-center justify-center min-h-screen p-4">

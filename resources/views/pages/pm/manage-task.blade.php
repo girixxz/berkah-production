@@ -795,7 +795,7 @@
         <div x-show="showStageModal" x-cloak class="fixed inset-0 z-50 overflow-y-auto">
             {{-- Background Overlay --}}
             <div x-show="showStageModal" x-transition.opacity @click="showStageModal = false; resetStageForm()"
-                class="fixed inset-0 bg-gray-900/80 backdrop-blur-sm"></div>
+                class="fixed inset-0 bg-black/50 bg-opacity-50 backdrop-blur-xs transition-opacity"></div>
             
             {{-- Modal Container --}}
             <div class="flex items-center justify-center min-h-screen p-4">
@@ -896,7 +896,7 @@
         <div x-show="showEditStageModal" x-cloak class="fixed inset-0 z-50 overflow-y-auto">
             {{-- Background Overlay --}}
             <div x-show="showEditStageModal" x-transition.opacity @click="showEditStageModal = false"
-                class="fixed inset-0 bg-gray-900/80 backdrop-blur-sm"></div>
+                class="fixed inset-0 bg-black/50 bg-opacity-50 backdrop-blur-xs transition-opacity"></div>
             
             {{-- Modal Container --}}
             <div class="flex items-center justify-center min-h-screen p-4">

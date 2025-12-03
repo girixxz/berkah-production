@@ -3,7 +3,7 @@
     class="fixed inset-0 z-50 overflow-y-auto">
     
     {{-- Background Overlay --}}
-    <div x-show="openModal" class="fixed inset-0 bg-gray-500 bg-opacity-50 backdrop-blur-sm transition-opacity"></div>
+    <div x-show="openModal" class="fixed inset-0 bg-black/50 bg-opacity-50 backdrop-blur-xs transition-opacity"></div>
     
     {{-- Modal Panel --}}
     <div class="flex items-center justify-center h-screen p-4">

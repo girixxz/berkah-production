@@ -477,7 +477,7 @@
 
         {{-- ===================== MODAL ADD CUSTOMER ===================== --}}
         <div x-show="openModal === 'addCustomer'" x-transition.opacity x-cloak
-            class="fixed inset-0 z-50 overflow-y-auto bg-gray-500/50 backdrop-blur-sm">
+            class="fixed inset-0 z-50 overflow-y-auto bg-black/50 bg-opacity-50 backdrop-blur-xs transition-opacity">
             <div class="flex items-center justify-center min-h-screen p-4">
                 <div @click.away="openModal = ''" class="bg-white rounded-xl shadow-lg w-full max-w-lg">
                     {{-- Header --}}
@@ -767,7 +767,7 @@
 
         {{-- ===================== MODAL EDIT CUSTOMER ===================== --}}
         <div x-show="openModal === 'editCustomer'" x-transition.opacity x-cloak
-            class="fixed inset-0 z-50 overflow-y-auto bg-gray-500/50 backdrop-blur-sm">
+            class="fixed inset-0 z-50 overflow-y-auto bg-black/50 bg-opacity-50 backdrop-blur-xs transition-opacity">
             <div class="flex items-center justify-center min-h-screen p-4">
                 <div @click.away="openModal = ''" class="bg-white rounded-xl shadow-lg w-full max-w-2xl">
                     {{-- Header --}}
@@ -1039,7 +1039,7 @@
 
         {{-- ===================== MODAL DELETE CONFIRMATION ===================== --}}
         <div x-show="showDeleteCustomerConfirm !== null" x-transition.opacity x-cloak
-            class="fixed inset-0 z-50 overflow-y-auto bg-gray-500/50 backdrop-blur-sm">
+            class="fixed inset-0 z-50 overflow-y-auto bg-black/50 bg-opacity-50 backdrop-blur-xs transition-opacity">
             <div class="flex items-center justify-center min-h-screen p-4">
                 <div @click.away="showDeleteCustomerConfirm = null" class="bg-white rounded-xl shadow-lg w-full max-w-md">
                     {{-- Icon & Message --}}

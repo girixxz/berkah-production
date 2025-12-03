@@ -214,7 +214,7 @@
         {{-- ===================== MODALS ===================== --}}
         {{-- ========== Add Sales Modal ========== --}}
         <div x-show="openModal === 'addSales'" x-cloak
-            class="fixed inset-0 z-50 flex items-center justify-center bg-gray-500/50 backdrop-blur-sm px-4">
+            class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 bg-opacity-50 backdrop-blur-xs transition-opacity px-4">
             <div @click.away="openModal=null" class="bg-white rounded-xl shadow-lg w-full max-w-md">
                 <div class="flex justify-between items-center border-b border-gray-200 px-6 py-4">
                     <h3 class="text-lg font-semibold text-gray-900">Add New Sales</h3>
@@ -270,7 +270,7 @@
 
         {{-- ========== Edit Sales Modal ========== --}}
         <div x-show="openModal === 'editSales'" x-cloak x-init="@if (session('openModal') === 'editSales' && session('editSalesId')) editSales = {{ \App\Models\Sale::find(session('editSalesId'))->toJson() }}; @endif"
-            class="fixed inset-0 z-50 flex items-center justify-center bg-gray-500/50 backdrop-blur-sm px-4">
+            class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 bg-opacity-50 backdrop-blur-xs transition-opacity px-4">
             <div @click.away="openModal=null" class="bg-white rounded-xl shadow-lg w-full max-w-md">
                 <div class="flex justify-between items-center border-b  border-gray-200 px-6 py-4">
                     <h3 class="text-lg font-semibold text-gray-900">Edit Sales</h3>
@@ -320,8 +320,7 @@
 
         {{-- ================= DELETE SALES CONFIRMATION MODAL ================= --}}
         <div x-show="showDeleteSalesConfirm !== null" x-cloak
-            class="fixed inset-0 z-50 overflow-y-auto flex items-center justify-center"
-            style="background-color: rgba(0, 0, 0, 0.5);">
+            class="fixed inset-0 z-50 overflow-y-auto flex items-center justify-center bg-black/50 bg-opacity-50 backdrop-blur-xs transition-opacity">
             <div @click.away="showDeleteSalesConfirm = null"
                 class="relative bg-white rounded-lg shadow-xl max-w-md w-full mx-4 p-6">
                 {{-- Icon --}}

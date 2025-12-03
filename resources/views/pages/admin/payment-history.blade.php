@@ -638,7 +638,7 @@
                 class="fixed inset-0 z-50">
                 
                 {{-- Background Overlay --}}
-                <div x-show="showImageModal" @click="showImageModal = false; selectedImage = ''" class="fixed inset-0 bg-gray-500 bg-opacity-50 backdrop-blur-sm transition-opacity"></div>
+                <div x-show="showImageModal" @click="showImageModal = false; selectedImage = ''" class="fixed inset-0 bg-black/50 bg-opacity-50 backdrop-blur-xs transition-opacity"></div>
                 
                 {{-- Modal Panel --}}
                 <div class="flex items-center justify-center min-h-screen p-4">

@@ -3,7 +3,7 @@
     @keydown.escape.window="showModal && closeShowModal()" aria-labelledby="modal-title" role="dialog" aria-modal="true">
 
     {{-- Background Overlay --}}
-    <div x-show="showModal" class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" @click="closeShowModal()">
+    <div x-show="showModal" class="fixed inset-0 bg-black/50 bg-opacity-50 backdrop-blur-xs transition-opacity" @click="closeShowModal()">
     </div>
 
     {{-- Modal Panel --}}

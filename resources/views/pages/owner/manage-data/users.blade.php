@@ -268,7 +268,7 @@
         {{-- ===================== MODALS ===================== --}}
         {{-- ========== Add User Modal ========== --}}
         <div x-show="openModal === 'addUser'" x-cloak
-            class="fixed inset-0 z-50 flex items-center justify-center bg-gray-500/50 backdrop-blur-sm px-4">
+            class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 bg-opacity-50 backdrop-blur-xs transition-opacity px-4">
             <div @click.away="openModal=null" class="bg-white rounded-xl shadow-lg w-full max-w-lg">
                 <div class="flex justify-between items-center px-6 py-4 border-b border-gray-200">
                     <h3 class="text-lg font-semibold text-gray-900">Add New User</h3>
@@ -451,7 +451,7 @@
 
         {{-- ========== Edit User Modal ========== --}}
         <div x-show="openModal === 'editUser'" x-cloak x-init="@if (session('openModal') === 'editUser' && session('editUserId')) editUser = {{ \App\Models\User::find(session('editUserId'))->toJson() }}; @endif"
-            class="fixed inset-0 z-50 flex items-center justify-center bg-gray-500/50 backdrop-blur-sm px-4">
+            class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 bg-opacity-50 backdrop-blur-xs transition-opacity px-4">
             <div @click.away="openModal=null" class="bg-white rounded-xl shadow-lg w-full max-w-lg">
                 <div class="flex justify-between items-center border-b border-gray-200 px-6 py-4">
                     <h3 class="text-lg font-semibold text-gray-900">Edit User</h3>
@@ -623,8 +623,7 @@
 
         {{-- ================= DELETE USER CONFIRMATION MODAL ================= --}}
         <div x-show="showDeleteUserConfirm !== null" x-cloak
-            class="fixed inset-0 z-50 overflow-y-auto flex items-center justify-center"
-            style="background-color: rgba(0, 0, 0, 0.5);">
+            class="fixed inset-0 z-50 overflow-y-auto flex items-center justify-center bg-black/50 bg-opacity-50 backdrop-blur-xs transition-opacity">
             <div @click.away="showDeleteUserConfirm = null"
                 class="relative bg-white rounded-lg shadow-xl max-w-md w-full mx-4 p-6">
                 {{-- Icon --}}
