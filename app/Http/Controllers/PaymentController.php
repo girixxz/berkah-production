@@ -11,6 +11,7 @@ use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Http\UploadedFile;
 
 /**
  * Payment Controller
@@ -20,6 +21,149 @@ use Illuminate\Support\Facades\Storage;
  */
 class PaymentController extends Controller
 {
+    /**
+     * Compress image if larger than 200KB
+     * 
+     * @param UploadedFile $file
+     * @return UploadedFile|null
+     */
+    private function compressImage(UploadedFile $file)
+    {
+        $originalSize = $file->getSize();
+        $originalSizeKB = round($originalSize / 1024, 2);
+        
+        // Check if file size is greater than 200KB (200 * 1024 bytes)
+        if ($originalSize <= 200 * 1024) {
+            Log::info("Image compression skipped - file already small", [
+                'filename' => $file->getClientOriginalName(),
+                'size_kb' => $originalSizeKB
+            ]);
+            return $file; // No compression needed
+        }
+
+        Log::info("Starting image compression", [
+            'filename' => $file->getClientOriginalName(),
+            'original_size_kb' => $originalSizeKB
+        ]);
+
+        $extension = strtolower($file->getClientOriginalExtension());
+        $originalPath = $file->getRealPath();
+        
+        // Load image based on type
+        $image = null;
+        switch ($extension) {
+            case 'jpg':
+            case 'jpeg':
+                $image = @imagecreatefromjpeg($originalPath);
+                break;
+            case 'png':
+                $image = @imagecreatefrompng($originalPath);
+                break;
+            case 'gif':
+                $image = @imagecreatefromgif($originalPath);
+                break;
+            case 'webp':
+                $image = @imagecreatefromwebp($originalPath);
+                break;
+            default:
+                Log::warning("Unsupported image format", ['extension' => $extension]);
+                return $file; // Unsupported format, return original
+        }
+
+        if (!$image) {
+            Log::warning("Failed to load image with GD", ['filename' => $file->getClientOriginalName()]);
+            return $file; // Failed to load image, return original
+        }
+
+        // Get original dimensions
+        $width = imagesx($image);
+        $height = imagesy($image);
+
+        // For PNG with transparency, convert to white background
+        if ($extension === 'png') {
+            // Create a new true color image
+            $newImage = imagecreatetruecolor($width, $height);
+            // Fill with white background
+            $white = imagecolorallocate($newImage, 255, 255, 255);
+            imagefill($newImage, 0, 0, $white);
+            // Copy original image onto white background
+            imagecopy($newImage, $image, 0, 0, 0, 0, $width, $height);
+            $image = $newImage;
+        }
+
+        // Save as JPEG for better compression (convert PNG/GIF/WebP to JPEG)
+        $tempPath = sys_get_temp_dir() . '/' . uniqid('compressed_') . '.jpg';
+
+        // Try different quality levels until we get under 200KB
+        $quality = 85;
+        $compressed = false;
+        $attempts = 0;
+        $maxAttempts = 10;
+
+        while ($quality >= 30 && !$compressed && $attempts < $maxAttempts) {
+            $attempts++;
+            
+            // Save as JPEG with current quality
+            $result = @imagejpeg($image, $tempPath, $quality);
+            
+            if (!$result) {
+                Log::warning("Failed to save compressed image", [
+                    'attempt' => $attempts,
+                    'quality' => $quality
+                ]);
+                break;
+            }
+
+            // Check if compressed size is under 200KB
+            if (file_exists($tempPath) && filesize($tempPath) <= 200 * 1024) {
+                $compressed = true;
+                Log::info("Compression successful at quality {$quality}", [
+                    'attempt' => $attempts,
+                    'size_kb' => round(filesize($tempPath) / 1024, 2)
+                ]);
+            } else {
+                $quality -= 5; // Reduce quality more gradually
+            }
+        }
+
+        // Note: In PHP 8+, GdImage objects are automatically destroyed when they go out of scope
+
+        // If compression successful, create new UploadedFile
+        if ($compressed && file_exists($tempPath)) {
+            $compressedSize = filesize($tempPath);
+            $compressedSizeKB = round($compressedSize / 1024, 2);
+            $reduction = round((($originalSize - $compressedSize) / $originalSize) * 100, 2);
+            
+            Log::info("Image compression successful", [
+                'filename' => $file->getClientOriginalName(),
+                'original_size_kb' => $originalSizeKB,
+                'compressed_size_kb' => $compressedSizeKB,
+                'reduction_percent' => $reduction . '%',
+                'final_quality' => $quality,
+                'converted_to' => 'jpg'
+            ]);
+            
+            // Create new UploadedFile from compressed image
+            $compressedFile = new UploadedFile(
+                $tempPath,
+                pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME) . '.jpg',
+                'image/jpeg',
+                null,
+                true
+            );
+            
+            return $compressedFile;
+        }
+
+        Log::warning("Image compression failed - returning original", [
+            'filename' => $file->getClientOriginalName(),
+            'original_size_kb' => $originalSizeKB,
+            'attempts' => $attempts
+        ]);
+
+        return $file;
+    }
+
     /**
      * Store a newly created payment in storage.
      */
@@ -32,7 +176,7 @@ class PaymentController extends Controller
                 'payment_type' => 'required|in:dp,repayment,full_payment',
                 'amount' => 'required|numeric|min:1',
                 'notes' => 'nullable|string|max:1000',
-                'image' => 'required|image|mimes:jpeg,png,jpg|max:10240', // Single image only
+                'image' => 'required|image|mimes:jpeg,png,jpg|max:25600', // Single image only (25MB, will be compressed)
             ], [
                 'invoice_id.required' => 'Invoice ID is required',
                 'invoice_id.exists' => 'Invoice not found',
@@ -78,6 +222,9 @@ class PaymentController extends Controller
             if ($request->hasFile('image') && $request->file('image')->isValid()) {
                 try {
                     $file = $request->file('image');
+                    
+                    // Compress image if larger than 200KB
+                    $file = $this->compressImage($file);
                     
                     // Generate unique filename with timestamp
                     $filename = time() . '_' . uniqid() . '.' . $file->getClientOriginalExtension();
