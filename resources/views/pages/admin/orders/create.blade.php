@@ -1497,9 +1497,13 @@
                                     unitPrice: unitPrice,
                                     unitPriceDisplay: unitPrice ? unitPrice.toLocaleString(
                                         'id-ID') : '',
-                                    qty: parseInt(item.qty || 0)
+                                    qty: parseInt(item.qty || 0),
+                                    sort_order: size?.sort_order || 999 // Add sort_order
                                 };
                             });
+
+                            // Sort rows by sort_order
+                            rows.sort((a, b) => a.sort_order - b.sort_order);
 
                             sleeveVariants.push({
                                 sleeve: sleeveId,
@@ -1561,7 +1565,10 @@
                         const variant = this.designVariants[this.selectedDesign].sleeveVariants[this.selectedVariant];
                         const basePrice = parseFloat(variant.basePrice) || 0;
 
-                        this.selectedSizes.forEach(size => {
+                        // Sort selectedSizes by sort_order before adding to table
+                        const sortedSizes = [...this.selectedSizes].sort((a, b) => a.sort_order - b.sort_order);
+
+                        sortedSizes.forEach(size => {
                             let exists = variant.rows.find(r => r.size_id === size.id);
 
                             if (!exists) {
@@ -1574,10 +1581,14 @@
                                     extraPrice: extraPrice,
                                     unitPrice: unitPrice,
                                     unitPriceDisplay: unitPrice ? unitPrice.toLocaleString('id-ID') : '',
-                                    qty: 0
+                                    qty: 0,
+                                    sort_order: size.sort_order // Store sort_order for later sorting
                                 });
                             }
                         });
+
+                        // Sort all rows by sort_order after adding new sizes
+                        variant.rows.sort((a, b) => a.sort_order - b.sort_order);
 
                         this.selectedSizes = [];
                         this.openModal = null;

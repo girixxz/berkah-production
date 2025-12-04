@@ -751,17 +751,6 @@
                       focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary" />
                     </div>
 
-                    {{-- Customize Sort Order Button --}}
-                    <button @click="openModal = 'customizeSortSize'"
-                        class="cursor-pointer flex-shrink-0 whitespace-nowrap px-3 py-2 rounded-md
-                   bg-gray-400 text-white hover:bg-gray-500 text-sm text-center flex items-center gap-1"
-                        title="Customize Size Order">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
-                        </svg>
-                        Sort Order
-                    </button>
-
                     {{-- Add Items --}}
                     <button @click="openModal = 'addSize'"
                         class="cursor-pointer flex-shrink-0 w-18 whitespace-nowrap px-3 py-2 rounded-md
