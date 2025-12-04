@@ -224,8 +224,11 @@
                             $additional = $order->extraServices->sum('price');
                             $discount = $order->discount ?? 0;
                             $total = $subtotal + $additional - $discount;
-                            $approvedPayments = $order->invoice->payments->where('status', 'approved')->sortBy('paid_at');
-                            $totalPaid = $approvedPayments->sum('amount');
+                            // Get all approved payments for calculation (including fiktif)
+                            $allApprovedPayments = $order->invoice->payments->where('status', 'approved');
+                            $totalPaid = $allApprovedPayments->sum('amount');
+                            // Filter out fiktif payments for display only
+                            $approvedPayments = $allApprovedPayments->where('amount', '>', 10)->sortBy('paid_at');
                             $remainingDue = $total - $totalPaid;
                         @endphp
 

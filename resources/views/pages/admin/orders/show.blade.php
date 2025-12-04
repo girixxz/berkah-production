@@ -713,9 +713,14 @@
                                     <td class="py-3 px-4 font-medium">Rp
                                         {{ number_format($payment->amount, 0, ',', '.') }}</td>
                                     <td class="py-3 px-4">
-                                        <span class="px-2 py-1 rounded text-xs font-medium {{ $statusClass }}">
-                                            {{ strtoupper($payment->status) }}
-                                        </span>
+                                        <div class="flex items-center gap-2">
+                                            <span class="px-2 py-1 rounded text-xs font-medium {{ $statusClass }}">
+                                                {{ strtoupper($payment->status) }}
+                                            </span>
+                                            @if ($payment->amount <= 10)
+                                                <span class="text-xs font-medium text-red-600 italic">(Fiktif)</span>
+                                            @endif
+                                        </div>
                                     </td>
                                     <td class="py-3 px-4 text-gray-600">{{ $payment->notes ?? '-' }}</td>
                                     <td class="py-3 px-4">
@@ -1261,8 +1266,11 @@
                                                 $additional = $order->extraServices->sum('price');
                                                 $discount = $order->discount ?? 0;
                                                 $total = $subtotal + $additional - $discount;
-                                                $approvedPayments = $order->invoice->payments->where('status', 'approved')->sortBy('paid_at');
-                                                $totalPaid = $approvedPayments->sum('amount');
+                                                // Get all approved payments for calculation (including fiktif)
+                                                $allApprovedPayments = $order->invoice->payments->where('status', 'approved');
+                                                $totalPaid = $allApprovedPayments->sum('amount');
+                                                // Filter out fiktif payments for display only
+                                                $approvedPayments = $allApprovedPayments->where('amount', '>', 10)->sortBy('paid_at');
                                                 $remainingDue = $total - $totalPaid;
                                             @endphp
 
