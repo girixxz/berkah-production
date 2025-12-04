@@ -75,9 +75,6 @@
             
             const url = '{{ route('calendar') }}?' + params.toString();
             
-            // Update URL without reload
-            window.history.pushState({}, '', url);
-            
             // Fetch content via AJAX with loading bar
             NProgress.start();
             
@@ -219,9 +216,16 @@
                                                     $status = strtolower($orderStage->status ?? '');
                                                     $isHighPriority = strtolower($orderStage->order->priority ?? '') === 'high';
                                                     $isDone = $status === 'done';
+                                                    $isFinished = strtolower($orderStage->order->production_status ?? '') === 'finished';
                                                     
                                                     // Set colors based on status and priority
-                                                    if ($isDone) {
+                                                    if ($isFinished) {
+                                                        // Order finished (light gray with white text)
+                                                        $bgClass = 'bg-gray-400';
+                                                        $borderClass = 'border-gray-500';
+                                                        $textClass = 'text-white';
+                                                        $separatorClass = 'text-white opacity-70';
+                                                    } elseif ($isDone) {
                                                         // Status: done (gray)
                                                         $bgClass = 'bg-gray-200';
                                                         $borderClass = 'border-gray-400';
@@ -256,12 +260,14 @@
                                                             <span class="font-medium">
                                                                 {{ $orderStage->order->total_qty ?? 0 }}
                                                             </span>
-                                                            @if ($isHighPriority && !$isDone)
+                                                            @if ($isHighPriority && !$isDone && !$isFinished)
                                                                 <span class="{{ $separatorClass }}">•</span>
                                                                 <span class="font-bold italic">HIGH</span>
                                                             @endif
                                                         </div>
-                                                        @if ($isDone)
+                                                        @if ($isFinished)
+                                                            <span class="text-white font-bold italic flex-shrink-0">FINISHED</span>
+                                                        @elseif ($isDone)
                                                             <span class="text-gray-500 font-bold italic flex-shrink-0">DONE</span>
                                                         @endif
                                                     </div>
@@ -273,14 +279,17 @@
                                                 <button type="button"
                                                     @click="openModal('{{ $day['date']->format('l, d F Y') }}', {{ collect($day['tasks'])->map(function ($os) {
                                                         $isHigh = strtolower($os->order->priority ?? '') === 'high';
+                                                        $isFinished = strtolower($os->order->production_status ?? '') === 'finished';
                                                         return [
                                                             'id' => $os->id,
+                                                            'order_id' => $os->order->id,
                                                             'invoice' => $os->order->invoice->invoice_no ?? 'N/A',
                                                             'product' => $os->order->productCategory->product_name ?? 'N/A',
                                                             'customer' => $os->order->customer->customer_name ?? 'N/A',
                                                             'qty' => $os->order->total_qty ?? 0,
                                                             'priority' => $isHigh ? 'high' : 'normal',
                                                             'status' => $os->status,
+                                                            'production_status' => $isFinished ? 'finished' : 'in_progress',
                                                             'deadline' => $os->deadline ? $os->deadline->format('d M Y') : 'N/A',
                                                         ];
                                                     })->toJson() }})"
@@ -323,41 +332,46 @@
                     <div class="p-5 max-h-[60vh] overflow-y-auto">
                         <div class="space-y-3">
                             <template x-for="(task, index) in modalTasks" :key="index">
-                                <div class="px-4 py-3 rounded-lg border"
-                                    :style="task.status !== 'done' && task.priority !== 'high' ? 'background-color: #eddfad; border-color: #d4c973;' : ''"
+                                <a :href="`{{ route('karyawan.task.work-order', ['order' => '__ORDER_ID__']) }}`.replace('__ORDER_ID__', task.order_id)" 
+                                    class="block px-4 py-3 rounded-lg border hover:opacity-80 transition-opacity cursor-pointer"
+                                    :style="task.production_status !== 'finished' && task.status !== 'done' && task.priority !== 'high' ? 'background-color: #eddfad; border-color: #d4c973;' : ''"
                                     :class="{
-                                        'bg-gray-200 border-gray-400': task.status === 'done',
-                                        'bg-red-500 border-red-600': task.status !== 'done' && task.priority === 'high'
+                                        'bg-gray-400 border-gray-500': task.production_status === 'finished',
+                                        'bg-gray-200 border-gray-400': task.status === 'done' && task.production_status !== 'finished',
+                                        'bg-red-500 border-red-600': task.status !== 'done' && task.priority === 'high' && task.production_status !== 'finished'
                                     }">
                                     <div class="flex items-center justify-between gap-2">
                                         <div class="flex items-center gap-2 text-xs font-medium flex-1 min-w-0"
                                             :class="{
-                                                'text-gray-600': task.status === 'done',
-                                                'text-white': task.status !== 'done' && task.priority === 'high',
-                                                'text-gray-900': task.status !== 'done' && task.priority !== 'high'
+                                                'text-white': task.production_status === 'finished' || (task.status !== 'done' && task.priority === 'high'),
+                                                'text-gray-600': task.status === 'done' && task.production_status !== 'finished',
+                                                'text-gray-900': task.status !== 'done' && task.priority !== 'high' && task.production_status !== 'finished'
                                             }">
                                             <span class="font-semibold truncate" x-text="task.customer"></span>
-                                            <span :class="task.status === 'done' ? 'text-gray-400' : (task.priority === 'high' && task.status !== 'done' ? 'text-white opacity-70' : 'text-gray-400')">•</span>
+                                            <span :class="task.production_status === 'finished' || (task.priority === 'high' && task.status !== 'done') ? 'text-white opacity-70' : (task.status === 'done' ? 'text-gray-400' : 'text-gray-400')">•</span>
                                             <span class="truncate" x-text="task.product"></span>
-                                            <span :class="task.status === 'done' ? 'text-gray-400' : (task.priority === 'high' && task.status !== 'done' ? 'text-white opacity-70' : 'text-gray-400')">•</span>
+                                            <span :class="task.production_status === 'finished' || (task.priority === 'high' && task.status !== 'done') ? 'text-white opacity-70' : (task.status === 'done' ? 'text-gray-400' : 'text-gray-400')">•</span>
                                             <span class="font-medium" x-text="task.qty || 0"></span>
-                                            <template x-if="task.priority === 'high' && task.status !== 'done'">
+                                            <template x-if="task.priority === 'high' && task.status !== 'done' && task.production_status !== 'finished'">
                                                 <span>
                                                     <span class="text-white opacity-70">•</span>
                                                     <span class="font-bold italic">HIGH</span>
                                                 </span>
                                             </template>
                                         </div>
-                                        <template x-if="task.status === 'done'">
+                                        <template x-if="task.production_status === 'finished'">
+                                            <span class="text-white font-bold italic text-xs flex-shrink-0">FINISHED</span>
+                                        </template>
+                                        <template x-if="task.status === 'done' && task.production_status !== 'finished'">
                                             <span class="text-gray-500 font-bold italic text-xs flex-shrink-0">DONE</span>
                                         </template>
                                     </div>
                                     <div class="mt-2 text-xs"
-                                        :class="task.status === 'done' ? 'text-gray-500' : (task.priority === 'high' && task.status !== 'done' ? 'text-white opacity-80' : 'text-gray-500')">
+                                        :class="task.production_status === 'finished' || (task.priority === 'high' && task.status !== 'done') ? 'text-white opacity-80' : 'text-gray-500'">
                                         <span>Deadline: </span>
                                         <span x-text="task.deadline"></span>
                                     </div>
-                                </div>
+                                </a>
                             </template>
                         </div>
                     </div>

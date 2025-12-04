@@ -56,7 +56,6 @@ class CalendarController extends Controller
             // Order by Create/Deadline mode: Show orders on specific date only (not span)
             $orders = \App\Models\Order::with(['orderStages', 'invoice', 'productCategory', 'customer'])
                 ->where('production_status', '!=', 'cancelled')
-                ->where('production_status', '!=', 'finished')
                 ->whereHas('orderStages')
                 ->get();
             
@@ -96,8 +95,7 @@ class CalendarController extends Controller
             $orderStages = OrderStage::with(['order.invoice', 'order.productCategory', 'order.customer'])
                 ->where('stage_id', $selectedStageId)
                 ->whereHas('order', function ($query) {
-                    $query->where('production_status', '!=', 'cancelled')
-                          ->where('production_status', '!=', 'finished');
+                    $query->where('production_status', '!=', 'cancelled');
                 })
                 ->where(function ($query) use ($startOfCalendar, $endOfCalendar) {
                     $query->where(function ($q) use ($startOfCalendar, $endOfCalendar) {
