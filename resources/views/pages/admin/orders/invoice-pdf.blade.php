@@ -2,153 +2,141 @@
 <html lang="id">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Invoice {{ $order->invoice->invoice_no }}</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400..700;1,400..700&display=swap" rel="stylesheet" />
     <style>
         @page {
             margin: 10mm;
         }
         
+        body {
+            font-family: 'DejaVu Sans', sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+        
         /* Prevent page breaks inside these elements */
         .no-break {
             page-break-inside: avoid;
-            break-inside: avoid;
-        }
-        
-        /* Allow page breaks after these elements */
-        .allow-break-after {
-            page-break-after: auto;
-            break-after: auto;
         }
         
         /* Prevent orphan rows at page bottom */
         tbody tr {
             page-break-inside: avoid;
-            break-inside: avoid;
         }
         
         /* Keep header with at least 2 rows */
         thead {
             display: table-header-group;
         }
-        
-        /* Keep footer at bottom of last page */
-        tfoot {
-            display: table-footer-group;
-        }
     </style>
 </head>
-<body style="font-family: 'Lora', serif; margin: 0; padding: 0;">
+<body>
     
-    <div class="bg-white" style="width: 210mm; min-height: 297mm;">
+    <div style="width: 100%; min-height: 297mm; background-color: #ffffff;">
         <div style="padding: 10mm;">
             
             {{-- Header Section --}}
-            <div class="border-b-2 border-black pb-4 mb-6 no-break">
-                <div class="flex justify-between items-center mb-2">
-                    {{-- Logo --}}
-                    <div class="flex-shrink-0">
-                        <img src="{{ public_path('images/logo-invoice.png') }}" alt="STGR Logo" class="h-24 w-auto object-contain">
-                    </div>
-                    
-                    {{-- Invoice Info --}}
-                    <div class="">
-                        <p class="text-4xl font-bold text-black mb-2 text-right">INVOICE</p>
-                        <table class="text-[11px]">
-                            <tr>
-                                <td class="text-black font-semibold py-0.5">No</td>
-                                <td class="text-black font-semibold px-2">:</td>
-                                <td class="text-black text-right">{{ $order->invoice->invoice_no }}</td>
-                            </tr>
-                            <tr>
-                                <td class="text-black font-semibold py-0.5">Order Date</td>
-                                <td class="text-black font-semibold px-2">:</td>
-                                <td class="text-black text-right">{{ \Carbon\Carbon::parse($order->order_date)->format('d F Y') }}</td>
-                            </tr>
-                            <tr>
-                                <td class="text-black font-semibold py-0.5">Deadline</td>
-                                <td class="text-black font-semibold px-2">:</td>
-                                <td class="text-black text-right">{{ $order->deadline ? \Carbon\Carbon::parse($order->deadline)->format('d F Y') : '-' }}</td>
-                            </tr>
-                        </table>
-                    </div>
-                </div>
+            <div style="border-bottom: 2px solid #000000; padding-bottom: 16px; margin-bottom: 24px;" class="no-break">
+                <table style="width: 100%; margin-bottom: 8px;">
+                    <tr>
+                        {{-- Logo --}}
+                        <td style="width: 50%; vertical-align: top;">
+                            <img src="{{ public_path('images/logo-invoice.png') }}" alt="STGR Logo" style="height: 96px; width: auto;">
+                        </td>
+                        
+                        {{-- Invoice Info --}}
+                        <td style="width: 50%; vertical-align: top; text-align: right;">
+                            <p style="font-size: 32px; font-weight: bold; color: #000000; margin: 0 0 8px 0;">INVOICE</p>
+                            <table style="font-size: 11px; display: inline-table; margin-left: auto;">
+                                <tr>
+                                    <td style="color: #000000; font-weight: 600; padding: 2px 0;">No</td>
+                                    <td style="color: #000000; font-weight: 600; padding: 0 8px;">:</td>
+                                    <td style="color: #000000; text-align: right;">{{ $order->invoice->invoice_no }}</td>
+                                </tr>
+                                <tr>
+                                    <td style="color: #000000; font-weight: 600; padding: 2px 0;">Order Date</td>
+                                    <td style="color: #000000; font-weight: 600; padding: 0 8px;">:</td>
+                                    <td style="color: #000000; text-align: right;">{{ \Carbon\Carbon::parse($order->order_date)->format('d F Y') }}</td>
+                                </tr>
+                                <tr>
+                                    <td style="color: #000000; font-weight: 600; padding: 2px 0;">Deadline</td>
+                                    <td style="color: #000000; font-weight: 600; padding: 0 8px;">:</td>
+                                    <td style="color: #000000; text-align: right;">{{ $order->deadline ? \Carbon\Carbon::parse($order->deadline)->format('d F Y') : '-' }}</td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+                </table>
 
                 {{-- Company Address --}}
-                <div class="text-center text-sm text-black">
-                    <p>Jl. KH Muhdi Demangan, Maguwoharjo, Depok, Sleman, Yogyakarta</p>
-                    <p>0823 1377 8296 - 0858 7067 1741</p>
+                <div style="text-align: center; font-size: 14px; color: #000000;">
+                    <p style="margin: 4px 0;">Jl. KH Muhdi Demangan, Maguwoharjo, Depok, Sleman, Yogyakarta</p>
+                    <p style="margin: 4px 0;">0823 1377 8296 - 0858 7067 1741</p>
                 </div>
             </div>
 
             {{-- Bill To & Detail Product (2 Columns) --}}
-            <h3 class="text-sm font-bold text-black pb-1">RECIPIENT :</h3>
-            <div class="grid grid-cols-2 gap-6 mb-4 no-break allow-break-after">
-                {{-- Data Customers --}}
-                <div class="mt-1">
-                    <div class="text-sm space-y-2">
-                        <div>
-                            <p class="text-black font-semibold">{{ $order->customer->customer_name }}</p>
+            <h3 style="font-size: 14px; font-weight: bold; color: #000000; padding-bottom: 4px; margin: 0 0 4px 0;">RECIPIENT :</h3>
+            <table style="width: 100%; margin-bottom: 16px;" class="no-break">
+                <tr>
+                    {{-- Data Customers --}}
+                    <td style="width: 50%; vertical-align: top; padding-right: 24px;">
+                        <div style="font-size: 14px; margin-top: 4px;">
+                            <p style="color: #000000; font-weight: 600; margin: 0 0 8px 0;">{{ $order->customer->customer_name }}</p>
+                            <p style="color: #000000; margin: 0 0 8px 0;">{{ $order->customer->phone }}</p>
+                            <p style="color: #000000; line-height: 1.6; margin: 0;">{{ $order->customer->address }}</p>
                         </div>
-                        <div>
-                            <p class="text-black">{{ $order->customer->phone }}</p>
-                        </div>
-                        <div>
-                            <p class="text-black leading-relaxed">{{ $order->customer->address }}</p>
-                        </div>
-                    </div>
-                </div>
+                    </td>
 
-                {{-- Detail Product --}}
-                <div>
-                    <table class="w-full text-sm">
-                        <tr>
-                            <td class="text-black font-semibold py-1" style="width: 35%;">Product</td>
-                            <td class="text-black font-semibold px-2">:</td>
-                            <td class="text-black">{{ $order->productCategory->name ?? '-' }}</td>
-                        </tr>
-                        <tr>
-                            <td class="text-black font-semibold py-1">Material</td>
-                            <td class="text-black font-semibold px-2">:</td>
-                            <td class="text-black">{{ $order->materialCategory->name ?? '-' }} - {{ $order->materialTexture->name ?? '-' }}</td>
-                        </tr>
-                        <tr>
-                            <td class="text-black font-semibold py-1">Color</td>
-                            <td class="text-black font-semibold px-2">:</td>
-                            <td class="text-black">{{ $order->product_color ?? '-' }}</td>
-                        </tr>
-                        <tr>
-                            <td class="text-black font-semibold py-1">Total QTY</td>
-                            <td class="text-black font-semibold px-2">:</td>
-                            <td class="text-black font-semibold">{{ $order->orderItems->sum('qty') }} pcs</td>
-                        </tr>
-                    </table>
-                </div>
-            </div>
+                    {{-- Detail Product --}}
+                    <td style="width: 50%; vertical-align: top; padding-left: 24px;">
+                        <table style="width: 100%; font-size: 14px;">
+                            <tr>
+                                <td style="color: #000000; font-weight: 600; padding: 4px 0; width: 35%;">Product</td>
+                                <td style="color: #000000; font-weight: 600; padding: 0 8px;">:</td>
+                                <td style="color: #000000;">{{ $order->productCategory->name ?? '-' }}</td>
+                            </tr>
+                            <tr>
+                                <td style="color: #000000; font-weight: 600; padding: 4px 0;">Material</td>
+                                <td style="color: #000000; font-weight: 600; padding: 0 8px;">:</td>
+                                <td style="color: #000000;">{{ $order->materialCategory->name ?? '-' }} - {{ $order->materialTexture->name ?? '-' }}</td>
+                            </tr>
+                            <tr>
+                                <td style="color: #000000; font-weight: 600; padding: 4px 0;">Color</td>
+                                <td style="color: #000000; font-weight: 600; padding: 0 8px;">:</td>
+                                <td style="color: #000000;">{{ $order->product_color ?? '-' }}</td>
+                            </tr>
+                            <tr>
+                                <td style="color: #000000; font-weight: 600; padding: 4px 0;">Total QTY</td>
+                                <td style="color: #000000; font-weight: 600; padding: 0 8px;">:</td>
+                                <td style="color: #000000; font-weight: 600;">{{ $order->orderItems->sum('qty') }} pcs</td>
+                            </tr>
+                        </table>
+                    </td>
+                </tr>
+            </table>
 
             {{-- Order Items Table --}}
-            <h3 class="text-sm font-bold text-black mb-2">DETAIL ORDERS :</h3>
-            <div class="mb-4">
-                <table class="w-full text-xs">
-                    <thead style="background-color: #5a5a5a">
+            <h3 style="font-size: 14px; font-weight: bold; color: #000000; margin: 0 0 8px 0;">DETAIL ORDERS :</h3>
+            <div style="margin-bottom: 16px;">
+                <table style="width: 100%; font-size: 12px; border-collapse: collapse;">
+                    <thead style="background-color: #5a5a5a;">
                         <tr>
-                            <th class="py-2 px-3 text-left font-semibold uppercase tracking-wide" style="color: #ffffff;">
+                            <th style="padding: 8px 12px; text-align: left; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: #ffffff;">
                                 Product & Size</th>
-                            <th class="py-2 px-3 text-center font-semibold uppercase tracking-wide" style="color: #ffffff;">Qty
+                            <th style="padding: 8px 12px; text-align: center; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: #ffffff;">Qty
                             </th>
-                            <th class="py-2 px-3 text-right font-semibold uppercase tracking-wide" style="color: #ffffff;">Price
+                            <th style="padding: 8px 12px; text-align: right; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: #ffffff;">Price
                             </th>
-                            <th class="py-2 px-3 text-right font-semibold uppercase tracking-wide" style="color: #ffffff;">Total
+                            <th style="padding: 8px 12px; text-align: right; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: #ffffff;">Total
                             </th>
                         </tr>
                     </thead>
-                    <tbody class="divide-y divide-gray-200">
+                    <tbody>
                         @foreach ($order->designVariants as $variant)
                             {{-- Variant Header --}}
-                            <tr class="bg-gray-100 no-break">
-                                <td colspan="4" class="py-1.5 px-3 font-semibold text-gray-900">
+                            <tr style="background-color: #f3f4f6;" class="no-break">
+                                <td colspan="4" style="padding: 6px 12px; font-weight: 600; color: #111827; border-top: 1px solid #e5e7eb;">
                                     Variant: {{ $variant->design_name }}
                                 </td>
                             </tr>
@@ -159,20 +147,20 @@
 
                             @foreach ($itemsBySleeve as $sleeveId => $items)
                                 {{-- Sleeve Header --}}
-                                <tr class="bg-gray-50 no-break">
-                                    <td colspan="4" class="py-1 px-3 pl-5 italic text-gray-600 text-xs">
+                                <tr style="background-color: #f9fafb;" class="no-break">
+                                    <td colspan="4" style="padding: 4px 12px 4px 20px; font-style: italic; color: #4b5563; font-size: 12px; border-top: 1px solid #e5e7eb;">
                                         Sleeve: {{ $items->first()->sleeve->sleeve_name ?? 'Unknown' }}
                                     </td>
                                 </tr>
 
                                 {{-- Items --}}
                                 @foreach ($items as $item)
-                                    <tr class="hover:bg-gray-50 no-break">
-                                        <td class="py-1.5 px-3 pl-8 text-gray-900">{{ $item->size->size_name ?? '-' }}</td>
-                                        <td class="py-1.5 px-3 text-center text-gray-900">{{ $item->qty }}</td>
-                                        <td class="py-1.5 px-3 text-right text-gray-900">
+                                    <tr class="no-break">
+                                        <td style="padding: 6px 12px 6px 32px; color: #111827; border-top: 1px solid #e5e7eb;">{{ $item->size->size_name ?? '-' }}</td>
+                                        <td style="padding: 6px 12px; text-align: center; color: #111827; border-top: 1px solid #e5e7eb;">{{ $item->qty }}</td>
+                                        <td style="padding: 6px 12px; text-align: right; color: #111827; border-top: 1px solid #e5e7eb;">
                                             Rp {{ number_format($item->unit_price, 0, ',', '.') }}</td>
-                                        <td class="py-1.5 px-3 text-right text-gray-900">
+                                        <td style="padding: 6px 12px; text-align: right; color: #111827; border-top: 1px solid #e5e7eb;">
                                             Rp {{ number_format($item->subtotal, 0, ',', '.') }}</td>
                                     </tr>
                                 @endforeach
@@ -181,19 +169,19 @@
 
                         {{-- Extra Services --}}
                         @if ($order->extraServices->count() > 0)
-                            <tr class="bg-gray-100 no-break">
-                                <td colspan="4" class="py-1.5 px-3 font-semibold text-gray-900">
+                            <tr style="background-color: #f3f4f6;" class="no-break">
+                                <td colspan="4" style="padding: 6px 12px; font-weight: 600; color: #111827; border-top: 1px solid #e5e7eb;">
                                     Additional Services
                                 </td>
                             </tr>
                             @foreach ($order->extraServices as $extra)
-                                <tr class="hover:bg-gray-50 no-break">
-                                    <td class="py-1.5 px-3 pl-5 text-gray-900">{{ $extra->service->service_name ?? 'Service' }}
+                                <tr class="no-break">
+                                    <td style="padding: 6px 12px 6px 20px; color: #111827; border-top: 1px solid #e5e7eb;">{{ $extra->service->service_name ?? 'Service' }}
                                     </td>
-                                    <td class="py-1.5 px-3 text-center text-gray-900">1</td>
-                                    <td class="py-1.5 px-3 text-right text-gray-900">
+                                    <td style="padding: 6px 12px; text-align: center; color: #111827; border-top: 1px solid #e5e7eb;">1</td>
+                                    <td style="padding: 6px 12px; text-align: right; color: #111827; border-top: 1px solid #e5e7eb;">
                                         Rp {{ number_format($extra->price, 0, ',', '.') }}</td>
-                                    <td class="py-1.5 px-3 text-right text-gray-900">
+                                    <td style="padding: 6px 12px; text-align: right; color: #111827; border-top: 1px solid #e5e7eb;">
                                         Rp {{ number_format($extra->price, 0, ',', '.') }}</td>
                                 </tr>
                             @endforeach
@@ -203,85 +191,85 @@
             </div>
 
             {{-- Footer --}}
-            <div class="grid grid-cols-2 gap-4 mt-4 pt-3 border-t border-gray-200 no-break">
-                {{-- Bank Info --}}
-                <div class="border border-gray-300 rounded-lg p-3 bg-gray-50 no-break">
-                    <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Rekening Bank Central Asia</p>
-                    <p class="text-xl font-bold text-gray-900 mb-0.5 tracking-wider">7315 40 1313</p>
-                    <p class="text-xs font-semibold text-gray-900 mb-2 pb-2 border-b border-gray-300">APRI KUSUMA PRAWIRA</p>
-                    <ul class="text-xs text-gray-600 space-y-1 list-disc list-inside">
-                        <li>Untuk pembayaran DP minimal 60% dari total harga, pelunasan dilakukan saat pengambilan barang.</li>
-                        <li>Jangan lupa mengirimkan bukti transfer DP untuk konfirmasi orderan.</li>
-                        <li>Pastikan sudah mengecek keseluruhan detail sesuai dengan pesanannya.</li>
-                    </ul>
-                </div>
-
-                {{-- Price Summary --}}
-                <div class="border border-gray-300 rounded-lg overflow-hidden no-break">
-                    <div class="divide-y divide-gray-200">
-                        @php
-                            $subtotal = $order->orderItems->sum('subtotal');
-                            $additional = $order->extraServices->sum('price');
-                            $discount = $order->discount ?? 0;
-                            $total = $subtotal + $additional - $discount;
-                            // Get all approved payments for calculation (including fiktif)
-                            $allApprovedPayments = $order->invoice->payments->where('status', 'approved');
-                            $totalPaid = $allApprovedPayments->sum('amount');
-                            // Filter out fiktif payments for display only
-                            $approvedPayments = $allApprovedPayments->where('amount', '>', 10)->sortBy('paid_at');
-                            $remainingDue = $total - $totalPaid;
-                        @endphp
-
-                        <div class="flex justify-between items-center py-2 px-3 bg-white">
-                            <span class="text-xs font-semibold">Subtotal</span>
-                            <span class="text-xs font-bold">Rp
-                                {{ number_format($subtotal, 0, ',', '.') }}</span>
+            <table style="width: 100%; margin-top: 16px; padding-top: 12px; border-top: 1px solid #e5e7eb;" class="no-break">
+                <tr>
+                    {{-- Bank Info --}}
+                    <td style="width: 50%; vertical-align: top; padding-right: 8px;">
+                        <div style="border: 1px solid #d1d5db; border-radius: 8px; padding: 12px; background-color: #f9fafb;">
+                            <p style="font-size: 12px; font-weight: 600; color: #6b7280; text-transform: uppercase; letter-spacing: 0.05em; margin: 0 0 4px 0;">Rekening Bank Central Asia</p>
+                            <p style="font-size: 20px; font-weight: bold; color: #111827; margin: 0 0 2px 0; letter-spacing: 0.05em;">7315 40 1313</p>
+                            <p style="font-size: 12px; font-weight: 600; color: #111827; margin: 0 0 8px 0; padding-bottom: 8px; border-bottom: 1px solid #d1d5db;">APRI KUSUMA PRAWIRA</p>
+                            <p style="font-size: 12px; color: #4b5563; margin: 4px 0; line-height: 1.4;">• Untuk pembayaran DP minimal 60% dari total harga, pelunasan dilakukan saat pengambilan barang.</p>
+                            <p style="font-size: 12px; color: #4b5563; margin: 4px 0; line-height: 1.4;">• Jangan lupa mengirimkan bukti transfer DP untuk konfirmasi orderan.</p>
+                            <p style="font-size: 12px; color: #4b5563; margin: 4px 0; line-height: 1.4;">• Pastikan sudah mengecek keseluruhan detail sesuai dengan pesanannya.</p>
                         </div>
-                        <div class="flex justify-between items-center py-2 px-3 bg-white">
-                            <span class="text-xs font-semibold">Additional</span>
-                            <span class="text-xs font-bold"
-                                style="color: #000000;">{{ $additional > 0 ? 'Rp ' . number_format($additional, 0, ',', '.') : '-' }}</span>
-                        </div>
-                        <div class="flex justify-between items-center py-2 px-3 bg-white">
-                            <span class="text-xs font-semibold">Discount</span>
-                            <span class="text-xs font-bold"
-                                style="color: #000000;">{{ $discount > 0 ? '- Rp ' . number_format($discount, 0, ',', '.') : '-' }}</span>
-                        </div>
-                        <div class="flex justify-between items-center py-2.5 px-3" style="background-color: #5a5a5a">
-                            <span class="text-sm font-extrabold" style="color: #ffffff;">Total Price</span>
-                            <span class="text-sm font-extrabold" style="color: #ffffff;">Rp
-                                {{ number_format($total, 0, ',', '.') }}</span>
-                        </div>
+                    </td>
 
-                        @if ($approvedPayments->count() > 0)
-                            {{-- Payment Activity Header --}}
-                            <div class="py-2 px-3 bg-gray-100 text-center">
-                                <span class="text-xs font-bold">PAYMENT ACTIVITY</span>
-                            </div>
+                    {{-- Price Summary --}}
+                    <td style="width: 50%; vertical-align: top; padding-left: 8px;">
+                        <div style="border: 1px solid #d1d5db; border-radius: 8px; overflow: hidden;">
+                            @php
+                                $subtotal = $order->orderItems->sum('subtotal');
+                                $additional = $order->extraServices->sum('price');
+                                $discount = $order->discount ?? 0;
+                                $total = $subtotal + $additional - $discount;
+                                // Get all approved payments for calculation (including fiktif)
+                                $allApprovedPayments = $order->invoice->payments->where('status', 'approved');
+                                $totalPaid = $allApprovedPayments->sum('amount');
+                                // Filter out fiktif payments for display only
+                                $approvedPayments = $allApprovedPayments->where('amount', '>', 10)->sortBy('paid_at');
+                                $remainingDue = $total - $totalPaid;
+                            @endphp
 
-                            @foreach ($approvedPayments as $index => $payment)
-                                <div class="flex justify-between items-center py-2 px-3 bg-white">
-                                    <span class="text-xs text-gray-600">
-                                        Payment #{{ $index + 1 }}
-                                        ({{ \Carbon\Carbon::parse($payment->paid_at)->format('d/m/Y') }})
-                                    </span>
-                                    <span class="text-xs font-semibold text-gray-900">
-                                        - Rp {{ number_format($payment->amount, 0, ',', '.') }}
-                                    </span>
-                                </div>
-                            @endforeach
-                        @endif
+                            <table style="width: 100%; font-size: 12px; border-collapse: collapse;">
+                                <tr style="background-color: #ffffff;">
+                                    <td style="padding: 8px 12px; font-weight: 600; border-bottom: 1px solid #e5e7eb;">Subtotal</td>
+                                    <td style="padding: 8px 12px; text-align: right; font-weight: bold; border-bottom: 1px solid #e5e7eb;">Rp {{ number_format($subtotal, 0, ',', '.') }}</td>
+                                </tr>
+                                <tr style="background-color: #ffffff;">
+                                    <td style="padding: 8px 12px; font-weight: 600; border-bottom: 1px solid #e5e7eb;">Additional</td>
+                                    <td style="padding: 8px 12px; text-align: right; font-weight: bold; color: #000000; border-bottom: 1px solid #e5e7eb;">{{ $additional > 0 ? 'Rp ' . number_format($additional, 0, ',', '.') : '-' }}</td>
+                                </tr>
+                                <tr style="background-color: #ffffff;">
+                                    <td style="padding: 8px 12px; font-weight: 600; border-bottom: 1px solid #e5e7eb;">Discount</td>
+                                    <td style="padding: 8px 12px; text-align: right; font-weight: bold; color: #000000; border-bottom: 1px solid #e5e7eb;">{{ $discount > 0 ? '- Rp ' . number_format($discount, 0, ',', '.') : '-' }}</td>
+                                </tr>
+                                <tr style="background-color: #5a5a5a;">
+                                    <td style="padding: 10px 12px; font-weight: 800; font-size: 14px; color: #ffffff;">Total Price</td>
+                                    <td style="padding: 10px 12px; text-align: right; font-weight: 800; font-size: 14px; color: #ffffff;">Rp {{ number_format($total, 0, ',', '.') }}</td>
+                                </tr>
 
-                        {{-- Remaining Due --}}
-                        <div class="flex justify-between items-center py-2.5 px-3 bg-red-600">
-                            <span class="text-sm font-extrabold text-white">Remaining Due</span>
-                            <span class="text-sm font-extrabold text-white">
-                                Rp {{ number_format($remainingDue, 0, ',', '.') }}
-                            </span>
+                                @if ($approvedPayments->count() > 0)
+                                    {{-- Payment Activity Header --}}
+                                    <tr style="background-color: #f3f4f6;">
+                                        <td colspan="2" style="padding: 8px 12px; text-align: center; font-weight: bold;">PAYMENT ACTIVITY</td>
+                                    </tr>
+
+                                    @foreach ($approvedPayments as $index => $payment)
+                                        <tr style="background-color: #ffffff;">
+                                            <td style="padding: 8px 12px; color: #4b5563; border-top: 1px solid #e5e7eb;">
+                                                Payment #{{ $index + 1 }}
+                                                ({{ \Carbon\Carbon::parse($payment->paid_at)->format('d/m/Y') }})
+                                            </td>
+                                            <td style="padding: 8px 12px; text-align: right; font-weight: 600; color: #111827; border-top: 1px solid #e5e7eb;">
+                                                - Rp {{ number_format($payment->amount, 0, ',', '.') }}
+                                            </td>
+                                        </tr>
+                                    @endforeach
+                                @endif
+
+                                {{-- Remaining Due --}}
+                                <tr style="background-color: #dc2626;">
+                                    <td style="padding: 10px 12px; font-weight: 800; font-size: 14px; color: #ffffff;">Remaining Due</td>
+                                    <td style="padding: 10px 12px; text-align: right; font-weight: 800; font-size: 14px; color: #ffffff;">
+                                        Rp {{ number_format($remainingDue, 0, ',', '.') }}
+                                    </td>
+                                </tr>
+                            </table>
                         </div>
-                    </div>
-                </div>
-            </div>
+                    </td>
+                </tr>
+            </table>
 
         </div>
     </div>
