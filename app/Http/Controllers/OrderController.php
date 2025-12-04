@@ -771,10 +771,51 @@ class OrderController extends Controller
             'extraServices.service'
         ]);
 
+        // Group order items by design variant and sleeve
+        $designVariants = $order->designVariants->map(function ($variant) {
+            $groupedItems = $variant->orderItems->groupBy(function ($item) {
+                return $item->sleeve->name;
+            })->map(function ($items, $sleeveName) {
+                $sizes = $items->map(function ($item) {
+                    return [
+                        'size' => $item->size->name,
+                        'qty' => $item->qty,
+                        'price' => $item->price,
+                        'total' => $item->total,
+                    ];
+                });
+
+                return [
+                    'sleeve' => $sleeveName,
+                    'sizes' => $sizes,
+                ];
+            });
+
+            return [
+                'variant' => $variant,
+                'grouped_items' => $groupedItems,
+            ];
+        });
+
+        // Filter payments > 10 for display (exclude fiktif)
+        $allApprovedPayments = $order->invoice->payments->where('status', 'approved');
+        $approvedPayments = $allApprovedPayments->filter(function ($payment) {
+            return $payment->amount > 10;
+        });
+        $totalPaid = $allApprovedPayments->sum('amount');
+
         // Generate PDF using Spatie Laravel PDF
         return \Spatie\LaravelPdf\Facades\Pdf::view('pages.admin.orders.invoice-pdf', [
             'order' => $order,
+            'designVariants' => $designVariants,
+            'approvedPayments' => $approvedPayments,
+            'totalPaid' => $totalPaid,
         ])
+        ->withBrowsershot(function ($browsershot) {
+            $browsershot->setChromePath('/usr/bin/google-chrome-stable')
+                        ->noSandbox()
+                        ->setOption('args', ['--no-sandbox', '--disable-setuid-sandbox']);
+        })
         ->format('a4')
         ->name("Invoice-{$order->invoice->invoice_no}.pdf");
     }
