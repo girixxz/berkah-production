@@ -178,6 +178,10 @@ class OrderController extends Controller
         $startDate = $request->input('start_date');
         $endDate = $request->input('end_date');
         $dateRange = $request->input('date_range');
+        $perPage = $request->input('per_page', 15); // Default 15
+
+        // Validate per_page value
+        $perPage = in_array($perPage, [5, 10, 15, 20, 25]) ? $perPage : 15;
 
         $query = Order::with([
             'customer',
@@ -279,21 +283,21 @@ class OrderController extends Controller
         if ($filter === 'wip') {
             $orders = $query->orderBy('wip_date', 'desc')
                 ->orderBy('created_at', 'desc')
-                ->paginate(15)
+                ->paginate($perPage)
                 ->appends($request->except('page'));
         } elseif ($filter === 'finished') {
             $orders = $query->orderBy('finished_date', 'desc')
                 ->orderBy('created_at', 'desc')
-                ->paginate(15)
+                ->paginate($perPage)
                 ->appends($request->except('page'));
         } elseif ($filter === 'cancelled') {
             $orders = $query->orderBy('cancelled_date', 'desc')
                 ->orderBy('created_at', 'desc')
-                ->paginate(15)
+                ->paginate($perPage)
                 ->appends($request->except('page'));
         } else {
             $orders = $query->orderBy('created_at', 'desc')
-                ->paginate(15)
+                ->paginate($perPage)
                 ->appends($request->except('page'));
         }
 
