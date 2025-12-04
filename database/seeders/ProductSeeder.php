@@ -74,13 +74,13 @@ class ProductSeeder extends Seeder
 
         // Material Sizes
         $materialSizes = [
-            ['size_name' => 'S', 'extra_price' => 0],
-            ['size_name' => 'M', 'extra_price' => 0],
-            ['size_name' => 'L', 'extra_price' => 2000],
-            ['size_name' => 'XL', 'extra_price' => 4000],
-            ['size_name' => 'XXL', 'extra_price' => 6000],
-            ['size_name' => 'XXXL', 'extra_price' => 8000],
-            ['size_name' => 'XXXXL', 'extra_price' => 10000],
+            ['size_name' => 'S', 'extra_price' => 0, 'sort_order' => 1],
+            ['size_name' => 'M', 'extra_price' => 0, 'sort_order' => 2],
+            ['size_name' => 'L', 'extra_price' => 2000, 'sort_order' => 3],
+            ['size_name' => 'XL', 'extra_price' => 4000, 'sort_order' => 4],
+            ['size_name' => 'XXL', 'extra_price' => 6000, 'sort_order' => 5],
+            ['size_name' => 'XXXL', 'extra_price' => 8000, 'sort_order' => 6],
+            ['size_name' => 'XXXXL', 'extra_price' => 10000, 'sort_order' => 7],
         ];
 
         foreach ($materialSizes as $size) {

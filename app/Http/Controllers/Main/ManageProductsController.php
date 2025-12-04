@@ -20,7 +20,8 @@ class ManageProductsController extends Controller
         $materialCategories = MaterialCategory::paginate(5, ['*'], 'material_page');
         $materialTextures = MaterialTexture::paginate(5, ['*'], 'texture_page');
         $materialSleeves = MaterialSleeve::paginate(5, ['*'], 'sleeve_page');
-        $materialSizes = MaterialSize::paginate(5, ['*'], 'size_page');
+        $materialSizes = MaterialSize::orderBy('sort_order', 'asc')->paginate(5, ['*'], 'size_page');
+        $allMaterialSizes = MaterialSize::orderBy('sort_order', 'asc')->get(); // For sort modal
         $services = Service::paginate(5, ['*'], 'service_page');
 
         return view('pages.owner.manage-data.products', compact(
@@ -29,6 +30,7 @@ class ManageProductsController extends Controller
             'materialTextures',
             'materialSleeves',
             'materialSizes',
+            'allMaterialSizes',
             'services',
         ));
     }

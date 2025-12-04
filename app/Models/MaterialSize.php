@@ -10,6 +10,7 @@ class MaterialSize extends Model
     protected $fillable = [
         'size_name',
         'extra_price',
+        'sort_order',
     ];
 
     protected $casts = [

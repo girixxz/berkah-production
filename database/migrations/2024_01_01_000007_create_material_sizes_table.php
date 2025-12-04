@@ -15,6 +15,7 @@ return new class extends Migration
             $table->id();
             $table->string('size_name', 100)->unique();
             $table->decimal('extra_price', 12, 2)->default(0);
+            $table->integer('sort_order')->comment('Order for size sorting (smaller first)');
             $table->timestamps();
         });
     }

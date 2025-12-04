@@ -751,6 +751,17 @@
                       focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary" />
                     </div>
 
+                    {{-- Customize Sort Order Button --}}
+                    <button @click="openModal = 'customizeSortSize'"
+                        class="cursor-pointer flex-shrink-0 whitespace-nowrap px-3 py-2 rounded-md
+                   bg-gray-400 text-white hover:bg-gray-500 text-sm text-center flex items-center gap-1"
+                        title="Customize Size Order">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
+                        </svg>
+                        Sort Order
+                    </button>
+
                     {{-- Add Items --}}
                     <button @click="openModal = 'addSize'"
                         class="cursor-pointer flex-shrink-0 w-18 whitespace-nowrap px-3 py-2 rounded-md
@@ -1396,6 +1407,42 @@
             </div>
         </div>
         <div x-show="openModal === 'editSize'" x-cloak x-init="@if (session('openModal') === 'editSize' && session('editSizeId')) editSize = {{ \App\Models\MaterialSize::find(session('editSizeId'))->toJson() }}; @endif"
+            x-data="{
+                allSizes: @js($allMaterialSizes->map(fn($s) => ['id' => $s->id, 'size_name' => $s->size_name, 'sort_order' => $s->sort_order])->values()->all()),
+                otherSizesAdjustments: '{}',
+                originalSortOrder: null,
+                handleSortOrderChange(newValue) {
+                    newValue = parseInt(newValue);
+                    
+                    if (!newValue || newValue < 1) return;
+                    
+                    // Store original if first change
+                    if (this.originalSortOrder === null) {
+                        this.originalSortOrder = this.editSize.sort_order;
+                    }
+                    
+                    const oldValue = this.originalSortOrder;
+                    const adjustments = {};
+                    
+                    // Skip if no real change
+                    if (oldValue === newValue) {
+                        this.otherSizesAdjustments = '{}';
+                        return;
+                    }
+                    
+                    // Logic: Semua size yang sort_order >= newValue akan +1
+                    // (kecuali size yang sedang diedit)
+                    this.allSizes.forEach(size => {
+                        if (size.id === this.editSize.id) return;
+                        
+                        if (size.sort_order >= newValue) {
+                            adjustments[size.id] = size.sort_order + 1;
+                        }
+                    });
+                    
+                    this.otherSizesAdjustments = JSON.stringify(adjustments);
+                }
+            }"
             class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 bg-opacity-50 backdrop-blur-xs transition-opacity px-4">
             <div @click.away="openModal=null" class="bg-white rounded-xl shadow-lg w-full max-w-lg">
                 <div class="flex justify-between items-center border-b border-gray-200 px-6 py-4">
@@ -1416,6 +1463,19 @@
                         @error('size_name', 'editSize')
                             <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                         @enderror
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Sort Order <span
+                                class="text-red-500">*</span></label>
+                        <input type="number" name="sort_order" x-model.number="editSize.sort_order" min="1"
+                            @input="handleSortOrderChange($event.target.value)"
+                            class="mt-1 w-full rounded-md px-4 py-2 text-sm border {{ $errors->editSize->has('sort_order') ? 'border-red-500 focus:border-red-500 focus:ring-red-200' : 'border-gray-200 focus:border-primary focus:ring-primary/20' }} focus:outline-none focus:ring-2 text-gray-700">
+
+                        @error('sort_order', 'editSize')
+                            <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                        @enderror
+                        <input type="hidden" name="other_sizes_adjustments" x-model="otherSizesAdjustments">
                     </div>
 
                     <div>
@@ -1556,6 +1616,8 @@
                     </form>
                 </div>
             </div>
+        </div>
+
         </div>
 
         {{-- Delete Material Category Modal --}}

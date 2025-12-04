@@ -17,6 +17,10 @@ class MaterialSizeController extends Controller
                 'extra_price' => 'required|numeric|min:0',
             ]);
 
+            // Auto-generate sort_order: max + 1
+            $maxSortOrder = MaterialSize::max('sort_order') ?? 0;
+            $validated['sort_order'] = $maxSortOrder + 1;
+
             MaterialSize::create($validated);
 
             // Clear cache
@@ -41,8 +45,21 @@ class MaterialSizeController extends Controller
             $validated = $request->validateWithBag('editSize', [
                 'size_name' => 'required|max:255|unique:material_sizes,size_name,' . $materialSize->id,
                 'extra_price' => 'required|numeric|min:0',
+                'sort_order' => 'required|integer|min:1',
             ]);
 
+            // Handle other sizes adjustments if provided
+            if ($request->has('other_sizes_adjustments') && !empty($request->other_sizes_adjustments)) {
+                $adjustments = json_decode($request->other_sizes_adjustments, true);
+                
+                if (is_array($adjustments) && !empty($adjustments)) {
+                    foreach ($adjustments as $sizeId => $newSortOrder) {
+                        MaterialSize::where('id', $sizeId)->update(['sort_order' => $newSortOrder]);
+                    }
+                }
+            }
+
+            // Update the main size
             $materialSize->update($validated);
 
             // Clear cache
