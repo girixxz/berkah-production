@@ -125,7 +125,30 @@ class WorkOrderController extends Controller
      */
     public function manage($orderId)
     {
-        // Load order with all necessary relationships
+        // Find order first without eager loading
+        $order = Order::findOrFail($orderId);
+
+        // Check if order is in WIP status or higher (including finished)
+        if (!in_array($order->production_status, ['wip', 'finished'])) {
+            return redirect()->route('admin.work-orders.index')
+                ->with('error', 'Order must be in WIP or Finished status to manage work orders');
+        }
+
+        // Auto-create work orders with status='pending' if not exist
+        // Load design variants first
+        $order->load('designVariants');
+        foreach ($order->designVariants as $designVariant) {
+            if (!$designVariant->workOrder) {
+                \App\Models\WorkOrder::create([
+                    'order_id' => $order->id,
+                    'design_variant_id' => $designVariant->id,
+                    'status' => 'pending',
+                ]);
+            }
+        }
+
+        // FRESH LOAD: Load all necessary relationships from database
+        // This ensures we get the latest data after any Order edits (qty, sleeve changes)
         $order = Order::with([
             'customer',
             'productCategory',
@@ -147,32 +170,6 @@ class WorkOrderController extends Controller
             'orderItems.size',
             'orderItems.sleeve'
         ])->findOrFail($orderId);
-
-        // Check if order is in WIP status or higher (including finished)
-        if (!in_array($order->production_status, ['wip', 'finished'])) {
-            return redirect()->route('admin.work-orders.index')
-                ->with('error', 'Order must be in WIP or Finished status to manage work orders');
-        }
-
-        // Auto-create work orders with status='pending' if not exist
-        foreach ($order->designVariants as $designVariant) {
-            if (!$designVariant->workOrder) {
-                \App\Models\WorkOrder::create([
-                    'order_id' => $order->id,
-                    'design_variant_id' => $designVariant->id,
-                    'status' => 'pending',
-                ]);
-            }
-        }
-
-        // Reload order with work orders AND all relationships
-        $order->load([
-            'designVariants.workOrder.cutting',
-            'designVariants.workOrder.printing',
-            'designVariants.workOrder.printingPlacement',
-            'designVariants.workOrder.sewing',
-            'designVariants.workOrder.packing',
-        ]);
 
         // Load all master data for dropdowns
         $masterData = [
