@@ -9,7 +9,7 @@
         }
         
         body {
-            font-family: 'DejaVu Sans', sans-serif;
+            font-family: serif;
             margin: 0;
             padding: 0;
         }

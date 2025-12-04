@@ -851,16 +851,16 @@ class WorkOrderController extends Controller
             ];
         })->values();
 
-        // Generate PDF using Spatie Laravel PDF
-        return \Spatie\LaravelPdf\Facades\Pdf::view('pages.admin.work-orders.partials.pdf-template', [
+        // Generate PDF using DomPDF
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('pages.admin.work-orders.partials.pdf-template', [
             'order' => $order,
             'workOrder' => $workOrder,
             'designVariant' => $designVariant,
             'displaySleeves' => $displaySleeves,
             'displaySizes' => $displaySizes,
             'orderItemsData' => $orderItemsData,
-        ])
-        ->format('a4')
-        ->name("WO-{$order->invoice->invoice_no}-{$designVariant->design_name}.pdf");
+        ]);
+        
+        return $pdf->setPaper('a4', 'portrait')->download("WO-{$order->invoice->invoice_no}-{$designVariant->design_name}.pdf");
     }
 }
