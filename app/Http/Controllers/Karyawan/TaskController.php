@@ -109,6 +109,7 @@ class TaskController extends Controller
         $order = \App\Models\Order::with([
             'invoice',
             'customer',
+            'sale',
             'productCategory',
             'materialCategory',
             'materialTexture',
@@ -124,10 +125,41 @@ class TaskController extends Controller
             'designVariants.workOrder.sewing.sewingLabel',
             'designVariants.workOrder.packing.plasticPacking',
             'designVariants.workOrder.packing.sticker',
+            'orderItems.designVariant',
             'orderItems.size',
             'orderItems.sleeve',
+            'extraServices.service',
         ])->findOrFail($orderId);
 
-        return view('pages.karyawan.view-work-order', compact('order'));
+        // Group order items by design variant and sleeve (same as OrderController show method)
+        $designVariants = [];
+        
+        foreach ($order->orderItems as $item) {
+            $designName = $item->designVariant->design_name;
+            $sleeveId = $item->sleeve_id;
+            $sleeveName = $item->sleeve->sleeve_name;
+            
+            if (!isset($designVariants[$designName])) {
+                $designVariants[$designName] = [];
+            }
+            
+            if (!isset($designVariants[$designName][$sleeveId])) {
+                // Calculate base price from first item (unit_price - extra_price)
+                $basePrice = $item->unit_price - ($item->size->extra_price ?? 0);
+                
+                $designVariants[$designName][$sleeveId] = [
+                    'sleeve_name' => $sleeveName,
+                    'base_price' => $basePrice,
+                    'items' => []
+                ];
+            }
+            
+            $designVariants[$designName][$sleeveId]['items'][] = $item;
+        }
+
+        return view('pages.karyawan.view-work-order', [
+            'order' => $order,
+            'designVariants' => $designVariants
+        ]);
     }
 }
