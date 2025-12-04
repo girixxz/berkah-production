@@ -423,6 +423,16 @@ class WorkOrderController extends Controller
         try {
             DB::beginTransaction();
 
+            // Log uploaded files for debugging
+            Log::info('Work Order Create - Uploaded Files', [
+                'has_mockup' => $request->hasFile('mockup_img'),
+                'has_cutting' => $request->hasFile('custom_size_chart_img'),
+                'has_printing' => $request->hasFile('printing_detail_img'),
+                'has_placement' => $request->hasFile('placement_detail_img'),
+                'has_sewing' => $request->hasFile('sewing_detail_img'),
+                'has_hangtag' => $request->hasFile('hangtag_img'),
+            ]);
+
             // Find or create work order
             $workOrder = \App\Models\WorkOrder::firstOrCreate(
                 [
@@ -640,6 +650,18 @@ class WorkOrderController extends Controller
 
             // ✅ AUTO-CHECK: Update order work_order_status if all designs completed
             $statusUpdated = $this->checkAndUpdateOrderWorkOrderStatus($validated['order_id']);
+
+            // Log saved data
+            $workOrder->refresh();
+            Log::info('Work Order Saved', [
+                'work_order_id' => $workOrder->id,
+                'mockup_img' => $workOrder->mockup_img_url,
+                'cutting_img' => $workOrder->cutting->custom_size_chart_img_url ?? null,
+                'printing_img' => $workOrder->printing->detail_img_url ?? null,
+                'placement_img' => $workOrder->printingPlacement->detail_img_url ?? null,
+                'sewing_img' => $workOrder->sewing->detail_img_url ?? null,
+                'packing_img' => $workOrder->packing->hangtag_img_url ?? null,
+            ]);
 
             DB::commit();
 
