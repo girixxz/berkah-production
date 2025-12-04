@@ -1026,17 +1026,17 @@
             class="fixed inset-0 z-50">
             
             {{-- Background Overlay --}}
-            <div x-show="showImageModal" @click="showImageModal = false" class="fixed inset-0 bg-black/50 bg-opacity-50 backdrop-blur-xs transition-opacity"></div>
+            <div x-show="showImageModal" @click="showImageModal = false; currentImage = ''" class="fixed inset-0 bg-black/50 bg-opacity-50 backdrop-blur-xs transition-opacity"></div>
             
             {{-- Modal Panel --}}
             <div class="flex items-center justify-center min-h-screen p-4">
-                <div @click.stop class="relative max-w-4xl w-full">
-                <button @click="showImageModal = false" class="absolute -top-10 right-0 text-white hover:text-gray-300">
-                    <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                <div @click.stop class="relative max-w-4xl w-full flex justify-center">
+                    <button @click="showImageModal = false; currentImage = ''" class="absolute -top-10 right-0 text-white hover:text-gray-300">
+                        <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
                         </svg>
                     </button>
-                    <img :src="currentImage" class="w-full h-auto rounded-lg shadow-2xl" alt="Payment proof">
+                    <img :src="currentImage" class="max-h-[85vh] w-auto max-w-full rounded-lg shadow-2xl object-contain" alt="Payment proof">
                 </div>
             </div>
         </div>
