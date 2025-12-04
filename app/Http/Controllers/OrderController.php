@@ -804,26 +804,16 @@ class OrderController extends Controller
         });
         $totalPaid = $allApprovedPayments->sum('amount');
 
-        // Generate PDF using Spatie Laravel PDF
-        return \Spatie\LaravelPdf\Facades\Pdf::view('pages.admin.orders.invoice-pdf', [
+        // Generate PDF using DomPDF (simple, no Chrome required)
+        $pdf = Pdf::loadView('pages.admin.orders.invoice-pdf', [
             'order' => $order,
             'designVariants' => $designVariants,
             'approvedPayments' => $approvedPayments,
             'totalPaid' => $totalPaid,
-        ])
-        ->withBrowsershot(function ($browsershot) {
-            $browsershot->setChromePath('/usr/bin/google-chrome-stable')
-                        ->noSandbox()
-                        ->setOption('args', [
-                            '--no-sandbox',
-                            '--disable-setuid-sandbox',
-                            '--disable-dev-shm-usage',
-                            '--disable-gpu',
-                            '--single-process'
-                        ]);
-        })
-        ->format('a4')
-        ->name("Invoice-{$order->invoice->invoice_no}.pdf");
+        ]);
+        
+        return $pdf->setPaper('a4', 'portrait')
+                   ->download("Invoice-{$order->invoice->invoice_no}.pdf");
     }
 
     /**
