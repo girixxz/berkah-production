@@ -814,7 +814,13 @@ class OrderController extends Controller
         ->withBrowsershot(function ($browsershot) {
             $browsershot->setChromePath('/usr/bin/google-chrome-stable')
                         ->noSandbox()
-                        ->setOption('args', ['--no-sandbox', '--disable-setuid-sandbox']);
+                        ->setOption('args', [
+                            '--no-sandbox',
+                            '--disable-setuid-sandbox',
+                            '--disable-dev-shm-usage',
+                            '--disable-gpu',
+                            '--single-process'
+                        ]);
         })
         ->format('a4')
         ->name("Invoice-{$order->invoice->invoice_no}.pdf");
