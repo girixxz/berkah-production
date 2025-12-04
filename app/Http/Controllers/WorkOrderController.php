@@ -7,9 +7,157 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Http\UploadedFile;
 
 class WorkOrderController extends Controller
 {
+    /**
+     * Compress image if larger than 200KB
+     * 
+     * @param UploadedFile $file
+     * @return UploadedFile|null
+     */
+    private function compressImage(UploadedFile $file)
+    {
+        $originalSize = $file->getSize();
+        $originalSizeKB = round($originalSize / 1024, 2);
+        
+        // Check if file size is greater than 200KB (200 * 1024 bytes)
+        if ($originalSize <= 200 * 1024) {
+            Log::info("Image compression skipped - file already small", [
+                'filename' => $file->getClientOriginalName(),
+                'size_kb' => $originalSizeKB
+            ]);
+            return $file; // No compression needed
+        }
+
+        Log::info("Starting image compression", [
+            'filename' => $file->getClientOriginalName(),
+            'original_size_kb' => $originalSizeKB
+        ]);
+
+        $extension = strtolower($file->getClientOriginalExtension());
+        $originalPath = $file->getRealPath();
+        
+        // Load image based on type
+        $image = null;
+        switch ($extension) {
+            case 'jpg':
+            case 'jpeg':
+                $image = @imagecreatefromjpeg($originalPath);
+                break;
+            case 'png':
+                $image = @imagecreatefrompng($originalPath);
+                break;
+            case 'gif':
+                $image = @imagecreatefromgif($originalPath);
+                break;
+            case 'webp':
+                $image = @imagecreatefromwebp($originalPath);
+                break;
+            default:
+                Log::warning("Unsupported image format", ['extension' => $extension]);
+                return $file; // Unsupported format, return original
+        }
+
+        if (!$image) {
+            Log::warning("Failed to load image with GD", ['filename' => $file->getClientOriginalName()]);
+            return $file; // Failed to load image, return original
+        }
+
+        // Get original dimensions
+        $width = imagesx($image);
+        $height = imagesy($image);
+
+        // For PNG with transparency, convert to white background
+        if ($extension === 'png') {
+            // Create a new true color image
+            $newImage = imagecreatetruecolor($width, $height);
+            // Fill with white background
+            $white = imagecolorallocate($newImage, 255, 255, 255);
+            imagefill($newImage, 0, 0, $white);
+            // Copy original image onto white background
+            imagecopy($newImage, $image, 0, 0, 0, 0, $width, $height);
+            // Don't destroy yet, will be destroyed at the end
+            $image = $newImage;
+        }
+
+        // Save as JPEG for better compression (convert PNG/GIF/WebP to JPEG)
+        $tempPath = sys_get_temp_dir() . '/' . uniqid('compressed_') . '.jpg';
+        $finalExtension = 'jpg';
+
+        // Try different quality levels until we get under 200KB
+        $quality = 85;
+        $compressed = false;
+        $attempts = 0;
+        $maxAttempts = 10;
+
+        while ($quality >= 30 && !$compressed && $attempts < $maxAttempts) {
+            $attempts++;
+            
+            // Save as JPEG with current quality
+            $result = @imagejpeg($image, $tempPath, $quality);
+            
+            if (!$result) {
+                Log::warning("Failed to save compressed image", [
+                    'attempt' => $attempts,
+                    'quality' => $quality
+                ]);
+                break;
+            }
+
+            // Check if compressed size is under 200KB
+            if (file_exists($tempPath) && filesize($tempPath) <= 200 * 1024) {
+                $compressed = true;
+                Log::info("Compression successful at quality {$quality}", [
+                    'attempt' => $attempts,
+                    'size_kb' => round(filesize($tempPath) / 1024, 2)
+                ]);
+            } else {
+                $quality -= 5; // Reduce quality more gradually
+            }
+        }
+
+        // Note: In PHP 8+, GdImage objects are automatically destroyed when they go out of scope
+        // No need to manually call imagedestroy() - it's deprecated and will be removed
+
+        // If compression successful, create new UploadedFile
+        if ($compressed && file_exists($tempPath)) {
+            $compressedSize = filesize($tempPath);
+            $compressedSizeKB = round($compressedSize / 1024, 2);
+            $reduction = round((($originalSize - $compressedSize) / $originalSize) * 100, 2);
+            
+            Log::info("Image compression successful", [
+                'filename' => $file->getClientOriginalName(),
+                'original_size_kb' => $originalSizeKB,
+                'compressed_size_kb' => $compressedSizeKB,
+                'reduction_percent' => $reduction . '%',
+                'final_quality' => $quality,
+                'converted_to' => 'jpg'
+            ]);
+            
+            // Create new UploadedFile from compressed image
+            $compressedFile = new UploadedFile(
+                $tempPath,
+                pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME) . '.jpg',
+                'image/jpeg',
+                null,
+                true // Mark as test file to avoid "file not found" errors
+            );
+            
+            return $compressedFile;
+        }
+
+        Log::warning("Image compression failed - returning original", [
+            'filename' => $file->getClientOriginalName(),
+            'original_size_kb' => $originalSizeKB,
+            'attempts' => $attempts
+        ]);
+
+        // If all else fails, return original
+        return $file;
+    }
+
     /**
      * Display a listing of WIP orders for work order management.
      */
@@ -198,23 +346,23 @@ class WorkOrderController extends Controller
         $validated = $request->validate([
             'order_id' => 'required|integer|exists:orders,id',
             'design_variant_id' => 'required|integer|exists:design_variants,id',
-            'mockup_img' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:5120',
+            'mockup_img' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:25600',
             
             // Cutting - SEMUA REQUIRED!
             'cutting_pattern_id' => 'required|integer|exists:cutting_patterns,id',
             'chain_cloth_id' => 'required|integer|exists:chain_cloths,id',
             'rib_size_id' => 'required|integer|exists:rib_sizes,id',
-            'custom_size_chart_img' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:5120',
+            'custom_size_chart_img' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:25600',
             'cutting_notes' => 'nullable|string|max:1000',
             
             // Printing - SEMUA REQUIRED!
             'print_ink_id' => 'required|integer|exists:print_inks,id',
             'finishing_id' => 'required|integer|exists:finishings,id',
-            'printing_detail_img' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:5120',
+            'printing_detail_img' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:25600',
             'printing_notes' => 'nullable|string|max:1000',
             
             // Printing Placement - IMG OPTIONAL (nullable)
-            'placement_detail_img' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:5120',
+            'placement_detail_img' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:25600',
             'placement_notes' => 'nullable|string|max:1000',
             
             // Sewing - SEMUA REQUIRED!
@@ -222,13 +370,13 @@ class WorkOrderController extends Controller
             'underarm_overdeck_id' => 'required|integer|exists:underarm_overdecks,id',
             'side_split_id' => 'required|integer|exists:side_splits,id',
             'sewing_label_id' => 'required|integer|exists:sewing_labels,id',
-            'sewing_detail_img' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:5120',
+            'sewing_detail_img' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:25600',
             'sewing_notes' => 'nullable|string|max:1000',
             
             // Packing - SEMUA REQUIRED!
             'plastic_packing_id' => 'required|integer|exists:plastic_packings,id',
             'sticker_id' => 'required|integer|exists:stickers,id',
-            'hangtag_img' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:5120',
+            'hangtag_img' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:25600',
             'packing_notes' => 'nullable|string|max:1000',
         ], [
             // Custom error messages in Indonesian
@@ -292,6 +440,8 @@ class WorkOrderController extends Controller
                 }
                 
                 $file = $request->file('mockup_img');
+                // Compress image if larger than 200KB
+                $file = $this->compressImage($file);
                 $filename = time() . '_mockup_' . uniqid() . '.' . $file->getClientOriginalExtension();
                 $file->storeAs('work-orders/mockup', $filename, 'local');
                 
@@ -330,6 +480,8 @@ class WorkOrderController extends Controller
                 }
                 
                 $file = $request->file('custom_size_chart_img');
+                // Compress image if larger than 200KB
+                $file = $this->compressImage($file);
                 $filename = time() . '_cutting_' . uniqid() . '.' . $file->getClientOriginalExtension();
                 $file->storeAs('work-orders/cutting', $filename, 'local');
                 $cuttingData['custom_size_chart_img_url'] = 'work-orders/cutting/' . $filename;
@@ -363,6 +515,8 @@ class WorkOrderController extends Controller
                 }
                 
                 $file = $request->file('printing_detail_img');
+                // Compress image if larger than 200KB
+                $file = $this->compressImage($file);
                 $filename = time() . '_printing_' . uniqid() . '.' . $file->getClientOriginalExtension();
                 $file->storeAs('work-orders/printing', $filename, 'local');
                 $printingData['detail_img_url'] = 'work-orders/printing/' . $filename;
@@ -394,6 +548,8 @@ class WorkOrderController extends Controller
                 }
                 
                 $file = $request->file('placement_detail_img');
+                // Compress image if larger than 200KB
+                $file = $this->compressImage($file);
                 $filename = time() . '_placement_' . uniqid() . '.' . $file->getClientOriginalExtension();
                 $file->storeAs('work-orders/placement', $filename, 'local');
                 $placementData['detail_img_url'] = 'work-orders/placement/' . $filename;
@@ -429,6 +585,8 @@ class WorkOrderController extends Controller
                 }
                 
                 $file = $request->file('sewing_detail_img');
+                // Compress image if larger than 200KB
+                $file = $this->compressImage($file);
                 $filename = time() . '_sewing_' . uniqid() . '.' . $file->getClientOriginalExtension();
                 $file->storeAs('work-orders/sewing', $filename, 'local');
                 $sewingData['detail_img_url'] = 'work-orders/sewing/' . $filename;
@@ -462,6 +620,8 @@ class WorkOrderController extends Controller
                 }
                 
                 $file = $request->file('hangtag_img');
+                // Compress image if larger than 200KB
+                $file = $this->compressImage($file);
                 $filename = time() . '_hangtag_' . uniqid() . '.' . $file->getClientOriginalExtension();
                 $file->storeAs('work-orders/packing', $filename, 'local');
                 $packingData['hangtag_img_url'] = 'work-orders/packing/' . $filename;
