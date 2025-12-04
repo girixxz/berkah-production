@@ -364,7 +364,7 @@
                                 @endphp
                                 <tr class="border-t border-gray-200 hover:bg-gray-50" x-data="{ showImageModal: false }"
                                     x-show="matchesSearch($el)"
-                                    data-invoice="{{ $order->invoice->invoice_number ?? '' }}"
+                                    data-invoice="{{ $order->invoice->invoice_no ?? '' }}"
                                     data-customer="{{ $order->customer->customer_name ?? '' }}"
                                     data-product="{{ $order->productCategory->product_name ?? '' }}">
                                     {{-- Mockup Column --}}
@@ -407,7 +407,7 @@
                                             <div>
                                                 <span class="inline-block w-16 text-xs text-gray-500">INVOICE</span>
                                                 <span class="text-xs text-gray-500">:</span>
-                                                <span class="ml-1 text-sm text-gray-700">{{ $order->invoice->invoice_number ?? 'N/A' }}</span>
+                                                <span class="ml-1 text-sm text-gray-700">{{ $order->invoice->invoice_no ?? 'N/A' }}</span>
                                             </div>
                                             
                                             <div>
@@ -546,7 +546,7 @@
                         
                         <div x-data="{ showImageModal: false }" class="bg-white border border-gray-200 rounded-lg p-4 shadow-sm"
                              x-show="matchesSearch($el)"
-                             data-invoice="{{ $order->invoice->invoice_number ?? '' }}"
+                             data-invoice="{{ $order->invoice->invoice_no ?? '' }}"
                              data-customer="{{ $order->customer->customer_name ?? '' }}"
                              data-product="{{ $order->productCategory->product_name ?? '' }}">
                             {{-- Header: Customer Name & Status --}}
@@ -558,7 +558,7 @@
                                             <span class="text-xs font-semibold text-red-600 italic">(HIGH)</span>
                                         @endif
                                     </h3>
-                                    <p class="text-xs text-gray-500 mt-0.5">{{ $order->invoice->invoice_number ?? 'N/A' }}</p>
+                                    <p class="text-xs text-gray-500 mt-0.5">{{ $order->invoice->invoice_no ?? 'N/A' }}</p>
                                 </div>
                                 <div class="flex flex-col items-end gap-1">
                                     @if ($order->production_status === 'wip')
