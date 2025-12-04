@@ -172,6 +172,21 @@ class CalendarController extends Controller
         $prevMonth = $currentDate->copy()->subMonth();
         $nextMonth = $currentDate->copy()->addMonth();
 
+        // If AJAX request, return only the calendar section
+        if ($request->ajax() || $request->wantsJson() || $request->header('X-Requested-With') === 'XMLHttpRequest') {
+            return view('pages.calendar', compact(
+                'productionStages',
+                'selectedStage',
+                'selectedStageId',
+                'filter',
+                'mode',
+                'currentDate',
+                'calendar',
+                'prevMonth',
+                'nextMonth'
+            ));
+        }
+
         return view('pages.calendar', compact(
             'productionStages',
             'selectedStage',

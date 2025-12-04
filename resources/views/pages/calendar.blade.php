@@ -40,6 +40,71 @@
         showModal: false,
         modalDate: '',
         modalTasks: [],
+        isLoading: false,
+        selectedFilter: '{{ $filter ?? 'create' }}',
+        // Select dropdown state
+        selectOpen: false,
+        selectOptions: [
+            { value: 'create', name: 'Order by Create' },
+            { value: 'deadline', name: 'Order by Deadline' },
+            @foreach ($productionStages as $stage)
+                { value: 'stage_{{ $stage->id }}', name: '{{ $stage->stage_name }}' },
+            @endforeach
+        ],
+        selectSelected: null,
+        init() {
+            // Initialize selected option
+            this.selectSelected = this.selectOptions.find(o => o.value === this.selectedFilter) || null;
+        },
+        selectOption(option) {
+            this.selectSelected = option;
+            this.selectedFilter = option.value;
+            this.selectOpen = false;
+            // Trigger AJAX filter
+            this.applyFilter(option.value);
+        },
+        applyFilter(filterValue) {
+            this.isLoading = true;
+            this.selectedFilter = filterValue;
+            
+            // Build URL with query params
+            const params = new URLSearchParams();
+            params.set('filter', filterValue);
+            params.set('month', '{{ request('month', $currentDate->month) }}');
+            params.set('year', '{{ request('year', $currentDate->year) }}');
+            
+            const url = '{{ route('calendar') }}?' + params.toString();
+            
+            // Update URL without reload
+            window.history.pushState({}, '', url);
+            
+            // Fetch content via AJAX with loading bar
+            NProgress.start();
+            
+            fetch(url, {
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+            .then(response => response.text())
+            .then(html => {
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(html, 'text/html');
+                const newSection = doc.getElementById('calendar-section');
+                
+                if (newSection) {
+                    document.getElementById('calendar-section').innerHTML = newSection.innerHTML;
+                }
+                
+                this.isLoading = false;
+                NProgress.done();
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                this.isLoading = false;
+                NProgress.done();
+            });
+        },
         openModal(date, tasks) {
             this.modalDate = date;
             this.modalTasks = tasks;
@@ -49,95 +114,62 @@
 
         {{-- Header --}}
         <div class="p-2 flex-shrink-0 bg-white border-b border-gray-200">
-            <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-                {{-- Left Side: Filter --}}
-                <div class="flex-1 max-w-md">
-                    <form method="GET" action="{{ route('calendar') }}" id="filterForm">
-                        <input type="hidden" name="month" value="{{ request('month', $currentDate->month) }}">
-                        <input type="hidden" name="year" value="{{ request('year', $currentDate->year) }}">
-                        
-                        {{-- Custom Select Component --}}
-                        <div x-data="{
-                            open: false,
-                            options: [
-                                { value: 'create', name: 'Order by Create' },
-                                { value: 'deadline', name: 'Order by Deadline' },
-                                @foreach ($productionStages as $stage)
-                                    { value: 'stage_{{ $stage->id }}', name: '{{ $stage->stage_name }}' },
-                                @endforeach
-                            ],
-                            selected: null,
-                            selectedValue: '{{ $filter ?? 'create' }}',
-                            
-                            init() {
-                                this.selected = this.options.find(o => o.value === this.selectedValue) || null;
-                            },
-                            
-                            select(option) {
-                                this.selected = option;
-                                this.selectedValue = option.value;
-                                this.open = false;
-                                // Auto submit form using nextTick to ensure value is updated
-                                this.$nextTick(() => {
-                                    document.getElementById('filterForm').submit();
-                                });
-                            }
-                        }" class="relative w-full">
-                            {{-- Trigger --}}
-                            <button type="button" @click="open = !open"
-                                class="w-full flex justify-between items-center rounded-md border border-gray-200 px-3 py-2 text-sm text-gray-700 bg-white
-                                       focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors">
-                                <span x-text="selected ? selected.name : 'Select Filter'"
-                                    :class="!selected ? 'text-gray-400' : 'text-gray-900'"></span>
-                                <svg class="w-4 h-4 text-gray-400 transition-transform" :class="open && 'rotate-180'" fill="none"
-                                    stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-                                </svg>
-                            </button>
+            <div class="flex flex-col gap-3 sm:gap-4 items-center">
+                <div class="w-full sm:w-120">
+                    {{-- Custom Select Component (Hard-write mirip select-form.blade.php) --}}
+                    <div class="relative w-full">
+                        {{-- Trigger --}}
+                        <button type="button" @click="selectOpen = !selectOpen"
+                            class="w-full flex justify-between items-center rounded-md border border-gray-200 px-3 py-2 text-sm text-gray-700 bg-white
+                                   focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors">
+                            <span x-text="selectSelected ? selectSelected.name : '-- Select Filter --'"
+                                :class="!selectSelected ? 'text-gray-400' : 'text-gray-900'"></span>
+                            <svg class="w-4 h-4 text-gray-400 transition-transform" :class="selectOpen && 'rotate-180'" fill="none"
+                                stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                            </svg>
+                        </button>
 
-                            {{-- Hidden input --}}
-                            <input type="hidden" name="filter" x-model="selectedValue">
-
-                            {{-- Dropdown --}}
-                            <div x-show="open" @click.away="open = false" x-cloak x-transition:enter="transition ease-out duration-100"
-                                x-transition:enter-start="opacity-0 scale-95" x-transition:enter-end="opacity-100 scale-100"
-                                x-transition:leave="transition ease-in duration-75" x-transition:leave-start="opacity-100 scale-100"
-                                x-transition:leave-end="opacity-0 scale-95"
-                                class="absolute z-20 mt-1 w-full bg-white border border-gray-200 rounded-md shadow-lg">
-                                <ul class="max-h-60 overflow-y-auto py-1">
-                                    <template x-for="option in options" :key="option.value">
-                                        <li @click="select(option)"
-                                            class="px-4 py-2 cursor-pointer text-sm hover:bg-primary/5 transition-colors"
-                                            :class="{ 'bg-primary/10 font-medium text-primary': selected && selected.value === option.value }">
-                                            <span x-text="option.name"></span>
-                                        </li>
-                                    </template>
-                                </ul>
-                            </div>
+                        {{-- Dropdown --}}
+                        <div x-show="selectOpen" @click.away="selectOpen = false" x-cloak 
+                            x-transition:enter="transition ease-out duration-100"
+                            x-transition:enter-start="opacity-0 scale-95" 
+                            x-transition:enter-end="opacity-100 scale-100"
+                            x-transition:leave="transition ease-in duration-75" 
+                            x-transition:leave-start="opacity-100 scale-100"
+                            x-transition:leave-end="opacity-0 scale-95"
+                            class="absolute z-20 mt-1 w-full bg-white border border-gray-200 rounded-md shadow-lg">
+                            <ul class="max-h-60 overflow-y-auto py-1">
+                                <template x-for="option in selectOptions" :key="option.value">
+                                    <li @click="selectOption(option)"
+                                        class="px-4 py-2 cursor-pointer text-sm hover:bg-primary/5 transition-colors"
+                                        :class="{ 'bg-primary/10 font-medium text-primary': selectSelected && selectSelected.value === option.value }">
+                                        <span x-text="option.name"></span>
+                                    </li>
+                                </template>
+                            </ul>
                         </div>
-                    </form>
+                    </div>
                 </div>
-
-                {{-- Right Side: Month Navigation + Reset --}}
-                <div class="flex items-center gap-3 flex-wrap justify-end">
+                <div class="flex items-center gap-3 justify-center">
                     {{-- Previous Month --}}
                     <a href="{{ route('calendar', ['filter' => $filter, 'month' => $prevMonth->month, 'year' => $prevMonth->year]) }}" 
-                       class="p-2 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer">
+                       class="p-2 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer flex-shrink-0">
                         <svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
                         </svg>
                     </a>
 
                     {{-- Current Month/Year Display --}}
-                    <div class="px-4 py-2 text-center min-w-[150px]">
-                        <span class="text-base font-semibold text-gray-900">
+                    <div class="px-3 sm:px-4 py-2 text-center min-w-[140px] sm:min-w-[150px]">
+                        <span class="text-sm sm:text-base font-semibold text-gray-900 whitespace-nowrap">
                             {{ $currentDate->format('F Y') }}
                         </span>
                     </div>
 
                     {{-- Next Month --}}
                     <a href="{{ route('calendar', ['filter' => $filter, 'month' => $nextMonth->month, 'year' => $nextMonth->year]) }}" 
-                       class="p-2 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer">
+                       class="p-2 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer flex-shrink-0">
                         <svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
                         </svg>
@@ -145,15 +177,16 @@
 
                     {{-- Reset Button --}}
                     <a href="{{ route('calendar', ['filter' => $filter]) }}" 
-                       class="px-4 py-2 bg-primary hover:bg-primary-dark text-white text-sm font-medium rounded-lg transition-colors cursor-pointer">
+                       class="px-3 sm:px-4 py-2 bg-primary hover:bg-primary-dark text-white text-sm font-medium rounded-lg transition-colors cursor-pointer flex-shrink-0">
                         Reset
                     </a>
                 </div>
             </div>
         </div>
 
-        {{-- Calendar Grid --}}
-        <div class="calendar-wrapper flex-1 overflow-hidden flex flex-col">
+        {{-- Calendar Section (for AJAX reload) --}}
+        <section id="calendar-section" class="flex-1 overflow-hidden flex flex-col">
+            <div id="calendar-wrapper" class="calendar-wrapper flex-1 overflow-hidden flex flex-col" :class="{ 'opacity-50 pointer-events-none': isLoading }">
             <div class="calendar-grid flex-1 flex flex-col overflow-hidden shadow-sm">
                 {{-- Calendar Header (Days of Week) --}}
                 <div class="grid grid-cols-7 bg-primary-light border-y border-gray-300">
@@ -208,7 +241,8 @@
                                                         $separatorClass = 'text-gray-600';
                                                     }
                                                 @endphp
-                                                <div class="px-1.5 py-0.5 rounded border {{ $bgClass }} {{ $borderClass }} text-[9px] font-medium">
+                                                <a href="{{ route('karyawan.task.work-order', ['order' => $orderStage->order->id]) }}" 
+                                                    class="block px-1.5 py-0.5 rounded border {{ $bgClass }} {{ $borderClass }} text-[9px] font-medium cursor-pointer hover:opacity-80 transition-opacity">
                                                     <div class="flex items-center justify-between gap-1">
                                                         <div class="flex items-center gap-1 {{ $textClass }} flex-1 min-w-0">
                                                             <span class="font-semibold truncate">
@@ -231,7 +265,7 @@
                                                             <span class="text-gray-500 font-bold italic flex-shrink-0">DONE</span>
                                                         @endif
                                                     </div>
-                                                </div>
+                                                </a>
                                             @endforeach
 
                                             {{-- View All button if more than 4 tasks --}}
@@ -262,7 +296,8 @@
                     @endforeach
                 </div>
             </div>
-        </div>
+        </section>
+        {{-- End Calendar Section --}}
 
         {{-- Modal - Show All Tasks for Selected Date --}}
         <div x-show="showModal" x-cloak x-transition.opacity
