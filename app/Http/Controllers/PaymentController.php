@@ -172,7 +172,7 @@ class PaymentController extends Controller
         try {
             $validated = $request->validate([
                 'invoice_id' => 'required|exists:invoices,id',
-                'payment_method' => 'required|in:tranfer,cash',
+                'payment_method' => 'required|in:transfer,cash',
                 'payment_type' => 'required|in:dp,repayment,full_payment',
                 'amount' => 'required|numeric|min:1',
                 'notes' => 'nullable|string|max:1000',

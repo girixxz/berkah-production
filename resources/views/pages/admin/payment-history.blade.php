@@ -498,7 +498,7 @@
                                     <div class="flex items-center gap-1.5 flex-wrap">
                                         @php
                                             $methodClass =
-                                                $payment->payment_method === 'tranfer'
+                                                $payment->payment_method === 'transfer'
                                                     ? 'bg-blue-100 text-blue-800'
                                                     : 'bg-purple-100 text-purple-800';
                                             $typeClasses = [

@@ -1337,7 +1337,7 @@
                                 <div x-data="{
                                     open: false,
                                     options: [
-                                        { value: 'tranfer', name: 'Transfer' },
+                                        { value: 'transfer', name: 'Transfer' },
                                         { value: 'cash', name: 'Cash' }
                                     ],
                                     selected: null,
