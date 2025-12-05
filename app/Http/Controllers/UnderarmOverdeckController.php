@@ -13,6 +13,10 @@ class UnderarmOverdeckController extends Controller
         try {
             $validated = $request->validateWithBag('addUnderarmOverdeck', [
                 'name' => 'required|max:100|unique:underarm_overdecks,name',
+            ], [
+                'name.required' => 'Underarm Overdeck name is required.',
+                'name.max' => 'Underarm Overdeck name must not exceed 100 characters.',
+                'name.unique' => 'This underarm overdeck name already exists.',
             ]);
 
             UnderarmOverdeck::create($validated);
@@ -37,6 +41,10 @@ class UnderarmOverdeckController extends Controller
         try {
             $validated = $request->validateWithBag('editUnderarmOverdeck', [
                 'name' => 'required|max:100|unique:underarm_overdecks,name,' . $underarmOverdeck->id,
+            ], [
+                'name.required' => 'Underarm Overdeck name is required.',
+                'name.max' => 'Underarm Overdeck name must not exceed 100 characters.',
+                'name.unique' => 'This underarm overdeck name already exists.',
             ]);
 
             $underarmOverdeck->update(array_filter($validated));

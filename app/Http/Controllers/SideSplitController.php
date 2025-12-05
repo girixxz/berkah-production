@@ -13,6 +13,10 @@ class SideSplitController extends Controller
         try {
             $validated = $request->validateWithBag('addSideSplit', [
                 'name' => 'required|max:100|unique:side_splits,name',
+            ], [
+                'name.required' => 'Side Split name is required.',
+                'name.max' => 'Side Split name must not exceed 100 characters.',
+                'name.unique' => 'This side split name already exists.',
             ]);
 
             SideSplit::create($validated);
@@ -37,6 +41,10 @@ class SideSplitController extends Controller
         try {
             $validated = $request->validateWithBag('editSideSplit', [
                 'name' => 'required|max:100|unique:side_splits,name,' . $sideSplit->id,
+            ], [
+                'name.required' => 'Side Split name is required.',
+                'name.max' => 'Side Split name must not exceed 100 characters.',
+                'name.unique' => 'This side split name already exists.',
             ]);
 
             $sideSplit->update(array_filter($validated));

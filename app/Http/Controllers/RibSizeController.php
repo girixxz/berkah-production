@@ -13,6 +13,10 @@ class RibSizeController extends Controller
         try {
             $validated = $request->validateWithBag('addRibSize', [
                 'name' => 'required|max:100|unique:rib_sizes,name',
+            ], [
+                'name.required' => 'Rib Size name is required.',
+                'name.max' => 'Rib Size name must not exceed 100 characters.',
+                'name.unique' => 'This rib size name already exists.',
             ]);
 
             RibSize::create($validated);
@@ -37,6 +41,10 @@ class RibSizeController extends Controller
         try {
             $validated = $request->validateWithBag('editRibSize', [
                 'name' => 'required|max:100|unique:rib_sizes,name,' . $ribSize->id,
+            ], [
+                'name.required' => 'Rib Size name is required.',
+                'name.max' => 'Rib Size name must not exceed 100 characters.',
+                'name.unique' => 'This rib size name already exists.',
             ]);
 
             $ribSize->update(array_filter($validated));

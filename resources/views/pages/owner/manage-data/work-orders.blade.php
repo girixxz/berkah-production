@@ -318,6 +318,87 @@
                       focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary" />
                     </div>
 
+                    {{-- Show Per Page Dropdown --}}
+                    <div x-data="{
+                        open: false,
+                        perPage: {{ request('per_page_cutting_pattern', 5) }},
+                        options: [
+                            { value: 5, label: '5' },
+                            { value: 10, label: '10' },
+                            { value: 15, label: '15' },
+                            { value: 20, label: '20' },
+                            { value: 25, label: '25' }
+                        ],
+                        get selected() {
+                            return this.options.find(o => o.value === this.perPage) || this.options[0];
+                        },
+                        selectOption(option) {
+                            this.perPage = option.value;
+                            this.open = false;
+                            this.applyPerPageFilter();
+                        },
+                        applyPerPageFilter() {
+                            const params = new URLSearchParams(window.location.search);
+                            params.set('per_page_cutting_pattern', this.perPage);
+                            params.delete('cutting_pattern_page');
+                            
+                            const url = '{{ route('owner.manage-data.work-orders.index') }}?' + params.toString();
+                            window.history.pushState({}, '', url);
+                            
+                            NProgress.start();
+                            
+                            fetch(url, {
+                                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                            })
+                            .then(response => response.text())
+                            .then(html => {
+                                const parser = new DOMParser();
+                                const doc = parser.parseFromString(html, 'text/html');
+                                const newSection = doc.getElementById('cutting-patterns');
+                                
+                                if (newSection) {
+                                    document.getElementById('cutting-patterns').innerHTML = newSection.innerHTML;
+                                    setupPagination('cutting-pattern-pagination-container', 'cutting-patterns');
+                                }
+                                
+                                NProgress.done();
+                            })
+                            .catch(error => {
+                                console.error('Error:', error);
+                                NProgress.done();
+                            });
+                        }
+                    }" class="relative flex-shrink-0">
+                        <button type="button" @click="open = !open"
+                            class="w-14 flex justify-between items-center rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 bg-white
+                                focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors">
+                            <span x-text="selected.label"></span>
+                            <svg class="w-3 h-3 text-gray-400 transition-transform" :class="open && 'rotate-180'" fill="none"
+                                stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                            </svg>
+                        </button>
+
+                        <div x-show="open" @click.away="open = false" x-cloak 
+                            x-transition:enter="transition ease-out duration-100"
+                            x-transition:enter-start="opacity-0 scale-95" 
+                            x-transition:enter-end="opacity-100 scale-100"
+                            x-transition:leave="transition ease-in duration-75" 
+                            x-transition:leave-start="opacity-100 scale-100"
+                            x-transition:leave-end="opacity-0 scale-95"
+                            class="absolute z-20 mt-1 w-14 bg-white border border-gray-200 rounded-md shadow-lg">
+                            <ul class="max-h-60 overflow-y-auto py-1">
+                                <template x-for="option in options" :key="option.value">
+                                    <li @click="selectOption(option)"
+                                        class="px-4 py-2 cursor-pointer text-sm hover:bg-primary/5 transition-colors"
+                                        :class="{ 'bg-primary/10 font-medium text-primary': perPage === option.value }">
+                                        <span x-text="option.label"></span>
+                                    </li>
+                                </template>
+                            </ul>
+                        </div>
+                    </div>
+
                     {{-- Add Items --}}
                     <button @click="openModal = 'addCuttingPattern'"
                         class="cursor-pointer flex-shrink-0 w-18 whitespace-nowrap px-3 py-2 rounded-md
@@ -459,6 +540,87 @@
                         <input type="text" x-model="searchChainCloth" placeholder="Search Items"
                             class="w-full rounded-md border border-gray-300 pl-9 pr-3 py-2 text-sm
                       focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary" />
+                    </div>
+
+                    {{-- Show Per Page Dropdown --}}
+                    <div x-data="{
+                        open: false,
+                        perPage: {{ request('per_page_chain_cloth', 5) }},
+                        options: [
+                            { value: 5, label: '5' },
+                            { value: 10, label: '10' },
+                            { value: 15, label: '15' },
+                            { value: 20, label: '20' },
+                            { value: 25, label: '25' }
+                        ],
+                        get selected() {
+                            return this.options.find(o => o.value === this.perPage) || this.options[0];
+                        },
+                        selectOption(option) {
+                            this.perPage = option.value;
+                            this.open = false;
+                            this.applyPerPageFilter();
+                        },
+                        applyPerPageFilter() {
+                            const params = new URLSearchParams(window.location.search);
+                            params.set('per_page_chain_cloth', this.perPage);
+                            params.delete('chain_cloth_page');
+                            
+                            const url = '{{ route('owner.manage-data.work-orders.index') }}?' + params.toString();
+                            window.history.pushState({}, '', url);
+                            
+                            NProgress.start();
+                            
+                            fetch(url, {
+                                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                            })
+                            .then(response => response.text())
+                            .then(html => {
+                                const parser = new DOMParser();
+                                const doc = parser.parseFromString(html, 'text/html');
+                                const newSection = doc.getElementById('chain-cloths');
+                                
+                                if (newSection) {
+                                    document.getElementById('chain-cloths').innerHTML = newSection.innerHTML;
+                                    setupPagination('chain-cloth-pagination-container', 'chain-cloths');
+                                }
+                                
+                                NProgress.done();
+                            })
+                            .catch(error => {
+                                console.error('Error:', error);
+                                NProgress.done();
+                            });
+                        }
+                    }" class="relative flex-shrink-0">
+                        <button type="button" @click="open = !open"
+                            class="w-14 flex justify-between items-center rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 bg-white
+                                focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors">
+                            <span x-text="selected.label"></span>
+                            <svg class="w-3 h-3 text-gray-400 transition-transform" :class="open && 'rotate-180'" fill="none"
+                                stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                            </svg>
+                        </button>
+
+                        <div x-show="open" @click.away="open = false" x-cloak 
+                            x-transition:enter="transition ease-out duration-100"
+                            x-transition:enter-start="opacity-0 scale-95" 
+                            x-transition:enter-end="opacity-100 scale-100"
+                            x-transition:leave="transition ease-in duration-75" 
+                            x-transition:leave-start="opacity-100 scale-100"
+                            x-transition:leave-end="opacity-0 scale-95"
+                            class="absolute z-20 mt-1 w-14 bg-white border border-gray-200 rounded-md shadow-lg">
+                            <ul class="max-h-60 overflow-y-auto py-1">
+                                <template x-for="option in options" :key="option.value">
+                                    <li @click="selectOption(option)"
+                                        class="px-4 py-2 cursor-pointer text-sm hover:bg-primary/5 transition-colors"
+                                        :class="{ 'bg-primary/10 font-medium text-primary': perPage === option.value }">
+                                        <span x-text="option.label"></span>
+                                    </li>
+                                </template>
+                            </ul>
+                        </div>
                     </div>
 
                     {{-- Add Items --}}
@@ -605,6 +767,87 @@
                       focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary" />
                     </div>
 
+                    {{-- Show Per Page Dropdown --}}
+                    <div x-data="{
+                        open: false,
+                        perPage: {{ request('per_page_rib_size', 5) }},
+                        options: [
+                            { value: 5, label: '5' },
+                            { value: 10, label: '10' },
+                            { value: 15, label: '15' },
+                            { value: 20, label: '20' },
+                            { value: 25, label: '25' }
+                        ],
+                        get selected() {
+                            return this.options.find(o => o.value === this.perPage) || this.options[0];
+                        },
+                        selectOption(option) {
+                            this.perPage = option.value;
+                            this.open = false;
+                            this.applyPerPageFilter();
+                        },
+                        applyPerPageFilter() {
+                            const params = new URLSearchParams(window.location.search);
+                            params.set('per_page_rib_size', this.perPage);
+                            params.delete('rib_size_page');
+                            
+                            const url = '{{ route('owner.manage-data.work-orders.index') }}?' + params.toString();
+                            window.history.pushState({}, '', url);
+                            
+                            NProgress.start();
+                            
+                            fetch(url, {
+                                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                            })
+                            .then(response => response.text())
+                            .then(html => {
+                                const parser = new DOMParser();
+                                const doc = parser.parseFromString(html, 'text/html');
+                                const newSection = doc.getElementById('rib-sizes');
+                                
+                                if (newSection) {
+                                    document.getElementById('rib-sizes').innerHTML = newSection.innerHTML;
+                                    setupPagination('rib-size-pagination-container', 'rib-sizes');
+                                }
+                                
+                                NProgress.done();
+                            })
+                            .catch(error => {
+                                console.error('Error:', error);
+                                NProgress.done();
+                            });
+                        }
+                    }" class="relative flex-shrink-0">
+                        <button type="button" @click="open = !open"
+                            class="w-14 flex justify-between items-center rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 bg-white
+                                focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors">
+                            <span x-text="selected.label"></span>
+                            <svg class="w-3 h-3 text-gray-400 transition-transform" :class="open && 'rotate-180'" fill="none"
+                                stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                            </svg>
+                        </button>
+
+                        <div x-show="open" @click.away="open = false" x-cloak 
+                            x-transition:enter="transition ease-out duration-100"
+                            x-transition:enter-start="opacity-0 scale-95" 
+                            x-transition:enter-end="opacity-100 scale-100"
+                            x-transition:leave="transition ease-in duration-75" 
+                            x-transition:leave-start="opacity-100 scale-100"
+                            x-transition:leave-end="opacity-0 scale-95"
+                            class="absolute z-20 mt-1 w-14 bg-white border border-gray-200 rounded-md shadow-lg">
+                            <ul class="max-h-60 overflow-y-auto py-1">
+                                <template x-for="option in options" :key="option.value">
+                                    <li @click="selectOption(option)"
+                                        class="px-4 py-2 cursor-pointer text-sm hover:bg-primary/5 transition-colors"
+                                        :class="{ 'bg-primary/10 font-medium text-primary': perPage === option.value }">
+                                        <span x-text="option.label"></span>
+                                    </li>
+                                </template>
+                            </ul>
+                        </div>
+                    </div>
+
                     {{-- Add Items --}}
                     <button @click="openModal = 'addRibSize'"
                         class="cursor-pointer flex-shrink-0 w-18 whitespace-nowrap px-3 py-2 rounded-md
@@ -746,6 +989,87 @@
                         <input type="text" x-model="searchPrintInk" placeholder="Search Items"
                             class="w-full rounded-md border border-gray-300 pl-9 pr-3 py-2 text-sm
                     focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary" />
+                    </div>
+
+                    {{-- Show Per Page Dropdown --}}
+                    <div x-data="{
+                        open: false,
+                        perPage: {{ request('per_page_print_ink', 5) }},
+                        options: [
+                            { value: 5, label: '5' },
+                            { value: 10, label: '10' },
+                            { value: 15, label: '15' },
+                            { value: 20, label: '20' },
+                            { value: 25, label: '25' }
+                        ],
+                        get selected() {
+                            return this.options.find(o => o.value === this.perPage) || this.options[0];
+                        },
+                        selectOption(option) {
+                            this.perPage = option.value;
+                            this.open = false;
+                            this.applyPerPageFilter();
+                        },
+                        applyPerPageFilter() {
+                            const params = new URLSearchParams(window.location.search);
+                            params.set('per_page_print_ink', this.perPage);
+                            params.delete('print_ink_page');
+                            
+                            const url = '{{ route('owner.manage-data.work-orders.index') }}?' + params.toString();
+                            window.history.pushState({}, '', url);
+                            
+                            NProgress.start();
+                            
+                            fetch(url, {
+                                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                            })
+                            .then(response => response.text())
+                            .then(html => {
+                                const parser = new DOMParser();
+                                const doc = parser.parseFromString(html, 'text/html');
+                                const newSection = doc.getElementById('print-inks');
+                                
+                                if (newSection) {
+                                    document.getElementById('print-inks').innerHTML = newSection.innerHTML;
+                                    setupPagination('print-ink-pagination-container', 'print-inks');
+                                }
+                                
+                                NProgress.done();
+                            })
+                            .catch(error => {
+                                console.error('Error:', error);
+                                NProgress.done();
+                            });
+                        }
+                    }" class="relative flex-shrink-0">
+                        <button type="button" @click="open = !open"
+                            class="w-14 flex justify-between items-center rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 bg-white
+                                focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors">
+                            <span x-text="selected.label"></span>
+                            <svg class="w-3 h-3 text-gray-400 transition-transform" :class="open && 'rotate-180'" fill="none"
+                                stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                            </svg>
+                        </button>
+
+                        <div x-show="open" @click.away="open = false" x-cloak 
+                            x-transition:enter="transition ease-out duration-100"
+                            x-transition:enter-start="opacity-0 scale-95" 
+                            x-transition:enter-end="opacity-100 scale-100"
+                            x-transition:leave="transition ease-in duration-75" 
+                            x-transition:leave-start="opacity-100 scale-100"
+                            x-transition:leave-end="opacity-0 scale-95"
+                            class="absolute z-20 mt-1 w-14 bg-white border border-gray-200 rounded-md shadow-lg">
+                            <ul class="max-h-60 overflow-y-auto py-1">
+                                <template x-for="option in options" :key="option.value">
+                                    <li @click="selectOption(option)"
+                                        class="px-4 py-2 cursor-pointer text-sm hover:bg-primary/5 transition-colors"
+                                        :class="{ 'bg-primary/10 font-medium text-primary': perPage === option.value }">
+                                        <span x-text="option.label"></span>
+                                    </li>
+                                </template>
+                            </ul>
+                        </div>
                     </div>
 
                     {{-- Add Items --}}
@@ -890,6 +1214,87 @@
                         <input type="text" x-model="searchFinishing" placeholder="Search Items"
                             class="w-full rounded-md border border-gray-300 pl-9 pr-3 py-2 text-sm
                       focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary" />
+                    </div>
+
+                    {{-- Show Per Page Dropdown --}}
+                    <div x-data="{
+                        open: false,
+                        perPage: {{ request('per_page_finishing', 5) }},
+                        options: [
+                            { value: 5, label: '5' },
+                            { value: 10, label: '10' },
+                            { value: 15, label: '15' },
+                            { value: 20, label: '20' },
+                            { value: 25, label: '25' }
+                        ],
+                        get selected() {
+                            return this.options.find(o => o.value === this.perPage) || this.options[0];
+                        },
+                        selectOption(option) {
+                            this.perPage = option.value;
+                            this.open = false;
+                            this.applyPerPageFilter();
+                        },
+                        applyPerPageFilter() {
+                            const params = new URLSearchParams(window.location.search);
+                            params.set('per_page_finishing', this.perPage);
+                            params.delete('finishing_page');
+                            
+                            const url = '{{ route('owner.manage-data.work-orders.index') }}?' + params.toString();
+                            window.history.pushState({}, '', url);
+                            
+                            NProgress.start();
+                            
+                            fetch(url, {
+                                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                            })
+                            .then(response => response.text())
+                            .then(html => {
+                                const parser = new DOMParser();
+                                const doc = parser.parseFromString(html, 'text/html');
+                                const newSection = doc.getElementById('finishings');
+                                
+                                if (newSection) {
+                                    document.getElementById('finishings').innerHTML = newSection.innerHTML;
+                                    setupPagination('finishing-pagination-container', 'finishings');
+                                }
+                                
+                                NProgress.done();
+                            })
+                            .catch(error => {
+                                console.error('Error:', error);
+                                NProgress.done();
+                            });
+                        }
+                    }" class="relative flex-shrink-0">
+                        <button type="button" @click="open = !open"
+                            class="w-14 flex justify-between items-center rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 bg-white
+                                focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors">
+                            <span x-text="selected.label"></span>
+                            <svg class="w-3 h-3 text-gray-400 transition-transform" :class="open && 'rotate-180'" fill="none"
+                                stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                            </svg>
+                        </button>
+
+                        <div x-show="open" @click.away="open = false" x-cloak 
+                            x-transition:enter="transition ease-out duration-100"
+                            x-transition:enter-start="opacity-0 scale-95" 
+                            x-transition:enter-end="opacity-100 scale-100"
+                            x-transition:leave="transition ease-in duration-75" 
+                            x-transition:leave-start="opacity-100 scale-100"
+                            x-transition:leave-end="opacity-0 scale-95"
+                            class="absolute z-20 mt-1 w-14 bg-white border border-gray-200 rounded-md shadow-lg">
+                            <ul class="max-h-60 overflow-y-auto py-1">
+                                <template x-for="option in options" :key="option.value">
+                                    <li @click="selectOption(option)"
+                                        class="px-4 py-2 cursor-pointer text-sm hover:bg-primary/5 transition-colors"
+                                        :class="{ 'bg-primary/10 font-medium text-primary': perPage === option.value }">
+                                        <span x-text="option.label"></span>
+                                    </li>
+                                </template>
+                            </ul>
+                        </div>
                     </div>
 
                     {{-- Add Items --}}
@@ -1038,6 +1443,87 @@
                       focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary" />
                     </div>
 
+                    {{-- Show Per Page Dropdown --}}
+                    <div x-data="{
+                        open: false,
+                        perPage: {{ request('per_page_neck_overdeck', 5) }},
+                        options: [
+                            { value: 5, label: '5' },
+                            { value: 10, label: '10' },
+                            { value: 15, label: '15' },
+                            { value: 20, label: '20' },
+                            { value: 25, label: '25' }
+                        ],
+                        get selected() {
+                            return this.options.find(o => o.value === this.perPage) || this.options[0];
+                        },
+                        selectOption(option) {
+                            this.perPage = option.value;
+                            this.open = false;
+                            this.applyPerPageFilter();
+                        },
+                        applyPerPageFilter() {
+                            const params = new URLSearchParams(window.location.search);
+                            params.set('per_page_neck_overdeck', this.perPage);
+                            params.delete('neck_overdeck_page');
+                            
+                            const url = '{{ route('owner.manage-data.work-orders.index') }}?' + params.toString();
+                            window.history.pushState({}, '', url);
+                            
+                            NProgress.start();
+                            
+                            fetch(url, {
+                                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                            })
+                            .then(response => response.text())
+                            .then(html => {
+                                const parser = new DOMParser();
+                                const doc = parser.parseFromString(html, 'text/html');
+                                const newSection = doc.getElementById('neck-overdecks');
+                                
+                                if (newSection) {
+                                    document.getElementById('neck-overdecks').innerHTML = newSection.innerHTML;
+                                    setupPagination('neck-overdeck-pagination-container', 'neck-overdecks');
+                                }
+                                
+                                NProgress.done();
+                            })
+                            .catch(error => {
+                                console.error('Error:', error);
+                                NProgress.done();
+                            });
+                        }
+                    }" class="relative flex-shrink-0">
+                        <button type="button" @click="open = !open"
+                            class="w-14 flex justify-between items-center rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 bg-white
+                                focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors">
+                            <span x-text="selected.label"></span>
+                            <svg class="w-3 h-3 text-gray-400 transition-transform" :class="open && 'rotate-180'" fill="none"
+                                stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                            </svg>
+                        </button>
+
+                        <div x-show="open" @click.away="open = false" x-cloak 
+                            x-transition:enter="transition ease-out duration-100"
+                            x-transition:enter-start="opacity-0 scale-95" 
+                            x-transition:enter-end="opacity-100 scale-100"
+                            x-transition:leave="transition ease-in duration-75" 
+                            x-transition:leave-start="opacity-100 scale-100"
+                            x-transition:leave-end="opacity-0 scale-95"
+                            class="absolute z-20 mt-1 w-14 bg-white border border-gray-200 rounded-md shadow-lg">
+                            <ul class="max-h-60 overflow-y-auto py-1">
+                                <template x-for="option in options" :key="option.value">
+                                    <li @click="selectOption(option)"
+                                        class="px-4 py-2 cursor-pointer text-sm hover:bg-primary/5 transition-colors"
+                                        :class="{ 'bg-primary/10 font-medium text-primary': perPage === option.value }">
+                                        <span x-text="option.label"></span>
+                                    </li>
+                                </template>
+                            </ul>
+                        </div>
+                    </div>
+
                     {{-- Add Items --}}
                     <button @click="openModal = 'addNeckOverdeck'"
                         class="cursor-pointer flex-shrink-0 w-18 whitespace-nowrap px-3 py-2 rounded-md
@@ -1181,6 +1667,87 @@
                         <input type="text" x-model="searchUnderarmOverdeck" placeholder="Search Items"
                             class="w-full rounded-md border border-gray-300 pl-9 pr-3 py-2 text-sm
                       focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary" />
+                    </div>
+
+                    {{-- Show Per Page Dropdown --}}
+                    <div x-data="{
+                        open: false,
+                        perPage: {{ request('per_page_underarm_overdeck', 5) }},
+                        options: [
+                            { value: 5, label: '5' },
+                            { value: 10, label: '10' },
+                            { value: 15, label: '15' },
+                            { value: 20, label: '20' },
+                            { value: 25, label: '25' }
+                        ],
+                        get selected() {
+                            return this.options.find(o => o.value === this.perPage) || this.options[0];
+                        },
+                        selectOption(option) {
+                            this.perPage = option.value;
+                            this.open = false;
+                            this.applyPerPageFilter();
+                        },
+                        applyPerPageFilter() {
+                            const params = new URLSearchParams(window.location.search);
+                            params.set('per_page_underarm_overdeck', this.perPage);
+                            params.delete('underarm_overdeck_page');
+                            
+                            const url = '{{ route('owner.manage-data.work-orders.index') }}?' + params.toString();
+                            window.history.pushState({}, '', url);
+                            
+                            NProgress.start();
+                            
+                            fetch(url, {
+                                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                            })
+                            .then(response => response.text())
+                            .then(html => {
+                                const parser = new DOMParser();
+                                const doc = parser.parseFromString(html, 'text/html');
+                                const newSection = doc.getElementById('underarm-overdecks');
+                                
+                                if (newSection) {
+                                    document.getElementById('underarm-overdecks').innerHTML = newSection.innerHTML;
+                                    setupPagination('underarm-overdeck-pagination-container', 'underarm-overdecks');
+                                }
+                                
+                                NProgress.done();
+                            })
+                            .catch(error => {
+                                console.error('Error:', error);
+                                NProgress.done();
+                            });
+                        }
+                    }" class="relative flex-shrink-0">
+                        <button type="button" @click="open = !open"
+                            class="w-14 flex justify-between items-center rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 bg-white
+                                focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors">
+                            <span x-text="selected.label"></span>
+                            <svg class="w-3 h-3 text-gray-400 transition-transform" :class="open && 'rotate-180'" fill="none"
+                                stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                            </svg>
+                        </button>
+
+                        <div x-show="open" @click.away="open = false" x-cloak 
+                            x-transition:enter="transition ease-out duration-100"
+                            x-transition:enter-start="opacity-0 scale-95" 
+                            x-transition:enter-end="opacity-100 scale-100"
+                            x-transition:leave="transition ease-in duration-75" 
+                            x-transition:leave-start="opacity-100 scale-100"
+                            x-transition:leave-end="opacity-0 scale-95"
+                            class="absolute z-20 mt-1 w-14 bg-white border border-gray-200 rounded-md shadow-lg">
+                            <ul class="max-h-60 overflow-y-auto py-1">
+                                <template x-for="option in options" :key="option.value">
+                                    <li @click="selectOption(option)"
+                                        class="px-4 py-2 cursor-pointer text-sm hover:bg-primary/5 transition-colors"
+                                        :class="{ 'bg-primary/10 font-medium text-primary': perPage === option.value }">
+                                        <span x-text="option.label"></span>
+                                    </li>
+                                </template>
+                            </ul>
+                        </div>
                     </div>
 
                     {{-- Add Items --}}
@@ -1328,6 +1895,87 @@
                       focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary" />
                     </div>
 
+                    {{-- Show Per Page Dropdown --}}
+                    <div x-data="{
+                        open: false,
+                        perPage: {{ request('per_page_side_split', 5) }},
+                        options: [
+                            { value: 5, label: '5' },
+                            { value: 10, label: '10' },
+                            { value: 15, label: '15' },
+                            { value: 20, label: '20' },
+                            { value: 25, label: '25' }
+                        ],
+                        get selected() {
+                            return this.options.find(o => o.value === this.perPage) || this.options[0];
+                        },
+                        selectOption(option) {
+                            this.perPage = option.value;
+                            this.open = false;
+                            this.applyPerPageFilter();
+                        },
+                        applyPerPageFilter() {
+                            const params = new URLSearchParams(window.location.search);
+                            params.set('per_page_side_split', this.perPage);
+                            params.delete('side_split_page');
+                            
+                            const url = '{{ route('owner.manage-data.work-orders.index') }}?' + params.toString();
+                            window.history.pushState({}, '', url);
+                            
+                            NProgress.start();
+                            
+                            fetch(url, {
+                                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                            })
+                            .then(response => response.text())
+                            .then(html => {
+                                const parser = new DOMParser();
+                                const doc = parser.parseFromString(html, 'text/html');
+                                const newSection = doc.getElementById('side-splits');
+                                
+                                if (newSection) {
+                                    document.getElementById('side-splits').innerHTML = newSection.innerHTML;
+                                    setupPagination('side-split-pagination-container', 'side-splits');
+                                }
+                                
+                                NProgress.done();
+                            })
+                            .catch(error => {
+                                console.error('Error:', error);
+                                NProgress.done();
+                            });
+                        }
+                    }" class="relative flex-shrink-0">
+                        <button type="button" @click="open = !open"
+                            class="w-14 flex justify-between items-center rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 bg-white
+                                focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors">
+                            <span x-text="selected.label"></span>
+                            <svg class="w-3 h-3 text-gray-400 transition-transform" :class="open && 'rotate-180'" fill="none"
+                                stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                            </svg>
+                        </button>
+
+                        <div x-show="open" @click.away="open = false" x-cloak 
+                            x-transition:enter="transition ease-out duration-100"
+                            x-transition:enter-start="opacity-0 scale-95" 
+                            x-transition:enter-end="opacity-100 scale-100"
+                            x-transition:leave="transition ease-in duration-75" 
+                            x-transition:leave-start="opacity-100 scale-100"
+                            x-transition:leave-end="opacity-0 scale-95"
+                            class="absolute z-20 mt-1 w-14 bg-white border border-gray-200 rounded-md shadow-lg">
+                            <ul class="max-h-60 overflow-y-auto py-1">
+                                <template x-for="option in options" :key="option.value">
+                                    <li @click="selectOption(option)"
+                                        class="px-4 py-2 cursor-pointer text-sm hover:bg-primary/5 transition-colors"
+                                        :class="{ 'bg-primary/10 font-medium text-primary': perPage === option.value }">
+                                        <span x-text="option.label"></span>
+                                    </li>
+                                </template>
+                            </ul>
+                        </div>
+                    </div>
+
                     {{-- Add Items --}}
                     <button @click="openModal = 'addSideSplit'"
                         class="cursor-pointer flex-shrink-0 w-18 whitespace-nowrap px-3 py-2 rounded-md
@@ -1471,6 +2119,87 @@
                         <input type="text" x-model="searchSewingLabel" placeholder="Search Items"
                             class="w-full rounded-md border border-gray-300 pl-9 pr-3 py-2 text-sm
                       focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary" />
+                    </div>
+
+                    {{-- Show Per Page Dropdown --}}
+                    <div x-data="{
+                        open: false,
+                        perPage: {{ request('per_page_sewing_label', 5) }},
+                        options: [
+                            { value: 5, label: '5' },
+                            { value: 10, label: '10' },
+                            { value: 15, label: '15' },
+                            { value: 20, label: '20' },
+                            { value: 25, label: '25' }
+                        ],
+                        get selected() {
+                            return this.options.find(o => o.value === this.perPage) || this.options[0];
+                        },
+                        selectOption(option) {
+                            this.perPage = option.value;
+                            this.open = false;
+                            this.applyPerPageFilter();
+                        },
+                        applyPerPageFilter() {
+                            const params = new URLSearchParams(window.location.search);
+                            params.set('per_page_sewing_label', this.perPage);
+                            params.delete('sewing_label_page');
+                            
+                            const url = '{{ route('owner.manage-data.work-orders.index') }}?' + params.toString();
+                            window.history.pushState({}, '', url);
+                            
+                            NProgress.start();
+                            
+                            fetch(url, {
+                                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                            })
+                            .then(response => response.text())
+                            .then(html => {
+                                const parser = new DOMParser();
+                                const doc = parser.parseFromString(html, 'text/html');
+                                const newSection = doc.getElementById('sewing-labels');
+                                
+                                if (newSection) {
+                                    document.getElementById('sewing-labels').innerHTML = newSection.innerHTML;
+                                    setupPagination('sewing-label-pagination-container', 'sewing-labels');
+                                }
+                                
+                                NProgress.done();
+                            })
+                            .catch(error => {
+                                console.error('Error:', error);
+                                NProgress.done();
+                            });
+                        }
+                    }" class="relative flex-shrink-0">
+                        <button type="button" @click="open = !open"
+                            class="w-14 flex justify-between items-center rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 bg-white
+                                focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors">
+                            <span x-text="selected.label"></span>
+                            <svg class="w-3 h-3 text-gray-400 transition-transform" :class="open && 'rotate-180'" fill="none"
+                                stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                            </svg>
+                        </button>
+
+                        <div x-show="open" @click.away="open = false" x-cloak 
+                            x-transition:enter="transition ease-out duration-100"
+                            x-transition:enter-start="opacity-0 scale-95" 
+                            x-transition:enter-end="opacity-100 scale-100"
+                            x-transition:leave="transition ease-in duration-75" 
+                            x-transition:leave-start="opacity-100 scale-100"
+                            x-transition:leave-end="opacity-0 scale-95"
+                            class="absolute z-20 mt-1 w-14 bg-white border border-gray-200 rounded-md shadow-lg">
+                            <ul class="max-h-60 overflow-y-auto py-1">
+                                <template x-for="option in options" :key="option.value">
+                                    <li @click="selectOption(option)"
+                                        class="px-4 py-2 cursor-pointer text-sm hover:bg-primary/5 transition-colors"
+                                        :class="{ 'bg-primary/10 font-medium text-primary': perPage === option.value }">
+                                        <span x-text="option.label"></span>
+                                    </li>
+                                </template>
+                            </ul>
+                        </div>
                     </div>
 
                     {{-- Add Items --}}
@@ -1618,6 +2347,87 @@
                       focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary" />
                     </div>
 
+                    {{-- Show Per Page Dropdown --}}
+                    <div x-data="{
+                        open: false,
+                        perPage: {{ request('per_page_plastic_packing', 5) }},
+                        options: [
+                            { value: 5, label: '5' },
+                            { value: 10, label: '10' },
+                            { value: 15, label: '15' },
+                            { value: 20, label: '20' },
+                            { value: 25, label: '25' }
+                        ],
+                        get selected() {
+                            return this.options.find(o => o.value === this.perPage) || this.options[0];
+                        },
+                        selectOption(option) {
+                            this.perPage = option.value;
+                            this.open = false;
+                            this.applyPerPageFilter();
+                        },
+                        applyPerPageFilter() {
+                            const params = new URLSearchParams(window.location.search);
+                            params.set('per_page_plastic_packing', this.perPage);
+                            params.delete('plastic_packing_page');
+                            
+                            const url = '{{ route('owner.manage-data.work-orders.index') }}?' + params.toString();
+                            window.history.pushState({}, '', url);
+                            
+                            NProgress.start();
+                            
+                            fetch(url, {
+                                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                            })
+                            .then(response => response.text())
+                            .then(html => {
+                                const parser = new DOMParser();
+                                const doc = parser.parseFromString(html, 'text/html');
+                                const newSection = doc.getElementById('plastic-packings');
+                                
+                                if (newSection) {
+                                    document.getElementById('plastic-packings').innerHTML = newSection.innerHTML;
+                                    setupPagination('plastic-packing-pagination-container', 'plastic-packings');
+                                }
+                                
+                                NProgress.done();
+                            })
+                            .catch(error => {
+                                console.error('Error:', error);
+                                NProgress.done();
+                            });
+                        }
+                    }" class="relative flex-shrink-0">
+                        <button type="button" @click="open = !open"
+                            class="w-14 flex justify-between items-center rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 bg-white
+                                focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors">
+                            <span x-text="selected.label"></span>
+                            <svg class="w-3 h-3 text-gray-400 transition-transform" :class="open && 'rotate-180'" fill="none"
+                                stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                            </svg>
+                        </button>
+
+                        <div x-show="open" @click.away="open = false" x-cloak 
+                            x-transition:enter="transition ease-out duration-100"
+                            x-transition:enter-start="opacity-0 scale-95" 
+                            x-transition:enter-end="opacity-100 scale-100"
+                            x-transition:leave="transition ease-in duration-75" 
+                            x-transition:leave-start="opacity-100 scale-100"
+                            x-transition:leave-end="opacity-0 scale-95"
+                            class="absolute z-20 mt-1 w-14 bg-white border border-gray-200 rounded-md shadow-lg">
+                            <ul class="max-h-60 overflow-y-auto py-1">
+                                <template x-for="option in options" :key="option.value">
+                                    <li @click="selectOption(option)"
+                                        class="px-4 py-2 cursor-pointer text-sm hover:bg-primary/5 transition-colors"
+                                        :class="{ 'bg-primary/10 font-medium text-primary': perPage === option.value }">
+                                        <span x-text="option.label"></span>
+                                    </li>
+                                </template>
+                            </ul>
+                        </div>
+                    </div>
+
                     {{-- Add Items --}}
                     <button @click="openModal = 'addPlasticPacking'"
                         class="cursor-pointer flex-shrink-0 w-18 whitespace-nowrap px-3 py-2 rounded-md
@@ -1761,6 +2571,87 @@
                         <input type="text" x-model="searchSticker" placeholder="Search Items"
                             class="w-full rounded-md border border-gray-300 pl-9 pr-3 py-2 text-sm
                       focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary" />
+                    </div>
+
+                    {{-- Show Per Page Dropdown --}}
+                    <div x-data="{
+                        open: false,
+                        perPage: {{ request('per_page_sticker', 5) }},
+                        options: [
+                            { value: 5, label: '5' },
+                            { value: 10, label: '10' },
+                            { value: 15, label: '15' },
+                            { value: 20, label: '20' },
+                            { value: 25, label: '25' }
+                        ],
+                        get selected() {
+                            return this.options.find(o => o.value === this.perPage) || this.options[0];
+                        },
+                        selectOption(option) {
+                            this.perPage = option.value;
+                            this.open = false;
+                            this.applyPerPageFilter();
+                        },
+                        applyPerPageFilter() {
+                            const params = new URLSearchParams(window.location.search);
+                            params.set('per_page_sticker', this.perPage);
+                            params.delete('sticker_page');
+                            
+                            const url = '{{ route('owner.manage-data.work-orders.index') }}?' + params.toString();
+                            window.history.pushState({}, '', url);
+                            
+                            NProgress.start();
+                            
+                            fetch(url, {
+                                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                            })
+                            .then(response => response.text())
+                            .then(html => {
+                                const parser = new DOMParser();
+                                const doc = parser.parseFromString(html, 'text/html');
+                                const newSection = doc.getElementById('stickers');
+                                
+                                if (newSection) {
+                                    document.getElementById('stickers').innerHTML = newSection.innerHTML;
+                                    setupPagination('sticker-pagination-container', 'stickers');
+                                }
+                                
+                                NProgress.done();
+                            })
+                            .catch(error => {
+                                console.error('Error:', error);
+                                NProgress.done();
+                            });
+                        }
+                    }" class="relative flex-shrink-0">
+                        <button type="button" @click="open = !open"
+                            class="w-14 flex justify-between items-center rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 bg-white
+                                focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors">
+                            <span x-text="selected.label"></span>
+                            <svg class="w-3 h-3 text-gray-400 transition-transform" :class="open && 'rotate-180'" fill="none"
+                                stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                            </svg>
+                        </button>
+
+                        <div x-show="open" @click.away="open = false" x-cloak 
+                            x-transition:enter="transition ease-out duration-100"
+                            x-transition:enter-start="opacity-0 scale-95" 
+                            x-transition:enter-end="opacity-100 scale-100"
+                            x-transition:leave="transition ease-in duration-75" 
+                            x-transition:leave-start="opacity-100 scale-100"
+                            x-transition:leave-end="opacity-0 scale-95"
+                            class="absolute z-20 mt-1 w-14 bg-white border border-gray-200 rounded-md shadow-lg">
+                            <ul class="max-h-60 overflow-y-auto py-1">
+                                <template x-for="option in options" :key="option.value">
+                                    <li @click="selectOption(option)"
+                                        class="px-4 py-2 cursor-pointer text-sm hover:bg-primary/5 transition-colors"
+                                        :class="{ 'bg-primary/10 font-medium text-primary': perPage === option.value }">
+                                        <span x-text="option.label"></span>
+                                    </li>
+                                </template>
+                            </ul>
+                        </div>
                     </div>
 
                     {{-- Add Items --}}
@@ -1919,11 +2810,12 @@
                                 </span>
                             @endif
                         </div>
-                        <p x-show="addCuttingPatternErrors.name" x-text="addCuttingPatternErrors.name"
-                            class="mt-1 text-sm text-red-600"></p>
-                        @error('name', 'addCuttingPattern')
-                            <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                        @enderror
+                        @if ($errors->addCuttingPattern->has('name'))
+                            <p class="mt-1 text-sm text-red-600">{{ $errors->addCuttingPattern->first('name') }}</p>
+                        @else
+                            <p x-show="addCuttingPatternErrors.name" x-text="addCuttingPatternErrors.name"
+                                class="mt-1 text-sm text-red-600"></p>
+                        @endif
                     </div>
                     <div class="flex justify-end gap-3 pt-4">
                         <button type="button" @click="openModal=null"
@@ -1995,11 +2887,12 @@
                                 </span>
                             @endif
                         </div>
-                        <p x-show="addChainClothErrors.name" x-text="addChainClothErrors.name"
-                            class="mt-1 text-sm text-red-600"></p>
-                        @error('name', 'addChainCloth')
-                            <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                        @enderror
+                        @if ($errors->addChainCloth->has('name'))
+                            <p class="mt-1 text-sm text-red-600">{{ $errors->addChainCloth->first('name') }}</p>
+                        @else
+                            <p x-show="addChainClothErrors.name" x-text="addChainClothErrors.name"
+                                class="mt-1 text-sm text-red-600"></p>
+                        @endif
                     </div>
                     <div class="flex justify-end gap-3 pt-4">
                         <button type="button" @click="openModal=null"
@@ -2069,11 +2962,12 @@
                                 </span>
                             @endif
                         </div>
-                        <p x-show="addRibSizeErrors.name" x-text="addRibSizeErrors.name"
-                            class="mt-1 text-sm text-red-600"></p>
-                        @error('name', 'addRibSize')
-                            <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                        @enderror
+                        @if ($errors->addRibSize->has('name'))
+                            <p class="mt-1 text-sm text-red-600">{{ $errors->addRibSize->first('name') }}</p>
+                        @else
+                            <p x-show="addRibSizeErrors.name" x-text="addRibSizeErrors.name"
+                                class="mt-1 text-sm text-red-600"></p>
+                        @endif
                     </div>
                     <div class="flex justify-end gap-3 pt-4">
                         <button type="button" @click="openModal=null"
@@ -2143,12 +3037,12 @@
                                 </span>
                             @endif
                         </div>
-                        <p x-show="addPrintInkErrors.name" x-text="addPrintInkErrors.name"
-                            class="mt-1 text-sm text-red-600">
-                        </p>
-                        @error('name', 'addPrintInk')
-                            <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                        @enderror
+                        @if ($errors->addPrintInk->has('name'))
+                            <p class="mt-1 text-sm text-red-600">{{ $errors->addPrintInk->first('name') }}</p>
+                        @else
+                            <p x-show="addPrintInkErrors.name" x-text="addPrintInkErrors.name"
+                                class="mt-1 text-sm text-red-600"></p>
+                        @endif
                     </div>
                     <div class="flex justify-end gap-3 pt-4">
                         <button type="button" @click="openModal=null"
@@ -2219,11 +3113,12 @@
                                 </span>
                             @endif
                         </div>
-                        <p x-show="addFinishingErrors.name" x-text="addFinishingErrors.name"
-                            class="mt-1 text-sm text-red-600"></p>
-                        @error('name', 'addFinishing')
-                            <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                        @enderror
+                        @if ($errors->addFinishing->has('name'))
+                            <p class="mt-1 text-sm text-red-600">{{ $errors->addFinishing->first('name') }}</p>
+                        @else
+                            <p x-show="addFinishingErrors.name" x-text="addFinishingErrors.name"
+                                class="mt-1 text-sm text-red-600"></p>
+                        @endif
                     </div>
                     <div class="flex justify-end gap-3 pt-4">
                         <button type="button" @click="openModal=null"
@@ -2313,11 +3208,12 @@
                                 </span>
                             @endif
                         </div>
-                        <p x-show="addNeckOverdeckErrors.name" x-text="addNeckOverdeckErrors.name"
-                            class="mt-1 text-sm text-red-600"></p>
-                        @error('name', 'addNeckOverdeck')
-                            <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                        @enderror
+                        @if ($errors->addNeckOverdeck->has('name'))
+                            <p class="mt-1 text-sm text-red-600">{{ $errors->addNeckOverdeck->first('name') }}</p>
+                        @else
+                            <p x-show="addNeckOverdeckErrors.name" x-text="addNeckOverdeckErrors.name"
+                                class="mt-1 text-sm text-red-600"></p>
+                        @endif
                     </div>
                     <div class="flex justify-end gap-3 pt-4">
                         <button type="button" @click="openModal=null"
@@ -2387,11 +3283,12 @@
                                 </span>
                             @endif
                         </div>
-                        <p x-show="addUnderarmOverdeckErrors.name" x-text="addUnderarmOverdeckErrors.name"
-                            class="mt-1 text-sm text-red-600"></p>
-                        @error('name', 'addUnderarmOverdeck')
-                            <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                        @enderror
+                        @if ($errors->addUnderarmOverdeck->has('name'))
+                            <p class="mt-1 text-sm text-red-600">{{ $errors->addUnderarmOverdeck->first('name') }}</p>
+                        @else
+                            <p x-show="addUnderarmOverdeckErrors.name" x-text="addUnderarmOverdeckErrors.name"
+                                class="mt-1 text-sm text-red-600"></p>
+                        @endif
                     </div>
                     <div class="flex justify-end gap-3 pt-4">
                         <button type="button" @click="openModal=null"
@@ -2461,11 +3358,12 @@
                                 </span>
                             @endif
                         </div>
-                        <p x-show="addSideSplitErrors.name" x-text="addSideSplitErrors.name"
-                            class="mt-1 text-sm text-red-600"></p>
-                        @error('name', 'addSideSplit')
-                            <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                        @enderror
+                        @if ($errors->addSideSplit->has('name'))
+                            <p class="mt-1 text-sm text-red-600">{{ $errors->addSideSplit->first('name') }}</p>
+                        @else
+                            <p x-show="addSideSplitErrors.name" x-text="addSideSplitErrors.name"
+                                class="mt-1 text-sm text-red-600"></p>
+                        @endif
                     </div>
                     <div class="flex justify-end gap-3 pt-4">
                         <button type="button" @click="openModal=null"
@@ -2535,11 +3433,12 @@
                                 </span>
                             @endif
                         </div>
-                        <p x-show="addSewingLabelErrors.name" x-text="addSewingLabelErrors.name"
-                            class="mt-1 text-sm text-red-600"></p>
-                        @error('name', 'addSewingLabel')
-                            <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                        @enderror
+                        @if ($errors->addSewingLabel->has('name'))
+                            <p class="mt-1 text-sm text-red-600">{{ $errors->addSewingLabel->first('name') }}</p>
+                        @else
+                            <p x-show="addSewingLabelErrors.name" x-text="addSewingLabelErrors.name"
+                                class="mt-1 text-sm text-red-600"></p>
+                        @endif
                     </div>
                     <div class="flex justify-end gap-3 pt-4">
                         <button type="button" @click="openModal=null"
@@ -2609,11 +3508,12 @@
                                 </span>
                             @endif
                         </div>
-                        <p x-show="addPlasticPackingErrors.name" x-text="addPlasticPackingErrors.name"
-                            class="mt-1 text-sm text-red-600"></p>
-                        @error('name', 'addPlasticPacking')
-                            <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                        @enderror
+                        @if ($errors->addPlasticPacking->has('name'))
+                            <p class="mt-1 text-sm text-red-600">{{ $errors->addPlasticPacking->first('name') }}</p>
+                        @else
+                            <p x-show="addPlasticPackingErrors.name" x-text="addPlasticPackingErrors.name"
+                                class="mt-1 text-sm text-red-600"></p>
+                        @endif
                     </div>
                     <div class="flex justify-end gap-3 pt-4">
                         <button type="button" @click="openModal=null"
@@ -2684,11 +3584,12 @@
                                 </span>
                             @endif
                         </div>
-                        <p x-show="addStickerErrors.name" x-text="addStickerErrors.name"
-                            class="mt-1 text-sm text-red-600"></p>
-                        @error('name', 'addSticker')
-                            <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                        @enderror
+                        @if ($errors->addSticker->has('name'))
+                            <p class="mt-1 text-sm text-red-600">{{ $errors->addSticker->first('name') }}</p>
+                        @else
+                            <p x-show="addStickerErrors.name" x-text="addStickerErrors.name"
+                                class="mt-1 text-sm text-red-600"></p>
+                        @endif
                     </div>
                     <div class="flex justify-end gap-3 pt-4">
                         <button type="button" @click="openModal=null"
@@ -3127,6 +4028,60 @@
 
         {{-- AJAX Pagination Script --}}
         <script>
+            // Function to setup pagination for a specific container
+            function setupPagination(containerId, sectionId) {
+                const container = document.getElementById(containerId);
+                if (!container) return;
+
+                // Prevent duplicate listeners
+                if (container._paginationListener) return;
+                container._paginationListener = true;
+
+                container.addEventListener('click', function(e) {
+                    const link = e.target.closest('a[href*="page="]');
+                    if (!link) return;
+
+                    e.preventDefault();
+                    const url = link.href;
+
+                    // Show loading indicator
+                    if (typeof NProgress !== 'undefined') NProgress.start();
+
+                    fetch(url, {
+                            headers: {
+                                'X-Requested-With': 'XMLHttpRequest'
+                            }
+                        })
+                        .then(response => response.text())
+                        .then(html => {
+                            const parser = new DOMParser();
+                            const doc = parser.parseFromString(html, 'text/html');
+                            const newContent = doc.getElementById(containerId);
+
+                            if (newContent) {
+                                container.innerHTML = newContent.innerHTML;
+
+                                // Scroll to section top
+                                const section = document.getElementById(sectionId);
+                                if (section) {
+                                    setTimeout(() => {
+                                        section.scrollIntoView({
+                                            behavior: 'smooth',
+                                            block: 'start'
+                                        });
+                                    }, 100);
+                                }
+                            }
+
+                            if (typeof NProgress !== 'undefined') NProgress.done();
+                        })
+                        .catch(error => {
+                            console.error('Pagination error:', error);
+                            if (typeof NProgress !== 'undefined') NProgress.done();
+                        });
+                });
+            }
+
             // Global function to setup all pagination containers
             function setupAllPagination() {
                 const paginationContainers = [
@@ -3143,59 +4098,22 @@
                     'sticker-pagination-container'
                 ];
 
-                paginationContainers.forEach(containerId => {
-                    const container = document.getElementById(containerId);
-                    if (!container) return;
+                const sectionIds = [
+                    'cutting-patterns',
+                    'chain-cloths',
+                    'rib-sizes',
+                    'print-inks',
+                    'finishings',
+                    'neck-overdecks',
+                    'underarm-overdecks',
+                    'side-splits',
+                    'sewing-labels',
+                    'plastic-packings',
+                    'stickers'
+                ];
 
-                    // Prevent duplicate listeners
-                    if (container._paginationListener) return;
-                    container._paginationListener = true;
-
-                    container.addEventListener('click', function(e) {
-                        const link = e.target.closest('a[href*="page="]');
-                        if (!link) return;
-
-                        e.preventDefault();
-                        const url = link.href;
-
-                        // Show loading indicator
-                        if (typeof NProgress !== 'undefined') NProgress.start();
-
-                        fetch(url, {
-                                headers: {
-                                    'X-Requested-With': 'XMLHttpRequest'
-                                }
-                            })
-                            .then(response => response.text())
-                            .then(html => {
-                                const parser = new DOMParser();
-                                const doc = parser.parseFromString(html, 'text/html');
-                                const newContent = doc.getElementById(containerId);
-
-                                if (newContent) {
-                                    container.innerHTML = newContent.innerHTML;
-
-                                    // Scroll to section top
-                                    const sectionId = containerId.replace('-pagination-container', 's');
-                                    const section = document.getElementById(sectionId) || document.getElementById(
-                                        containerId.replace('-pagination-container', ''));
-                                    if (section) {
-                                        setTimeout(() => {
-                                            section.scrollIntoView({
-                                                behavior: 'smooth',
-                                                block: 'start'
-                                            });
-                                        }, 100);
-                                    }
-                                }
-
-                                if (typeof NProgress !== 'undefined') NProgress.done();
-                            })
-                            .catch(error => {
-                                console.error('Pagination error:', error);
-                                if (typeof NProgress !== 'undefined') NProgress.done();
-                            });
-                    });
+                paginationContainers.forEach((containerId, index) => {
+                    setupPagination(containerId, sectionIds[index]);
                 });
             }
 

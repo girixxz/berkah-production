@@ -13,6 +13,10 @@ class NeckOverdeckController extends Controller
         try {
             $validated = $request->validateWithBag('addNeckOverdeck', [
                 'name' => 'required|max:100|unique:neck_overdecks,name',
+            ], [
+                'name.required' => 'Neck Overdeck name is required.',
+                'name.max' => 'Neck Overdeck name must not exceed 100 characters.',
+                'name.unique' => 'This neck overdeck name already exists.',
             ]);
 
             NeckOverdeck::create($validated);
@@ -37,6 +41,10 @@ class NeckOverdeckController extends Controller
         try {
             $validated = $request->validateWithBag('editNeckOverdeck', [
                 'name' => 'required|max:100|unique:neck_overdecks,name,' . $neckOverdeck->id,
+            ], [
+                'name.required' => 'Neck Overdeck name is required.',
+                'name.max' => 'Neck Overdeck name must not exceed 100 characters.',
+                'name.unique' => 'This neck overdeck name already exists.',
             ]);
 
             $neckOverdeck->update(array_filter($validated));

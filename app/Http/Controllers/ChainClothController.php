@@ -13,6 +13,10 @@ class ChainClothController extends Controller
         try {
             $validated = $request->validateWithBag('addChainCloth', [
                 'name' => 'required|max:100|unique:chain_cloths,name',
+            ], [
+                'name.required' => 'Chain Cloth name is required.',
+                'name.max' => 'Chain Cloth name must not exceed 100 characters.',
+                'name.unique' => 'This chain cloth name already exists.',
             ]);
 
             ChainCloth::create($validated);
@@ -37,6 +41,10 @@ class ChainClothController extends Controller
         try {
             $validated = $request->validateWithBag('editChainCloth', [
                 'name' => 'required|max:100|unique:chain_cloths,name,' . $chainCloth->id,
+            ], [
+                'name.required' => 'Chain Cloth name is required.',
+                'name.max' => 'Chain Cloth name must not exceed 100 characters.',
+                'name.unique' => 'This chain cloth name already exists.',
             ]);
 
             $chainCloth->update(array_filter($validated));

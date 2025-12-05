@@ -13,6 +13,10 @@ class PlasticPackingController extends Controller
         try {
             $validated = $request->validateWithBag('addPlasticPacking', [
                 'name' => 'required|max:100|unique:plastic_packings,name',
+            ], [
+                'name.required' => 'Plastic Packing name is required.',
+                'name.max' => 'Plastic Packing name must not exceed 100 characters.',
+                'name.unique' => 'This plastic packing name already exists.',
             ]);
 
             PlasticPacking::create($validated);
@@ -37,6 +41,10 @@ class PlasticPackingController extends Controller
         try {
             $validated = $request->validateWithBag('editPlasticPacking', [
                 'name' => 'required|max:100|unique:plastic_packings,name,' . $plasticPacking->id,
+            ], [
+                'name.required' => 'Plastic Packing name is required.',
+                'name.max' => 'Plastic Packing name must not exceed 100 characters.',
+                'name.unique' => 'This plastic packing name already exists.',
             ]);
 
             $plasticPacking->update(array_filter($validated));

@@ -13,6 +13,10 @@ class StickerController extends Controller
         try {
             $validated = $request->validateWithBag('addSticker', [
                 'name' => 'required|max:100|unique:stickers,name',
+            ], [
+                'name.required' => 'Sticker name is required.',
+                'name.max' => 'Sticker name must not exceed 100 characters.',
+                'name.unique' => 'This sticker name already exists.',
             ]);
 
             Sticker::create($validated);
@@ -37,6 +41,10 @@ class StickerController extends Controller
         try {
             $validated = $request->validateWithBag('editSticker', [
                 'name' => 'required|max:100|unique:stickers,name,' . $sticker->id,
+            ], [
+                'name.required' => 'Sticker name is required.',
+                'name.max' => 'Sticker name must not exceed 100 characters.',
+                'name.unique' => 'This sticker name already exists.',
             ]);
 
             $sticker->update(array_filter($validated));

@@ -13,6 +13,10 @@ class PrintInkController extends Controller
         try {
             $validated = $request->validateWithBag('addPrintInk', [
                 'name' => 'required|max:100|unique:print_inks,name',
+            ], [
+                'name.required' => 'Print Ink name is required.',
+                'name.max' => 'Print Ink name must not exceed 100 characters.',
+                'name.unique' => 'This print ink name already exists.',
             ]);
 
             PrintInk::create($validated);
@@ -37,6 +41,10 @@ class PrintInkController extends Controller
         try {
             $validated = $request->validateWithBag('editPrintInk', [
                 'name' => 'required|max:100|unique:print_inks,name,' . $printInk->id,
+            ], [
+                'name.required' => 'Print Ink name is required.',
+                'name.max' => 'Print Ink name must not exceed 100 characters.',
+                'name.unique' => 'This print ink name already exists.',
             ]);
 
             $printInk->update(array_filter($validated));

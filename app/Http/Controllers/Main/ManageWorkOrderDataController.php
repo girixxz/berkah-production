@@ -18,26 +18,60 @@ use App\Models\Sticker;
 
 class ManageWorkOrderDataController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
+        // Get per_page values for each section with validation
+        $perPageCuttingPattern = $request->input('per_page_cutting_pattern', 5);
+        $perPageCuttingPattern = in_array($perPageCuttingPattern, [5, 10, 15, 20, 25]) ? $perPageCuttingPattern : 5;
+        
+        $perPageChainCloth = $request->input('per_page_chain_cloth', 5);
+        $perPageChainCloth = in_array($perPageChainCloth, [5, 10, 15, 20, 25]) ? $perPageChainCloth : 5;
+        
+        $perPageRibSize = $request->input('per_page_rib_size', 5);
+        $perPageRibSize = in_array($perPageRibSize, [5, 10, 15, 20, 25]) ? $perPageRibSize : 5;
+        
+        $perPagePrintInk = $request->input('per_page_print_ink', 5);
+        $perPagePrintInk = in_array($perPagePrintInk, [5, 10, 15, 20, 25]) ? $perPagePrintInk : 5;
+        
+        $perPageFinishing = $request->input('per_page_finishing', 5);
+        $perPageFinishing = in_array($perPageFinishing, [5, 10, 15, 20, 25]) ? $perPageFinishing : 5;
+        
+        $perPageNeckOverdeck = $request->input('per_page_neck_overdeck', 5);
+        $perPageNeckOverdeck = in_array($perPageNeckOverdeck, [5, 10, 15, 20, 25]) ? $perPageNeckOverdeck : 5;
+        
+        $perPageUnderarmOverdeck = $request->input('per_page_underarm_overdeck', 5);
+        $perPageUnderarmOverdeck = in_array($perPageUnderarmOverdeck, [5, 10, 15, 20, 25]) ? $perPageUnderarmOverdeck : 5;
+        
+        $perPageSideSplit = $request->input('per_page_side_split', 5);
+        $perPageSideSplit = in_array($perPageSideSplit, [5, 10, 15, 20, 25]) ? $perPageSideSplit : 5;
+        
+        $perPageSewingLabel = $request->input('per_page_sewing_label', 5);
+        $perPageSewingLabel = in_array($perPageSewingLabel, [5, 10, 15, 20, 25]) ? $perPageSewingLabel : 5;
+        
+        $perPagePlasticPacking = $request->input('per_page_plastic_packing', 5);
+        $perPagePlasticPacking = in_array($perPagePlasticPacking, [5, 10, 15, 20, 25]) ? $perPagePlasticPacking : 5;
+        
+        $perPageSticker = $request->input('per_page_sticker', 5);
+        $perPageSticker = in_array($perPageSticker, [5, 10, 15, 20, 25]) ? $perPageSticker : 5;
+        
         // Cutting Data
-        $cuttingPatterns = CuttingPattern::paginate(5, ['*'], 'cutting_pattern_page');
-        $chainCloths = ChainCloth::paginate(5, ['*'], 'chain_cloth_page');
-        $ribSizes = RibSize::paginate(5, ['*'], 'rib_size_page');
+        $cuttingPatterns = CuttingPattern::paginate($perPageCuttingPattern, ['*'], 'cutting_pattern_page');
+        $chainCloths = ChainCloth::paginate($perPageChainCloth, ['*'], 'chain_cloth_page');
+        $ribSizes = RibSize::paginate($perPageRibSize, ['*'], 'rib_size_page');
 
         // Printing Data
-        $printInks = PrintInk::paginate(5, ['*'], 'print_ink_page');
-        $finishings = Finishing::paginate(5, ['*'], 'finishing_page');
+        $printInks = PrintInk::paginate($perPagePrintInk, ['*'], 'print_ink_page');
+        $finishings = Finishing::paginate($perPageFinishing, ['*'], 'finishing_page');
 
         // Sewing Data
-        $neckOverdecks = NeckOverdeck::paginate(5, ['*'], 'neck_overdeck_page');
-        $underarmOverdecks = UnderarmOverdeck::paginate(5, ['*'], 'underarm_overdeck_page');
-        $sideSplits = SideSplit::paginate(5, ['*'], 'side_split_page');
-        $sewingLabels = SewingLabel::paginate(5, ['*'], 'sewing_label_page');
+        $neckOverdecks = NeckOverdeck::paginate($perPageNeckOverdeck, ['*'], 'neck_overdeck_page');
+        $underarmOverdecks = UnderarmOverdeck::paginate($perPageUnderarmOverdeck, ['*'], 'underarm_overdeck_page');
+        $sideSplits = SideSplit::paginate($perPageSideSplit, ['*'], 'side_split_page');
+        $sewingLabels = SewingLabel::paginate($perPageSewingLabel, ['*'], 'sewing_label_page');
 
         // Packing Data
-        $plasticPackings = PlasticPacking::paginate(5, ['*'], 'plastic_packing_page');
-        $stickers = Sticker::paginate(5, ['*'], 'sticker_page');
+        $plasticPackings = PlasticPacking::paginate($perPagePlasticPacking, ['*'], 'plastic_packing_page');
+        $stickers = Sticker::paginate($perPageSticker, ['*'], 'sticker_page');
 
         return view('pages.owner.manage-data.work-orders', compact(
             'cuttingPatterns',

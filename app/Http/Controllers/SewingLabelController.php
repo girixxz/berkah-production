@@ -13,6 +13,10 @@ class SewingLabelController extends Controller
         try {
             $validated = $request->validateWithBag('addSewingLabel', [
                 'name' => 'required|max:100|unique:sewing_labels,name',
+            ], [
+                'name.required' => 'Sewing Label name is required.',
+                'name.max' => 'Sewing Label name must not exceed 100 characters.',
+                'name.unique' => 'This sewing label name already exists.',
             ]);
 
             SewingLabel::create($validated);
@@ -37,6 +41,10 @@ class SewingLabelController extends Controller
         try {
             $validated = $request->validateWithBag('editSewingLabel', [
                 'name' => 'required|max:100|unique:sewing_labels,name,' . $sewingLabel->id,
+            ], [
+                'name.required' => 'Sewing Label name is required.',
+                'name.max' => 'Sewing Label name must not exceed 100 characters.',
+                'name.unique' => 'This sewing label name already exists.',
             ]);
 
             $sewingLabel->update(array_filter($validated));

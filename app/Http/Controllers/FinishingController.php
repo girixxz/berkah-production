@@ -13,6 +13,10 @@ class FinishingController extends Controller
         try {
             $validated = $request->validateWithBag('addFinishing', [
                 'name' => 'required|max:100|unique:finishings,name',
+            ], [
+                'name.required' => 'Finishing name is required.',
+                'name.max' => 'Finishing name must not exceed 100 characters.',
+                'name.unique' => 'This finishing name already exists.',
             ]);
 
             Finishing::create($validated);
@@ -37,6 +41,10 @@ class FinishingController extends Controller
         try {
             $validated = $request->validateWithBag('editFinishing', [
                 'name' => 'required|max:100|unique:finishings,name,' . $finishing->id,
+            ], [
+                'name.required' => 'Finishing name is required.',
+                'name.max' => 'Finishing name must not exceed 100 characters.',
+                'name.unique' => 'This finishing name already exists.',
             ]);
 
             $finishing->update(array_filter($validated));
