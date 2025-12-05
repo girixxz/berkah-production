@@ -15,6 +15,10 @@ class CustomerController extends Controller
     public function index(Request $request)
     {
         $search = $request->input('search');
+        
+        // Per page validation
+        $perPage = $request->input('per_page', 15);
+        $perPage = in_array($perPage, [5, 10, 15, 20, 25]) ? $perPage : 15;
 
         $customers = Customer::with(['orders'])
             ->when($search, function ($query, $search) {
@@ -24,7 +28,7 @@ class CustomerController extends Controller
             ->withCount('orders')
             ->withSum('orders', 'total_qty')
             ->orderBy('created_at', 'desc')
-            ->paginate(15, ['*'], 'customer_page');
+            ->paginate($perPage, ['*'], 'customer_page');
 
         // No longer passing provinces - will be loaded via AJAX
         return view('pages.admin.customers', compact('customers'));
