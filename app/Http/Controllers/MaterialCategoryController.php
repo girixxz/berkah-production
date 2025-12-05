@@ -13,6 +13,10 @@ class MaterialCategoryController extends Controller
         try {
             $validated = $request->validateWithBag('addMaterial', [
                 'material_name' => 'required|max:255|unique:material_categories,material_name',
+            ], [
+                'material_name.required' => 'Material name is required.',
+                'material_name.max' => 'Material name must not exceed 255 characters.',
+                'material_name.unique' => 'This material name already exists.',
             ]);
 
             MaterialCategory::create($validated);
@@ -38,6 +42,10 @@ class MaterialCategoryController extends Controller
         try {
             $validated = $request->validateWithBag('editMaterial', [
                 'material_name' => 'required|max:255|unique:material_categories,material_name,' . $materialCategory->id,
+            ], [
+                'material_name.required' => 'Material name is required.',
+                'material_name.max' => 'Material name must not exceed 255 characters.',
+                'material_name.unique' => 'This material name already exists.',
             ]);
 
             $materialCategory->update(array_filter($validated));

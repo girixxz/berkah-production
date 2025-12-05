@@ -177,6 +177,87 @@
                       focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary" />
                     </div>
 
+                    {{-- Show Per Page Dropdown --}}
+                    <div x-data="{
+                        open: false,
+                        perPage: {{ request('per_page_product', 5) }},
+                        options: [
+                            { value: 5, label: '5' },
+                            { value: 10, label: '10' },
+                            { value: 15, label: '15' },
+                            { value: 20, label: '20' },
+                            { value: 25, label: '25' }
+                        ],
+                        get selected() {
+                            return this.options.find(o => o.value === this.perPage) || this.options[0];
+                        },
+                        selectOption(option) {
+                            this.perPage = option.value;
+                            this.open = false;
+                            this.applyPerPageFilter();
+                        },
+                        applyPerPageFilter() {
+                            const params = new URLSearchParams(window.location.search);
+                            params.set('per_page_product', this.perPage);
+                            params.delete('product_page');
+                            
+                            const url = '{{ route('owner.manage-data.products.index') }}?' + params.toString();
+                            window.history.pushState({}, '', url);
+                            
+                            NProgress.start();
+                            
+                            fetch(url, {
+                                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                            })
+                            .then(response => response.text())
+                            .then(html => {
+                                const parser = new DOMParser();
+                                const doc = parser.parseFromString(html, 'text/html');
+                                const newSection = doc.getElementById('product-categories');
+                                
+                                if (newSection) {
+                                    document.getElementById('product-categories').innerHTML = newSection.innerHTML;
+                                    setupPagination('product-pagination-container', 'product-categories');
+                                }
+                                
+                                NProgress.done();
+                            })
+                            .catch(error => {
+                                console.error('Error:', error);
+                                NProgress.done();
+                            });
+                        }
+                    }" class="relative flex-shrink-0">
+                        <button type="button" @click="open = !open"
+                            class="w-14 flex justify-between items-center rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 bg-white
+                                focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors">
+                            <span x-text="selected.label"></span>
+                            <svg class="w-3 h-3 text-gray-400 transition-transform" :class="open && 'rotate-180'" fill="none"
+                                stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                            </svg>
+                        </button>
+
+                        <div x-show="open" @click.away="open = false" x-cloak 
+                            x-transition:enter="transition ease-out duration-100"
+                            x-transition:enter-start="opacity-0 scale-95" 
+                            x-transition:enter-end="opacity-100 scale-100"
+                            x-transition:leave="transition ease-in duration-75" 
+                            x-transition:leave-start="opacity-100 scale-100"
+                            x-transition:leave-end="opacity-0 scale-95"
+                            class="absolute z-20 mt-1 w-14 bg-white border border-gray-200 rounded-md shadow-lg">
+                            <ul class="max-h-60 overflow-y-auto py-1">
+                                <template x-for="option in options" :key="option.value">
+                                    <li @click="selectOption(option)"
+                                        class="px-4 py-2 cursor-pointer text-sm hover:bg-primary/5 transition-colors"
+                                        :class="{ 'bg-primary/10 font-medium text-primary': perPage === option.value }">
+                                        <span x-text="option.label"></span>
+                                    </li>
+                                </template>
+                            </ul>
+                        </div>
+                    </div>
+
                     {{-- Add Items --}}
                     <button @click="openModal = 'addProduct'"
                         class="cursor-pointer flex-shrink-0 w-18 whitespace-nowrap px-3 py-2 rounded-md
@@ -318,6 +399,87 @@
                         <input type="text" x-model="searchMaterial" placeholder="Search Items"
                             class="w-full rounded-md border border-gray-300 pl-9 pr-3 py-2 text-sm
                       focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary" />
+                    </div>
+
+                    {{-- Show Per Page Dropdown --}}
+                    <div x-data="{
+                        open: false,
+                        perPage: {{ request('per_page_material', 5) }},
+                        options: [
+                            { value: 5, label: '5' },
+                            { value: 10, label: '10' },
+                            { value: 15, label: '15' },
+                            { value: 20, label: '20' },
+                            { value: 25, label: '25' }
+                        ],
+                        get selected() {
+                            return this.options.find(o => o.value === this.perPage) || this.options[0];
+                        },
+                        selectOption(option) {
+                            this.perPage = option.value;
+                            this.open = false;
+                            this.applyPerPageFilter();
+                        },
+                        applyPerPageFilter() {
+                            const params = new URLSearchParams(window.location.search);
+                            params.set('per_page_material', this.perPage);
+                            params.delete('material_page');
+                            
+                            const url = '{{ route('owner.manage-data.products.index') }}?' + params.toString();
+                            window.history.pushState({}, '', url);
+                            
+                            NProgress.start();
+                            
+                            fetch(url, {
+                                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                            })
+                            .then(response => response.text())
+                            .then(html => {
+                                const parser = new DOMParser();
+                                const doc = parser.parseFromString(html, 'text/html');
+                                const newSection = doc.getElementById('material-categories');
+                                
+                                if (newSection) {
+                                    document.getElementById('material-categories').innerHTML = newSection.innerHTML;
+                                    setupPagination('material-pagination-container', 'material-categories');
+                                }
+                                
+                                NProgress.done();
+                            })
+                            .catch(error => {
+                                console.error('Error:', error);
+                                NProgress.done();
+                            });
+                        }
+                    }" class="relative flex-shrink-0">
+                        <button type="button" @click="open = !open"
+                            class="w-14 flex justify-between items-center rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 bg-white
+                                focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors">
+                            <span x-text="selected.label"></span>
+                            <svg class="w-3 h-3 text-gray-400 transition-transform" :class="open && 'rotate-180'" fill="none"
+                                stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                            </svg>
+                        </button>
+
+                        <div x-show="open" @click.away="open = false" x-cloak 
+                            x-transition:enter="transition ease-out duration-100"
+                            x-transition:enter-start="opacity-0 scale-95" 
+                            x-transition:enter-end="opacity-100 scale-100"
+                            x-transition:leave="transition ease-in duration-75" 
+                            x-transition:leave-start="opacity-100 scale-100"
+                            x-transition:leave-end="opacity-0 scale-95"
+                            class="absolute z-20 mt-1 w-14 bg-white border border-gray-200 rounded-md shadow-lg">
+                            <ul class="max-h-60 overflow-y-auto py-1">
+                                <template x-for="option in options" :key="option.value">
+                                    <li @click="selectOption(option)"
+                                        class="px-4 py-2 cursor-pointer text-sm hover:bg-primary/5 transition-colors"
+                                        :class="{ 'bg-primary/10 font-medium text-primary': perPage === option.value }">
+                                        <span x-text="option.label"></span>
+                                    </li>
+                                </template>
+                            </ul>
+                        </div>
                     </div>
 
                     {{-- Add Items --}}
@@ -464,6 +626,53 @@
                       focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary" />
                     </div>
 
+                    {{-- Show Per Page Dropdown --}}
+                    <div x-data="{
+                        open: false,
+                        perPage: {{ request('per_page_texture', 5) }},
+                        options: [{ value: 5, label: '5' },{ value: 10, label: '10' },{ value: 15, label: '15' },{ value: 20, label: '20' },{ value: 25, label: '25' }],
+                        get selected() { return this.options.find(o => o.value === this.perPage) || this.options[0]; },
+                        selectOption(option) {
+                            this.perPage = option.value;
+                            this.open = false;
+                            const params = new URLSearchParams(window.location.search);
+                            params.set('per_page_texture', this.perPage);
+                            params.delete('texture_page');
+                            const url = '{{ route('owner.manage-data.products.index') }}?' + params.toString();
+                            window.history.pushState({}, '', url);
+                            NProgress.start();
+                            fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+                            .then(response => response.text())
+                            .then(html => {
+                                const parser = new DOMParser();
+                                const doc = parser.parseFromString(html, 'text/html');
+                                const newSection = doc.getElementById('material-textures');
+                                if (newSection) {
+                                    document.getElementById('material-textures').innerHTML = newSection.innerHTML;
+                                    setupPagination('texture-pagination-container', 'material-textures');
+                                }
+                                NProgress.done();
+                            })
+                            .catch(error => { console.error('Error:', error); NProgress.done(); });
+                        }
+                    }" class="relative flex-shrink-0">
+                        <button type="button" @click="open = !open" class="w-14 flex justify-between items-center rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors">
+                            <span x-text="selected.label"></span>
+                            <svg class="w-3 h-3 text-gray-400 transition-transform" :class="open && 'rotate-180'" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                            </svg>
+                        </button>
+                        <div x-show="open" @click.away="open = false" x-cloak x-transition class="absolute z-20 mt-1 w-14 bg-white border border-gray-200 rounded-md shadow-lg">
+                            <ul class="max-h-60 overflow-y-auto py-1">
+                                <template x-for="option in options" :key="option.value">
+                                    <li @click="selectOption(option)" class="px-4 py-2 cursor-pointer text-sm hover:bg-primary/5 transition-colors" :class="{ 'bg-primary/10 font-medium text-primary': perPage === option.value }">
+                                        <span x-text="option.label"></span>
+                                    </li>
+                                </template>
+                            </ul>
+                        </div>
+                    </div>
+
                     {{-- Add Items --}}
                     <button @click="openModal = 'addTexture'"
                         class="cursor-pointer flex-shrink-0 w-18 whitespace-nowrap px-3 py-2 rounded-md
@@ -605,6 +814,53 @@
                         <input type="text" x-model="searchSleeve" placeholder="Search Items"
                             class="w-full rounded-md border border-gray-300 pl-9 pr-3 py-2 text-sm
                     focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary" />
+                    </div>
+
+                    {{-- Show Per Page Dropdown --}}
+                    <div x-data="{
+                        open: false,
+                        perPage: {{ request('per_page_sleeve', 5) }},
+                        options: [{ value: 5, label: '5' },{ value: 10, label: '10' },{ value: 15, label: '15' },{ value: 20, label: '20' },{ value: 25, label: '25' }],
+                        get selected() { return this.options.find(o => o.value === this.perPage) || this.options[0]; },
+                        selectOption(option) {
+                            this.perPage = option.value;
+                            this.open = false;
+                            const params = new URLSearchParams(window.location.search);
+                            params.set('per_page_sleeve', this.perPage);
+                            params.delete('sleeve_page');
+                            const url = '{{ route('owner.manage-data.products.index') }}?' + params.toString();
+                            window.history.pushState({}, '', url);
+                            NProgress.start();
+                            fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+                            .then(response => response.text())
+                            .then(html => {
+                                const parser = new DOMParser();
+                                const doc = parser.parseFromString(html, 'text/html');
+                                const newSection = doc.getElementById('material-sleeves');
+                                if (newSection) {
+                                    document.getElementById('material-sleeves').innerHTML = newSection.innerHTML;
+                                    setupPagination('sleeve-pagination-container', 'material-sleeves');
+                                }
+                                NProgress.done();
+                            })
+                            .catch(error => { console.error('Error:', error); NProgress.done(); });
+                        }
+                    }" class="relative flex-shrink-0">
+                        <button type="button" @click="open = !open" class="w-14 flex justify-between items-center rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors">
+                            <span x-text="selected.label"></span>
+                            <svg class="w-3 h-3 text-gray-400 transition-transform" :class="open && 'rotate-180'" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                            </svg>
+                        </button>
+                        <div x-show="open" @click.away="open = false" x-cloak x-transition class="absolute z-20 mt-1 w-14 bg-white border border-gray-200 rounded-md shadow-lg">
+                            <ul class="max-h-60 overflow-y-auto py-1">
+                                <template x-for="option in options" :key="option.value">
+                                    <li @click="selectOption(option)" class="px-4 py-2 cursor-pointer text-sm hover:bg-primary/5 transition-colors" :class="{ 'bg-primary/10 font-medium text-primary': perPage === option.value }">
+                                        <span x-text="option.label"></span>
+                                    </li>
+                                </template>
+                            </ul>
+                        </div>
                     </div>
 
                     {{-- Add Items --}}
@@ -749,6 +1005,53 @@
                         <input type="text" x-model="searchSize" placeholder="Search Items"
                             class="w-full rounded-md border border-gray-300 pl-9 pr-3 py-2 text-sm
                       focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary" />
+                    </div>
+
+                    {{-- Show Per Page Dropdown --}}
+                    <div x-data="{
+                        open: false,
+                        perPage: {{ request('per_page_size', 5) }},
+                        options: [{ value: 5, label: '5' },{ value: 10, label: '10' },{ value: 15, label: '15' },{ value: 20, label: '20' },{ value: 25, label: '25' }],
+                        get selected() { return this.options.find(o => o.value === this.perPage) || this.options[0]; },
+                        selectOption(option) {
+                            this.perPage = option.value;
+                            this.open = false;
+                            const params = new URLSearchParams(window.location.search);
+                            params.set('per_page_size', this.perPage);
+                            params.delete('size_page');
+                            const url = '{{ route('owner.manage-data.products.index') }}?' + params.toString();
+                            window.history.pushState({}, '', url);
+                            NProgress.start();
+                            fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+                            .then(response => response.text())
+                            .then(html => {
+                                const parser = new DOMParser();
+                                const doc = parser.parseFromString(html, 'text/html');
+                                const newSection = doc.getElementById('material-sizes');
+                                if (newSection) {
+                                    document.getElementById('material-sizes').innerHTML = newSection.innerHTML;
+                                    setupPagination('size-pagination-container', 'material-sizes');
+                                }
+                                NProgress.done();
+                            })
+                            .catch(error => { console.error('Error:', error); NProgress.done(); });
+                        }
+                    }" class="relative flex-shrink-0">
+                        <button type="button" @click="open = !open" class="w-14 flex justify-between items-center rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors">
+                            <span x-text="selected.label"></span>
+                            <svg class="w-3 h-3 text-gray-400 transition-transform" :class="open && 'rotate-180'" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                            </svg>
+                        </button>
+                        <div x-show="open" @click.away="open = false" x-cloak x-transition class="absolute z-20 mt-1 w-14 bg-white border border-gray-200 rounded-md shadow-lg">
+                            <ul class="max-h-60 overflow-y-auto py-1">
+                                <template x-for="option in options" :key="option.value">
+                                    <li @click="selectOption(option)" class="px-4 py-2 cursor-pointer text-sm hover:bg-primary/5 transition-colors" :class="{ 'bg-primary/10 font-medium text-primary': perPage === option.value }">
+                                        <span x-text="option.label"></span>
+                                    </li>
+                                </template>
+                            </ul>
+                        </div>
                     </div>
 
                     {{-- Add Items --}}
@@ -898,6 +1201,53 @@
                         <input type="text" x-model="searchService" placeholder="Search Items"
                             class="w-full rounded-md border border-gray-300 pl-9 pr-3 py-2 text-sm
                       focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary" />
+                    </div>
+
+                    {{-- Show Per Page Dropdown --}}
+                    <div x-data="{
+                        open: false,
+                        perPage: {{ request('per_page_service', 5) }},
+                        options: [{ value: 5, label: '5' },{ value: 10, label: '10' },{ value: 15, label: '15' },{ value: 20, label: '20' },{ value: 25, label: '25' }],
+                        get selected() { return this.options.find(o => o.value === this.perPage) || this.options[0]; },
+                        selectOption(option) {
+                            this.perPage = option.value;
+                            this.open = false;
+                            const params = new URLSearchParams(window.location.search);
+                            params.set('per_page_service', this.perPage);
+                            params.delete('service_page');
+                            const url = '{{ route('owner.manage-data.products.index') }}?' + params.toString();
+                            window.history.pushState({}, '', url);
+                            NProgress.start();
+                            fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+                            .then(response => response.text())
+                            .then(html => {
+                                const parser = new DOMParser();
+                                const doc = parser.parseFromString(html, 'text/html');
+                                const newSection = doc.getElementById('services');
+                                if (newSection) {
+                                    document.getElementById('services').innerHTML = newSection.innerHTML;
+                                    setupPagination('service-pagination-container', 'services');
+                                }
+                                NProgress.done();
+                            })
+                            .catch(error => { console.error('Error:', error); NProgress.done(); });
+                        }
+                    }" class="relative flex-shrink-0">
+                        <button type="button" @click="open = !open" class="w-14 flex justify-between items-center rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors">
+                            <span x-text="selected.label"></span>
+                            <svg class="w-3 h-3 text-gray-400 transition-transform" :class="open && 'rotate-180'" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                            </svg>
+                        </button>
+                        <div x-show="open" @click.away="open = false" x-cloak x-transition class="absolute z-20 mt-1 w-14 bg-white border border-gray-200 rounded-md shadow-lg">
+                            <ul class="max-h-60 overflow-y-auto py-1">
+                                <template x-for="option in options" :key="option.value">
+                                    <li @click="selectOption(option)" class="px-4 py-2 cursor-pointer text-sm hover:bg-primary/5 transition-colors" :class="{ 'bg-primary/10 font-medium text-primary': perPage === option.value }">
+                                        <span x-text="option.label"></span>
+                                    </li>
+                                </template>
+                            </ul>
+                        </div>
                     </div>
 
                     {{-- Add Items --}}
@@ -1056,11 +1406,12 @@
                                 </span>
                             @endif
                         </div>
-                        <p x-show="addProductErrors.product_name" x-text="addProductErrors.product_name"
-                            class="mt-1 text-sm text-red-600"></p>
-                        @error('product_name', 'addProduct')
-                            <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                        @enderror
+                        @if ($errors->addProduct->has('product_name'))
+                            <p class="mt-1 text-sm text-red-600">{{ $errors->addProduct->first('product_name') }}</p>
+                        @else
+                            <p x-show="addProductErrors.product_name" x-text="addProductErrors.product_name"
+                                class="mt-1 text-sm text-red-600"></p>
+                        @endif
                     </div>
                     <div class="flex justify-end gap-3 pt-4">
                         <button type="button" @click="openModal=null"
@@ -1078,7 +1429,7 @@
                     <h3 class="text-lg font-semibold text-gray-900">Edit Product Category</h3>
                     <button @click="openModal=null" class="text-gray-400 hover:text-gray-600 cursor-pointer">✕</button>
                 </div>
-                <form :action="`/owner/manage-data/products/product-categories/${editProduct.id}`" method="POST"
+                <form :action="`/owner/manage-data/products/product-categories/${editProduct.id || ''}`" method="POST"
                     @submit="if (!validateEditProduct()) $event.preventDefault()" class="px-6 py-4 space-y-4">
                     @csrf
                     @method('PUT')
@@ -1133,11 +1484,12 @@
                                 </span>
                             @endif
                         </div>
-                        <p x-show="addMaterialErrors.material_name" x-text="addMaterialErrors.material_name"
-                            class="mt-1 text-sm text-red-600"></p>
-                        @error('material_name', 'addMaterial')
-                            <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                        @enderror
+                        @if ($errors->addMaterial->has('material_name'))
+                            <p class="mt-1 text-sm text-red-600">{{ $errors->addMaterial->first('material_name') }}</p>
+                        @else
+                            <p x-show="addMaterialErrors.material_name" x-text="addMaterialErrors.material_name"
+                                class="mt-1 text-sm text-red-600"></p>
+                        @endif
                     </div>
                     <div class="flex justify-end gap-3 pt-4">
                         <button type="button" @click="openModal=null"
@@ -1155,7 +1507,7 @@
                     <h3 class="text-lg font-semibold text-gray-900">Edit Material Category</h3>
                     <button @click="openModal=null" class="text-gray-400 hover:text-gray-600 cursor-pointer">✕</button>
                 </div>
-                <form :action="`/owner/manage-data/products/material-categories/${editMaterial.id}`" method="POST"
+                <form :action="`/owner/manage-data/products/material-categories/${editMaterial.id || ''}`" method="POST"
                     @submit="if (!validateEditMaterial()) $event.preventDefault()" class="px-6 py-4 space-y-4">
                     @csrf
                     @method('PUT')
@@ -1207,11 +1559,12 @@
                                 </span>
                             @endif
                         </div>
-                        <p x-show="addTextureErrors.texture_name" x-text="addTextureErrors.texture_name"
-                            class="mt-1 text-sm text-red-600"></p>
-                        @error('texture_name', 'addTexture')
-                            <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                        @enderror
+                        @if ($errors->addTexture->has('texture_name'))
+                            <p class="mt-1 text-sm text-red-600">{{ $errors->addTexture->first('texture_name') }}</p>
+                        @else
+                            <p x-show="addTextureErrors.texture_name" x-text="addTextureErrors.texture_name"
+                                class="mt-1 text-sm text-red-600"></p>
+                        @endif
                     </div>
                     <div class="flex justify-end gap-3 pt-4">
                         <button type="button" @click="openModal=null"
@@ -1229,7 +1582,7 @@
                     <h3 class="text-lg font-semibold text-gray-900">Edit Material Texture</h3>
                     <button @click="openModal=null" class="text-gray-400 hover:text-gray-600 cursor-pointer">✕</button>
                 </div>
-                <form :action="`/owner/manage-data/products/material-textures/${editTexture.id}`" method="POST"
+                <form :action="`/owner/manage-data/products/material-textures/${editTexture.id || ''}`" method="POST"
                     @submit="if (!validateEditTexture()) $event.preventDefault()" class="px-6 py-4 space-y-4">
                     @csrf
                     @method('PUT')
@@ -1281,11 +1634,12 @@
                                 </span>
                             @endif
                         </div>
-                        <p x-show="addSleeveErrors.sleeve_name" x-text="addSleeveErrors.sleeve_name"
-                            class="mt-1 text-sm text-red-600"></p>
-                        @error('sleeve_name', 'addSleeve')
-                            <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                        @enderror
+                        @if ($errors->addSleeve->has('sleeve_name'))
+                            <p class="mt-1 text-sm text-red-600">{{ $errors->addSleeve->first('sleeve_name') }}</p>
+                        @else
+                            <p x-show="addSleeveErrors.sleeve_name" x-text="addSleeveErrors.sleeve_name"
+                                class="mt-1 text-sm text-red-600"></p>
+                        @endif
                     </div>
                     <div class="flex justify-end gap-3 pt-4">
                         <button type="button" @click="openModal=null"
@@ -1303,7 +1657,7 @@
                     <h3 class="text-lg font-semibold text-gray-900">Edit Material Sleeve</h3>
                     <button @click="openModal=null" class="text-gray-400 hover:text-gray-600 cursor-pointer">✕</button>
                 </div>
-                <form :action="`/owner/manage-data/products/material-sleeves/${editSleeve.id}`" method="POST"
+                <form :action="`/owner/manage-data/products/material-sleeves/${editSleeve.id || ''}`" method="POST"
                     @submit="if (!validateEditSleeve()) $event.preventDefault()" class="px-6 py-4 space-y-4">
                     @csrf
                     @method('PUT')
@@ -1356,11 +1710,12 @@
                                 </span>
                             @endif
                         </div>
-                        <p x-show="addSizeErrors.size_name" x-text="addSizeErrors.size_name"
-                            class="mt-1 text-sm text-red-600"></p>
-                        @error('size_name', 'addSize')
-                            <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                        @enderror
+                        @if ($errors->addSize->has('size_name'))
+                            <p class="mt-1 text-sm text-red-600">{{ $errors->addSize->first('size_name') }}</p>
+                        @else
+                            <p x-show="addSizeErrors.size_name" x-text="addSizeErrors.size_name"
+                                class="mt-1 text-sm text-red-600"></p>
+                        @endif
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-gray-700">Extra Price <span
@@ -1380,11 +1735,12 @@
                                 </span>
                             @endif
                         </div>
-                        <p x-show="addSizeErrors.extra_price" x-text="addSizeErrors.extra_price"
-                            class="mt-1 text-sm text-red-600"></p>
-                        @error('extra_price', 'addSize')
-                            <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                        @enderror
+                        @if ($errors->addSize->has('extra_price'))
+                            <p class="mt-1 text-sm text-red-600">{{ $errors->addSize->first('extra_price') }}</p>
+                        @else
+                            <p x-show="addSizeErrors.extra_price" x-text="addSizeErrors.extra_price"
+                                class="mt-1 text-sm text-red-600"></p>
+                        @endif
                     </div>
                     <div class="flex justify-end gap-3 pt-4">
                         <button type="button" @click="openModal=null"
@@ -1438,7 +1794,7 @@
                     <h3 class="text-lg font-semibold text-gray-900">Edit Material Size</h3>
                     <button @click="openModal=null" class="text-gray-400 hover:text-gray-600 cursor-pointer">✕</button>
                 </div>
-                <form :action="`/owner/manage-data/products/material-sizes/${editSize.id}`" method="POST"
+                <form :action="`/owner/manage-data/products/material-sizes/${editSize.id || ''}`" method="POST"
                     @submit="if (!validateEditSize()) $event.preventDefault()" class="px-6 py-4 space-y-4">
                     @csrf
                     @method('PUT')
@@ -1523,11 +1879,12 @@
                                 </span>
                             @endif
                         </div>
-                        <p x-show="addServiceErrors.service_name" x-text="addServiceErrors.service_name"
-                            class="mt-1 text-sm text-red-600"></p>
-                        @error('service_name', 'addService')
-                            <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                        @enderror
+                        @if ($errors->addService->has('service_name'))
+                            <p class="mt-1 text-sm text-red-600">{{ $errors->addService->first('service_name') }}</p>
+                        @else
+                            <p x-show="addServiceErrors.service_name" x-text="addServiceErrors.service_name"
+                                class="mt-1 text-sm text-red-600"></p>
+                        @endif
                     </div>
                     <div class="flex justify-end gap-3 pt-4">
                         <button type="button" @click="openModal=null"
@@ -1545,7 +1902,7 @@
                     <h3 class="text-lg font-semibold text-gray-900">Edit Service</h3>
                     <button @click="openModal=null" class="text-gray-400 hover:text-gray-600 cursor-pointer">✕</button>
                 </div>
-                <form :action="`/owner/manage-data/products/services/${editService.id}`" method="POST"
+                <form :action="`/owner/manage-data/products/services/${editService.id || ''}`" method="POST"
                     @submit="if (!validateEditService()) $event.preventDefault()" class="px-6 py-4 space-y-4">
                     @csrf
                     @method('PUT')
@@ -1607,8 +1964,6 @@
             </div>
         </div>
 
-        </div>
-
         {{-- Delete Material Category Modal --}}
         <div x-show="showDeleteMaterialConfirm !== null" x-cloak
             class="fixed inset-0 z-50 overflow-y-auto flex items-center justify-center"
@@ -1632,7 +1987,7 @@
                     </button>
                     <form
                         :action="'{{ route('owner.manage-data.products.index') }}/material-categories/' +
-                        showDeleteMaterialConfirm"
+                        (showDeleteMaterialConfirm || '')"
                         method="POST" class="flex-1">
                         @csrf
                         @method('DELETE')
@@ -1667,7 +2022,7 @@
                         Cancel
                     </button>
                     <form
-                        :action="'{{ route('owner.manage-data.products.index') }}/material-textures/' + showDeleteTextureConfirm"
+                        :action="'{{ route('owner.manage-data.products.index') }}/material-textures/' + (showDeleteTextureConfirm || '')"
                         method="POST" class="flex-1">
                         @csrf
                         @method('DELETE')
@@ -1702,7 +2057,7 @@
                         Cancel
                     </button>
                     <form
-                        :action="'{{ route('owner.manage-data.products.index') }}/material-sleeves/' + showDeleteSleeveConfirm"
+                        :action="'{{ route('owner.manage-data.products.index') }}/material-sleeves/' + (showDeleteSleeveConfirm || '')"
                         method="POST" class="flex-1">
                         @csrf
                         @method('DELETE')
@@ -1737,7 +2092,7 @@
                         Cancel
                     </button>
                     <form
-                        :action="'{{ route('owner.manage-data.products.index') }}/material-sizes/' + showDeleteSizeConfirm"
+                        :action="'{{ route('owner.manage-data.products.index') }}/material-sizes/' + (showDeleteSizeConfirm || '')"
                         method="POST" class="flex-1">
                         @csrf
                         @method('DELETE')
@@ -1771,7 +2126,7 @@
                         class="flex-1 px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">
                         Cancel
                     </button>
-                    <form :action="'{{ route('owner.manage-data.products.index') }}/services/' + showDeleteServiceConfirm"
+                    <form :action="'{{ route('owner.manage-data.products.index') }}/services/' + (showDeleteServiceConfirm || '')"
                         method="POST" class="flex-1">
                         @csrf
                         @method('DELETE')

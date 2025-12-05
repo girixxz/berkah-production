@@ -13,6 +13,10 @@ class MaterialSleeveController extends Controller
         try {
             $validated = $request->validateWithBag('addSleeve', [
                 'sleeve_name' => 'required|string|max:100|unique:material_sleeves,sleeve_name',
+            ], [
+                'sleeve_name.required' => 'Sleeve name is required.',
+                'sleeve_name.max' => 'Sleeve name must not exceed 100 characters.',
+                'sleeve_name.unique' => 'This sleeve name already exists.',
             ]);
 
             MaterialSleeve::create($validated);
@@ -38,6 +42,10 @@ class MaterialSleeveController extends Controller
         try {
             $validated = $request->validateWithBag('editSleeve', [
                 'sleeve_name' => 'required|string|max:100|unique:material_sleeves,sleeve_name,' . $materialSleeve->id,
+            ], [
+                'sleeve_name.required' => 'Sleeve name is required.',
+                'sleeve_name.max' => 'Sleeve name must not exceed 100 characters.',
+                'sleeve_name.unique' => 'This sleeve name already exists.',
             ]);
 
             $materialSleeve->update(array_filter($validated));

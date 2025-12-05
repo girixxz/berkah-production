@@ -13,6 +13,10 @@ class ServiceController extends Controller
         try {
             $validated = $request->validateWithBag('addService', [
                 'service_name' => 'required|max:255|unique:services,service_name',
+            ], [
+                'service_name.required' => 'Service name is required.',
+                'service_name.max' => 'Service name must not exceed 255 characters.',
+                'service_name.unique' => 'This service name already exists.',
             ]);
 
             Service::create($validated);
@@ -38,6 +42,10 @@ class ServiceController extends Controller
         try {
             $validated = $request->validateWithBag('editService', [
                 'service_name' => 'required|max:255|unique:services,service_name,' . $service->id,
+            ], [
+                'service_name.required' => 'Service name is required.',
+                'service_name.max' => 'Service name must not exceed 255 characters.',
+                'service_name.unique' => 'This service name already exists.',
             ]);
 
             $service->update(array_filter($validated));

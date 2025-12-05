@@ -460,10 +460,10 @@
                             }" class="relative flex-shrink-0">
                                 {{-- Trigger Button --}}
                                 <button type="button" @click="open = !open"
-                                    class="w-20 flex justify-between items-center rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 bg-white
+                                    class="w-14 flex justify-between items-center rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 bg-white
                                         focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors">
                                     <span x-text="selected.label"></span>
-                                    <svg class="w-4 h-4 text-gray-400 transition-transform" :class="open && 'rotate-180'" fill="none"
+                                    <svg class="w-3 h-3 text-gray-400 transition-transform" :class="open && 'rotate-180'" fill="none"
                                         stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
                                     </svg>
@@ -477,7 +477,7 @@
                                     x-transition:leave="transition ease-in duration-75" 
                                     x-transition:leave-start="opacity-100 scale-100"
                                     x-transition:leave-end="opacity-0 scale-95"
-                                    class="absolute z-20 mt-1 w-20 bg-white border border-gray-200 rounded-md shadow-lg">
+                                    class="absolute z-20 mt-1 w-14 bg-white border border-gray-200 rounded-md shadow-lg">
                                     <ul class="max-h-60 overflow-y-auto py-1">
                                         <template x-for="option in options" :key="option.value">
                                             <li @click="selectOption(option)"

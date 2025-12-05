@@ -15,6 +15,13 @@ class MaterialSizeController extends Controller
             $validated = $request->validateWithBag('addSize', [
                 'size_name' => 'required|max:255|unique:material_sizes,size_name',
                 'extra_price' => 'required|numeric|min:0',
+            ], [
+                'size_name.required' => 'Size name is required.',
+                'size_name.max' => 'Size name must not exceed 255 characters.',
+                'size_name.unique' => 'This size name already exists.',
+                'extra_price.required' => 'Extra price is required.',
+                'extra_price.numeric' => 'Extra price must be a number.',
+                'extra_price.min' => 'Extra price must be at least 0.',
             ]);
 
             // Auto-generate sort_order: max + 1
@@ -46,6 +53,16 @@ class MaterialSizeController extends Controller
                 'size_name' => 'required|max:255|unique:material_sizes,size_name,' . $materialSize->id,
                 'extra_price' => 'required|numeric|min:0',
                 'sort_order' => 'required|integer|min:1',
+            ], [
+                'size_name.required' => 'Size name is required.',
+                'size_name.max' => 'Size name must not exceed 255 characters.',
+                'size_name.unique' => 'This size name already exists.',
+                'extra_price.required' => 'Extra price is required.',
+                'extra_price.numeric' => 'Extra price must be a number.',
+                'extra_price.min' => 'Extra price must be at least 0.',
+                'sort_order.required' => 'Sort order is required.',
+                'sort_order.integer' => 'Sort order must be an integer.',
+                'sort_order.min' => 'Sort order must be at least 1.',
             ]);
 
             // Handle other sizes adjustments if provided

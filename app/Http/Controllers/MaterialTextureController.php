@@ -14,6 +14,10 @@ class MaterialTextureController extends Controller
         try {
             $validated = $request->validateWithBag('addTexture', [
                 'texture_name' => 'required|max:255|unique:material_textures,texture_name',
+            ], [
+                'texture_name.required' => 'Texture name is required.',
+                'texture_name.max' => 'Texture name must not exceed 255 characters.',
+                'texture_name.unique' => 'This texture name already exists.',
             ]);
 
             MaterialTexture::create($validated);
@@ -39,6 +43,10 @@ class MaterialTextureController extends Controller
         try {
             $validated = $request->validateWithBag('editTexture', [
                 'texture_name' => 'required|max:255|unique:material_textures,texture_name,' . $material_texture->id,
+            ], [
+                'texture_name.required' => 'Texture name is required.',
+                'texture_name.max' => 'Texture name must not exceed 255 characters.',
+                'texture_name.unique' => 'This texture name already exists.',
             ]);
 
             $material_texture->update(array_filter($validated));

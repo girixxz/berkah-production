@@ -14,6 +14,10 @@ class ProductCategoryController extends Controller
         try {
             $validated = $request->validateWithBag('addProduct', [
                 'product_name' => 'required|max:255|unique:product_categories,product_name',
+            ], [
+                'product_name.required' => 'Product name is required.',
+                'product_name.max' => 'Product name must not exceed 255 characters.',
+                'product_name.unique' => 'This product name already exists.',
             ]);
 
             ProductCategory::create($validated);
@@ -39,6 +43,10 @@ class ProductCategoryController extends Controller
         try {
             $validated = $request->validateWithBag('editProduct', [
                 'product_name' => 'required|max:255|unique:product_categories,product_name,' . $productCategory->id,
+            ], [
+                'product_name.required' => 'Product name is required.',
+                'product_name.max' => 'Product name must not exceed 255 characters.',
+                'product_name.unique' => 'This product name already exists.',
             ]);
 
             $productCategory->update(array_filter($validated));
