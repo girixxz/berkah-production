@@ -30,7 +30,7 @@
                     </a>
                 </li>
                 <li>
-                    <a href="{{ route('calendar') }}" class="{{ $navClasses('calendar') }}">
+                    <a href="{{ route('calendar') }}" target="_blank" class="{{ $navClasses('calendar') }}">
                         Calendar
                     </a>
                 </li>
