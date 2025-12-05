@@ -38,6 +38,6 @@ class UserSeeder extends Seeder
         ]);
 
         // Create additional random users
-        User::factory(10)->create();
+        // User::factory(10)->create();
     }
 }
