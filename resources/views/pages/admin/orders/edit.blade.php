@@ -713,7 +713,7 @@
             {{-- Left: Order Image Upload --}}
             <div class="space-y-4" x-data="{
                 orderImage: null,
-                imagePreview: '{{ $order->img_url ? route('admin.orders.image', $order->id) : '' }}' || null,
+                imagePreview: '{{ $order->img_url ? route('orders.serve-image', $order->id) : '' }}' || null,
                 removeImageFlag: false,
                 isDragging: false,
                 handleFileSelect(event) {
