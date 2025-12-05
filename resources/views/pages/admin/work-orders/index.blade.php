@@ -114,6 +114,10 @@
             if (this.startDate) params.set('start_date', this.startDate);
             if (this.endDate) params.set('end_date', this.endDate);
             
+            // Include per_page parameter
+            const perPageValue = this.getPerPageValue();
+            if (perPageValue) params.set('per_page', perPageValue);
+            
             const url = '{{ route('admin.work-orders.index') }}?' + params.toString();
             
             // Update URL without reload
@@ -162,6 +166,10 @@
                 console.error('Error:', error);
                 NProgress.done();
             });
+        },
+        getPerPageValue() {
+            const urlParams = new URLSearchParams(window.location.search);
+            return urlParams.get('per_page') || '15';
         }
     }" class="space-y-6">
 
@@ -265,6 +273,95 @@
                                         @input="applyFilter()"
                                         placeholder="Search invoice, customer, product..."
                                         class="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary">
+                                </div>
+                            </div>
+
+                            {{-- Show Per Page Dropdown --}}
+                            <div x-data="{
+                                open: false,
+                                perPage: {{ request('per_page', 15) }},
+                                options: [
+                                    { value: 5, label: '5' },
+                                    { value: 10, label: '10' },
+                                    { value: 15, label: '15' },
+                                    { value: 20, label: '20' },
+                                    { value: 25, label: '25' }
+                                ],
+                                get selected() {
+                                    return this.options.find(o => o.value === this.perPage) || this.options[2];
+                                },
+                                selectOption(option) {
+                                    this.perPage = option.value;
+                                    this.open = false;
+                                    this.applyPerPageFilter();
+                                },
+                                applyPerPageFilter() {
+                                    // Build URL with all existing params + per_page
+                                    const params = new URLSearchParams(window.location.search);
+                                    params.set('per_page', this.perPage);
+                                    params.delete('page'); // Reset to page 1
+                                    
+                                    const url = '{{ route('admin.work-orders.index') }}?' + params.toString();
+                                    
+                                    // Update URL without reload
+                                    window.history.pushState({}, '', url);
+                                    
+                                    // Fetch content via AJAX with loading bar
+                                    NProgress.start();
+                                    
+                                    fetch(url, {
+                                        headers: {
+                                            'X-Requested-With': 'XMLHttpRequest'
+                                        }
+                                    })
+                                    .then(response => response.text())
+                                    .then(html => {
+                                        const parser = new DOMParser();
+                                        const doc = parser.parseFromString(html, 'text/html');
+                                        const newSection = doc.getElementById('work-orders-section');
+                                        
+                                        if (newSection) {
+                                            document.getElementById('work-orders-section').innerHTML = newSection.innerHTML;
+                                            setupPagination('work-orders-pagination-container', 'work-orders-section');
+                                        }
+                                        
+                                        NProgress.done();
+                                    })
+                                    .catch(error => {
+                                        console.error('Error:', error);
+                                        NProgress.done();
+                                    });
+                                }
+                            }" class="relative flex-shrink-0">
+                                {{-- Trigger Button --}}
+                                <button type="button" @click="open = !open"
+                                    class="w-14 flex justify-between items-center rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 bg-white
+                                        focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors">
+                                    <span x-text="selected.label"></span>
+                                    <svg class="w-3 h-3 text-gray-400 transition-transform" :class="open && 'rotate-180'" fill="none"
+                                        stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                                    </svg>
+                                </button>
+
+                                {{-- Dropdown --}}
+                                <div x-show="open" @click.away="open = false" x-cloak 
+                                    x-transition:enter="transition ease-out duration-100"
+                                    x-transition:enter-start="opacity-0 scale-95" 
+                                    x-transition:enter-end="opacity-100 scale-100"
+                                    x-transition:leave="transition ease-in duration-75" 
+                                    x-transition:leave-start="opacity-100 scale-100"
+                                    x-transition:leave-end="opacity-0 scale-95"
+                                    class="absolute z-20 mt-1 w-14 bg-white border border-gray-200 rounded-md shadow-lg">
+                                    <ul class="max-h-60 overflow-y-auto py-1">
+                                        <template x-for="option in options" :key="option.value">
+                                            <li @click="selectOption(option)"
+                                                class="px-4 py-2 cursor-pointer text-sm hover:bg-primary/5 transition-colors"
+                                                :class="{ 'bg-primary/10 font-medium text-primary': perPage === option.value }">
+                                                <span x-text="option.label"></span>
+                                            </li>
+                                        </template>
+                                    </ul>
                                 </div>
                             </div>
 
@@ -431,17 +528,28 @@
 
                                     {{-- Status --}}
                                     <td class="py-3 px-4">
-                                        @if ($order->work_order_status === 'created')
-                                            <span
-                                                class="inline-flex items-center text-xs font-medium text-green-700 bg-green-50 px-2 py-1 rounded-full w-fit">
-                                                Created
-                                            </span>
-                                        @else
-                                            <span
-                                                class="inline-flex items-center text-xs font-medium text-yellow-700 bg-yellow-50 px-2 py-1 rounded-full w-fit">
-                                                Pending
-                                            </span>
-                                        @endif
+                                        @php
+                                            $totalDesigns = $order->designVariants->count();
+                                            $completedWorkOrders = $order->designVariants->filter(function($design) {
+                                                return $design->workOrder && $design->workOrder->status === 'created';
+                                            })->count();
+                                            $progressText = "({$completedWorkOrders}/{$totalDesigns})";
+                                        @endphp
+                                        
+                                        <div class="flex items-center gap-2">
+                                            @if ($order->work_order_status === 'created')
+                                                <span
+                                                    class="inline-flex items-center text-xs font-semibold text-green-700 bg-green-50 px-2.5 py-1 rounded-full">
+                                                    CREATED
+                                                </span>
+                                            @else
+                                                <span
+                                                    class="inline-flex items-center text-xs font-semibold text-yellow-700 bg-yellow-50 px-2.5 py-1 rounded-full">
+                                                    PENDING
+                                                </span>
+                                            @endif
+                                            <span class="text-xs text-gray-500 font-medium">{{ $progressText }}</span>
+                                        </div>
                                     </td>
 
                                     {{-- Action --}}

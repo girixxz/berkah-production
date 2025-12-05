@@ -168,6 +168,10 @@ class WorkOrderController extends Controller
         $startDate = $request->input('start_date');
         $endDate = $request->input('end_date');
         $dateRange = $request->input('date_range');
+        
+        // Per page validation
+        $perPage = $request->input('per_page', 15);
+        $perPage = in_array($perPage, [5, 10, 15, 20, 25]) ? $perPage : 15;
 
         // Query orders that are in WIP status or higher (including finished)
         $query = Order::with([
@@ -245,7 +249,7 @@ class WorkOrderController extends Controller
 
         // Order by wip_date DESC (newest first) - show most recent WIP orders at top
         $orders = $query->orderBy('wip_date', 'desc')
-            ->paginate(15)
+            ->paginate($perPage)
             ->appends($request->except('page'));
 
         // Calculate statistics
