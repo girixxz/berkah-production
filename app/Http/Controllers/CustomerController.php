@@ -39,6 +39,10 @@ class CustomerController extends Controller
      */
     public function show(Customer $customer, Request $request)
     {
+        // Per page validation
+        $perPage = $request->input('per_page', 15);
+        $perPage = in_array($perPage, [5, 10, 15, 20, 25]) ? $perPage : 15;
+        
         // Base query for customer's orders
         $query = $customer->orders()
             ->with([
@@ -86,7 +90,7 @@ class CustomerController extends Controller
         $query->orderBy('wip_date', 'desc');
 
         // Get orders with pagination
-        $orders = $query->paginate(15);
+        $orders = $query->paginate($perPage);
 
         return view('pages.admin.customers.show', compact('customer', 'orders', 'startDate', 'endDate', 'dateRange'));
     }
