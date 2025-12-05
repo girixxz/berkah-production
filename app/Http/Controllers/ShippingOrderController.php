@@ -17,6 +17,10 @@ class ShippingOrderController extends Controller
         $startDate = $request->input('start_date');
         $endDate = $request->input('end_date');
         $dateRange = $request->input('date_range');
+        
+        // Get per_page value with validation
+        $perPage = $request->input('per_page', 15);
+        $perPage = in_array($perPage, [5, 10, 15, 20, 25]) ? $perPage : 15;
 
         // Query orders that are finished and shipped
         $query = Order::with([
@@ -92,7 +96,7 @@ class ShippingOrderController extends Controller
 
         // Order by shipping date DESC (newest first)
         $orders = $query->orderBy('shipping_date', 'desc')
-            ->paginate(15)
+            ->paginate($perPage)
             ->appends($request->except('page'));
 
         // Calculate statistics
