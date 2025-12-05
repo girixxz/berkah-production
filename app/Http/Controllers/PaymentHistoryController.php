@@ -16,6 +16,10 @@ class PaymentHistoryController extends Controller
         $startDate = $request->input('start_date');
         $endDate = $request->input('end_date');
         $dateRange = $request->input('date_range');
+        
+        // Per page validation
+        $perPage = $request->input('per_page', 15);
+        $perPage = in_array($perPage, [5, 10, 15, 20, 25]) ? $perPage : 15;
 
         $query = Payment::with(['invoice.order.customer', 'invoice.order.productCategory']);
 
@@ -103,7 +107,7 @@ class PaymentHistoryController extends Controller
 
         // Get paginated payments
         $payments = $query->orderBy('paid_at', 'desc')
-            ->paginate(15)
+            ->paginate($perPage)
             ->appends($request->except('page'));
 
         // AJAX support - return rendered HTML for AJAX requests
