@@ -9,6 +9,10 @@
     <meta name="turbo-prefetch" content="false">
     <title>@yield('title')</title>
 
+    {{-- Favicon --}}
+    <link rel="icon" type="image/svg+xml" href="{{ asset('favicon.svg') }}">
+    <link rel="alternate icon" href="{{ asset('favicon.ico') }}">
+
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 
     {{-- Alpine.js sudah di-bundle dalam app.js (self-hosted) --}}
