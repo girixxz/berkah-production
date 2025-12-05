@@ -49,10 +49,13 @@ class MaterialSizeController extends Controller
     public function update(Request $request, MaterialSize $materialSize)
     {
         try {
+            // Get total count of sizes
+            $totalSizes = MaterialSize::count();
+            
             $validated = $request->validateWithBag('editSize', [
                 'size_name' => 'required|max:255|unique:material_sizes,size_name,' . $materialSize->id,
                 'extra_price' => 'required|numeric|min:0',
-                'sort_order' => 'required|integer|min:1',
+                'sort_order' => 'required|integer|min:1|max:' . $totalSizes,
             ], [
                 'size_name.required' => 'Size name is required.',
                 'size_name.max' => 'Size name must not exceed 255 characters.',
@@ -63,16 +66,28 @@ class MaterialSizeController extends Controller
                 'sort_order.required' => 'Sort order is required.',
                 'sort_order.integer' => 'Sort order must be an integer.',
                 'sort_order.min' => 'Sort order must be at least 1.',
+                'sort_order.max' => 'Sort order cannot exceed total sizes (' . $totalSizes . ').',
             ]);
 
-            // Handle other sizes adjustments if provided
-            if ($request->has('other_sizes_adjustments') && !empty($request->other_sizes_adjustments)) {
-                $adjustments = json_decode($request->other_sizes_adjustments, true);
-                
-                if (is_array($adjustments) && !empty($adjustments)) {
-                    foreach ($adjustments as $sizeId => $newSortOrder) {
-                        MaterialSize::where('id', $sizeId)->update(['sort_order' => $newSortOrder]);
-                    }
+            $oldSortOrder = $materialSize->sort_order;
+            $newSortOrder = $validated['sort_order'];
+
+            // Handle sort order adjustment automatically
+            if ($oldSortOrder !== $newSortOrder) {
+                if ($newSortOrder < $oldSortOrder) {
+                    // Moving UP (ke posisi lebih kecil): 5 → 2
+                    // Semua size dengan sort_order >= newSortOrder dan < oldSortOrder akan +1
+                    MaterialSize::where('id', '!=', $materialSize->id)
+                        ->where('sort_order', '>=', $newSortOrder)
+                        ->where('sort_order', '<', $oldSortOrder)
+                        ->increment('sort_order');
+                } else {
+                    // Moving DOWN (ke posisi lebih besar): 2 → 5
+                    // Semua size dengan sort_order > oldSortOrder dan <= newSortOrder akan -1
+                    MaterialSize::where('id', '!=', $materialSize->id)
+                        ->where('sort_order', '>', $oldSortOrder)
+                        ->where('sort_order', '<=', $newSortOrder)
+                        ->decrement('sort_order');
                 }
             }
 
