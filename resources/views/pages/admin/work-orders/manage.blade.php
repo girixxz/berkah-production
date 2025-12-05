@@ -234,7 +234,7 @@
             // ✅ UPDATED: Using Model Binding Routes (same pattern as Payment)
             // Load work order mockup image
             if (workOrder.mockup_img_url) {
-                const mockupUrl = `{{ route('admin.work-orders.mockup-image', ['workOrder' => '__ID__']) }}`.replace('__ID__', workOrder.id);
+                const mockupUrl = `{{ route('work-orders.serve-mockup-image', ['workOrder' => '__ID__']) }}`.replace('__ID__', workOrder.id);
                 this.formData.mockup_img_url = mockupUrl;
                 this.mockupPreview = mockupUrl;
             }
@@ -247,7 +247,7 @@
                 
                 // Cutting image with model binding
                 if (workOrder.cutting.custom_size_chart_img_url) {
-                    this.formData.custom_size_chart_img_url = `{{ route('admin.work-orders.cutting-image', ['cutting' => '__ID__']) }}`.replace('__ID__', workOrder.cutting.id);
+                    this.formData.custom_size_chart_img_url = `{{ route('work-orders.serve-cutting-image', ['cutting' => '__ID__']) }}`.replace('__ID__', workOrder.cutting.id);
                 }
                 this.formData.cutting_notes = workOrder.cutting.notes || '';
             }
@@ -259,7 +259,7 @@
                 
                 // Printing image with model binding
                 if (workOrder.printing.detail_img_url) {
-                    this.formData.printing_detail_img_url = `{{ route('admin.work-orders.printing-image', ['printing' => '__ID__']) }}`.replace('__ID__', workOrder.printing.id);
+                    this.formData.printing_detail_img_url = `{{ route('work-orders.serve-printing-image', ['printing' => '__ID__']) }}`.replace('__ID__', workOrder.printing.id);
                 }
                 this.formData.printing_notes = workOrder.printing.notes || '';
             }
@@ -268,7 +268,7 @@
             if (workOrder.printing_placement) {
                 // Placement image with model binding
                 if (workOrder.printing_placement.detail_img_url) {
-                    this.formData.placement_detail_img_url = `{{ route('admin.work-orders.placement-image', ['placement' => '__ID__']) }}`.replace('__ID__', workOrder.printing_placement.id);
+                    this.formData.placement_detail_img_url = `{{ route('work-orders.serve-placement-image', ['placement' => '__ID__']) }}`.replace('__ID__', workOrder.printing_placement.id);
                 }
                 this.formData.placement_notes = workOrder.printing_placement.notes || '';
             }
@@ -282,7 +282,7 @@
                 
                 // Sewing image with model binding
                 if (workOrder.sewing.detail_img_url) {
-                    this.formData.sewing_detail_img_url = `{{ route('admin.work-orders.sewing-image', ['sewing' => '__ID__']) }}`.replace('__ID__', workOrder.sewing.id);
+                    this.formData.sewing_detail_img_url = `{{ route('work-orders.serve-sewing-image', ['sewing' => '__ID__']) }}`.replace('__ID__', workOrder.sewing.id);
                 }
                 this.formData.sewing_notes = workOrder.sewing.notes || '';
             }
@@ -294,7 +294,7 @@
                 
                 // Packing image with model binding
                 if (workOrder.packing.hangtag_img_url) {
-                    this.formData.hangtag_img_url = `{{ route('admin.work-orders.packing-image', ['packing' => '__ID__']) }}`.replace('__ID__', workOrder.packing.id);
+                    this.formData.hangtag_img_url = `{{ route('work-orders.serve-packing-image', ['packing' => '__ID__']) }}`.replace('__ID__', workOrder.packing.id);
                 }
                 this.formData.packing_notes = workOrder.packing.notes || '';
             }
@@ -395,7 +395,7 @@
                         <div class="flex-shrink-0">
                             @if ($design->workOrder && $design->workOrder->mockup_img_url)
                                 {{-- ✅ UPDATED: Use model binding route for mockup image --}}
-                                <img src="{{ route('admin.work-orders.mockup-image', ['workOrder' => $design->workOrder->id]) }}" 
+                                <img src="{{ route('work-orders.serve-mockup-image', ['workOrder' => $design->workOrder->id]) }}" 
                                     alt="{{ $design->design_name }}"
                                     class="w-16 h-16 md:w-20 md:h-20 object-cover rounded-lg border-2 border-gray-200">
                             @elseif($design->orderItem->mockup_img_url ?? null)

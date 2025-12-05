@@ -70,7 +70,6 @@ Route::middleware(['auth'])->group(function () {
         Route::get('payment-history', [\App\Http\Controllers\PaymentHistoryController::class, 'index'])->name('payment-history');
         Route::patch('payments/{payment}/approve', [\App\Http\Controllers\PaymentController::class, 'approve'])->name('payments.approve');
         Route::patch('payments/{payment}/reject', [\App\Http\Controllers\PaymentController::class, 'reject'])->name('payments.reject');
-        Route::get('payments/{payment}/image', [\App\Http\Controllers\PaymentController::class, 'serveImage'])->name('payments.image');
         Route::get('payments/pending-count', [\App\Http\Controllers\PaymentController::class, 'getPendingCount'])->name('payments.pending-count');
         Route::get('payments/pending-list', [\App\Http\Controllers\PaymentController::class, 'getPendingList'])->name('payments.pending-list');
 
@@ -141,16 +140,11 @@ Route::middleware(['auth'])->group(function () {
         Route::patch('orders/{order}/cancel', [OrderController::class, 'cancel'])->name('orders.cancel');
         Route::patch('orders/{order}/move-to-shipping', [OrderController::class, 'moveToShipping'])->name('orders.move-to-shipping');
         Route::get('orders/{order}/invoice/download', [OrderController::class, 'downloadInvoice'])->name('orders.invoice.download');
-        Route::get('orders/{order}/image', [OrderController::class, 'serveOrderImage'])->name('orders.image');
-        
-        // AJAX - Get customer location
-        Route::get('customers/{customer}/location', [OrderController::class, 'getCustomerLocation'])->name('customers.location');
 
         // Payments
         Route::post('payments', [\App\Http\Controllers\PaymentController::class, 'store'])->name('payments.store');
         Route::delete('payments/{payment}', [\App\Http\Controllers\PaymentController::class, 'destroy'])->name('payments.destroy');
         Route::get('invoices/{invoice}/payments', [\App\Http\Controllers\PaymentController::class, 'getPaymentsByInvoice'])->name('invoices.payments');
-        Route::get('payments/{payment}/image', [\App\Http\Controllers\PaymentController::class, 'serveImage'])->name('payments.image');
 
         // Shipping Orders
         Route::get('shipping-orders', [\App\Http\Controllers\ShippingOrderController::class, 'index'])->name('shipping-orders');
@@ -168,17 +162,6 @@ Route::middleware(['auth'])->group(function () {
         
         // Work Order PDF Download
         Route::get('work-orders/{workOrder}/download-pdf', [\App\Http\Controllers\WorkOrderController::class, 'downloadPdf'])->name('work-orders.download-pdf');
-        
-        // Work Order Image Routes - USING MODEL BINDING (same pattern as Payment)
-        Route::get('work-orders/{workOrder}/mockup-image', [\App\Http\Controllers\WorkOrderController::class, 'serveMockupImage'])->name('work-orders.mockup-image');
-        Route::get('work-orders/cutting/{cutting}/image', [\App\Http\Controllers\WorkOrderController::class, 'serveCuttingImage'])->name('work-orders.cutting-image');
-        Route::get('work-orders/printing/{printing}/image', [\App\Http\Controllers\WorkOrderController::class, 'servePrintingImage'])->name('work-orders.printing-image');
-        Route::get('work-orders/placement/{placement}/image', [\App\Http\Controllers\WorkOrderController::class, 'servePlacementImage'])->name('work-orders.placement-image');
-        Route::get('work-orders/sewing/{sewing}/image', [\App\Http\Controllers\WorkOrderController::class, 'serveSewingImage'])->name('work-orders.sewing-image');
-        Route::get('work-orders/packing/{packing}/image', [\App\Http\Controllers\WorkOrderController::class, 'servePackingImage'])->name('work-orders.packing-image');
-        
-        // Order Image Route
-        Route::get('orders/{order}/image', [\App\Http\Controllers\OrderController::class, 'serveOrderImage'])->name('orders.image');
         
         Route::get('payment-history', [\App\Http\Controllers\PaymentHistoryController::class, 'index'])->name('payment-history');
 
@@ -210,6 +193,27 @@ Route::middleware(['auth'])->group(function () {
         Route::post('task/mark-done', [App\Http\Controllers\Karyawan\TaskController::class, 'markAsDone'])->name('task.mark-done');
         Route::get('task/work-order/{order}', [App\Http\Controllers\Karyawan\TaskController::class, 'viewWorkOrder'])->name('task.work-order');
     });
+
+    /* ---------- SHARED IMAGE ROUTES (ALL AUTHENTICATED USERS) ---------- */
+    // These routes are accessible by all authenticated users (owner, admin, pm, karyawan)
+    // Controllers will handle authorization internally
+    
+    // Payment Images
+    Route::get('payments/{payment}/image', [\App\Http\Controllers\PaymentController::class, 'serveImage'])->name('payments.serve-image');
+    
+    // Order Images
+    Route::get('orders/{order}/image', [OrderController::class, 'serveOrderImage'])->name('orders.serve-image');
+    
+    // Work Order Images - USING MODEL BINDING
+    Route::get('work-orders/{workOrder}/mockup-image', [\App\Http\Controllers\WorkOrderController::class, 'serveMockupImage'])->name('work-orders.serve-mockup-image');
+    Route::get('work-orders/cutting/{cutting}/image', [\App\Http\Controllers\WorkOrderController::class, 'serveCuttingImage'])->name('work-orders.serve-cutting-image');
+    Route::get('work-orders/printing/{printing}/image', [\App\Http\Controllers\WorkOrderController::class, 'servePrintingImage'])->name('work-orders.serve-printing-image');
+    Route::get('work-orders/placement/{placement}/image', [\App\Http\Controllers\WorkOrderController::class, 'servePlacementImage'])->name('work-orders.serve-placement-image');
+    Route::get('work-orders/sewing/{sewing}/image', [\App\Http\Controllers\WorkOrderController::class, 'serveSewingImage'])->name('work-orders.serve-sewing-image');
+    Route::get('work-orders/packing/{packing}/image', [\App\Http\Controllers\WorkOrderController::class, 'servePackingImage'])->name('work-orders.serve-packing-image');
+    
+    // Customer Location API (used by karyawan view work order)
+    Route::get('customers/{customer}/location', [OrderController::class, 'getCustomerLocation'])->name('customers.location');
 
     /* ---------- ALL ROLE ---------- */
     Route::get('highlights', [\App\Http\Controllers\HighlightController::class, 'index'])->name('highlights');

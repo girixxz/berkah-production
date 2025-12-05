@@ -372,7 +372,7 @@
                                         <div @click="showImageModal = true" 
                                              class="inline-block w-40 h-25 bg-gray-100 rounded-lg overflow-hidden border border-gray-200 cursor-pointer hover:opacity-80 transition-opacity">
                                             @if ($order->img_url)
-                                                <img src="{{ route('admin.orders.image', $order) }}" alt="Order Image" 
+                                                <img src="{{ route('orders.serve-image', $order) }}" alt="Order Image" 
                                                      class="w-full h-full object-cover">
                                             @else
                                                 <div class="w-full h-full flex items-center justify-center">
@@ -436,7 +436,7 @@
                                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
                                                         </svg>
                                                     </button>
-                                                    <img src="{{ route('admin.orders.image', $order) }}" 
+                                                    <img src="{{ route('orders.serve-image', $order) }}" 
                                                          alt="Order Image Full" 
                                                          class="max-w-full max-h-[90vh] object-contain rounded-lg shadow-2xl">
                                                 </div>
@@ -583,7 +583,7 @@
                                 <div @click="showImageModal = true" 
                                      class="flex-shrink-0 w-24 h-24 bg-gray-100 rounded-lg overflow-hidden border border-gray-200 cursor-pointer hover:opacity-80 transition-opacity">
                                     @if ($order->img_url)
-                                        <img src="{{ route('admin.orders.image', $order) }}" alt="Order Image" 
+                                        <img src="{{ route('orders.serve-image', $order) }}" alt="Order Image" 
                                              class="w-full h-full object-cover">
                                     @else
                                         <div class="w-full h-full flex items-center justify-center">
@@ -661,8 +661,8 @@
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
                                             </svg>
                                         </button>
-                                        <img src="{{ route('admin.orders.image', $order) }}" 
-                                             alt="Order Image Full" 
+                                        <img src="{{ route('orders.serve-image', $order) }}" 
+                                             alt="Order Image Full"
                                              class="max-w-full max-h-[90vh] object-contain rounded-lg shadow-2xl">
                                     </div>
                                 </div>

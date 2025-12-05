@@ -648,7 +648,7 @@
                                 {{-- Attachment --}}
                                 <td class="py-3 px-4 text-center">
                                     @if ($payment->img_url)
-                                        <button @click="selectedImage = '{{ route($role === 'owner' ? 'owner.payments.image' : 'admin.payments.image', $payment->id) }}'; showImageModal = true"
+                                        <button @click="selectedImage = '{{ route($role === 'owner' ? 'payments.serve-image' : 'payments.serve-image', $payment->id) }}'; showImageModal = true"
                                             class="inline-flex items-center gap-1 px-3 py-1 bg-blue-100 text-blue-700 rounded-md hover:bg-blue-200 text-xs font-medium cursor-pointer">
                                             <svg class="w-4 h-4" fill="none" stroke="currentColor"
                                                 viewBox="0 0 24 24">

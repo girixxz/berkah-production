@@ -61,7 +61,7 @@
         },
         async loadLocationData() {
             try {
-                const response = await fetch('{{ route('admin.customers.location', $order->customer_id) }}');
+                const response = await fetch('{{ route('customers.location', $order->customer_id) }}');
                 const data = await response.json();
                 this.locationData = data;
             } catch (error) {
@@ -92,10 +92,10 @@
                     {{-- Order Image Container - Hidden on mobile, shown on md+ --}}
                     <div class="hidden md:flex flex-shrink-0">
                         @if($order->img_url)
-                            <img src="{{ route('admin.orders.image', $order->id) }}" 
+                            <img src="{{ route('orders.serve-image', $order->id) }}" 
                                  alt="Order Image" 
                                  class="w-20 h-20 object-cover rounded-lg border-2 border-gray-200 shadow-sm cursor-pointer hover:border-primary transition-colors"
-                                 @click="showImage('{{ route('admin.orders.image', $order->id) }}')"
+                                 @click="showImage('{{ route('orders.serve-image', $order->id) }}')"
                                  onerror="this.onerror=null; this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22100%22 height=%22100%22 viewBox=%220 0 100 100%22%3E%3Crect fill=%22%23f3f4f6%22 width=%22100%22 height=%22100%22/%3E%3Ctext fill=%22%239ca3af%22 font-family=%22Arial%22 font-size=%2214%22 text-anchor=%22middle%22 x=%2250%22 y=%2250%22 dy=%220.3em%22%3ENo Image%3C/text%3E%3C/svg%3E';">
                         @else
                             <div class="w-20 h-20 rounded-lg border-2 border-gray-200 bg-gray-50 flex items-center justify-center">
@@ -725,7 +725,7 @@
                                     <td class="py-3 px-4 text-gray-600">{{ $payment->notes ?? '-' }}</td>
                                     <td class="py-3 px-4">
                                         @if ($payment->img_url)
-                                            <button @click="showImage('{{ route('admin.payments.image', $payment->id) }}')"
+                                            <button @click="showImage('{{ route('payments.serve-image', $payment->id) }}')"
                                                 class="text-primary hover:text-primary-dark font-medium text-xs flex items-center gap-1">
                                                 <svg class="w-4 h-4" fill="none" stroke="currentColor"
                                                     viewBox="0 0 24 24">
@@ -766,7 +766,7 @@
                             {{-- 1. Image (Kiri) - dari work_orders.mockup_img_url --}}
                             <div class="flex-shrink-0">
                                 @if ($design->workOrder && $design->workOrder->mockup_img_url)
-                                    <img src="{{ route('admin.work-orders.mockup-image', ['workOrder' => $design->workOrder->id]) }}" 
+                                    <img src="{{ route('work-orders.serve-mockup-image', ['workOrder' => $design->workOrder->id]) }}" 
                                         alt="{{ $design->design_name }}"
                                         class="w-16 h-16 md:w-20 md:h-20 object-cover rounded-lg border-2 border-gray-200">
                                 @elseif($design->orderItem->mockup_img_url ?? null)

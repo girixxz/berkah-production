@@ -30,7 +30,7 @@
         },
         async loadLocationData() {
             try {
-                const response = await fetch('{{ route('admin.customers.location', $order->customer_id) }}');
+                const response = await fetch('{{ route('customers.location', $order->customer_id) }}');
                 const data = await response.json();
                 this.locationData = data;
             } catch (error) {
@@ -60,7 +60,7 @@
                 {{-- Order Image Container - Hidden on mobile, shown on md+ --}}
                 <div class="hidden md:flex flex-shrink-0">
                     @if($order->img_url)
-                        <img src="{{ route('admin.orders.image', $order->id) }}" 
+                        <img src="{{ route('orders.serve-image', $order->id) }}" 
                              alt="Order Image" 
                              class="w-20 h-20 object-cover rounded-lg border-2 border-gray-200 shadow-sm">
                     @else
@@ -196,7 +196,7 @@
                             {{-- 1. Image (Kiri) - dari work_orders.mockup_img_url --}}
                             <div class="flex-shrink-0">
                                 @if ($design->workOrder && $design->workOrder->mockup_img_url)
-                                    <img src="{{ route('admin.work-orders.mockup-image', ['workOrder' => $design->workOrder->id]) }}" 
+                                    <img src="{{ route('work-orders.serve-mockup-image', ['workOrder' => $design->workOrder->id]) }}" 
                                         alt="{{ $design->design_name }}"
                                         class="w-16 h-16 md:w-20 md:h-20 object-cover rounded-lg border-2 border-gray-200">
                                 @elseif($design->orderItem->mockup_img_url ?? null)

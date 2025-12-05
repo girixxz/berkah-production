@@ -64,7 +64,7 @@
                                 <img :src="(() => {
                                     const workOrder = showData?.work_order;
                                     if (!workOrder || !workOrder.id || !workOrder.mockup_img_url) return '/images/work-order-null.png';
-                                    return '{{ route('admin.work-orders.mockup-image', ['workOrder' => '__ID__']) }}'.replace('__ID__', workOrder.id);
+                                    return '{{ route('work-orders.serve-mockup-image', ['workOrder' => '__ID__']) }}'.replace('__ID__', workOrder.id);
                                 })()"
                                     alt="Mockup" class="max-h-92 w-auto object-contain">
                             </div>
@@ -82,7 +82,7 @@
                                     <img :src="(() => {
                                         const cutting = showData?.work_order?.cutting;
                                         if (!cutting || !cutting.id || !cutting.custom_size_chart_img_url) return '/images/work-order-null.png';
-                                        return '{{ route('admin.work-orders.cutting-image', ['cutting' => '__ID__']) }}'.replace('__ID__', cutting.id);
+                                        return '{{ route('work-orders.serve-cutting-image', ['cutting' => '__ID__']) }}'.replace('__ID__', cutting.id);
                                     })()"
                                         alt="Size Chart" class="max-h-[160px] w-auto object-contain">
                                 </div>
@@ -284,7 +284,7 @@
                                 <img :src="(() => {
                                     const printing = showData?.work_order?.printing;
                                     if (!printing || !printing.id || !printing.detail_img_url) return '/images/work-order-null.png';
-                                    return '{{ route('admin.work-orders.printing-image', ['printing' => '__ID__']) }}'.replace('__ID__', printing.id);
+                                    return '{{ route('work-orders.serve-printing-image', ['printing' => '__ID__']) }}'.replace('__ID__', printing.id);
                                 })()"
                                     alt="Mockup" class="max-h-235 w-auto object-contain">
                             </div>
@@ -325,7 +325,7 @@
                                 <img :src="(() => {
                                     const placement = showData?.work_order?.printing_placement;
                                     if (!placement || !placement.id || !placement.detail_img_url) return '/images/work-order-null.png';
-                                    return '{{ route('admin.work-orders.placement-image', ['placement' => '__ID__']) }}'.replace('__ID__', placement.id);
+                                    return '{{ route('work-orders.serve-placement-image', ['placement' => '__ID__']) }}'.replace('__ID__', placement.id);
                                 })()"
                                     alt="Mockup" class="max-h-235 w-auto object-contain">
                             </div>
@@ -380,7 +380,7 @@
                                         <img :src="(() => {
                                             const sewing = showData?.work_order?.sewing;
                                             if (!sewing || !sewing.id || !sewing.detail_img_url) return '/images/work-order-null.png';
-                                            return '{{ route('admin.work-orders.sewing-image', ['sewing' => '__ID__']) }}'.replace('__ID__', sewing.id);
+                                            return '{{ route('work-orders.serve-sewing-image', ['sewing' => '__ID__']) }}'.replace('__ID__', sewing.id);
                                         })()"
                                             alt="Posisi Label" class="h-50 w-auto object-contain">
                                     </div>
@@ -482,7 +482,7 @@
                                         <img :src="(() => {
                                             const packing = showData?.work_order?.packing;
                                             if (!packing || !packing.id || !packing.hangtag_img_url) return '/images/work-order-null.png';
-                                            return '{{ route('admin.work-orders.packing-image', ['packing' => '__ID__']) }}'.replace('__ID__', packing.id);
+                                            return '{{ route('work-orders.serve-packing-image', ['packing' => '__ID__']) }}'.replace('__ID__', packing.id);
                                         })()"
                                             alt="Posisi Hangtag" class="h-50 w-auto object-contain">
                                     </div>
