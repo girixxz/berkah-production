@@ -5,7 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>Production Calendar - {{ config('app.name') }}</title>
-    
+    {{-- Favicon --}}
+    <link rel="icon" type="image/svg+xml" href="{{ asset('favicon.svg') }}">
+    <link rel="alternate icon" href="{{ asset('favicon.ico') }}">
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     
     <style>
@@ -175,7 +177,7 @@
                     {{-- Reset Button --}}
                     <a href="{{ route('calendar', ['filter' => $filter]) }}" 
                        class="px-3 sm:px-4 py-2 bg-primary hover:bg-primary-dark text-white text-sm font-medium rounded-lg transition-colors cursor-pointer flex-shrink-0">
-                        Reset
+                        This Month
                     </a>
                 </div>
             </div>
