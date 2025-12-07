@@ -247,7 +247,7 @@
                                                         $separatorClass = 'text-gray-600';
                                                     }
                                                 @endphp
-                                                <a href="{{ route('karyawan.task.work-order', ['order' => $orderStage->order->id]) }}" 
+                                                <a href="{{ route('karyawan.task.work-order', ['order' => $orderStage->order->id]) }}" target="_blank"
                                                     class="block px-1.5 py-0.5 rounded border {{ $bgClass }} {{ $borderClass }} text-[9px] font-medium cursor-pointer hover:opacity-80 transition-opacity">
                                                     <div class="flex items-center justify-between gap-1">
                                                         <div class="flex items-center gap-1 {{ $textClass }} flex-1 min-w-0">
@@ -334,7 +334,7 @@
                     <div class="p-5 max-h-[60vh] overflow-y-auto">
                         <div class="space-y-3">
                             <template x-for="(task, index) in modalTasks" :key="index">
-                                <a :href="`{{ route('karyawan.task.work-order', ['order' => '__ORDER_ID__']) }}`.replace('__ORDER_ID__', task.order_id)" 
+                                <a :href="`{{ route('karyawan.task.work-order', ['order' => '__ORDER_ID__']) }}`.replace('__ORDER_ID__', task.order_id)"  target="_blank"
                                     class="block px-4 py-3 rounded-lg border hover:opacity-80 transition-opacity cursor-pointer"
                                     :style="task.production_status !== 'finished' && task.status !== 'done' && task.priority !== 'high' ? 'background-color: #eddfad; border-color: #d4c973;' : ''"
                                     :class="{

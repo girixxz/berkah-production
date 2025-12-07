@@ -801,7 +801,7 @@
                                                     :style="dropdownStyle"
                                                     class="bg-white border border-gray-200 rounded-md shadow-lg z-50 py-1">
                                                     {{-- View Detail --}}
-                                                    <a href="{{ route('admin.orders.show', $order->id) }}"
+                                                    <a href="{{ route('admin.orders.show', $order->id) }}" target="_blank"
                                                         class="px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2">
                                                         <svg class="w-4 h-4" fill="none" stroke="currentColor"
                                                             viewBox="0 0 24 24">
@@ -1039,7 +1039,7 @@
                                                     :style="dropdownStyle"
                                                     class="bg-white border border-gray-200 rounded-md shadow-lg z-50 py-1">
                                                     {{-- View Detail --}}
-                                                    <a href="{{ route('admin.orders.show', $order->id) }}"
+                                                    <a href="{{ route('admin.orders.show', $order->id) }}" target="_blank"
                                                         class="px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2">
                                                         <svg class="w-4 h-4" fill="none" stroke="currentColor"
                                                             viewBox="0 0 24 24">
