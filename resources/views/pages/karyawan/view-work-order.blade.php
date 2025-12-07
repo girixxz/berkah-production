@@ -109,45 +109,6 @@
             </div>
         </div>
 
-        {{-- ================= SECTION 2: CUSTOMER INFORMATION ================= --}}
-        <div class="bg-white border border-gray-200 rounded-2xl p-4 md:p-6">
-            <h2 class="text-lg font-semibold text-gray-900 mb-4">Customer Information</h2>
-            <div class="grid grid-cols-2 md:grid-cols-3 gap-3">
-                <div>
-                    <p class="text-xs md:text-sm font-semibold text-gray-900 mb-1">Name</p>
-                    <p class="text-sm md:text-base font-normal text-gray-700">{{ $order->customer->customer_name }}</p>
-                </div>
-                <div>
-                    <p class="text-xs md:text-sm font-semibold text-gray-900 mb-1">Phone</p>
-                    <p class="text-sm md:text-base font-normal text-gray-700">{{ $order->customer->phone }}</p>
-                </div>
-                <div>
-                    <p class="text-xs md:text-sm font-semibold text-gray-900 mb-1">Sales</p>
-                    <p class="text-sm md:text-base font-normal text-gray-700">{{ $order->sale->sales_name ?? '-' }}</p>
-                </div>
-                <div>
-                    <p class="text-xs md:text-sm font-semibold text-gray-900 mb-1">Province</p>
-                    <p class="text-sm md:text-base font-normal text-gray-700" x-text="locationData.province_name"></p>
-                </div>
-                <div>
-                    <p class="text-xs md:text-sm font-semibold text-gray-900 mb-1">City</p>
-                    <p class="text-sm md:text-base font-normal text-gray-700" x-text="locationData.city_name"></p>
-                </div>
-                <div>
-                    <p class="text-xs md:text-sm font-semibold text-gray-900 mb-1">District</p>
-                    <p class="text-sm md:text-base font-normal text-gray-700" x-text="locationData.district_name"></p>
-                </div>
-                <div>
-                    <p class="text-xs md:text-sm font-semibold text-gray-900 mb-1">Village</p>
-                    <p class="text-sm md:text-base font-normal text-gray-700" x-text="locationData.village_name"></p>
-                </div>
-                <div class="col-span-2 md:col-span-2">
-                    <p class="text-xs md:text-sm font-semibold text-gray-900 mb-1">Address</p>
-                    <p class="text-sm md:text-base font-normal text-gray-700">{{ $order->customer->address }}</p>
-                </div>
-            </div>
-        </div>
-
         {{-- ================= SECTION 3: DETAIL PRODUCTS ================= --}}
         <div class="bg-white border border-gray-200 rounded-2xl p-4 md:p-6">
             <h2 class="text-lg font-semibold text-gray-900 mb-4">Detail Products</h2>
