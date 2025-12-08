@@ -20,6 +20,7 @@
         isDragging: false,
         errors: {},
         isSubmitting: false,
+        zoomLevel: 100,
         formData: {
             design_variant_id: null,
             mockup_img_url: null,
@@ -328,10 +329,25 @@
             console.log('Order items:', design.order_items);
             this.showData = design;
             this.showModal = true;
+            this.zoomLevel = 100;
         },
         closeShowModal() {
             this.showModal = false;
             this.showData = null;
+            this.zoomLevel = 100;
+        },
+        zoomIn() {
+            if (this.zoomLevel < 200) {
+                this.zoomLevel += 10;
+            }
+        },
+        zoomOut() {
+            if (this.zoomLevel > 50) {
+                this.zoomLevel -= 10;
+            }
+        },
+        resetZoom() {
+            this.zoomLevel = 100;
         }
     }" class="space-y-6">
 

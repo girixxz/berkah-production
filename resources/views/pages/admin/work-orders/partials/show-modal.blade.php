@@ -20,13 +20,49 @@
                             Work Order Preview
                         </h3>
                     </div>
-                    <button @click="closeShowModal()" type="button"
-                        class="text-gray-400 hover:text-gray-600 focus:outline-none">
-                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M6 18L18 6M6 6l12 12" />
-                        </svg>
-                    </button>
+                    <div class="flex items-center gap-2">
+                        {{-- Zoom Controls - Responsive --}}
+                        <div class="flex items-center gap-1 mr-1 md:mr-3 bg-white rounded-lg border border-gray-300 px-1 md:px-2 py-1">
+                            {{-- Zoom Out Button --}}
+                            <button @click="zoomOut()" type="button"
+                                class="p-1 rounded hover:bg-gray-100 transition-colors"
+                                :disabled="zoomLevel <= 50"
+                                :class="{ 'opacity-50 cursor-not-allowed': zoomLevel <= 50 }">
+                                <svg class="w-4 h-4 md:w-5 md:h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4" />
+                                </svg>
+                            </button>
+                            
+                            {{-- Percentage Display - Hidden on Mobile --}}
+                            <span class="hidden md:inline text-xs font-medium text-gray-700 min-w-[45px] text-center" x-text="zoomLevel + '%'"></span>
+                            
+                            {{-- Zoom In Button --}}
+                            <button @click="zoomIn()" type="button"
+                                class="p-1 rounded hover:bg-gray-100 transition-colors"
+                                :disabled="zoomLevel >= 200"
+                                :class="{ 'opacity-50 cursor-not-allowed': zoomLevel >= 200 }">
+                                <svg class="w-4 h-4 md:w-5 md:h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                                </svg>
+                            </button>
+                            
+                            {{-- Reset Button - Icon only on mobile, text on desktop --}}
+                            <button @click="resetZoom()" type="button"
+                                class="ml-1 p-1 md:px-2 md:py-1 text-gray-600 hover:bg-gray-100 rounded transition-colors">
+                                <svg class="w-4 h-4 md:hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                </svg>
+                                <span class="hidden md:inline text-xs font-medium">Reset</span>
+                            </button>
+                        </div>
+                        <button @click="closeShowModal()" type="button"
+                            class="text-gray-400 hover:text-gray-600 focus:outline-none">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                        </button>
+                    </div>
                 </div>
                 <p class="text-sm text-gray-500">
                     <span>Variant </span><span x-text="showData?.variant_index || '1'"></span>
@@ -37,7 +73,8 @@
             </div>
 
             {{-- Modal Content - A4 Print Preview --}}
-            <div class="p-6 bg-gray-100 flex-1 overflow-y-auto">
+            <div class="p-6 bg-gray-100 flex-1 overflow-auto">
+                <div class="inline-block min-w-full" :style="`transform: scale(${zoomLevel / 100}); transform-origin: top center; transition: transform 0.2s ease;`">
 
                 {{-- PAGE 1 - CUTTING --}}
                 <div class="bg-white mx-auto shadow-2xl border-4 border-black"
@@ -550,6 +587,8 @@
                             </div>
                         </div>
                     </div>
+                </div>
+                
                 </div>
             </div>
             
