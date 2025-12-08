@@ -19,6 +19,9 @@ class PlasticPackingController extends Controller
                 'name.unique' => 'This plastic packing name already exists.',
             ]);
 
+            $maxSortOrder = PlasticPacking::max('sort_order') ?? 0;
+            $validated['sort_order'] = $maxSortOrder + 1;
+
             PlasticPacking::create($validated);
 
             Cache::forget('plastic_packings');
@@ -39,13 +42,32 @@ class PlasticPackingController extends Controller
     public function update(Request $request, PlasticPacking $plasticPacking)
     {
         try {
+            $totalCount = PlasticPacking::count();
             $validated = $request->validateWithBag('editPlasticPacking', [
                 'name' => 'required|max:100|unique:plastic_packings,name,' . $plasticPacking->id,
+                'sort_order' => 'required|integer|min:1|max:' . $totalCount,
             ], [
                 'name.required' => 'Plastic Packing name is required.',
                 'name.max' => 'Plastic Packing name must not exceed 100 characters.',
                 'name.unique' => 'This plastic packing name already exists.',
+                'sort_order.required' => 'Sort Order is required.',
+                'sort_order.integer' => 'Sort Order must be a number.',
+                'sort_order.min' => 'Sort Order must be at least 1.',
+                'sort_order.max' => 'Sort Order cannot exceed ' . $totalCount . '.',
             ]);
+
+            $oldSortOrder = $plasticPacking->sort_order;
+            $newSortOrder = $validated['sort_order'];
+
+            if ($oldSortOrder != $newSortOrder) {
+                if ($newSortOrder > $oldSortOrder) {
+                    PlasticPacking::whereBetween('sort_order', [$oldSortOrder + 1, $newSortOrder])
+                        ->decrement('sort_order');
+                } else {
+                    PlasticPacking::whereBetween('sort_order', [$newSortOrder, $oldSortOrder - 1])
+                        ->increment('sort_order');
+                }
+            }
 
             $plasticPacking->update(array_filter($validated));
 
@@ -67,7 +89,11 @@ class PlasticPackingController extends Controller
 
     public function destroy(PlasticPacking $plasticPacking)
     {
+        $deletedSortOrder = $plasticPacking->sort_order;
         $plasticPacking->delete();
+
+        PlasticPacking::where('sort_order', '>', $deletedSortOrder)
+            ->decrement('sort_order');
 
         Cache::forget('plastic_packings');
 

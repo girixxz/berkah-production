@@ -19,6 +19,9 @@ class SewingLabelController extends Controller
                 'name.unique' => 'This sewing label name already exists.',
             ]);
 
+            $maxSortOrder = SewingLabel::max('sort_order') ?? 0;
+            $validated['sort_order'] = $maxSortOrder + 1;
+
             SewingLabel::create($validated);
 
             Cache::forget('sewing_labels');
@@ -39,13 +42,32 @@ class SewingLabelController extends Controller
     public function update(Request $request, SewingLabel $sewingLabel)
     {
         try {
+            $totalCount = SewingLabel::count();
             $validated = $request->validateWithBag('editSewingLabel', [
                 'name' => 'required|max:100|unique:sewing_labels,name,' . $sewingLabel->id,
+                'sort_order' => 'required|integer|min:1|max:' . $totalCount,
             ], [
                 'name.required' => 'Sewing Label name is required.',
                 'name.max' => 'Sewing Label name must not exceed 100 characters.',
                 'name.unique' => 'This sewing label name already exists.',
+                'sort_order.required' => 'Sort Order is required.',
+                'sort_order.integer' => 'Sort Order must be a number.',
+                'sort_order.min' => 'Sort Order must be at least 1.',
+                'sort_order.max' => 'Sort Order cannot exceed ' . $totalCount . '.',
             ]);
+
+            $oldSortOrder = $sewingLabel->sort_order;
+            $newSortOrder = $validated['sort_order'];
+
+            if ($oldSortOrder != $newSortOrder) {
+                if ($newSortOrder > $oldSortOrder) {
+                    SewingLabel::whereBetween('sort_order', [$oldSortOrder + 1, $newSortOrder])
+                        ->decrement('sort_order');
+                } else {
+                    SewingLabel::whereBetween('sort_order', [$newSortOrder, $oldSortOrder - 1])
+                        ->increment('sort_order');
+                }
+            }
 
             $sewingLabel->update(array_filter($validated));
 
@@ -67,7 +89,11 @@ class SewingLabelController extends Controller
 
     public function destroy(SewingLabel $sewingLabel)
     {
+        $deletedSortOrder = $sewingLabel->sort_order;
         $sewingLabel->delete();
+
+        SewingLabel::where('sort_order', '>', $deletedSortOrder)
+            ->decrement('sort_order');
 
         Cache::forget('sewing_labels');
 

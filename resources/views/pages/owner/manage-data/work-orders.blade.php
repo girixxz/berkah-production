@@ -2848,6 +2848,16 @@
                         @enderror
                     </div>
 
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Sort Order</label>
+                        <input type="number" name="sort_order" x-model.number="editCuttingPattern.sort_order"
+                            class="mt-1 w-full rounded-md px-4 py-2 text-sm border {{ $errors->editCuttingPattern->has('sort_order') ? 'border-red-500 focus:border-red-500 focus:ring-red-200' : 'border-gray-200 focus:border-primary focus:ring-primary/20' }} focus:outline-none focus:ring-2 text-gray-700">
+
+                        @error('sort_order', 'editCuttingPattern')
+                            <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                        @enderror
+                    </div>
+
                     <div class="flex justify-end gap-3 pt-4">
                         <button type="button" @click="openModal=null"
                             class="px-4 py-2 rounded-md bg-gray-100 hover:bg-gray-200 text-gray-700 cursor-pointer">Cancel</button>
@@ -2921,6 +2931,16 @@
                             class="mt-1 w-full rounded-md px-4 py-2 text-sm border {{ $errors->editChainCloth->has('name') ? 'border-red-500 focus:border-red-500 focus:ring-red-200' : 'border-gray-200 focus:border-primary focus:ring-primary/20' }} focus:outline-none focus:ring-2 text-gray-700">
 
                         @error('name', 'editChainCloth')
+                            <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                        @enderror
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Sort Order</label>
+                        <input type="number" name="sort_order" x-model.number="editChainCloth.sort_order"
+                            class="mt-1 w-full rounded-md px-4 py-2 text-sm border {{ $errors->editChainCloth->has('sort_order') ? 'border-red-500 focus:border-red-500 focus:ring-red-200' : 'border-gray-200 focus:border-primary focus:ring-primary/20' }} focus:outline-none focus:ring-2 text-gray-700">
+
+                        @error('sort_order', 'editChainCloth')
                             <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                         @enderror
                     </div>
@@ -3000,6 +3020,16 @@
                         @enderror
                     </div>
 
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Sort Order</label>
+                        <input type="number" name="sort_order" x-model.number="editRibSize.sort_order"
+                            class="mt-1 w-full rounded-md px-4 py-2 text-sm border {{ $errors->editRibSize->has('sort_order') ? 'border-red-500 focus:border-red-500 focus:ring-red-200' : 'border-gray-200 focus:border-primary focus:ring-primary/20' }} focus:outline-none focus:ring-2 text-gray-700">
+
+                        @error('sort_order', 'editRibSize')
+                            <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                        @enderror
+                    </div>
+
                     <div class="flex justify-end gap-3 pt-4">
                         <button type="button" @click="openModal=null"
                             class="px-4 py-2 rounded-md bg-gray-100 hover:bg-gray-200 text-gray-700 cursor-pointer">Cancel</button>
@@ -3071,6 +3101,16 @@
                             class="mt-1 w-full rounded-md px-4 py-2 text-sm border {{ $errors->editPrintInk->has('name') ? 'border-red-500 focus:border-red-500 focus:ring-red-200' : 'border-gray-200 focus:border-primary focus:ring-primary/20' }} focus:outline-none focus:ring-2 text-gray-700">
 
                         @error('name', 'editPrintInk')
+                            <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                        @enderror
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Sort Order</label>
+                        <input type="number" name="sort_order" x-model.number="editPrintInk.sort_order"
+                            class="mt-1 w-full rounded-md px-4 py-2 text-sm border {{ $errors->editPrintInk->has('sort_order') ? 'border-red-500 focus:border-red-500 focus:ring-red-200' : 'border-gray-200 focus:border-primary focus:ring-primary/20' }} focus:outline-none focus:ring-2 text-gray-700">
+
+                        @error('sort_order', 'editPrintInk')
                             <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                         @enderror
                     </div>
@@ -3171,6 +3211,16 @@
                         @enderror
                     </div>
 
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Sort Order</label>
+                        <input type="number" name="sort_order" x-model.number="editFinishing.sort_order"
+                            class="mt-1 w-full rounded-md px-4 py-2 text-sm border {{ $errors->editFinishing->has('sort_order') ? 'border-red-500 focus:border-red-500 focus:ring-red-200' : 'border-gray-200 focus:border-primary focus:ring-primary/20' }} focus:outline-none focus:ring-2 text-gray-700">
+
+                        @error('sort_order', 'editFinishing')
+                            <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                        @enderror
+                    </div>
+
                     <div class="flex justify-end gap-3 pt-4">
                         <button type="button" @click="openModal=null"
                             class="px-4 py-2 rounded-md bg-gray-100 hover:bg-gray-200 text-gray-700 cursor-pointer">Cancel</button>
@@ -3242,6 +3292,16 @@
                             class="mt-1 w-full rounded-md px-4 py-2 text-sm border {{ $errors->editNeckOverdeck->has('name') ? 'border-red-500 focus:border-red-500 focus:ring-red-200' : 'border-gray-200 focus:border-primary focus:ring-primary/20' }} focus:outline-none focus:ring-2 text-gray-700">
 
                         @error('name', 'editNeckOverdeck')
+                            <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                        @enderror
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Sort Order</label>
+                        <input type="number" name="sort_order" x-model.number="editNeckOverdeck.sort_order"
+                            class="mt-1 w-full rounded-md px-4 py-2 text-sm border {{ $errors->editNeckOverdeck->has('sort_order') ? 'border-red-500 focus:border-red-500 focus:ring-red-200' : 'border-gray-200 focus:border-primary focus:ring-primary/20' }} focus:outline-none focus:ring-2 text-gray-700">
+
+                        @error('sort_order', 'editNeckOverdeck')
                             <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                         @enderror
                     </div>
@@ -3321,6 +3381,16 @@
                         @enderror
                     </div>
 
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Sort Order</label>
+                        <input type="number" name="sort_order" x-model.number="editUnderarmOverdeck.sort_order"
+                            class="mt-1 w-full rounded-md px-4 py-2 text-sm border {{ $errors->editUnderarmOverdeck->has('sort_order') ? 'border-red-500 focus:border-red-500 focus:ring-red-200' : 'border-gray-200 focus:border-primary focus:ring-primary/20' }} focus:outline-none focus:ring-2 text-gray-700">
+
+                        @error('sort_order', 'editUnderarmOverdeck')
+                            <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                        @enderror
+                    </div>
+
                     <div class="flex justify-end gap-3 pt-4">
                         <button type="button" @click="openModal=null"
                             class="px-4 py-2 rounded-md bg-gray-100 hover:bg-gray-200 text-gray-700 cursor-pointer">Cancel</button>
@@ -3396,6 +3466,16 @@
                         @enderror
                     </div>
 
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Sort Order</label>
+                        <input type="number" name="sort_order" x-model.number="editSideSplit.sort_order"
+                            class="mt-1 w-full rounded-md px-4 py-2 text-sm border {{ $errors->editSideSplit->has('sort_order') ? 'border-red-500 focus:border-red-500 focus:ring-red-200' : 'border-gray-200 focus:border-primary focus:ring-primary/20' }} focus:outline-none focus:ring-2 text-gray-700">
+
+                        @error('sort_order', 'editSideSplit')
+                            <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                        @enderror
+                    </div>
+
                     <div class="flex justify-end gap-3 pt-4">
                         <button type="button" @click="openModal=null"
                             class="px-4 py-2 rounded-md bg-gray-100 hover:bg-gray-200 text-gray-700 cursor-pointer">Cancel</button>
@@ -3467,6 +3547,16 @@
                             class="mt-1 w-full rounded-md px-4 py-2 text-sm border {{ $errors->editSewingLabel->has('name') ? 'border-red-500 focus:border-red-500 focus:ring-red-200' : 'border-gray-200 focus:border-primary focus:ring-primary/20' }} focus:outline-none focus:ring-2 text-gray-700">
 
                         @error('name', 'editSewingLabel')
+                            <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                        @enderror
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Sort Order</label>
+                        <input type="number" name="sort_order" x-model.number="editSewingLabel.sort_order"
+                            class="mt-1 w-full rounded-md px-4 py-2 text-sm border {{ $errors->editSewingLabel->has('sort_order') ? 'border-red-500 focus:border-red-500 focus:ring-red-200' : 'border-gray-200 focus:border-primary focus:ring-primary/20' }} focus:outline-none focus:ring-2 text-gray-700">
+
+                        @error('sort_order', 'editSewingLabel')
                             <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                         @enderror
                     </div>
@@ -3547,6 +3637,16 @@
                         @enderror
                     </div>
 
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Sort Order</label>
+                        <input type="number" name="sort_order" x-model.number="editPlasticPacking.sort_order"
+                            class="mt-1 w-full rounded-md px-4 py-2 text-sm border {{ $errors->editPlasticPacking->has('sort_order') ? 'border-red-500 focus:border-red-500 focus:ring-red-200' : 'border-gray-200 focus:border-primary focus:ring-primary/20' }} focus:outline-none focus:ring-2 text-gray-700">
+
+                        @error('sort_order', 'editPlasticPacking')
+                            <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                        @enderror
+                    </div>
+
                     <div class="flex justify-end gap-3 pt-4">
                         <button type="button" @click="openModal=null"
                             class="px-4 py-2 rounded-md bg-gray-100 hover:bg-gray-200 text-gray-700 cursor-pointer">Cancel</button>
@@ -3618,6 +3718,16 @@
                             class="mt-1 w-full rounded-md px-4 py-2 text-sm border {{ $errors->editSticker->has('name') ? 'border-red-500 focus:border-red-500 focus:ring-red-200' : 'border-gray-200 focus:border-primary focus:ring-primary/20' }} focus:outline-none focus:ring-2 text-gray-700">
 
                         @error('name', 'editSticker')
+                            <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                        @enderror
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Sort Order</label>
+                        <input type="number" name="sort_order" x-model.number="editSticker.sort_order"
+                            class="mt-1 w-full rounded-md px-4 py-2 text-sm border {{ $errors->editSticker->has('sort_order') ? 'border-red-500 focus:border-red-500 focus:ring-red-200' : 'border-gray-200 focus:border-primary focus:ring-primary/20' }} focus:outline-none focus:ring-2 text-gray-700">
+
+                        @error('sort_order', 'editSticker')
                             <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                         @enderror
                     </div>
