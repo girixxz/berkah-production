@@ -22,6 +22,20 @@
     <div x-data="{
         showModal: false,
         showData: null,
+        zoomLevel: 100,
+        zoomIn() {
+            if (this.zoomLevel < 200) {
+                this.zoomLevel += 10;
+            }
+        },
+        zoomOut() {
+            if (this.zoomLevel > 50) {
+                this.zoomLevel -= 10;
+            }
+        },
+        resetZoom() {
+            this.zoomLevel = 100;
+        },
         locationData: {
             province_name: 'Loading...',
             city_name: 'Loading...',

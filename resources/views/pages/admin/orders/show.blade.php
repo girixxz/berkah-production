@@ -53,6 +53,34 @@
         showMoveToShippingConfirm: false,
         showModal: false,
         showData: null,
+        zoomLevel: 100,
+        zoomIn() {
+            if (this.zoomLevel < 200) {
+                this.zoomLevel += 10;
+            }
+        },
+        zoomOut() {
+            if (this.zoomLevel > 50) {
+                this.zoomLevel -= 10;
+            }
+        },
+        resetZoom() {
+            this.zoomLevel = 100;
+        },
+        invoiceZoomLevel: 100,
+        invoiceZoomIn() {
+            if (this.invoiceZoomLevel < 200) {
+                this.invoiceZoomLevel += 10;
+            }
+        },
+        invoiceZoomOut() {
+            if (this.invoiceZoomLevel > 50) {
+                this.invoiceZoomLevel -= 10;
+            }
+        },
+        invoiceResetZoom() {
+            this.invoiceZoomLevel = 100;
+        },
         locationData: {
             province_name: 'Loading...',
             city_name: 'Loading...',
@@ -1053,23 +1081,7 @@
         <div x-show="openInvoiceModal" x-cloak
             class="fixed inset-0 z-50 "
             @keydown.escape.window="openInvoiceModal && (openInvoiceModal = false)"
-            aria-labelledby="modal-title" role="dialog" aria-modal="true"
-            x-data="{
-                invoiceZoomLevel: 100,
-                invoiceZoomIn() {
-                    if (this.invoiceZoomLevel < 200) {
-                        this.invoiceZoomLevel += 10;
-                    }
-                },
-                invoiceZoomOut() {
-                    if (this.invoiceZoomLevel > 50) {
-                        this.invoiceZoomLevel -= 10;
-                    }
-                },
-                invoiceResetZoom() {
-                    this.invoiceZoomLevel = 100;
-                }
-            }">
+            aria-labelledby="modal-title" role="dialog" aria-modal="true">
 
             {{-- Background Overlay --}}
             <div x-show="openInvoiceModal" class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity"
@@ -1958,6 +1970,7 @@
                 </div>
             </div>
         </div>
+    </div>
     </div>
 
 @endsection
