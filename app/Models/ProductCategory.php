@@ -9,6 +9,7 @@ class ProductCategory extends Model
 {
     protected $fillable = [
         'product_name',
+        'sort_order',
     ];
 
     protected $appends = ['name'];

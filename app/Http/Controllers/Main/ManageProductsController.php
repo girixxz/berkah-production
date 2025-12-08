@@ -35,13 +35,13 @@ class ManageProductsController extends Controller
         $perPageService = $request->input('per_page_service', 5);
         $perPageService = in_array($perPageService, [5, 10, 15, 20, 25]) ? $perPageService : 5;
         
-        $productCategories = ProductCategory::paginate($perPageProduct, ['*'], 'product_page');
-        $materialCategories = MaterialCategory::paginate($perPageMaterial, ['*'], 'material_page');
-        $materialTextures = MaterialTexture::paginate($perPageTexture, ['*'], 'texture_page');
-        $materialSleeves = MaterialSleeve::paginate($perPageSleeve, ['*'], 'sleeve_page');
+        $productCategories = ProductCategory::orderBy('sort_order', 'asc')->paginate($perPageProduct, ['*'], 'product_page');
+        $materialCategories = MaterialCategory::orderBy('sort_order', 'asc')->paginate($perPageMaterial, ['*'], 'material_page');
+        $materialTextures = MaterialTexture::orderBy('sort_order', 'asc')->paginate($perPageTexture, ['*'], 'texture_page');
+        $materialSleeves = MaterialSleeve::orderBy('sort_order', 'asc')->paginate($perPageSleeve, ['*'], 'sleeve_page');
         $materialSizes = MaterialSize::orderBy('sort_order', 'asc')->paginate($perPageSize, ['*'], 'size_page');
         $allMaterialSizes = MaterialSize::orderBy('sort_order', 'asc')->get(); // For sort modal
-        $services = Service::paginate($perPageService, ['*'], 'service_page');
+        $services = Service::orderBy('sort_order', 'asc')->paginate($perPageService, ['*'], 'service_page');
 
         return view('pages.owner.manage-data.products', compact(
             'productCategories',

@@ -9,6 +9,7 @@ class MaterialSleeve extends Model
 {
     protected $fillable = [
         'sleeve_name',
+        'sort_order',
     ];
 
     protected $appends = ['name'];

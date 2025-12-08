@@ -9,6 +9,7 @@ class MaterialTexture extends Model
 {
     protected $fillable = [
         'texture_name',
+        'sort_order',
     ];
 
     protected $appends = ['name'];

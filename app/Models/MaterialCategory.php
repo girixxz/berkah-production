@@ -9,6 +9,7 @@ class MaterialCategory extends Model
 {
     protected $fillable = [
         'material_name',
+        'sort_order',
     ];
 
     protected $appends = ['name'];

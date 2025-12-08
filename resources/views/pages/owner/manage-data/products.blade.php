@@ -1466,11 +1466,23 @@
                     @method('PUT')
 
                     <div>
-                        <label class="block text-sm font-medium text-gray-700">Product Name</label>
+                        <label class="block text-sm font-medium text-gray-700">Product Name <span
+                                class="text-red-500">*</span></label>
                         <input type="text" name="product_name" x-model="editProduct.product_name"
                             class="mt-1 w-full rounded-md px-4 py-2 text-sm border {{ $errors->editProduct->has('product_name') ? 'border-red-500 focus:border-red-500 focus:ring-red-200' : 'border-gray-200 focus:border-primary focus:ring-primary/20' }} focus:outline-none focus:ring-2 text-gray-700">
 
                         @error('product_name', 'editProduct')
+                            <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                        @enderror
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Sort Order <span
+                                class="text-red-500">*</span></label>
+                        <input type="number" name="sort_order" x-model.number="editProduct.sort_order" min="1"
+                            class="mt-1 w-full rounded-md px-4 py-2 text-sm border {{ $errors->editProduct->has('sort_order') ? 'border-red-500 focus:border-red-500 focus:ring-red-200' : 'border-gray-200 focus:border-primary focus:ring-primary/20' }} focus:outline-none focus:ring-2 text-gray-700">
+
+                        @error('sort_order', 'editProduct')
                             <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                         @enderror
                     </div>
@@ -1544,11 +1556,23 @@
                     @method('PUT')
 
                     <div>
-                        <label class="block text-sm font-medium text-gray-700">Material Name</label>
+                        <label class="block text-sm font-medium text-gray-700">Material Name <span
+                                class="text-red-500">*</span></label>
                         <input type="text" name="material_name" x-model="editMaterial.material_name"
                             class="mt-1 w-full rounded-md px-4 py-2 text-sm border {{ $errors->editMaterial->has('material_name') ? 'border-red-500 focus:border-red-500 focus:ring-red-200' : 'border-gray-200 focus:border-primary focus:ring-primary/20' }} focus:outline-none focus:ring-2 text-gray-700">
 
                         @error('material_name', 'editMaterial')
+                            <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                        @enderror
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Sort Order <span
+                                class="text-red-500">*</span></label>
+                        <input type="number" name="sort_order" x-model.number="editMaterial.sort_order" min="1"
+                            class="mt-1 w-full rounded-md px-4 py-2 text-sm border {{ $errors->editMaterial->has('sort_order') ? 'border-red-500 focus:border-red-500 focus:ring-red-200' : 'border-gray-200 focus:border-primary focus:ring-primary/20' }} focus:outline-none focus:ring-2 text-gray-700">
+
+                        @error('sort_order', 'editMaterial')
                             <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                         @enderror
                     </div>
@@ -1619,11 +1643,23 @@
                     @method('PUT')
 
                     <div>
-                        <label class="block text-sm font-medium text-gray-700">Texture Name</label>
+                        <label class="block text-sm font-medium text-gray-700">Texture Name <span
+                                class="text-red-500">*</span></label>
                         <input type="text" name="texture_name" x-model="editTexture.texture_name"
                             class="mt-1 w-full rounded-md px-4 py-2 text-sm border {{ $errors->editTexture->has('texture_name') ? 'border-red-500 focus:border-red-500 focus:ring-red-200' : 'border-gray-200 focus:border-primary focus:ring-primary/20' }} focus:outline-none focus:ring-2 text-gray-700">
 
                         @error('texture_name', 'editTexture')
+                            <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                        @enderror
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Sort Order <span
+                                class="text-red-500">*</span></label>
+                        <input type="number" name="sort_order" x-model.number="editTexture.sort_order" min="1"
+                            class="mt-1 w-full rounded-md px-4 py-2 text-sm border {{ $errors->editTexture->has('sort_order') ? 'border-red-500 focus:border-red-500 focus:ring-red-200' : 'border-gray-200 focus:border-primary focus:ring-primary/20' }} focus:outline-none focus:ring-2 text-gray-700">
+
+                        @error('sort_order', 'editTexture')
                             <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                         @enderror
                     </div>
@@ -1694,11 +1730,23 @@
                     @method('PUT')
 
                     <div>
-                        <label class="block text-sm font-medium text-gray-700">Sleeve Name</label>
+                        <label class="block text-sm font-medium text-gray-700">Sleeve Name <span
+                                class="text-red-500">*</span></label>
                         <input type="text" name="sleeve_name" x-model="editSleeve.sleeve_name"
                             class="mt-1 w-full rounded-md px-4 py-2 text-sm border {{ $errors->editSleeve->has('sleeve_name') ? 'border-red-500 focus:border-red-500 focus:ring-red-200' : 'border-gray-200 focus:border-primary focus:ring-primary/20' }} focus:outline-none focus:ring-2 text-gray-700">
 
                         @error('sleeve_name', 'editSleeve')
+                            <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                        @enderror
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Sort Order <span
+                                class="text-red-500">*</span></label>
+                        <input type="number" name="sort_order" x-model.number="editSleeve.sort_order" min="1"
+                            class="mt-1 w-full rounded-md px-4 py-2 text-sm border {{ $errors->editSleeve->has('sort_order') ? 'border-red-500 focus:border-red-500 focus:ring-red-200' : 'border-gray-200 focus:border-primary focus:ring-primary/20' }} focus:outline-none focus:ring-2 text-gray-700">
+
+                        @error('sort_order', 'editSleeve')
                             <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                         @enderror
                     </div>
@@ -1901,11 +1949,23 @@
                     @method('PUT')
 
                     <div>
-                        <label class="block text-sm font-medium text-gray-700">Service Name</label>
+                        <label class="block text-sm font-medium text-gray-700">Service Name <span
+                                class="text-red-500">*</span></label>
                         <input type="text" name="service_name" x-model="editService.service_name"
                             class="mt-1 w-full rounded-md px-4 py-2 text-sm border {{ $errors->editService->has('service_name') ? 'border-red-500 focus:border-red-500 focus:ring-red-200' : 'border-gray-200 focus:border-primary focus:ring-primary/20' }} focus:outline-none focus:ring-2 text-gray-700">
 
                         @error('service_name', 'editService')
+                            <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                        @enderror
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Sort Order <span
+                                class="text-red-500">*</span></label>
+                        <input type="number" name="sort_order" x-model.number="editService.sort_order" min="1"
+                            class="mt-1 w-full rounded-md px-4 py-2 text-sm border {{ $errors->editService->has('sort_order') ? 'border-red-500 focus:border-red-500 focus:ring-red-200' : 'border-gray-200 focus:border-primary focus:ring-primary/20' }} focus:outline-none focus:ring-2 text-gray-700">
+
+                        @error('sort_order', 'editService')
                             <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                         @enderror
                     </div>

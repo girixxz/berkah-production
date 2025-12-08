@@ -19,12 +19,12 @@ class ProductSeeder extends Seeder
     {
         // Product Categories
         $productCategories = [
-            ['product_name' => 'Kaos Oblong'],
-            ['product_name' => 'Polo Shirt'],
-            ['product_name' => 'Jersey'],
-            ['product_name' => 'Jaket'],
-            ['product_name' => 'Sweater'],
-            ['product_name' => 'Hoodie'],
+            ['product_name' => 'Kaos Oblong', 'sort_order' => 1],
+            ['product_name' => 'Polo Shirt', 'sort_order' => 2],
+            ['product_name' => 'Jersey', 'sort_order' => 3],
+            ['product_name' => 'Jaket', 'sort_order' => 4],
+            ['product_name' => 'Sweater', 'sort_order' => 5],
+            ['product_name' => 'Hoodie', 'sort_order' => 6],
         ];
 
         foreach ($productCategories as $category) {
@@ -33,14 +33,14 @@ class ProductSeeder extends Seeder
 
         // Material Categories
         $materialCategories = [
-            ['material_name' => 'Cotton Combed 20s'],
-            ['material_name' => 'Cotton Combed 24s'],
-            ['material_name' => 'Cotton Combed 30s'],
-            ['material_name' => 'Cotton Bamboo'],
-            ['material_name' => 'Polyester'],
-            ['material_name' => 'Hyget'],
-            ['material_name' => 'PE (Polyester)'],
-            ['material_name' => 'Lacoste'],
+            ['material_name' => 'Cotton Combed 20s', 'sort_order' => 1],
+            ['material_name' => 'Cotton Combed 24s', 'sort_order' => 2],
+            ['material_name' => 'Cotton Combed 30s', 'sort_order' => 3],
+            ['material_name' => 'Cotton Bamboo', 'sort_order' => 4],
+            ['material_name' => 'Polyester', 'sort_order' => 5],
+            ['material_name' => 'Hyget', 'sort_order' => 6],
+            ['material_name' => 'PE (Polyester)', 'sort_order' => 7],
+            ['material_name' => 'Lacoste', 'sort_order' => 8],
         ];
 
         foreach ($materialCategories as $material) {
@@ -49,11 +49,11 @@ class ProductSeeder extends Seeder
 
         // Material Textures
         $materialTextures = [
-            ['texture_name' => 'Soft'],
-            ['texture_name' => 'Medium'],
-            ['texture_name' => 'Hard'],
-            ['texture_name' => 'Smooth'],
-            ['texture_name' => 'Rough'],
+            ['texture_name' => 'Soft', 'sort_order' => 1],
+            ['texture_name' => 'Medium', 'sort_order' => 2],
+            ['texture_name' => 'Hard', 'sort_order' => 3],
+            ['texture_name' => 'Smooth', 'sort_order' => 4],
+            ['texture_name' => 'Rough', 'sort_order' => 5],
         ];
 
         foreach ($materialTextures as $texture) {
@@ -62,10 +62,10 @@ class ProductSeeder extends Seeder
 
         // Material Sleeves
         $materialSleeves = [
-            ['sleeve_name' => 'Pendek'],
-            ['sleeve_name' => 'Panjang'],
-            ['sleeve_name' => 'Raglan'],
-            ['sleeve_name' => '3/4'],
+            ['sleeve_name' => 'Pendek', 'sort_order' => 1],
+            ['sleeve_name' => 'Panjang', 'sort_order' => 2],
+            ['sleeve_name' => 'Raglan', 'sort_order' => 3],
+            ['sleeve_name' => '3/4', 'sort_order' => 4],
         ];
 
         foreach ($materialSleeves as $sleeve) {
@@ -89,16 +89,16 @@ class ProductSeeder extends Seeder
 
         // Services
         $services = [
-            ['service_name' => 'Sablon Manual'],
-            ['service_name' => 'Sablon Digital'],
-            ['service_name' => 'Sablon Rubber'],
-            ['service_name' => 'Sablon Plastisol'],
-            ['service_name' => 'Bordir Komputer'],
-            ['service_name' => 'Bordir Tangan'],
-            ['service_name' => 'Printing DTG'],
-            ['service_name' => 'Printing Sublim'],
-            ['service_name' => 'Polyflex'],
-            ['service_name' => 'Heat Transfer'],
+            ['service_name' => 'Sablon Manual', 'sort_order' => 1],
+            ['service_name' => 'Sablon Digital', 'sort_order' => 2],
+            ['service_name' => 'Sablon Rubber', 'sort_order' => 3],
+            ['service_name' => 'Sablon Plastisol', 'sort_order' => 4],
+            ['service_name' => 'Bordir Komputer', 'sort_order' => 5],
+            ['service_name' => 'Bordir Tangan', 'sort_order' => 6],
+            ['service_name' => 'Printing DTG', 'sort_order' => 7],
+            ['service_name' => 'Printing Sublim', 'sort_order' => 8],
+            ['service_name' => 'Polyflex', 'sort_order' => 9],
+            ['service_name' => 'Heat Transfer', 'sort_order' => 10],
         ];
 
         foreach ($services as $service) {

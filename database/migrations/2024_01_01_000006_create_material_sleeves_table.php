@@ -14,6 +14,7 @@ return new class extends Migration
         Schema::create('material_sleeves', function (Blueprint $table) {
             $table->id();
             $table->string('sleeve_name', 100)->unique();
+            $table->integer('sort_order');
             $table->timestamps();
         });
     }

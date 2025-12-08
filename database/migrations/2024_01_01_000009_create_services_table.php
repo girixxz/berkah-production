@@ -14,6 +14,7 @@ return new class extends Migration
         Schema::create('services', function (Blueprint $table) {
             $table->id();
             $table->string('service_name', 100)->unique();
+            $table->integer('sort_order');
             $table->timestamps();
         });
     }

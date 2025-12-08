@@ -20,6 +20,10 @@ class MaterialTextureController extends Controller
                 'texture_name.unique' => 'This texture name already exists.',
             ]);
 
+            // Auto-generate sort_order: max + 1
+            $maxSortOrder = MaterialTexture::max('sort_order') ?? 0;
+            $validated['sort_order'] = $maxSortOrder + 1;
+
             MaterialTexture::create($validated);
 
             // Clear cache
@@ -41,15 +45,44 @@ class MaterialTextureController extends Controller
     public function update(Request $request, MaterialTexture $material_texture)
     {
         try {
+            // Get total count
+            $totalTextures = MaterialTexture::count();
+            
             $validated = $request->validateWithBag('editTexture', [
                 'texture_name' => 'required|max:255|unique:material_textures,texture_name,' . $material_texture->id,
+                'sort_order' => 'required|integer|min:1|max:' . $totalTextures,
             ], [
                 'texture_name.required' => 'Texture name is required.',
                 'texture_name.max' => 'Texture name must not exceed 255 characters.',
                 'texture_name.unique' => 'This texture name already exists.',
+                'sort_order.required' => 'Sort order is required.',
+                'sort_order.integer' => 'Sort order must be an integer.',
+                'sort_order.min' => 'Sort order must be at least 1.',
+                'sort_order.max' => 'Sort order cannot exceed total textures (' . $totalTextures . ').',
             ]);
 
-            $material_texture->update(array_filter($validated));
+            $oldSortOrder = $material_texture->sort_order;
+            $newSortOrder = $validated['sort_order'];
+
+            // Handle sort order adjustment
+            if ($oldSortOrder !== $newSortOrder) {
+                if ($newSortOrder < $oldSortOrder) {
+                    // Moving UP
+                    MaterialTexture::where('id', '!=', $material_texture->id)
+                        ->where('sort_order', '>=', $newSortOrder)
+                        ->where('sort_order', '<', $oldSortOrder)
+                        ->increment('sort_order');
+                } else {
+                    // Moving DOWN
+                    MaterialTexture::where('id', '!=', $material_texture->id)
+                        ->where('sort_order', '>', $oldSortOrder)
+                        ->where('sort_order', '<=', $newSortOrder)
+                        ->decrement('sort_order');
+                }
+            }
+
+            // Update the texture
+            $material_texture->update($validated);
 
             // Clear cache
             Cache::forget('material_textures');
@@ -70,7 +103,14 @@ class MaterialTextureController extends Controller
 
     public function destroy(MaterialTexture $material_texture)
     {
+        $deletedSortOrder = $material_texture->sort_order;
+        
+        // Delete the texture
         $material_texture->delete();
+
+        // Reorder: decrement sort_order for all items after deleted item
+        MaterialTexture::where('sort_order', '>', $deletedSortOrder)
+            ->decrement('sort_order');
 
         // Clear cache
         Cache::forget('material_textures');
