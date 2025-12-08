@@ -629,15 +629,15 @@
                 <table class="min-w-full text-xs">
                     <thead class="bg-primary-light text-gray-600">
                         <tr>
-                            <th class="py-3 px-3 text-left font-medium whitespace-nowrap rounded-l-lg">Customer</th>
-                            <th class="py-3 px-3 text-left font-medium whitespace-nowrap">Order</th>
-                            <th class="py-3 px-3 text-center font-medium whitespace-nowrap">Date In</th>
-                            <th class="py-3 px-3 text-center font-medium whitespace-nowrap">Date Out</th>
+                            <th class="py-3 px-3 text-left font-bold whitespace-nowrap rounded-l-lg">Customer</th>
+                            <th class="py-3 px-3 text-left font-bold whitespace-nowrap">Order</th>
+                            <th class="py-3 px-3 text-center font-bold whitespace-nowrap">Date In</th>
+                            <th class="py-3 px-3 text-center font-bold whitespace-nowrap">Date Out</th>
                             @foreach ($productionStages as $stage)
-                                <th class="py-3 px-3 text-center font-medium whitespace-nowrap">{{ $stage->stage_name }}
+                                <th class="py-3 px-3 text-center font-bold whitespace-nowrap">{{ $stage->stage_name }}
                                 </th>
                             @endforeach
-                            <th class="py-3 px-3 text-center font-medium whitespace-nowrap rounded-r-lg">Action</th>
+                            <th class="py-3 px-3 text-center font-bold whitespace-nowrap rounded-r-lg">Action</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-200">
