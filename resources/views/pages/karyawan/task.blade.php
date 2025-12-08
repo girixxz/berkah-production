@@ -159,32 +159,36 @@
 
                                                     {{-- Dropdown Menu --}}
                                                     <div x-show="showDropdown" @click.away="showDropdown = false" x-cloak
-                                                        class="absolute right-0 {{ $isLast ? 'bottom-full mb-1' : 'top-full mt-1' }} w-40 bg-white rounded-lg shadow-lg border border-gray-200 z-[9999] py-1">
+                                                        class="absolute right-0 {{ $isLast ? 'bottom-full mb-1' : 'top-full mt-1' }} w-40 bg-white rounded-lg shadow-lg border border-gray-200 z-50 py-1">
                                                         {{-- View Detail --}}
                                                         <a href="{{ route('karyawan.task.work-order', ['order' => $orderStage->order->id]) }}"
                                                             @click="showDropdown = false"
-                                                            class="w-full text-left px-4 py-2 text-xs text-gray-700 hover:bg-gray-50 flex items-center gap-2 cursor-pointer">
-                                                            <svg class="w-3 h-3" fill="none" stroke="currentColor"
-                                                                viewBox="0 0 24 24">
-                                                                <path stroke-linecap="round" stroke-linejoin="round"
-                                                                    stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                                                                <path stroke-linecap="round" stroke-linejoin="round"
-                                                                    stroke-width="2"
-                                                                    d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                                                            </svg>
-                                                            View Detail
+                                                            class="block w-full text-left px-4 py-2 text-xs text-gray-700 hover:bg-gray-50">
+                                                            <div class="flex items-center gap-2">
+                                                                <svg class="w-3 h-3" fill="none" stroke="currentColor"
+                                                                    viewBox="0 0 24 24">
+                                                                    <path stroke-linecap="round" stroke-linejoin="round"
+                                                                        stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                                                    <path stroke-linecap="round" stroke-linejoin="round"
+                                                                        stroke-width="2"
+                                                                        d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                                                </svg>
+                                                                View Detail
+                                                            </div>
                                                         </a>
                                                         {{-- Mark as Done --}}
                                                         <button type="button"
                                                             @click="showDropdown = false; markAsDone({{ $orderStage->id }}, '{{ $orderStage->order->invoice->invoice_no ?? 'N/A' }}', '{{ $orderStage->order->productCategory->product_name ?? 'N/A' }}', '{{ $orderStage->order->customer->customer_name ?? 'N/A' }}', {{ $orderStage->order->total_qty ?? 0 }}, '{{ strtolower($orderStage->order->priority ?? 'normal') }}')"
-                                                            class="w-full text-left px-4 py-2 text-xs text-green-700 hover:bg-green-50 flex items-center gap-2 cursor-pointer">
-                                                            <svg class="w-3 h-3" fill="none" stroke="currentColor"
-                                                                viewBox="0 0 24 24">
-                                                                <path stroke-linecap="round" stroke-linejoin="round"
-                                                                    stroke-width="2"
-                                                                    d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                                            </svg>
-                                                            Done
+                                                            class="block w-full text-left px-4 py-2 text-xs text-green-700 hover:bg-green-50 cursor-pointer">
+                                                            <div class="flex items-center gap-2">
+                                                                <svg class="w-3 h-3" fill="none" stroke="currentColor"
+                                                                    viewBox="0 0 24 24">
+                                                                    <path stroke-linecap="round" stroke-linejoin="round"
+                                                                        stroke-width="2"
+                                                                        d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                                                </svg>
+                                                                Done
+                                                            </div>
                                                         </button>
                                                     </div>
                                                 @else
@@ -267,15 +271,15 @@
                     <div class="p-5 max-h-[60vh] overflow-y-auto">
                         <div class="space-y-3">
                             <template x-for="(order, index) in modalOrders" :key="index">
-                                <div class="px-4 py-3 rounded-lg border"
-                                    :style="order.priority !== 'high' ? 'background-color: #eddfad; border-color: #d4c973;' : ''"
-                                    :class="{
-                                        'bg-red-500 border-red-600': order.priority === 'high'
-                                    }"
-                                    x-data="{ showDropdown: false }">
-                                    <div class="flex items-center justify-between gap-3">
-                                        {{-- Content: Nama • Product • QTY • HIGH (horizontal row) --}}
-                                        <div class="flex items-center gap-2 flex-1 min-w-0 text-xs font-medium"
+                                <div class="flex items-center gap-2">
+                                    {{-- Clickable Bubble --}}
+                                    <a :href="`{{ route('karyawan.task.work-order', ['order' => '__ORDER_ID__']) }}`.replace('__ORDER_ID__', order.order_id)"
+                                        class="flex-1 px-4 py-3 rounded-lg border hover:opacity-90 transition-opacity"
+                                        :style="order.priority !== 'high' ? 'background-color: #eddfad; border-color: #d4c973;' : ''"
+                                        :class="{
+                                            'bg-red-500 border-red-600': order.priority === 'high'
+                                        }">
+                                        <div class="flex items-center gap-2 text-xs font-medium"
                                             :class="order.priority === 'high' ? 'text-white' : 'text-gray-900'">
                                             <span class="font-semibold truncate" x-text="order.customer"></span>
                                             <span :class="order.priority === 'high' ? 'text-white opacity-70' : 'text-gray-600'">•</span>
@@ -289,63 +293,31 @@
                                                 </span>
                                             </template>
                                         </div>
-                                        {{-- Three Dot Button --}}
-                                        <div class="flex-shrink-0 relative">
-                                            <template x-if="order.status !== 'done'">
-                                                <button type="button" @click="showDropdown = !showDropdown"
-                                                    class="p-1 hover:bg-gray-200 rounded transition-colors cursor-pointer"
-                                                    title="Actions">
-                                                    <svg class="w-4 h-4 text-gray-600" fill="currentColor"
-                                                        viewBox="0 0 20 20">
-                                                        <path
-                                                            d="M6 10a2 2 0 11-4 0 2 2 0 014 0zM12 10a2 2 0 11-4 0 2 2 0 014 0zM16 12a2 2 0 100-4 2 2 0 000 4z" />
-                                                    </svg>
-                                                </button>
-                                            </template>
-                                            
-                                            {{-- Dropdown Menu - Auto adjust position based on index --}}
-                                            <div x-show="showDropdown" @click.away="showDropdown = false" x-cloak
-                                                class="absolute right-0 w-40 bg-white rounded-lg shadow-lg border border-gray-200 z-[9999] py-1"
-                                                :class="index >= modalOrders.length - 3 ? 'bottom-full mb-1' : 'top-full mt-1'">
-                                                {{-- View Detail --}}
-                                                <a :href="`{{ route('karyawan.task.work-order', ['order' => '__ORDER_ID__']) }}`.replace('__ORDER_ID__', order.order_id)"
-                                                    @click="showDropdown = false"
-                                                    class="w-full text-left px-4 py-2 text-xs text-gray-700 hover:bg-gray-50 flex items-center gap-2 cursor-pointer">
-                                                    <svg class="w-3 h-3" fill="none" stroke="currentColor"
-                                                        viewBox="0 0 24 24">
-                                                        <path stroke-linecap="round" stroke-linejoin="round"
-                                                            stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                                                        <path stroke-linecap="round" stroke-linejoin="round"
-                                                            stroke-width="2"
-                                                            d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                                                    </svg>
-                                                    View Detail
-                                                </a>
-                                                {{-- Mark as Done --}}
-                                                <button type="button"
-                                                    @click="showDropdown = false; markAsDone(order.id, order.invoice, order.product, order.customer, order.qty, order.priority)"
-                                                    class="w-full text-left px-4 py-2 text-xs text-green-700 hover:bg-green-50 flex items-center gap-2 cursor-pointer">
-                                                    <svg class="w-3 h-3" fill="none" stroke="currentColor"
-                                                        viewBox="0 0 24 24">
-                                                        <path stroke-linecap="round" stroke-linejoin="round"
-                                                            stroke-width="2"
-                                                            d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                                    </svg>
-                                                    Done
-                                                </button>
-                                            </div>
-                                            
-                                            {{-- Done checkmark --}}
-                                            <template x-if="order.status === 'done'">
-                                                <svg class="w-4 h-4 text-green-500" fill="currentColor"
-                                                    viewBox="0 0 20 20">
-                                                    <path fill-rule="evenodd"
-                                                        d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                                                        clip-rule="evenodd" />
-                                                </svg>
-                                            </template>
+                                    </a>
+                                    
+                                    {{-- Done Button --}}
+                                    <template x-if="order.status !== 'done'">
+                                        <button type="button"
+                                            @click="markAsDone(order.id, order.invoice, order.product, order.customer, order.qty, order.priority)"
+                                            class="flex-shrink-0 w-12 h-12 bg-green-500 hover:bg-green-600 text-white rounded-lg transition-colors cursor-pointer flex items-center justify-center"
+                                            title="Mark as Done">
+                                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
+                                                    d="M5 13l4 4L19 7" />
+                                            </svg>
+                                        </button>
+                                    </template>
+                                    
+                                    {{-- Done checkmark --}}
+                                    <template x-if="order.status === 'done'">
+                                        <div class="flex-shrink-0 w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
+                                            <svg class="w-5 h-5 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+                                                <path fill-rule="evenodd"
+                                                    d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                                                    clip-rule="evenodd" />
+                                            </svg>
                                         </div>
-                                    </div>
+                                    </template>
                                 </div>
                             </template>
                         </div>
