@@ -608,29 +608,29 @@
                         <thead class="bg-primary-light text-gray-600">
                             {{-- Finished Filter: Different Columns --}}
                             <tr x-show="activeFilter === 'finished'">
-                                <th class="py-3 px-4 text-left font-medium rounded-l-lg">No Invoice</th>
-                                <th class="py-3 px-4 text-left font-medium">Customer</th>
-                                <th class="py-3 px-4 text-left font-medium">Product</th>
-                                <th class="py-3 px-4 text-left font-medium">QTY</th>
-                                <th class="py-3 px-4 text-left font-medium">Total Bill</th>
-                                <th class="py-3 px-4 text-left font-medium">Remaining</th>
-                                <th class="py-3 px-4 text-left font-medium">Status</th>
-                                <th class="py-3 px-4 text-left font-medium">Finished Date</th>
-                                <th class="py-3 px-4 text-left font-medium">Shipping Status</th>
-                                <th class="py-3 px-4 text-center font-medium rounded-r-lg">Action</th>
+                                <th class="py-3 px-4 text-left font-bold rounded-l-lg">No Invoice</th>
+                                <th class="py-3 px-4 text-left font-bold">Customer</th>
+                                <th class="py-3 px-4 text-left font-bold">Product</th>
+                                <th class="py-3 px-4 text-left font-bold">QTY</th>
+                                <th class="py-3 px-4 text-left font-bold">Total Bill</th>
+                                <th class="py-3 px-4 text-left font-bold">Remaining</th>
+                                <th class="py-3 px-4 text-left font-bold">Status</th>
+                                <th class="py-3 px-4 text-left font-bold">Finished Date</th>
+                                <th class="py-3 px-4 text-left font-bold">Shipping Status</th>
+                                <th class="py-3 px-4 text-center font-bold rounded-r-lg">Action</th>
                             </tr>
                             {{-- Other Filters: Default Columns --}}
                             <tr x-show="activeFilter !== 'finished'">
-                                <th class="py-3 px-4 text-left font-medium rounded-l-lg">No Invoice</th>
-                                <th class="py-3 px-4 text-left font-medium">Customer</th>
-                                <th class="py-3 px-4 text-left font-medium">Product</th>
-                                <th class="py-3 px-4 text-left font-medium">QTY</th>
-                                <th class="py-3 px-4 text-left font-medium">Total Bill</th>
-                                <th class="py-3 px-4 text-left font-medium">Remaining</th>
-                                <th class="py-3 px-4 text-left font-medium">Order Date</th>
-                                <th class="py-3 px-4 text-left font-medium">Deadline</th>
-                                <th class="py-3 px-4 text-left font-medium">Status</th>
-                                <th class="py-3 px-4 text-center font-medium rounded-r-lg">Action</th>
+                                <th class="py-3 px-4 text-left font-bold rounded-l-lg">No Invoice</th>
+                                <th class="py-3 px-4 text-left font-bold">Customer</th>
+                                <th class="py-3 px-4 text-left font-bold">Product</th>
+                                <th class="py-3 px-4 text-left font-bold">QTY</th>
+                                <th class="py-3 px-4 text-left font-bold">Total Bill</th>
+                                <th class="py-3 px-4 text-left font-bold">Remaining</th>
+                                <th class="py-3 px-4 text-left font-bold">Order Date</th>
+                                <th class="py-3 px-4 text-left font-bold">Deadline</th>
+                                <th class="py-3 px-4 text-left font-bold">Status</th>
+                                <th class="py-3 px-4 text-center font-bold rounded-r-lg">Action</th>
                             </tr>
                         </thead>
                         <tbody class="">

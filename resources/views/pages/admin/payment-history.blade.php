@@ -540,16 +540,16 @@
                 <table class="min-w-full text-sm">
                     <thead class="bg-primary-light text-gray-600">
                         <tr>
-                            <th class="py-3 px-4 text-left font-medium rounded-l-lg">Paid At</th>
-                            <th class="py-3 px-4 text-left font-medium">Customer</th>
-                            <th class="py-3 px-4 text-left font-medium">Order</th>
-                            <th class="py-3 px-4 text-left font-medium">Payment Model</th>
-                            <th class="py-3 px-4 text-left font-medium">Amount</th>
-                            <th class="py-3 px-4 text-left font-medium">Status</th>
-                            <th class="py-3 px-4 text-left font-medium">Notes</th>
-                            <th class="py-3 px-4 text-center font-medium">Attachment</th>
+                            <th class="py-3 px-4 text-left font-bold rounded-l-lg">Paid At</th>
+                            <th class="py-3 px-4 text-left font-bold">Customer</th>
+                            <th class="py-3 px-4 text-left font-bold">Order</th>
+                            <th class="py-3 px-4 text-left font-bold">Payment Model</th>
+                            <th class="py-3 px-4 text-left font-bold">Amount</th>
+                            <th class="py-3 px-4 text-left font-bold">Status</th>
+                            <th class="py-3 px-4 text-left font-bold">Notes</th>
+                            <th class="py-3 px-4 text-center font-bold">Attachment</th>
                             @if ($role === 'owner')
-                                <th class="py-3 px-4 text-center font-medium rounded-r-lg">Action</th>
+                                <th class="py-3 px-4 text-center font-bold rounded-r-lg">Action</th>
                             @endif
                         </tr>
                     </thead>

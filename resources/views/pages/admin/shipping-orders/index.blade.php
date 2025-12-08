@@ -467,14 +467,14 @@
                     <table class="min-w-full text-sm">
                         <thead class="bg-primary-light text-gray-600">
                             <tr>
-                                <th class="py-3 px-4 text-left font-medium rounded-l-lg">No Invoice</th>
-                                <th class="py-3 px-4 text-left font-medium">Customer</th>
-                                <th class="py-3 px-4 text-left font-medium">Product</th>
-                                <th class="py-3 px-4 text-left font-medium">QTY</th>
-                                <th class="py-3 px-4 text-left font-medium">Finished Date</th>
-                                <th class="py-3 px-4 text-left font-medium">Shipping Date</th>
-                                <th class="py-3 px-4 text-left font-medium">Shipping Type</th>
-                                <th class="py-3 px-4 text-center font-medium rounded-r-lg">Action</th>
+                                <th class="py-3 px-4 text-left font-bold rounded-l-lg">No Invoice</th>
+                                <th class="py-3 px-4 text-left font-bold">Customer</th>
+                                <th class="py-3 px-4 text-left font-bold">Product</th>
+                                <th class="py-3 px-4 text-left font-bold">QTY</th>
+                                <th class="py-3 px-4 text-left font-bold">Finished Date</th>
+                                <th class="py-3 px-4 text-left font-bold">Shipping Date</th>
+                                <th class="py-3 px-4 text-left font-bold">Shipping Type</th>
+                                <th class="py-3 px-4 text-center font-bold rounded-r-lg">Action</th>
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-gray-200">
