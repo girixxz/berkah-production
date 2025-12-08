@@ -1216,26 +1216,26 @@
                                     </div>
 
                                     {{-- Detail Product --}}
-                                    <div>
-                                        <table class="w-full text-sm">
+                                    <div class="flex justify-end">
+                                        <table class="text-sm">
                                             <tr>
-                                                <td class="text-black font-semibold py-1" style="width: 35%;">Product</td>
-                                                <td class="text-black font-semibold px-2">:</td>
+                                                <td class="text-black font-semibold py-1" style="width: 75px; padding-right: 4px;">Product</td>
+                                                <td class="text-black font-semibold" style="width: 8px; padding-right: 8px;">:</td>
                                                 <td class="text-black">{{ $order->productCategory->name ?? '-' }}</td>
                                             </tr>
                                             <tr>
-                                                <td class="text-black font-semibold py-1">Material</td>
-                                                <td class="text-black font-semibold px-2">:</td>
+                                                <td class="text-black font-semibold py-1" style="width: 75px; padding-right: 4px;">Material</td>
+                                                <td class="text-black font-semibold" style="width: 8px; padding-right: 8px;">:</td>
                                                 <td class="text-black">{{ $order->materialCategory->name ?? '-' }} - {{ $order->materialTexture->name ?? '-' }}</td>
                                             </tr>
                                             <tr>
-                                                <td class="text-black font-semibold py-1">Color</td>
-                                                <td class="text-black font-semibold px-2">:</td>
+                                                <td class="text-black font-semibold py-1" style="width: 75px; padding-right: 4px;">Color</td>
+                                                <td class="text-black font-semibold" style="width: 8px; padding-right: 8px;">:</td>
                                                 <td class="text-black">{{ $order->product_color ?? '-' }}</td>
                                             </tr>
                                             <tr>
-                                                <td class="text-black font-semibold py-1">Total QTY</td>
-                                                <td class="text-black font-semibold px-2">:</td>
+                                                <td class="text-black font-semibold py-1" style="width: 75px; padding-right: 4px;">Total QTY</td>
+                                                <td class="text-black font-semibold" style="width: 8px; padding-right: 8px;">:</td>
                                                 <td class="text-black font-semibold">{{ $order->orderItems->sum('qty') }} pcs</td>
                                             </tr>
                                         </table>

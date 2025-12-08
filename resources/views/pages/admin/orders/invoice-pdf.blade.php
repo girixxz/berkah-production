@@ -98,26 +98,30 @@
 
                     {{-- Detail Product --}}
                     <td style="width: 50%; vertical-align: top; padding-left: 24px;">
-                        <table style="width: 100%; font-size: 14px;">
+                        <table style="font-size: 14px; width: 100%;">
                             <tr>
-                                <td style="color: #000000; font-weight: 600; padding: 4px 0; width: 35%;">Product</td>
-                                <td style="color: #000000; font-weight: 600; padding: 0 8px;">:</td>
-                                <td style="color: #000000;">{{ $order->productCategory->name ?? '-' }}</td>
+                                <td style="width: 40%;"></td>
+                                <td style="color: #000000; font-weight: 600; padding: 4px 0; width: 75px; padding-right: 4px; white-space: nowrap;">Product</td>
+                                <td style="color: #000000; font-weight: 600; width: 8px; padding-right: 8px; white-space: nowrap;">:</td>
+                                <td style="color: #000000; white-space: nowrap;">{{ $order->productCategory->name ?? '-' }}</td>
                             </tr>
                             <tr>
-                                <td style="color: #000000; font-weight: 600; padding: 4px 0;">Material</td>
-                                <td style="color: #000000; font-weight: 600; padding: 0 8px;">:</td>
-                                <td style="color: #000000;">{{ $order->materialCategory->name ?? '-' }} - {{ $order->materialTexture->name ?? '-' }}</td>
+                                <td style="width: 40%;"></td>
+                                <td style="color: #000000; font-weight: 600; padding: 4px 0; width: 75px; padding-right: 4px; white-space: nowrap;">Material</td>
+                                <td style="color: #000000; font-weight: 600; width: 8px; padding-right: 8px; white-space: nowrap;">:</td>
+                                <td style="color: #000000; white-space: nowrap;">{{ $order->materialCategory->name ?? '-' }} - {{ $order->materialTexture->name ?? '-' }}</td>
                             </tr>
                             <tr>
-                                <td style="color: #000000; font-weight: 600; padding: 4px 0;">Color</td>
-                                <td style="color: #000000; font-weight: 600; padding: 0 8px;">:</td>
-                                <td style="color: #000000;">{{ $order->product_color ?? '-' }}</td>
+                                <td style="width: 40%;"></td>
+                                <td style="color: #000000; font-weight: 600; padding: 4px 0; width: 75px; padding-right: 4px; white-space: nowrap;">Color</td>
+                                <td style="color: #000000; font-weight: 600; width: 8px; padding-right: 8px; white-space: nowrap;">:</td>
+                                <td style="color: #000000; white-space: nowrap;">{{ $order->product_color ?? '-' }}</td>
                             </tr>
                             <tr>
-                                <td style="color: #000000; font-weight: 600; padding: 4px 0;">Total QTY</td>
-                                <td style="color: #000000; font-weight: 600; padding: 0 8px;">:</td>
-                                <td style="color: #000000; font-weight: 600;">{{ $order->orderItems->sum('qty') }} pcs</td>
+                                <td style="width: 40%;"></td>
+                                <td style="color: #000000; font-weight: 600; padding: 4px 0; width: 75px; padding-right: 4px; white-space: nowrap;">Total QTY</td>
+                                <td style="color: #000000; font-weight: 600; width: 8px; padding-right: 8px; white-space: nowrap;">:</td>
+                                <td style="color: #000000; font-weight: 600; white-space: nowrap;">{{ $order->orderItems->sum('qty') }} pcs</td>
                             </tr>
                         </table>
                     </td>
