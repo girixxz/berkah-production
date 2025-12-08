@@ -83,7 +83,15 @@
                     <td style="width: 50%; vertical-align: top; padding-right: 24px;">
                         <div style="font-size: 14px; margin-top: 4px;">
                             <p style="color: #000000; font-weight: 600; margin: 0 0 8px 0;">{{ $order->customer->customer_name }}</p>
-                            <p style="color: #000000; margin: 0 0 8px 0;">{{ $order->customer->phone }}</p>
+                            <p style="color: #000000; margin: 0 0 8px 0;">
+                                @php
+                                    $phone = $order->customer->phone;
+                                    $maskedPhone = strlen($phone) > 8 
+                                        ? substr($phone, 0, 4) . str_repeat('*', strlen($phone) - 8) . substr($phone, -4)
+                                        : $phone;
+                                @endphp
+                                {{ $maskedPhone }}
+                            </p>
                             <p style="color: #000000; line-height: 1.6; margin: 0;">{{ $order->customer->address }}</p>
                         </div>
                     </td>

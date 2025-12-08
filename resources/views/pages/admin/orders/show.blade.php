@@ -321,7 +321,15 @@
                 </div>
                 <div>
                     <p class="text-xs md:text-sm font-semibold text-gray-900 mb-1">Phone</p>
-                    <p class="text-sm md:text-base font-normal text-gray-700">{{ $order->customer->phone }}</p>
+                    <p class="text-sm md:text-base font-normal text-gray-700">
+                        @php
+                            $phone = $order->customer->phone;
+                            $maskedPhone = strlen($phone) > 8 
+                                ? substr($phone, 0, 4) . str_repeat('*', strlen($phone) - 8) . substr($phone, -4)
+                                : $phone;
+                        @endphp
+                        {{ $maskedPhone }}
+                    </p>
                 </div>
                 <div>
                     <p class="text-xs md:text-sm font-semibold text-gray-900 mb-1">Sales</p>
@@ -1135,7 +1143,15 @@
                                                 <p class="text-black font-semibold">{{ $order->customer->customer_name }}</p>
                                             </div>
                                             <div>
-                                                <p class="text-black">{{ $order->customer->phone }}</p>
+                                                <p class="text-black">
+                                                    @php
+                                                        $phone = $order->customer->phone;
+                                                        $maskedPhone = strlen($phone) > 8 
+                                                            ? substr($phone, 0, 4) . str_repeat('*', strlen($phone) - 8) . substr($phone, -4)
+                                                            : $phone;
+                                                    @endphp
+                                                    {{ $maskedPhone }}
+                                                </p>
                                             </div>
                                             <div>
                                                 <p class="text-black leading-relaxed">{{ $order->customer->address }}</p>
