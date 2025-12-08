@@ -334,12 +334,12 @@ class OrderController extends Controller
         $data = [
             'customers' => Customer::orderBy('customer_name')->get(),
             'sales' => Cache::remember('sales_list', 86400, fn() => Sale::orderBy('sales_name')->get()),
-            'productCategories' => Cache::remember('product_categories', 86400, fn() => ProductCategory::orderBy('product_name')->get()),
-            'materialCategories' => Cache::remember('material_categories', 86400, fn() => MaterialCategory::orderBy('material_name')->get()),
-            'materialTextures' => Cache::remember('material_textures', 86400, fn() => MaterialTexture::orderBy('texture_name')->get()),
+            'productCategories' => Cache::remember('product_categories', 86400, fn() => ProductCategory::orderBy('sort_order', 'asc')->get()),
+            'materialCategories' => Cache::remember('material_categories', 86400, fn() => MaterialCategory::orderBy('sort_order', 'asc')->get()),
+            'materialTextures' => Cache::remember('material_textures', 86400, fn() => MaterialTexture::orderBy('sort_order', 'asc')->get()),
             'materialSleeves' => Cache::remember('material_sleeves', 86400, fn() => MaterialSleeve::orderBy('id')->get()),
             'materialSizes' => Cache::remember('material_sizes', 86400, fn() => MaterialSize::orderBy('sort_order', 'asc')->get()),
-            'services' => Cache::remember('services', 86400, fn() => Service::orderBy('service_name')->get()),
+            'services' => Cache::remember('services', 86400, fn() => Service::orderBy('sort_order', 'asc')->get()),
             'provinces' => $this->getProvinces(),
         ];
 
@@ -600,12 +600,12 @@ class OrderController extends Controller
             'order' => $order->load(['orderItems.designVariant', 'orderItems.size', 'orderItems.sleeve', 'extraServices']),
             'customers' => Customer::orderBy('customer_name')->get(),
             'sales' => Cache::remember('sales_list', 86400, fn() => Sale::orderBy('sales_name')->get()),
-            'productCategories' => Cache::remember('product_categories', 86400, fn() => ProductCategory::orderBy('product_name')->get()),
-            'materialCategories' => Cache::remember('material_categories', 86400, fn() => MaterialCategory::orderBy('material_name')->get()),
-            'materialTextures' => Cache::remember('material_textures', 86400, fn() => MaterialTexture::orderBy('texture_name')->get()),
+            'productCategories' => Cache::remember('product_categories', 86400, fn() => ProductCategory::orderBy('sort_order', 'asc')->get()),
+            'materialCategories' => Cache::remember('material_categories', 86400, fn() => MaterialCategory::orderBy('sort_order', 'asc')->get()),
+            'materialTextures' => Cache::remember('material_textures', 86400, fn() => MaterialTexture::orderBy('sort_order', 'asc')->get()),
             'materialSleeves' => Cache::remember('material_sleeves', 86400, fn() => MaterialSleeve::orderBy('id')->get()),
             'materialSizes' => Cache::remember('material_sizes', 86400, fn() => MaterialSize::orderBy('sort_order', 'asc')->get()),
-            'services' => Cache::remember('services', 86400, fn() => Service::orderBy('service_name')->get()),
+            'services' => Cache::remember('services', 86400, fn() => Service::orderBy('sort_order', 'asc')->get()),
         ];
 
         return view('pages.admin.orders.edit', $data);
