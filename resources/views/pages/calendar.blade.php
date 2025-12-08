@@ -152,7 +152,7 @@
                 </div>
                 <div class="flex items-center gap-3 justify-center">
                     {{-- Previous Month --}}
-                    <a href="{{ route('calendar', ['filter' => $filter, 'month' => $prevMonth->month, 'year' => $prevMonth->year]) }}" 
+                    <a :href="`{{ route('calendar') }}?filter=${selectedFilter}&month={{ $prevMonth->month }}&year={{ $prevMonth->year }}`" 
                        class="p-2 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer flex-shrink-0">
                         <svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
@@ -167,7 +167,7 @@
                     </div>
 
                     {{-- Next Month --}}
-                    <a href="{{ route('calendar', ['filter' => $filter, 'month' => $nextMonth->month, 'year' => $nextMonth->year]) }}" 
+                    <a :href="`{{ route('calendar') }}?filter=${selectedFilter}&month={{ $nextMonth->month }}&year={{ $nextMonth->year }}`" 
                        class="p-2 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer flex-shrink-0">
                         <svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
@@ -175,7 +175,7 @@
                     </a>
 
                     {{-- Reset Button --}}
-                    <a href="{{ route('calendar', ['filter' => $filter]) }}" 
+                    <a :href="`{{ route('calendar') }}?filter=${selectedFilter}`" 
                        class="px-3 sm:px-4 py-2 bg-primary hover:bg-primary-dark text-white text-sm font-medium rounded-lg transition-colors cursor-pointer flex-shrink-0">
                         This Month
                     </a>
@@ -215,9 +215,16 @@
                                             {{-- Show max 4 tasks --}}
                                             @foreach (array_slice($day['tasks'], 0, 4) as $orderStage)
                                                 @php
+                                                    // Check if ALL stages of this order are done (for create/deadline mode)
+                                                    $allStagesDone = $orderStage->order->orderStages->every(function($stage) {
+                                                        return strtolower($stage->status) === 'done';
+                                                    });
+                                                    
+                                                    // In stage mode, use the current stage status
+                                                    // In create/deadline mode, only show done if ALL stages done
                                                     $status = strtolower($orderStage->status ?? '');
                                                     $isHighPriority = strtolower($orderStage->order->priority ?? '') === 'high';
-                                                    $isDone = $status === 'done';
+                                                    $isDone = ($filter === 'create' || $filter === 'deadline') ? $allStagesDone : ($status === 'done');
                                                     $isFinished = strtolower($orderStage->order->production_status ?? '') === 'finished';
                                                     
                                                     // Set colors based on status and priority
@@ -279,9 +286,15 @@
                                             {{-- View All button if more than 4 tasks --}}
                                             @if (count($day['tasks']) > 4)
                                                 <button type="button"
-                                                    @click="openModal('{{ $day['date']->format('l, d F Y') }}', {{ collect($day['tasks'])->map(function ($os) {
+                                                    @click="openModal('{{ $day['date']->format('l, d F Y') }}', {{ collect($day['tasks'])->map(function ($os) use ($filter) {
                                                         $isHigh = strtolower($os->order->priority ?? '') === 'high';
                                                         $isFinished = strtolower($os->order->production_status ?? '') === 'finished';
+                                                        // Check if ALL stages done for create/deadline mode
+                                                        $allStagesDone = $os->order->orderStages->every(function($stage) {
+                                                            return strtolower($stage->status) === 'done';
+                                                        });
+                                                        $taskStatus = ($filter === 'create' || $filter === 'deadline') ? ($allStagesDone ? 'done' : 'in_progress') : $os->status;
+                                                        
                                                         return [
                                                             'id' => $os->id,
                                                             'order_id' => $os->order->id,
@@ -290,7 +303,7 @@
                                                             'customer' => $os->order->customer->customer_name ?? 'N/A',
                                                             'qty' => $os->order->total_qty ?? 0,
                                                             'priority' => $isHigh ? 'high' : 'normal',
-                                                            'status' => $os->status,
+                                                            'status' => $taskStatus,
                                                             'production_status' => $isFinished ? 'finished' : 'in_progress',
                                                             'deadline' => $os->deadline ? $os->deadline->format('d M Y') : 'N/A',
                                                         ];
