@@ -1782,14 +1782,7 @@
                 </form>
             </div>
         </div>
-        <div x-show="openModal === 'editSize'" x-cloak 
-            x-data="{
-                init() {
-                    @if (session('openModal') === 'editSize' && session('editSizeId')) 
-                        this.$root.editSize = {{ \App\Models\MaterialSize::find(session('editSizeId'))->toJson() }}; 
-                    @endif
-                }
-            }"
+        <div x-show="openModal === 'editSize'" x-cloak x-init="@if (session('openModal') === 'editSize' && session('editSizeId')) editSize = {{ \App\Models\MaterialSize::find(session('editSizeId'))->toJson() }}; @endif"
             class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 bg-opacity-50 backdrop-blur-xs transition-opacity px-4">
             <div @click.away="openModal=null" class="bg-white rounded-xl shadow-lg w-full max-w-lg">
                 <div class="flex justify-between items-center border-b border-gray-200 px-6 py-4">
