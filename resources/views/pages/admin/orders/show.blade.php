@@ -1053,7 +1053,23 @@
         <div x-show="openInvoiceModal" x-cloak
             class="fixed inset-0 z-50 "
             @keydown.escape.window="openInvoiceModal && (openInvoiceModal = false)"
-            aria-labelledby="modal-title" role="dialog" aria-modal="true">
+            aria-labelledby="modal-title" role="dialog" aria-modal="true"
+            x-data="{
+                invoiceZoomLevel: 100,
+                invoiceZoomIn() {
+                    if (this.invoiceZoomLevel < 200) {
+                        this.invoiceZoomLevel += 10;
+                    }
+                },
+                invoiceZoomOut() {
+                    if (this.invoiceZoomLevel > 50) {
+                        this.invoiceZoomLevel -= 10;
+                    }
+                },
+                invoiceResetZoom() {
+                    this.invoiceZoomLevel = 100;
+                }
+            }">
 
             {{-- Background Overlay --}}
             <div x-show="openInvoiceModal" class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity"
@@ -1077,18 +1093,58 @@
                                     {{ $order->invoice->invoice_no }} - {{ $order->customer->customer_name }}
                                 </p>
                             </div>
-                            <button @click="openInvoiceModal = false" type="button"
-                                class="text-gray-400 hover:text-gray-600 focus:outline-none">
-                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                        d="M6 18L18 6M6 6l12 12" />
-                                </svg>
-                            </button>
+                            
+                            {{-- Zoom Controls + Close Button --}}
+                            <div class="flex items-center gap-3">
+                                {{-- Zoom Controls --}}
+                                <div class="flex items-center gap-2 border border-gray-300 rounded-lg px-2 py-1.5 bg-white">
+                                    {{-- Zoom Out --}}
+                                    <button @click="invoiceZoomOut()" type="button"
+                                        :disabled="invoiceZoomLevel <= 50"
+                                        :class="invoiceZoomLevel <= 50 ? 'opacity-40 cursor-not-allowed' : 'hover:bg-gray-100'"
+                                        class="p-1 rounded transition-colors">
+                                        <svg class="w-4 h-4 md:w-5 md:h-5 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4" />
+                                        </svg>
+                                    </button>
+
+                                    {{-- Zoom Percentage - Hidden on mobile --}}
+                                    <span class="hidden md:inline text-xs font-medium text-gray-700 min-w-[45px] text-center" x-text="invoiceZoomLevel + '%'"></span>
+
+                                    {{-- Zoom In --}}
+                                    <button @click="invoiceZoomIn()" type="button"
+                                        :disabled="invoiceZoomLevel >= 200"
+                                        :class="invoiceZoomLevel >= 200 ? 'opacity-40 cursor-not-allowed' : 'hover:bg-gray-100'"
+                                        class="p-1 rounded transition-colors">
+                                        <svg class="w-4 h-4 md:w-5 md:h-5 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                                        </svg>
+                                    </button>
+
+                                    {{-- Reset Zoom --}}
+                                    <button @click="invoiceResetZoom()" type="button"
+                                        class="p-1 rounded hover:bg-gray-100 transition-colors ml-1 border-l border-gray-300 pl-2">
+                                        <svg class="w-4 h-4 md:w-5 md:h-5 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                        </svg>
+                                    </button>
+                                </div>
+
+                                {{-- Close Button --}}
+                                <button @click="openInvoiceModal = false" type="button"
+                                    class="text-gray-400 hover:text-gray-600 focus:outline-none">
+                                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M6 18L18 6M6 6l12 12" />
+                                    </svg>
+                                </button>
+                            </div>
                         </div>
                     </div>
 
                     {{-- Modal Content - Invoice Preview --}}
-                    <div class="p-4 bg-gray-100 flex-1 overflow-y-auto">
+                    <div class="bg-gray-100 flex-1 overflow-auto">
+                        <div class="p-4 inline-block min-w-full" :style="`transform: scale(${invoiceZoomLevel / 100}); transform-origin: top center; transition: transform 0.2s ease;`">
                         
                         {{-- Invoice Paper --}}
                         <div class="bg-white border-2 mx-auto shadow-lg" style="width: 210mm; min-height: 297mm; font-family: 'Lora', serif;">
@@ -1343,6 +1399,8 @@
 
                             </div>
 
+                        </div>
+                        
                         </div>
                     </div>
 
