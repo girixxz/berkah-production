@@ -113,7 +113,14 @@ class MaterialSizeController extends Controller
 
     public function destroy(MaterialSize $materialSize)
     {
+        $deletedSortOrder = $materialSize->sort_order;
+        
+        // Delete the size
         $materialSize->delete();
+
+        // Reorder: decrement sort_order for all items that were after the deleted item
+        MaterialSize::where('sort_order', '>', $deletedSortOrder)
+            ->decrement('sort_order');
 
         // Clear cache
         Cache::forget('material_sizes');
