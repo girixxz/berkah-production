@@ -18,6 +18,14 @@ return new class extends Migration
             $table->string('phone_number', 100)->nullable();
             $table->string('password');
             $table->enum('role', ['owner', 'admin', 'pm', 'karyawan']);
+
+            $table->text('address')->nullable();
+            $table->date('birth_date')->nullable();
+            $table->string('work_date')->nullable();
+            $table->string('dress_size')->nullable();
+            $table->string('salary_system')->nullable();
+            $table->integer('salary_cycle')->nullable();
+
             $table->rememberToken();
             $table->timestamps();
         });

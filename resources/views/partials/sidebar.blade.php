@@ -34,7 +34,7 @@
 
                     <!-- Manage Data -->
                     <li x-data="{
-                        open: @js(request()->routeIs('owner.manage-data.products.*') || request()->is('owner/manage-data/products/*') || request()->routeIs('owner.manage-data.work-orders.*') || request()->is('owner/manage-data/work-orders/*') || request()->routeIs('owner.manage-data.users.*') || request()->is('owner/manage-data/users/*') || request()->routeIs('owner.manage-data.sales.*') || request()->is('owner/manage-data/sales/*'))
+                        open: @js(request()->routeIs('owner.manage-data.products.*') || request()->is('owner/manage-data/products/*') || request()->routeIs('owner.manage-data.work-orders.*') || request()->is('owner/manage-data/work-orders/*') || request()->routeIs('owner.manage-data.users.*') || request()->is('owner/manage-data/users/*') || request()->routeIs('owner.manage-data.sales.*') || request()->is('owner/manage-data/sales/*') || request()->routeIs('owner.manage-data.employees.*') || request()->is('owner/manage-data/employees/*'))
                     }">
                         <button type="button" @click="open = !open"
                             class="flex items-center justify-between w-full pl-6 pr-4 py-3 hover:bg-gray-light focus:outline-none cursor-pointer">
@@ -48,7 +48,9 @@
                                         request()->routeIs('owner.manage-data.users.*') ||
                                         request()->is('owner/manage-data/users/*') ||
                                         request()->routeIs('owner.manage-data.sales.*') ||
-                                        request()->is('owner/manage-data/sales/*');
+                                        request()->is('owner/manage-data/sales/*') ||
+                                        request()->routeIs('owner.manage-data.employees.*') ||
+                                        request()->is('owner/manage-data/employees/*');
                                 @endphp
                                 <x-icons.manage-data />
                                 <span class="ml-2">Manage Data</span>
@@ -81,6 +83,12 @@
                                 <x-sidebar-menu.sub-menu href="{{ route('owner.manage-data.sales.index') }}"
                                     :pattern="['owner.manage-data.sales.*', 'owner/manage-data/sales/*']">
                                     Sales Data
+                                </x-sidebar-menu.sub-menu>
+                            </li>
+                            <li>
+                                <x-sidebar-menu.sub-menu href="{{ route('owner.manage-data.employees.index') }}"
+                                    :pattern="['owner.manage-data.employees.*', 'owner/manage-data/employees/*']">
+                                    Employees
                                 </x-sidebar-menu.sub-menu>
                             </li>
                         </ul>

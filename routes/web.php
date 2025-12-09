@@ -120,6 +120,12 @@ Route::middleware(['auth'])->group(function () {
                 Route::put('/{sale}', [\App\Http\Controllers\Main\SalesController::class, 'update'])->name('update');
                 Route::delete('/{sale}', [\App\Http\Controllers\Main\SalesController::class, 'destroy'])->name('destroy');
             });
+
+            // Employee Management
+            Route::prefix('employees')->name('employees.')->group(function () {
+                Route::get('/', [\App\Http\Controllers\Main\EmployeeController::class, 'index'])->name('index');
+                Route::put('/{user}', [\App\Http\Controllers\Main\EmployeeController::class, 'update'])->name('update');
+            });
         });
         
         // AJAX endpoints for dashboard charts
