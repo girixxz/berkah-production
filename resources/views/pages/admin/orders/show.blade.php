@@ -183,7 +183,7 @@
                     </button>
 
                     {{-- Dropdown Menu --}}
-                    <div class="relative" x-data="{ open: false }">
+                    <div x-data="{ open: false }" class="relative">
                         <button @click="open = !open"
                             class="p-2 rounded-md border border-gray-300 text-gray-700 hover:bg-gray-50">
                             <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
@@ -206,124 +206,69 @@
                                 Show Invoice
                             </button>
 
-                            @php
-                                $isPending = $order->production_status === 'pending';
-                                $isWip = $order->production_status === 'wip';
-                                $isFinished = $order->production_status === 'finished';
-                                $isCancelled = $order->production_status === 'cancelled';
-                                $isShipped = $order->shipping_status === 'shipped';
-                                $hasRemainingDue = ($order->invoice->amount_due ?? 0) > 0;
-                            @endphp
-
-                            {{-- 1. STATUS == PENDING --}}
-                            @if ($isPending)
+                            {{-- Edit (Hidden for finished/cancelled) --}}
+                            @if ($order->production_status !== 'finished' && $order->production_status !== 'cancelled')
                                 <a href="{{ route('admin.orders.edit', $order->id) }}"
-                                    class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
-                                    <svg class="w-4 h-4 inline-block mr-2" fill="none" stroke="currentColor"
-                                        viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                            d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                                    </svg>
-                                    Edit Order
-                                </a>
-                                <button @click="openPaymentModal = true; open = false"
-                                    class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
-                                    <svg class="w-4 h-4 inline-block mr-2" fill="none" stroke="currentColor"
-                                        viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                            d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                    </svg>
-                                    Add Payment
-                                </button>
-                                <button @click="showCancelConfirm = true; open = false"
-                                    class="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50">
-                                    <svg class="w-4 h-4 inline-block mr-2" fill="none" stroke="currentColor"
-                                        viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                            d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                    </svg>
-                                    Cancel Order
-                                </button>
-                            @endif
-
-                            {{-- 2. STATUS == WIP --}}
-                            @if ($isWip)
-                                <a href="{{ route('admin.orders.edit', $order->id) }}"
-                                    class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
-                                    <svg class="w-4 h-4 inline-block mr-2" fill="none" stroke="currentColor"
-                                        viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                            d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                                    </svg>
-                                    Edit Order
-                                </a>
-                                <button @click="openPaymentModal = true; open = false"
-                                    class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
-                                    <svg class="w-4 h-4 inline-block mr-2" fill="none" stroke="currentColor"
-                                        viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                            d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                    </svg>
-                                    Add Payment
-                                </button>
-                                <button @click="showCancelConfirm = true; open = false"
-                                    class="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50">
-                                    <svg class="w-4 h-4 inline-block mr-2" fill="none" stroke="currentColor"
-                                        viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                            d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                    </svg>
-                                    Cancel Order
-                                </button>
-                            @endif
-
-                            {{-- 3. STATUS == FINISHED, REMAINING > 0 --}}
-                            @if ($isFinished && $hasRemainingDue && !$isShipped)
-                                <button @click="openPaymentModal = true; open = false"
-                                    class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
-                                    <svg class="w-4 h-4 inline-block mr-2" fill="none" stroke="currentColor"
-                                        viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                            d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                    </svg>
-                                    Add Payment
-                                </button>
-                                {{-- Move to Shipping - Locked --}}
-                                <div
-                                    class="w-full text-left px-4 py-2 text-sm text-gray-400 cursor-not-allowed bg-gray-50 flex items-center justify-between">
-                                    <div class="flex items-center">
-                                        <svg class="w-4 h-4 inline-block mr-2" fill="none" stroke="currentColor"
-                                            viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
-                                        </svg>
-                                        Move to Shipping
-                                    </div>
+                                    class="px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2">
                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                            d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                                            d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                                     </svg>
-                                </div>
-                                <p class="px-4 py-2 text-xs text-orange-600 bg-orange-50">
-                                    ⚠️ Complete payment first
-                                </p>
+                                    Edit
+                                </a>
                             @endif
 
-                            {{-- 4. STATUS == FINISHED, REMAINING == 0, SHIPPED == PENDING --}}
-                            @if ($isFinished && !$hasRemainingDue && !$isShipped)
-                                <button @click="showMoveToShippingConfirm = true; open = false"
-                                    class="w-full text-left px-4 py-2 text-sm text-green-600 hover:bg-green-50">
-                                    <svg class="w-4 h-4 inline-block mr-2" fill="none" stroke="currentColor"
-                                        viewBox="0 0 24 24">
+                            {{-- Add Payment (Hidden if no invoice, fully paid, or cancelled) --}}
+                            @if ($order->invoice && $order->invoice->amount_due > 0 && $order->production_status !== 'cancelled')
+                                <button type="button" @click="openPaymentModal = true; open = false"
+                                    class="w-full text-left px-4 py-2 text-sm text-blue-600 hover:bg-blue-50 flex items-center gap-2">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
+                                    </svg>
+                                    Add Payment
+                                </button>
+                            @endif
+
+                            {{-- Move to Shippings (Only for finished orders that haven't been shipped) --}}
+                            @if ($order->production_status === 'finished' && $order->shipping_status === 'pending')
+                                @php
+                                    $hasRemainingDue = $order->invoice && $order->invoice->amount_due > 0;
+                                @endphp
+                                <button type="button"
+                                    @if (!$hasRemainingDue) @click="showMoveToShippingConfirm = true; open = false"
+                                    @else
+                                        disabled title="Complete payment first (Remaining: Rp {{ number_format($order->invoice->amount_due, 0, ',', '.') }})" @endif
+                                    class="w-full text-left px-4 py-2 text-sm flex items-center gap-2 {{ $hasRemainingDue ? 'text-gray-400 cursor-not-allowed' : 'text-green-600 hover:bg-green-50' }}">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                             d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
                                     </svg>
-                                    Move to Shipping
+                                    Move to Shippings
+                                    @if ($hasRemainingDue)
+                                        <svg class="w-4 h-4 ml-auto" fill="none" stroke="currentColor"
+                                            viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                                        </svg>
+                                    @endif
                                 </button>
                             @endif
 
-                            {{-- 5. STATUS == FINISHED, REMAINING == 0, SHIPPED == SHIPPED --}}
-                            @if ($isFinished && !$hasRemainingDue && $isShipped)
+                            {{-- Cancel (Hidden for cancelled and finished) --}}
+                            @if ($order->production_status !== 'cancelled' && $order->production_status !== 'finished')
+                                <button type="button" @click="showCancelConfirm = true; open = false"
+                                    class="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                    </svg>
+                                    Cancel Order
+                                </button>
+                            @endif
+
+                            {{-- No actions for completed orders --}}
+                            @if ($order->production_status === 'finished' && $order->shipping_status === 'shipped')
                                 <div class="px-4 py-6 text-center text-gray-400">
                                     <svg class="w-10 h-10 mx-auto mb-2 opacity-50" fill="none" stroke="currentColor"
                                         viewBox="0 0 24 24">
@@ -1920,13 +1865,14 @@
                 </div>
             </div>
         </div>
+        </div>
 
         {{-- ================= MOVE TO SHIPPING CONFIRMATION MODAL ================= --}}
         <div x-show="showMoveToShippingConfirm" x-cloak
             class="fixed inset-0 z-50 overflow-y-auto">
             
             {{-- Background Overlay --}}
-            <div x-show="showMoveToShippingConfirm" class="fixed inset-0 bg-gray-500 bg-opacity-50 backdrop-blur-sm transition-opacity"></div>
+            <div x-show="showMoveToShippingConfirm" class="fixed inset-0 bg-black/50 bg-opacity-50 backdrop-blur-xs transition-opacity"></div>
             
             {{-- Modal Panel --}}
             <div class="flex items-center justify-center min-h-screen p-4">
@@ -1970,7 +1916,8 @@
                 </div>
             </div>
         </div>
-    </div>
+        </div>
+
     </div>
 
 @endsection
