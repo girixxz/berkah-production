@@ -14,7 +14,7 @@ class ProductionStageSeeder extends Seeder
     {
         $stages = [
             ['stage_name' => 'PO'],
-            ['stage_name' => 'Bahan'],
+            ['stage_name' => 'Material'],
             ['stage_name' => 'Cutting'],
             ['stage_name' => 'Screening'],
             ['stage_name' => 'Printing'],
