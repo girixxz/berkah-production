@@ -1,7 +1,7 @@
-<header class="bg-white border-b border-gray-200">
-    <div class="flex items-center justify-between px-4 py-3">
+<header class="sticky top-0 z-30 bg-white border-b border-gray-200 w-full max-w-full">
+    <div class="flex items-center justify-between px-4 py-3 w-full max-w-full overflow-hidden">
         <!-- Left: Hamburger -->
-        <div class="flex items-center space-x-4">
+        <div class="flex items-center space-x-4 flex-shrink-0">
             <button @click="$dispatch('sidebar-toggle')"
                 class="text-gray-600 hover:text-gray-800 focus:outline-none p-2 rounded-md hover:bg-gray-100 md:inline-flex"
                 aria-label="Toggle sidebar" title="Toggle sidebar">
@@ -22,7 +22,7 @@
             };
         @endphp
 
-        <nav class="flex-1 flex items-center justify-center">
+        <nav class="flex-1 flex items-center justify-center min-w-0 overflow-hidden">
             <ul class="flex items-center text-sm md:text-[14px] sm:gap-2">
                 <li>
                     <a href="{{ route('highlights') }}" target="_blank" class="{{ $navClasses('highlights') }}">
@@ -38,6 +38,7 @@
         </nav>
 
         <!-- Right: Notification Bell (Owner Only) + User -->
+        <div class="flex items-center gap-3 flex-shrink-0">
         @php
             $profile_name = auth()->user()?->fullname;
             $user_role = auth()->user()?->role;

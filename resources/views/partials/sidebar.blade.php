@@ -10,14 +10,14 @@
         default => 'login',
     };
 @endphp
-<div class="flex flex-col h-screen bg-white border-r border-gray-light w-64">
+<div class="flex flex-col h-full bg-white border-r border-gray-light w-64">
     <!-- Logo -->
-    <div class="flex items-center justify-center h-16 border-b border-gray-light">
+    <div class="flex items-center justify-center h-16 border-b border-gray-light flex-shrink-0">
         <a href="{{ route($dashboardRouteName) }}" class="text-2xl font-bold text-primary">STGR</a>
     </div>
 
     <!-- Navigation -->
-    <nav class="flex-1 overflow-y-auto py-6 text-sm text-font-base">
+    <nav class="flex-1 overflow-y-auto overflow-x-hidden py-6 text-sm text-font-base">
         {{-- ================= OWNER ONLY ================= --}}
         @if ($role === 'owner')
             <div class="mb-4">

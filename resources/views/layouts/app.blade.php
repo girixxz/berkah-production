@@ -55,29 +55,29 @@
             this.userPreference = saved === 'true';
         }
 
-        // Set initial state
-        const isLgOrLarger = window.matchMedia('(min-width: 1024px)').matches;
+        // Set initial state - GANTI ke XL (1280px) agar iPad tetap overlay
+        const isXlOrLarger = window.matchMedia('(min-width: 1280px)').matches;
         if (this.userPreference !== null) {
-            // Respect user preference (hanya di lg+)
-            this.sidebarOpen = isLgOrLarger && this.userPreference;
+            // Respect user preference (hanya di xl+)
+            this.sidebarOpen = isXlOrLarger && this.userPreference;
         } else {
-            // Auto behavior: buka di lg+, tutup di mobile
-            this.sidebarOpen = isLgOrLarger;
+            // Auto behavior: buka di xl+, tutup di mobile/tablet/iPad
+            this.sidebarOpen = isXlOrLarger;
         }
 
         // Listen untuk perubahan ukuran layar
         window.addEventListener('resize', () => {
-            const isLgOrLarger = window.matchMedia('(min-width: 1024px)').matches;
+            const isXlOrLarger = window.matchMedia('(min-width: 1280px)').matches;
 
-            if (!isLgOrLarger) {
-                // Di mobile/tablet: selalu tutup saat resize
+            if (!isXlOrLarger) {
+                // Di mobile/tablet/iPad: selalu tutup saat resize
                 this.sidebarOpen = false;
             } else {
-                // Di lg+: respect user preference
+                // Di xl+: respect user preference
                 if (this.userPreference !== null) {
                     this.sidebarOpen = this.userPreference;
                 } else {
-                    this.sidebarOpen = true; // Default buka di lg+
+                    this.sidebarOpen = true; // Default buka di xl+
                 }
             }
         });
@@ -86,46 +86,58 @@
     toggleSidebar() {
         this.sidebarOpen = !this.sidebarOpen;
 
-        // Save preference hanya untuk lg+ screen
-        const isLgOrLarger = window.matchMedia('(min-width: 1024px)').matches;
-        if (isLgOrLarger) {
+        // Save preference hanya untuk xl+ screen
+        const isXlOrLarger = window.matchMedia('(min-width: 1280px)').matches;
+        if (isXlOrLarger) {
             this.userPreference = this.sidebarOpen;
             localStorage.setItem('sidebarUserPreference', this.sidebarOpen);
         }
     }
-}" @sidebar-toggle.window="toggleSidebar()" class="h-screen flex bg-gray-light">
+}" @sidebar-toggle.window="toggleSidebar()" class="h-screen flex overflow-hidden bg-gray-light">
 
-    {{-- SIDEBAR WRAPPER + OVERLAY --}}
-    {{-- Di mobile/tablet: sidebar overlay (fixed), di LG+: sidebar push konten (flex) --}}
-    <div x-cloak class="hidden lg:block relative z-40 flex-shrink-0 overflow-hidden"
-        :class="sidebarOpen ? 'w-64' : 'w-0'" :style="sidebarOpen ? '' : 'transition: width 0ms'">
-        {{-- container sidebar untuk LG+ --}}
-        <div class="fixed inset-y-0 left-0 w-64 transform" :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full'"
-            :style="sidebarOpen ? 'transition: transform 300ms ease-out' : 'transition: none'">
-            @include('partials.sidebar')
-        </div>
-    </div>
-
-    {{-- Sidebar Mobile/Tablet: Overlay di atas konten --}}
-    <div class="lg:hidden">
-        {{-- overlay gelap saat sidebar terbuka (hanya di mobile/tablet) --}}
-        <div x-cloak x-show="sidebarOpen" x-transition.opacity class="fixed inset-0 bg-black/40 z-40"
-            @click="$dispatch('sidebar-toggle')" aria-hidden="true"></div>
-
-        {{-- container sidebar mobile/tablet: overlay --}}
-        <div class="fixed inset-y-0 left-0 w-64 transform z-50"
+    {{-- SIDEBAR untuk Desktop Besar (XL+): Push content --}}
+    <div x-cloak class="hidden xl:block relative z-40 flex-shrink-0"
+        :class="sidebarOpen ? 'w-64' : 'w-0'" 
+        :style="sidebarOpen ? 'transition: width 300ms ease-out' : 'transition: width 300ms ease-out'">
+        {{-- container sidebar untuk XL+ --}}
+        <div class="fixed inset-y-0 left-0 w-64 transform" 
             :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full'"
-            :style="sidebarOpen ? 'transition: transform 300ms ease-out' : 'transition: none'">
+            :style="sidebarOpen ? 'transition: transform 300ms ease-out' : 'transition: transform 300ms ease-out'">
             @include('partials.sidebar')
         </div>
     </div>
 
-    {{-- MAIN - konten akan otomatis adjust sesuai lebar sidebar di LG+ --}}
-    <div x-cloak class="flex-1 flex flex-col overflow-hidden" data-turbo-permanent>
+    {{-- Sidebar untuk Mobile/Tablet/iPad (< XL): ALWAYS OVERLAY --}}
+    <div class="xl:hidden">
+        {{-- overlay gelap saat sidebar terbuka --}}
+        <div x-cloak x-show="sidebarOpen" 
+            x-transition:enter="transition-opacity ease-linear duration-300"
+            x-transition:enter-start="opacity-0"
+            x-transition:enter-end="opacity-100"
+            x-transition:leave="transition-opacity ease-linear duration-300"
+            x-transition:leave-start="opacity-100"
+            x-transition:leave-end="opacity-0"
+            class="fixed inset-0 bg-black/50 z-40"
+            @click="$dispatch('sidebar-toggle')" 
+            aria-hidden="true">
+        </div>
+
+        {{-- container sidebar mobile/tablet/iPad: overlay --}}
+        <div class="fixed inset-y-0 left-0 w-64 z-50"
+            :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full'"
+            style="transition: transform 300ms ease-out;">
+            @include('partials.sidebar')
+        </div>
+    </div>
+
+    {{-- MAIN - Full width, sidebar tidak push content --}}
+    <div x-cloak class="flex-1 flex flex-col min-h-0 w-full max-w-full" data-turbo-permanent>
         @include('partials.navbar')
 
-        <main id="main-content" class="flex-1 overflow-y-auto p-6">
-            @yield('content')
+        <main id="main-content" class="flex-1 overflow-y-auto overflow-x-hidden p-6 w-full max-w-full">
+            <div class="max-w-full">
+                @yield('content')
+            </div>
         </main>
     </div>
 
