@@ -336,10 +336,15 @@
 
         {{-- Confirmation Modal - Mark as Done --}}
         <div x-show="showConfirmDone" x-cloak x-transition.opacity
-            class="fixed inset-0 z-50 overflow-y-auto bg-black/50 bg-opacity-50 backdrop-blur-xs transition-opacity">
-            <div class="flex items-center justify-center min-h-screen p-4">
+            class="fixed inset-0 z-50">
+            
+            {{-- Background Overlay --}}
+            <div x-show="showConfirmDone" class="fixed inset-0 bg-black/50 bg-opacity-50 backdrop-blur-xs transition-opacity"></div>
+            
+            {{-- Modal Panel --}}
+            <div class="fixed inset-0 flex items-center justify-center p-4">
                 <div @click.away="showConfirmDone = false; isSubmitting = false"
-                    class="bg-white rounded-xl shadow-lg w-full max-w-md">
+                    class="relative bg-white rounded-xl shadow-lg w-full max-w-md">
                     {{-- Modal Header --}}
                     <div class="flex items-center justify-center p-6 border-b border-gray-200">
                         <div class="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
