@@ -889,17 +889,18 @@
     </section>
 
         {{-- ================= STAGE DATE MODAL ================= --}}
-        <div x-show="showStageModal" x-cloak class="fixed inset-0 z-50 overflow-y-auto">
+        <div x-show="showStageModal" x-cloak class="fixed inset-0 z-50">
             {{-- Background Overlay --}}
             <div x-show="showStageModal" x-transition.opacity @click="showStageModal = false; resetStageForm()"
                 class="fixed inset-0 bg-black/50 bg-opacity-50 backdrop-blur-xs transition-opacity"></div>
             
             {{-- Modal Container --}}
-            <div class="flex items-center justify-center min-h-screen p-4">
+            <div class="fixed inset-0 flex items-center justify-center p-4">
                 <div @click.away="showStageModal = false; resetStageForm()" x-transition
-                    class="relative bg-white rounded-xl shadow-2xl max-w-md w-full z-10">
+                    class="relative bg-white rounded-xl shadow-2xl max-w-md w-full z-10"
+                    style="height: min(calc(100vh - 6rem), 325px); min-height: 0; display: flex; flex-direction: column;">
                 {{-- Header --}}
-                <div class="flex items-center justify-between p-5 border-b border-gray-200">
+                <div class="flex items-center justify-between px-6 py-4 border-b border-gray-200 flex-shrink-0">
                     <h3 class="text-lg font-semibold text-gray-900">Set Stage Date - <span
                             x-text="selectedStageName"></span></h3>
                     <button @click="showStageModal = false; resetStageForm()"
@@ -911,8 +912,9 @@
                     </button>
                 </div>
 
-                {{-- Form --}}
-                <form
+                {{-- Scrollable Content --}}
+                <div class="flex-1">
+                    <form id="stageDateForm" class="px-6 py-4 space-y-4"
                     @submit.prevent="
                     isSubmittingStage = true;
                     stageErrors = {};
@@ -970,17 +972,16 @@
                                 console.error('Failed to refresh table:', err);
                             });
                         } else {
-                            stageErrors = data.errors || { general: data.message };
-                            isSubmittingStage = false;
-                        }
-                    })
-                    .catch(err => {
-                        stageErrors = { general: 'Network error. Please try again.' };
+                        stageErrors = data.errors || { general: data.message };
                         isSubmittingStage = false;
-                        console.error(err);
-                    });
-                ">
-                    <div class="p-5 space-y-4">
+                    }
+                })
+                .catch(err => {
+                    stageErrors = { general: 'Network error. Please try again.' };
+                    isSubmittingStage = false;
+                    console.error(err);
+                });
+            ">
                         {{-- Start Date --}}
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-2">Start Date</label>
@@ -1006,37 +1007,38 @@
                         {{-- General Error --}}
                         <p x-show="stageErrors.general" x-text="stageErrors.general"
                             class="text-xs text-red-600 bg-red-50 p-2 rounded"></p>
-                    </div>
+                    </form>
+                </div>
 
-                    {{-- Footer --}}
-                    <div class="flex gap-3 p-5 border-t border-gray-200">
-                        <button type="button" @click="showStageModal = false; resetStageForm()"
-                            class="flex-1 px-4 py-2 rounded-md bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-medium cursor-pointer">
-                            Cancel
-                        </button>
-                        <button type="submit" :disabled="isSubmittingStage"
-                            class="flex-1 px-4 py-2 rounded-md bg-primary text-white hover:bg-primary-dark text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer">
-                            <span x-show="!isSubmittingStage">Apply</span>
-                            <span x-show="isSubmittingStage">Saving...</span>
-                        </button>
-                    </div>
-                </form>
+                {{-- Fixed Footer --}}
+                <div class="flex gap-3 px-6 py-4 border-t border-gray-200 flex-shrink-0">
+                    <button type="button" @click="showStageModal = false; resetStageForm()"
+                        class="flex-1 px-4 py-2 rounded-md bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-medium cursor-pointer">
+                        Cancel
+                    </button>
+                    <button type="submit" form="stageDateForm" :disabled="isSubmittingStage"
+                        class="flex-1 px-4 py-2 rounded-md bg-primary text-white hover:bg-primary-dark text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer">
+                        <span x-show="!isSubmittingStage">Apply</span>
+                        <span x-show="isSubmittingStage">Saving...</span>
+                    </button>
+                </div>
                 </div>
             </div>
         </div>
 
         {{-- ================= EDIT STAGE MODAL ================= --}}
-        <div x-show="showEditStageModal" x-cloak class="fixed inset-0 z-50 overflow-y-auto">
+        <div x-show="showEditStageModal" x-cloak class="fixed inset-0 z-50">
             {{-- Background Overlay --}}
             <div x-show="showEditStageModal" x-transition.opacity @click="showEditStageModal = false"
                 class="fixed inset-0 bg-black/50 bg-opacity-50 backdrop-blur-xs transition-opacity"></div>
             
             {{-- Modal Container --}}
-            <div class="flex items-center justify-center min-h-screen p-4">
+            <div class="fixed inset-0 flex items-center justify-center p-4">
                 <div @click.away="showEditStageModal = false" x-transition
-                    class="relative bg-white rounded-xl shadow-2xl max-w-3xl w-full max-h-[90vh] flex flex-col z-10">
+                    class="relative bg-white rounded-xl shadow-2xl max-w-3xl w-full z-10"
+                    style="height: min(calc(100vh - 6rem), 700px); min-height: 0; display: flex; flex-direction: column;">
                 {{-- Header --}}
-                <div class="flex items-center justify-between p-5 border-b border-gray-200 flex-shrink-0">
+                <div class="flex items-center justify-between px-6 py-4 border-b border-gray-200 flex-shrink-0">
                     <div>
                         <h3 class="text-lg font-semibold text-gray-900">Edit Stage Status</h3>
                         <p class="text-sm text-gray-500 mt-1">Order: <span class="font-medium"
@@ -1050,8 +1052,8 @@
                     </button>
                 </div>
 
-                {{-- Content --}}
-                <div class="p-5 overflow-y-auto flex-1">
+                {{-- Scrollable Content --}}
+                <div class="overflow-y-auto flex-1 px-6 py-4">
                     {{-- Order Notes - MOVED TO TOP --}}
                     <div class="mb-6">
                         <h4 class="text-sm font-semibold text-gray-700 mb-3">Order Notes</h4>
@@ -1146,8 +1148,8 @@
                     </div>
                 </div>
 
-                {{-- Footer --}}
-                <div class="flex justify-between sm:justify-end gap-3 p-5 border-t border-gray-200 flex-shrink-0">
+                {{-- Fixed Footer --}}
+                <div class="flex justify-between sm:justify-end gap-3 px-6 py-4 border-t border-gray-200 flex-shrink-0">
                     <button @click="saveStageChanges()" 
                         :disabled="!hasChanges || isUpdatingStatus || {{ $isViewOnly ? 'true' : 'false' }}"
                         :class="hasChanges && !isUpdatingStatus ? 'bg-primary hover:bg-primary-dark text-white' : 'bg-gray-300 text-gray-500 cursor-not-allowed'"
