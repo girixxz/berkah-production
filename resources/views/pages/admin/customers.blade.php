@@ -566,22 +566,29 @@
 
         {{-- ===================== MODAL ADD CUSTOMER ===================== --}}
         <div x-show="openModal === 'addCustomer'" x-transition.opacity x-cloak
-            class="fixed inset-0 z-50 overflow-y-auto bg-black/50 bg-opacity-50 backdrop-blur-xs transition-opacity">
-            <div class="flex items-center justify-center min-h-screen p-4">
-                <div @click.away="openModal = ''" class="bg-white rounded-xl shadow-lg w-full max-w-lg">
+            class="fixed inset-0 z-50">
+            
+            {{-- Background Overlay --}}
+            <div x-show="openModal === 'addCustomer'" class="fixed inset-0 bg-black/50 bg-opacity-50 backdrop-blur-xs transition-opacity"></div>
+            
+            {{-- Modal Panel --}}
+            <div class="fixed inset-0 flex items-center justify-center p-4">
+                <div @click.away="openModal = ''" 
+                    class="relative bg-white rounded-xl shadow-lg w-full max-w-lg"
+                    style="height: min(calc(100vh - 6rem), 700px); min-height: 0; display: flex; flex-direction: column;">
                     {{-- Header --}}
-                    <div class="flex items-center justify-between p-5 border-b border-gray-200">
+                    <div class="flex items-center justify-between px-6 py-4 border-b border-gray-200 flex-shrink-0">
                         <h3 class="text-lg font-semibold text-gray-900">Add Customer</h3>
                         <button @click="openModal = ''" class="text-gray-400 hover:text-gray-600 cursor-pointer">
                             ✕
                         </button>
                     </div>
 
-                    {{-- Form --}}
-                    <form action="{{ route('admin.customers.store') }}" method="POST"
-                        @submit="if (!validateAddCustomer()) $event.preventDefault()">
-                        @csrf
-                        <div class="p-5 space-y-4 max-h-[70vh] overflow-y-auto">
+                    {{-- Scrollable Content --}}
+                    <div class="overflow-y-auto flex-1">
+                        <form id="addCustomerForm" action="{{ route('admin.customers.store') }}" method="POST" class="px-6 py-4 space-y-4"
+                            @submit="if (!validateAddCustomer()) $event.preventDefault()">
+                            @csrf
                             {{-- Customer Name --}}
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-1">
@@ -836,42 +843,49 @@
                                     <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                                 @enderror
                             </div>
-                        </div>
+                        </form>
+                    </div>
 
-                        {{-- Footer --}}
-                        <div class="flex justify-end gap-3 p-5 border-t border-gray-200">
-                            <button type="button" @click="openModal = ''"
-                                class="px-4 py-2 rounded-md bg-gray-100 hover:bg-gray-200 text-gray-700 cursor-pointer">
-                                Cancel
-                            </button>
-                            <button type="submit"
-                                class="px-4 py-2 rounded-md bg-primary text-white hover:bg-primary-dark cursor-pointer">
-                                Add Customer
-                            </button>
-                        </div>
-                    </form>
+                    {{-- Fixed Footer --}}
+                    <div class="flex justify-end gap-3 px-6 py-4 border-t border-gray-200 flex-shrink-0">
+                        <button type="button" @click="openModal = ''"
+                            class="px-4 py-2 rounded-md bg-gray-100 hover:bg-gray-200 text-gray-700 cursor-pointer">
+                            Cancel
+                        </button>
+                        <button type="submit" form="addCustomerForm"
+                            class="px-4 py-2 rounded-md bg-primary text-white hover:bg-primary-dark cursor-pointer">
+                            Add Customer
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
 
         {{-- ===================== MODAL EDIT CUSTOMER ===================== --}}
         <div x-show="openModal === 'editCustomer'" x-transition.opacity x-cloak
-            class="fixed inset-0 z-50 overflow-y-auto bg-black/50 bg-opacity-50 backdrop-blur-xs transition-opacity">
-            <div class="flex items-center justify-center min-h-screen p-4">
-                <div @click.away="openModal = ''" class="bg-white rounded-xl shadow-lg w-full max-w-2xl">
+            class="fixed inset-0 z-50">
+            
+            {{-- Background Overlay --}}
+            <div x-show="openModal === 'editCustomer'" class="fixed inset-0 bg-black/50 bg-opacity-50 backdrop-blur-xs transition-opacity"></div>
+            
+            {{-- Modal Panel --}}
+            <div class="fixed inset-0 flex items-center justify-center p-4">
+                <div @click.away="openModal = ''" 
+                    class="relative bg-white rounded-xl shadow-lg w-full max-w-2xl"
+                    style="height: min(calc(100vh - 6rem), 750px); min-height: 0; display: flex; flex-direction: column;">
                     {{-- Header --}}
-                    <div class="flex items-center justify-between p-5 border-b border-gray-200">
+                    <div class="flex items-center justify-between px-6 py-4 border-b border-gray-200 flex-shrink-0">
                         <h3 class="text-lg font-semibold text-gray-900">Edit Customer</h3>
                         <button @click="openModal = ''" class="text-gray-400 hover:text-gray-600 cursor-pointer">
                             ✕
                         </button>
                     </div>
 
-                    {{-- Form --}}
-                    <form :action="`{{ route('admin.customers.index') }}/${editCustomer.id}`" method="POST">
-                        @csrf
-                        @method('PUT')
-                        <div class="p-5 space-y-4 max-h-[70vh] overflow-y-auto">
+                    {{-- Scrollable Content --}}
+                    <div class="overflow-y-auto flex-1">
+                        <form id="editCustomerForm" :action="`{{ route('admin.customers.index') }}/${editCustomer.id}`" method="POST" class="px-6 py-4 space-y-4">
+                            @csrf
+                            @method('PUT')
                             {{-- Customer Name --}}
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-1">
@@ -1108,20 +1122,20 @@
                                     <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                                 @enderror
                             </div>
-                        </div>
+                        </form>
+                    </div>
 
-                        {{-- Footer --}}
-                        <div class="flex justify-end gap-3 p-5 border-t border-gray-200">
-                            <button type="button" @click="openModal = ''"
-                                class="px-4 py-2 rounded-md bg-gray-100 hover:bg-gray-200 text-gray-700 cursor-pointer">
-                                Cancel
-                            </button>
-                            <button type="submit"
-                                class="px-4 py-2 rounded-md bg-primary text-white hover:bg-primary-dark cursor-pointer">
-                                Save
-                            </button>
-                        </div>
-                    </form>
+                    {{-- Fixed Footer --}}
+                    <div class="flex justify-end gap-3 px-6 py-4 border-t border-gray-200 flex-shrink-0">
+                        <button type="button" @click="openModal = ''"
+                            class="px-4 py-2 rounded-md bg-gray-100 hover:bg-gray-200 text-gray-700 cursor-pointer">
+                            Cancel
+                        </button>
+                        <button type="submit" form="editCustomerForm"
+                            class="px-4 py-2 rounded-md bg-primary text-white hover:bg-primary-dark cursor-pointer">
+                            Save
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>

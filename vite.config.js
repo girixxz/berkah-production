@@ -18,7 +18,7 @@ export default defineConfig({
         port: 5173,
         strictPort: false,
         hmr: {
-            host: "192.168.0.104", // Your computer's IP address
+            host: "192.168.0.100", // Your computer's IP address
         },
     },
 
