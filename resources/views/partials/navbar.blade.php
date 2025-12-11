@@ -1,5 +1,5 @@
 <header class="sticky top-0 z-30 bg-white border-b border-gray-200 w-full max-w-full">
-    <div class="flex items-center justify-between px-4 py-3 w-full max-w-full overflow-hidden">
+    <div class="flex items-center justify-between px-4 py-3 w-full max-w-full">
         <!-- Left: Hamburger -->
         <div class="flex items-center space-x-4 flex-shrink-0">
             <button @click="$dispatch('sidebar-toggle')"
@@ -15,15 +15,15 @@
         <!-- Center: Nav (Highlight & Calendar) -->
         @php
             $navClasses = function (string $pattern) {
-                $base = 'px-3 py-2 rounded-md';
+                $base = 'px-6 py-2 rounded-md transition-all duration-200';
                 return request()->routeIs($pattern)
-                    ? $base . ' bg-primary-light ring-1 ring-inset ring-primary-light text-font-base font-semibold'
-                    : $base . ' text-font-base hover:bg-gray-light';
+                    ? $base . ' bg-primary-light font-medium hover:bg-gray-100'
+                    : $base . ' text-gray-700 hover:bg-gray-100 hover:text-gray-900';
             };
         @endphp
 
-        <nav class="flex-1 flex items-center justify-center min-w-0 overflow-hidden">
-            <ul class="flex items-center text-sm md:text-[14px] sm:gap-2">
+        <nav class="flex-1 flex items-center justify-center min-w-0">
+            <ul class="flex items-center text-sm md:text-[14px] gap-3">
                 <li>
                     <a href="{{ route('highlights') }}" target="_blank" class="{{ $navClasses('highlights') }}">
                         Highlights
@@ -110,7 +110,8 @@
 
                 <!-- Dropdown -->
                 <div id="userDropdown" x-cloak x-show="open" @click.outside="open = false" x-transition.opacity
-                    class="absolute right-0 mt-2 w-48 bg-white border border-gray-200 rounded-md shadow-lg py-1 z-20"
+                    class="fixed mt-2 w-48 bg-white border border-gray-200 rounded-md shadow-lg py-1 z-50"
+                    style="right: 1rem;"
                     role="menu">
                     <form method="POST" action="{{ route('logout') }}">
                         @csrf
