@@ -144,6 +144,9 @@
     {{-- Notif Toast --}}
     <x-toast-notif />
 
+    {{-- Modals Stack - Di luar main content agar tidak terbatas overflow --}}
+    @stack('modals')
+
     {{-- Script --}}
     @stack('scripts')
     

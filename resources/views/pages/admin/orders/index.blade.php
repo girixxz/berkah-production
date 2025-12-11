@@ -1178,16 +1178,16 @@
 
         {{-- ================= CANCEL CONFIRMATION MODAL ================= --}}
         <div x-show="showCancelConfirm !== null" x-cloak
-            class="fixed inset-0 z-50 overflow-y-auto">
+            class="fixed inset-0 z-50">
             
             {{-- Background Overlay --}}
             <div x-show="showCancelConfirm !== null" @click="showCancelConfirm = null"
                 class="fixed inset-0 bg-black/50 bg-opacity-50 backdrop-blur-xs transition-opacity"></div>
             
             {{-- Modal Container --}}
-            <div class="flex items-center justify-center min-h-screen p-4">
+            <div class="fixed inset-0 flex items-center justify-center p-4">
                 <div @click.away="showCancelConfirm = null"
-                    class="relative bg-white rounded-lg shadow-xl max-w-md w-full mx-4 p-6 z-10">
+                    class="relative bg-white rounded-lg shadow-xl max-w-md w-full p-6 z-10">
                 {{-- Icon --}}
                 <div class="flex items-center justify-center w-12 h-12 mx-auto mb-4 bg-red-100 rounded-full">
                     <svg class="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1281,25 +1281,21 @@
 
         {{-- ================= ADD PAYMENT MODAL ================= --}}
         <div x-show="showAddPaymentModal" x-cloak
-            class="fixed inset-0 z-50 overflow-y-auto">
-            
-            {{-- Background Overlay --}}
-            <div x-show="showAddPaymentModal" x-transition.opacity @click="showAddPaymentModal = false; resetPaymentForm()"
-                class="fixed inset-0 bg-black/50 bg-opacity-50 backdrop-blur-xs transition-opacity"></div>
-            
-            {{-- Modal Container --}}
-            <div class="flex items-center justify-center min-h-screen p-4">
-                <div @click.away="showAddPaymentModal = false; resetPaymentForm()"
-                    class="bg-white rounded-xl shadow-lg w-full max-w-3xl z-10">
-                    {{-- Header --}}
-                    <div class="flex items-center justify-between p-5 border-b border-gray-200">
-                        <h3 class="text-lg font-semibold text-gray-900">Add Payment</h3>
-                        <button @click="showAddPaymentModal = false; resetPaymentForm()"
-                            class="text-gray-400 hover:text-gray-600 cursor-pointer">
-                            ✕
-                        </button>
-                    </div>
+            class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs px-4 py-6">
+            <div @click.away="showAddPaymentModal = false; resetPaymentForm()"
+                class="bg-white rounded-xl shadow-lg w-full max-w-3xl"
+                style="height: min(calc(100vh - 6rem), 700px); min-height: 0; display: flex; flex-direction: column;">
+                {{-- Fixed Header --}}
+                <div class="flex items-center justify-between px-6 py-4 border-b border-gray-200 flex-shrink-0">
+                    <h3 class="text-lg font-semibold text-gray-900">Add Payment</h3>
+                    <button @click="showAddPaymentModal = false; resetPaymentForm()"
+                        class="text-gray-400 hover:text-gray-600 cursor-pointer">
+                        ✕
+                    </button>
+                </div>
 
+                {{-- Scrollable Content --}}
+                <div class="overflow-y-auto flex-1 px-6 py-4">
                     {{-- Form --}}
                     <form id="addPaymentForm"
                         @submit.prevent="
@@ -1390,7 +1386,7 @@
                         ">
                         <input type="hidden" name="invoice_id" :value="selectedOrderForPayment?.invoice_id">
 
-                        <div class="p-5 space-y-4 max-h-[70vh] overflow-y-auto">
+                        <div class="space-y-4">
                             {{-- Invoice Info --}}
                             <div class="bg-gray-50 border border-gray-200 rounded-md p-3 space-y-3">
                                 {{-- Row 1: Invoice No & Remaining Due --}}
@@ -1700,29 +1696,29 @@
                                     class="mt-1 text-sm text-red-600"></p>
                             </div>
                         </div>
-
-                        {{-- Footer --}}
-                        <div class="flex justify-end gap-3 p-5 border-t border-gray-200">
-                            <button type="button" @click="showAddPaymentModal = false; resetPaymentForm()"
-                                :disabled="isSubmittingPayment"
-                                class="px-4 py-2 rounded-md bg-gray-100 hover:bg-gray-200 text-gray-700 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed">
-                                Cancel
-                            </button>
-                            <button type="submit" :disabled="isSubmittingPayment"
-                                class="px-4 py-2 rounded-md bg-primary text-white hover:bg-primary-dark cursor-pointer disabled:opacity-70 disabled:cursor-not-allowed flex items-center gap-2">
-                                {{-- Loading Spinner --}}
-                                <svg x-show="isSubmittingPayment" x-cloak class="animate-spin h-4 w-4 text-white"
-                                    xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                    <circle class="opacity-25" cx="12" cy="12" r="10"
-                                        stroke="currentColor" stroke-width="4"></circle>
-                                    <path class="opacity-75" fill="currentColor"
-                                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
-                                    </path>
-                                </svg>
-                                <span x-text="isSubmittingPayment ? 'Processing...' : 'Add Payment'"></span>
-                            </button>
-                        </div>
                     </form>
+                </div>
+
+                {{-- Fixed Footer --}}
+                <div class="flex justify-end gap-3 px-6 py-4 border-t border-gray-200 flex-shrink-0">
+                    <button type="button" @click="showAddPaymentModal = false; resetPaymentForm()"
+                        :disabled="isSubmittingPayment"
+                        class="px-4 py-2 rounded-md bg-gray-100 hover:bg-gray-200 text-gray-700 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed">
+                        Cancel
+                    </button>
+                    <button type="submit" form="addPaymentForm" :disabled="isSubmittingPayment"
+                        class="px-4 py-2 rounded-md bg-primary text-white hover:bg-primary-dark cursor-pointer disabled:opacity-70 disabled:cursor-not-allowed flex items-center gap-2">
+                        {{-- Loading Spinner --}}
+                        <svg x-show="isSubmittingPayment" x-cloak class="animate-spin h-4 w-4 text-white"
+                            xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10"
+                                stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor"
+                                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
+                            </path>
+                        </svg>
+                        <span x-text="isSubmittingPayment ? 'Processing...' : 'Add Payment'"></span>
+                    </button>
                 </div>
             </div>
         </div>
