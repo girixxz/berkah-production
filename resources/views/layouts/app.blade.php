@@ -93,7 +93,7 @@
             localStorage.setItem('sidebarUserPreference', this.sidebarOpen);
         }
     }
-}" @sidebar-toggle.window="toggleSidebar()" class="h-screen flex overflow-hidden bg-gray-light">
+}" @sidebar-toggle.window="toggleSidebar()" class="flex overflow-hidden bg-gray-light" style="height: 100dvh; min-height: -webkit-fill-available;">
 
     {{-- SIDEBAR untuk Desktop Besar (XL+): Push content --}}
     <div x-cloak class="hidden xl:block relative z-40 flex-shrink-0"
@@ -134,7 +134,7 @@
     <div x-cloak class="flex-1 flex flex-col min-h-0 w-full max-w-full" data-turbo-permanent>
         @include('partials.navbar')
 
-        <main id="main-content" class="flex-1 overflow-y-auto overflow-x-hidden p-6 w-full max-w-full">
+        <main id="main-content" class="flex-1 overflow-y-auto overflow-x-hidden p-6 w-full max-w-full" style="padding-bottom: max(1.5rem, env(safe-area-inset-bottom));">
             <div class="max-w-full">
                 @yield('content')
             </div>

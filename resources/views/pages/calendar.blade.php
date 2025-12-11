@@ -35,7 +35,7 @@
         }
     </style>
 </head>
-<body class="bg-gray-light h-screen overflow-hidden">
+<body class="bg-gray-light overflow-hidden" style="height: 100dvh; min-height: -webkit-fill-available;">
 
     {{-- Root Alpine State --}}
     <div x-data="{
