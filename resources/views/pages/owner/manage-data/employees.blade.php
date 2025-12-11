@@ -323,20 +323,23 @@
                     setEditEmployee({{ \App\Models\User::find(session('editEmployeeId'))->toJson() }});
                 @endif
             "
-            class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 bg-opacity-50 backdrop-blur-xs transition-opacity px-4">
-            <div @click.away="openModal=null" class="bg-white rounded-xl shadow-lg w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-                <div class="flex justify-between items-center border-b border-gray-200 px-6 py-4 sticky top-0 bg-white z-10 rounded-t-xl">
+            class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs px-4 py-6">
+            <div @click.away="openModal=null" class="bg-white rounded-xl shadow-lg w-full max-w-2xl flex flex-col overflow-hidden" style="height: min(calc(100vh - 6rem), 700px); min-height: 0; display: flex; flex-direction: column;">
+                {{-- Fixed Header --}}
+                <div class="flex justify-between items-center border-b border-gray-200 px-6 py-4 bg-white rounded-t-xl flex-shrink-0">
                     <h3 class="text-lg font-semibold text-gray-900">Edit Employee</h3>
                     <button @click="openModal=null" class="text-gray-400 hover:text-gray-600 cursor-pointer">✕</button>
                 </div>
 
-                <form :action="`{{ route('owner.manage-data.employees.index') }}/${editEmployee.id}`" method="POST"
+                {{-- Scrollable Content --}}
+                <div class="overflow-y-auto overflow-x-hidden flex-1 px-6 py-4">
+                <form id="editEmployeeForm" :action="`{{ route('owner.manage-data.employees.index') }}/${editEmployee.id}`" method="POST"
                     @submit.prevent="
                         if (validateEditEmployee()) {
                             $el.submit();
                         }
                     "
-                    class="px-6 py-4 space-y-4">
+                    class="space-y-4">
                     @csrf
                     @method('PUT')
 
@@ -662,21 +665,23 @@
                             <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                         @enderror
                     </div>
-
-                    <div class="flex justify-end gap-3 pt-4 border-t border-gray-200 sticky bottom-0 bg-white pb-2">
-                        <button type="button" @click="openModal=null"
-                            class="px-4 py-2 rounded-md bg-gray-100 hover:bg-gray-200 text-gray-700 cursor-pointer">Cancel</button>
-                        <button type="submit"
-                            class="px-4 py-2 rounded-md bg-primary text-white hover:bg-primary-dark cursor-pointer">Update</button>
-                    </div>
                 </form>
+                </div>
+
+                {{-- Fixed Footer --}}
+                <div class="flex justify-end gap-3 px-6 py-4 border-t border-gray-200 flex-shrink-0 bg-white rounded-b-xl">
+                    <button type="button" @click="openModal=null"
+                        class="px-4 py-2 rounded-md bg-gray-100 hover:bg-gray-200 text-gray-700 cursor-pointer">Cancel</button>
+                    <button type="submit" form="editEmployeeForm"
+                        class="px-4 py-2 rounded-md bg-primary text-white hover:bg-primary-dark cursor-pointer">Update</button>
+                </div>
             </div>
         </div>
 
         {{-- ========== View Employee Detail Modal ========== --}}
         <div x-show="openModal === 'viewEmployee'" x-cloak
-            class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs px-4">
-            <div @click.away="openModal=null" class="bg-white rounded-xl shadow-lg w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden">
+            class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs px-4 py-6">
+            <div @click.away="openModal=null" class="bg-white rounded-xl shadow-lg w-full max-w-2xl flex flex-col overflow-hidden" style="height: min(calc(100vh - 6rem), 600px); min-height: 0; display: flex; flex-direction: column;">
                 {{-- Fixed Header --}}
                 <div class="flex justify-between items-center border-b border-gray-200 px-6 py-4 bg-white rounded-t-xl flex-shrink-0">
                     <h3 class="text-lg font-semibold text-gray-900">Employee Detail</h3>
