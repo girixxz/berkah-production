@@ -740,14 +740,14 @@
                 <div x-show="showImageModal" @click="showImageModal = false; selectedImage = ''" class="fixed inset-0 bg-black/50 bg-opacity-50 backdrop-blur-xs transition-opacity"></div>
                 
                 {{-- Modal Panel --}}
-                <div class="flex items-center justify-center min-h-screen p-4">
-                    <div @click.stop class="relative max-w-4xl w-full flex justify-center">
-                        <button @click="showImageModal = false; selectedImage = ''" class="absolute -top-10 right-0 text-white hover:text-gray-300">
+                <div class="fixed inset-0 flex items-center justify-center p-4">
+                    <div @click.stop class="relative max-w-3xl w-full flex justify-center items-center" style="max-height: calc(100vh - 6rem);">
+                        <button @click="showImageModal = false; selectedImage = ''" class="absolute -top-10 right-0 text-white hover:text-gray-300 z-10">
                             <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
                             </svg>
                         </button>
-                        <img :src="selectedImage" class="max-h-[85vh] w-auto max-w-full rounded-lg shadow-2xl object-contain" alt="Payment proof">
+                        <img :src="selectedImage" class="max-w-full max-h-full rounded-lg shadow-2xl object-contain" style="max-height: calc(100vh - 10rem);" alt="Payment proof">
                     </div>
                 </div>
             </div>
