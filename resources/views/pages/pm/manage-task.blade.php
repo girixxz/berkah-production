@@ -649,14 +649,19 @@
                             <tr class="hover:bg-gray-50"
                                 x-show="matchesSearch($el)"
                                 data-invoice="{{ $order->invoice->invoice_no ?? '' }}"
-                                data-customer="{{ $order->customer->customer_name ?? '' }} {{ $order->customer->phone ?? '' }}">
+                                data-customer="{{ $order->customer->customer_name ?? '' }}">
                                 {{-- Customer --}}
                                 <td class="py-3 px-3">
                                     <div>
                                         <p class="text-gray-700 whitespace-nowrap">
                                             {{ $order->customer->customer_name ?? '-' }}</p>
                                         <p class="text-[10px] text-gray-500">
-                                            {{ $order->customer->phone ?? '-' }}</p>
+                                            @if($order->customer && $order->customer->phone)
+                                                {{ substr($order->customer->phone, 0, 4) }}****{{ substr($order->customer->phone, -3) }}
+                                            @else
+                                                -
+                                            @endif
+                                        </p>
                                     </div>
                                 </td>
 
@@ -680,14 +685,20 @@
 
                                 {{-- Date In --}}
                                 <td class="py-3 px-3 text-center">
-                                    <span
-                                        class="text-gray-700 text-[10px] whitespace-nowrap">{{ \Carbon\Carbon::parse($order->order_date)->format('d M Y') }}</span>
+                                    <div class="flex flex-col items-center leading-tight">
+                                        <span class="text-gray-900 text-sm font-semibold">{{ \Carbon\Carbon::parse($order->order_date)->format('d') }}</span>
+                                        <span class="text-gray-600 text-[10px]">{{ \Carbon\Carbon::parse($order->order_date)->format('M') }}</span>
+                                        <span class="text-gray-500 text-[9px]">{{ \Carbon\Carbon::parse($order->order_date)->format('Y') }}</span>
+                                    </div>
                                 </td>
 
                                 {{-- Date Out (Deadline) --}}
                                 <td class="py-3 px-3 text-center">
-                                    <span
-                                        class="text-gray-700 text-[10px] whitespace-nowrap">{{ \Carbon\Carbon::parse($order->deadline)->format('d M Y') }}</span>
+                                    <div class="flex flex-col items-center leading-tight">
+                                        <span class="text-gray-900 text-sm font-semibold">{{ \Carbon\Carbon::parse($order->deadline)->format('d') }}</span>
+                                        <span class="text-gray-600 text-[10px]">{{ \Carbon\Carbon::parse($order->deadline)->format('M') }}</span>
+                                        <span class="text-gray-500 text-[9px]">{{ \Carbon\Carbon::parse($order->deadline)->format('Y') }}</span>
+                                    </div>
                                 </td>
 
                                 {{-- Production Stages --}}
