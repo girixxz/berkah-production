@@ -1,5 +1,5 @@
 {{-- SHOW MODAL - Work Order Print Preview (A4 Format) --}}
-<div x-show="showModal" x-cloak class="fixed inset-0 z-50 overflow-y-auto"
+<div x-show="showModal" x-cloak class="fixed inset-0 z-50"
     @keydown.escape.window="showModal && closeShowModal()" aria-labelledby="modal-title" role="dialog" aria-modal="true">
 
     {{-- Background Overlay --}}
@@ -7,10 +7,10 @@
     </div>
 
     {{-- Modal Panel --}}
-    <div class="flex items-center justify-center h-screen px-4 py-8"  style="font-family: 'Times New Roman', Times, serif;">
+    <div class="fixed inset-0 flex items-center justify-center px-4 py-8" style="font-family: 'Times New Roman', Times, serif;">
         <div x-show="showModal"
             class="relative w-full max-w-4xl bg-white rounded-lg shadow-xl transform transition-all flex flex-col"
-            style="max-height: 95vh;" @click.away="closeShowModal()">
+            style="height: min(calc(100vh - 4rem), 95vh); min-height: 0;" @click.away="closeShowModal()">
 
             {{-- Modal Header --}}
             <div class="px-6 py-4 border-b border-gray-200 bg-gray-50 flex-shrink-0">

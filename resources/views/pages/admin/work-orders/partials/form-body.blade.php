@@ -1,5 +1,5 @@
 {{-- ================= WORK ORDER FORM BODY ================= --}}
-<form x-ref="workOrderForm" method="POST" action="{{ route('admin.work-orders.store') }}"
+<form id="workOrderForm" x-ref="workOrderForm" method="POST" action="{{ route('admin.work-orders.store') }}"
                 enctype="multipart/form-data">
                 @csrf
                 <input type="hidden" name="order_id" value="{{ $order->id }}">
@@ -13,7 +13,7 @@
                 <input type="hidden" name="delete_sewing_detail_img" x-model="deletedImages.sewing_detail_img">
                 <input type="hidden" name="delete_hangtag_img" x-model="deletedImages.hangtag_img">
 
-                <div class="p-5 space-y-6 max-h-[70vh] overflow-y-auto">
+                <div class="px-6 py-4 space-y-6">
 
                     {{-- Display Backend Validation Errors --}}
                     @if ($errors->any())
@@ -1201,26 +1201,5 @@
                         </div>
                     </div>
 
-                </div>
-
-                {{-- Modal Footer --}}
-                <div class="flex justify-end gap-3 p-5 border-t border-gray-200">
-                    <button type="button" @click="closeModal()" :disabled="isSubmitting"
-                        class="px-4 py-2 rounded-md bg-gray-100 hover:bg-gray-200 text-gray-700 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed">
-                        Cancel
-                    </button>
-                    <button type="button" @click="handleSubmit()" :disabled="isSubmitting"
-                        class="px-4 py-2 rounded-md bg-primary text-white hover:bg-primary-dark cursor-pointer disabled:opacity-70 disabled:cursor-not-allowed flex items-center gap-2">
-                        {{-- Loading Spinner --}}
-                        <svg x-show="isSubmitting" x-cloak class="animate-spin h-4 w-4 text-white"
-                            xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor"
-                                stroke-width="4"></circle>
-                            <path class="opacity-75" fill="currentColor"
-                                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
-                            </path>
-                        </svg>
-                        <span x-text="isSubmitting ? 'Processing...' : 'Save Work Order'"></span>
-                    </button>
                 </div>
             </form>
