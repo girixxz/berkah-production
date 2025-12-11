@@ -26,6 +26,7 @@ window.NProgress = NProgress;
 
 // Track actual navigation (bukan prefetch)
 let isNavigating = false;
+let loadTimeout;
 
 // Integrate NProgress with Turbo events
 // Hanya start saat BENAR-BENAR KLIK (bukan prefetch)
@@ -39,15 +40,26 @@ document.addEventListener("turbo:before-fetch-request", (event) => {
     if (!isNavigating) {
         return;
     }
+    
+    // Set timeout untuk force reload jika stuck
+    clearTimeout(loadTimeout);
+    loadTimeout = setTimeout(() => {
+        console.warn("Turbo request timeout, forcing full reload");
+        NProgress.done();
+        isNavigating = false;
+        window.location.reload();
+    }, 5000); // 5 detik timeout
 });
 
 document.addEventListener("turbo:before-render", () => {
+    clearTimeout(loadTimeout);
     if (isNavigating) {
         NProgress.inc(); // Increment progress
     }
 });
 
 document.addEventListener("turbo:render", () => {
+    clearTimeout(loadTimeout);
     if (isNavigating) {
         NProgress.done();
         isNavigating = false;
@@ -55,6 +67,7 @@ document.addEventListener("turbo:render", () => {
 });
 
 document.addEventListener("turbo:load", () => {
+    clearTimeout(loadTimeout);
     if (isNavigating) {
         NProgress.done();
         isNavigating = false;
@@ -63,11 +76,13 @@ document.addEventListener("turbo:load", () => {
 
 // Handle errors
 document.addEventListener("turbo:fetch-request-error", () => {
+    clearTimeout(loadTimeout);
     NProgress.done();
     isNavigating = false;
+    // Optional: show error message to user
+    alert("Connection error. Page will reload.");
+    window.location.reload();
 });
-
-// ApexCharts
 import ApexCharts from "apexcharts";
 
 // Expose ApexCharts to global scope
