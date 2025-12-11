@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="id">
+<html lang="id" class="h-full">
 
 <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
     <title>Berkah Bermanfaat - Login</title>
 
     {{-- Pre-load critical assets untuk persiapan setelah login --}}
@@ -13,14 +13,25 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <style>
+        /* Force fixed height and prevent scroll */
+        html, body {
+            height: 100%;
+            overflow: hidden;
+            position: fixed;
+            width: 100%;
+        }
+    </style>
 </head>
 
-<body class="h-screen bg-gray-light flex items-center justify-center">
-    <main class="w-full max-w-md px-4 py-10">
-        <!-- Logo -->
-        <div class="flex justify-center mb-8">
-            <img src="{{ asset('images/brand.svg') }}" alt="Berkah Bermanfaat" class="h-24 md:h-28 w-auto">
-        </div>
+<body class="bg-gray-light">
+    <div class="h-full w-full flex items-center justify-center">
+        <main class="w-full max-w-md px-6">
+            <!-- Logo -->
+            <div class="flex justify-center mb-6">
+                <img src="{{ asset('images/brand.svg') }}" alt="Berkah Bermanfaat" class="h-20 md:h-24 w-auto">
+            </div>
 
         @if ($errors->has('username') || $errors->has('password') || session('auth_error'))
             <div class="text-center mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
@@ -128,7 +139,9 @@
                 Login
             </button>
         </form>
-    </main>
+        </main>
+    </div>
+    
     <!-- JS khusus untuk toggle password (diletakkan dekat komponennya) -->
     <script>
         (function() {
