@@ -268,8 +268,8 @@
         {{-- ===================== MODALS ===================== --}}
         {{-- ========== Add User Modal ========== --}}
         <div x-show="openModal === 'addUser'" x-cloak
-            class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs px-4">
-            <div @click.away="openModal=null" class="bg-white rounded-xl shadow-lg w-full max-w-lg max-h-[90vh] flex flex-col overflow-hidden">
+            class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs px-4 py-6">
+            <div @click.away="openModal=null" class="bg-white rounded-xl shadow-lg w-full max-w-lg" style="height: min(calc(100vh - 3rem), 600px); min-height: 0; display: flex; flex-direction: column;">
                 {{-- Fixed Header --}}
                 <div class="flex justify-between items-center px-6 py-4 border-b border-gray-200 flex-shrink-0 bg-white rounded-t-xl">
                     <h3 class="text-lg font-semibold text-gray-900">Add New User</h3>
