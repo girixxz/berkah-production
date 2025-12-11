@@ -268,15 +268,19 @@
         {{-- ===================== MODALS ===================== --}}
         {{-- ========== Add User Modal ========== --}}
         <div x-show="openModal === 'addUser'" x-cloak
-            class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 bg-opacity-50 backdrop-blur-xs transition-opacity px-4">
-            <div @click.away="openModal=null" class="bg-white rounded-xl shadow-lg w-full max-w-lg">
-                <div class="flex justify-between items-center px-6 py-4 border-b border-gray-200">
+            class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs px-4">
+            <div @click.away="openModal=null" class="bg-white rounded-xl shadow-lg w-full max-w-lg max-h-[90vh] flex flex-col overflow-hidden">
+                {{-- Fixed Header --}}
+                <div class="flex justify-between items-center px-6 py-4 border-b border-gray-200 flex-shrink-0 bg-white rounded-t-xl">
                     <h3 class="text-lg font-semibold text-gray-900">Add New User</h3>
                     <button @click="openModal=null" class="text-gray-400 hover:text-gray-600 cursor-pointer">✕</button>
                 </div>
-                <form action="{{ route('owner.manage-data.users.store') }}" method="POST"
-                    @submit="if (!validateAddUser()) $event.preventDefault()" class="px-6 py-4 space-y-4">
-                    @csrf
+                
+                {{-- Scrollable Content --}}
+                <div class="overflow-y-auto overflow-x-hidden flex-1 px-6 py-4">
+                    <form id="addUserForm" action="{{ route('owner.manage-data.users.store') }}" method="POST"
+                        @submit="if (!validateAddUser()) $event.preventDefault()" class="space-y-4">
+                        @csrf
                     {{-- Full Name --}}
                     <div>
                         <label class="block text-sm font-medium text-gray-700">Fullname <span
@@ -439,13 +443,16 @@
                             <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                         @enderror
                     </div>
-                    <div class="flex justify-end gap-3 pt-4">
-                        <button type="button" @click="openModal=null"
-                            class="px-4 py-2 rounded-md bg-gray-100 hover:bg-gray-200 text-gray-700 cursor-pointer">Cancel</button>
-                        <button type="submit"
-                            class="px-4 py-2 rounded-md bg-primary text-white hover:bg-primary-dark cursor-pointer">Save</button>
-                    </div>
-                </form>
+                    </form>
+                </div>
+                
+                {{-- Fixed Footer --}}
+                <div class="flex justify-end gap-3 px-6 py-4 border-t border-gray-200 flex-shrink-0 bg-white rounded-b-xl">
+                    <button type="button" @click="openModal=null"
+                        class="px-4 py-2 rounded-md bg-gray-100 hover:bg-gray-200 text-gray-700 cursor-pointer">Cancel</button>
+                    <button type="submit" form="addUserForm"
+                        class="px-4 py-2 rounded-md bg-primary text-white hover:bg-primary-dark cursor-pointer">Save</button>
+                </div>
             </div>
         </div>
 
