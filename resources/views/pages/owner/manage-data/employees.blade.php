@@ -7,6 +7,7 @@
     <div x-data="{
         openModal: '{{ session('openModal') }}',
         editEmployee: {},
+        viewEmployee: {},
         searchEmployee: '',
         editEmployeeErrors: {},
     
@@ -132,6 +133,10 @@
                 this.editEmployee.work_month = '';
                 this.editEmployee.work_year = '';
             }
+        },
+
+        setViewEmployee(employee) {
+            this.viewEmployee = employee;
         }
     }">
 
@@ -160,14 +165,14 @@
                     <table class="min-w-[450px] w-full text-sm">
                         <thead class="sticky top-0 bg-primary-light text-font-base z-10">
                             <tr>
-                                <th class="py-2 px-4 text-left rounded-l-md">No</th>
-                                <th class="py-2 px-4 text-left">Fullname</th>
-                                <th class="py-2 px-4 text-left">Birth Date</th>
-                                <th class="py-2 px-4 text-left">Work Date</th>
-                                <th class="py-2 px-4 text-left">Dress Size</th>
-                                <th class="py-2 px-4 text-left">Salary System</th>
-                                <th class="py-2 px-4 text-left">Address</th>
-                                <th class="py-2 px-4 text-right rounded-r-md">Action</th>
+                                <th class="py-2 px-4 text-left rounded-l-md w-16">No</th>
+                                <th class="py-2 px-4 text-left w-40">Fullname</th>
+                                <th class="py-2 px-4 text-left w-32">Birth Date</th>
+                                <th class="py-2 px-4 text-left w-32">Work Date</th>
+                                <th class="py-2 px-4 text-left w-24">Dress Size</th>
+                                <th class="py-2 px-4 text-left w-36">Salary System</th>
+                                <th class="py-2 px-4 text-left w-64">Address</th>
+                                <th class="py-2 px-4 text-right rounded-r-md w-20">Action</th>
                             </tr>
                         </thead>
                         <tbody id="employees-tbody">
@@ -197,7 +202,11 @@
                                             {{ $employee->salary_system ?? '-' }}
                                         @endif
                                     </td>
-                                    <td class="py-2 px-4">{{ $employee->address ?? '-' }}</td>
+                                    <td class="py-2 px-4 max-w-64">
+                                        <div class="truncate" title="{{ $employee->address ?? '-' }}">
+                                            {{ $employee->address ?? '-' }}
+                                        </div>
+                                    </td>
 
                                     <td class="py-2 px-4 text-right">
                                         <div class="relative inline-block text-left" x-data="{
@@ -254,6 +263,22 @@
                                                 :style="dropdownStyle"
                                                 class="rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-[9999]">
                                                 <div class="py-1">
+                                                    {{-- View Detail --}}
+                                                    <button
+                                                        @click="setViewEmployee({{ $employee->toJson() }}); openModal = 'viewEmployee'; open = false"
+                                                        class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2">
+                                                        <svg class="w-4 h-4" fill="none" stroke="currentColor"
+                                                            viewBox="0 0 24 24">
+                                                            <path stroke-linecap="round" stroke-linejoin="round"
+                                                                stroke-width="2"
+                                                                d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                                            <path stroke-linecap="round" stroke-linejoin="round"
+                                                                stroke-width="2"
+                                                                d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                                        </svg>
+                                                        View Detail
+                                                    </button>
+
                                                     {{-- Edit --}}
                                                     <button
                                                         @click="setEditEmployee({{ $employee->toJson() }}); openModal = 'editEmployee'; open = false"
@@ -647,5 +672,167 @@
                 </form>
             </div>
         </div>
+
+        {{-- ========== View Employee Detail Modal ========== --}}
+        <div x-show="openModal === 'viewEmployee'" x-cloak
+            class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs px-4">
+            <div @click.away="openModal=null" class="bg-white rounded-xl shadow-lg w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden">
+                {{-- Fixed Header --}}
+                <div class="flex justify-between items-center border-b border-gray-200 px-6 py-4 bg-white rounded-t-xl flex-shrink-0">
+                    <h3 class="text-lg font-semibold text-gray-900">Employee Detail</h3>
+                    <button @click="openModal=null" class="text-gray-400 hover:text-gray-600 cursor-pointer">✕</button>
+                </div>
+
+                {{-- Scrollable Content --}}
+                <div class="overflow-y-auto overflow-x-hidden flex-1 px-6 py-4">
+                    <div class="space-y-4 max-w-full">
+                    {{-- Full Name --}}
+                    <div class="border-b border-gray-100 pb-3">
+                        <label class="block text-xs font-medium text-gray-500 mb-1">Full Name</label>
+                        <p class="text-sm font-medium text-gray-900 break-words" x-text="viewEmployee.fullname || '-'"></p>
+                    </div>
+
+                    {{-- Phone Number --}}
+                    <div class="border-b border-gray-100 pb-3">
+                        <label class="block text-xs font-medium text-gray-500 mb-1">Phone Number</label>
+                        <p class="text-sm text-gray-900 break-words" x-text="viewEmployee.phone_number || '-'"></p>
+                    </div>
+
+                    {{-- Role --}}
+                    <div class="border-b border-gray-100 pb-3">
+                        <label class="block text-xs font-medium text-gray-500 mb-1">Role</label>
+                        <p class="text-sm text-gray-900">
+                            <span x-show="viewEmployee.role === 'owner'" class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+                                Owner
+                            </span>
+                            <span x-show="viewEmployee.role === 'admin'" class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                Admin
+                            </span>
+                            <span x-show="viewEmployee.role === 'pm'" class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                Project Manager
+                            </span>
+                            <span x-show="viewEmployee.role === 'karyawan'" class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                                Karyawan
+                            </span>
+                        </p>
+                    </div>
+
+                    {{-- Birth Date --}}
+                    <div class="border-b border-gray-100 pb-3">
+                        <label class="block text-xs font-medium text-gray-500 mb-1">Birth Date</label>
+                        <p class="text-sm text-gray-900">
+                            <template x-if="viewEmployee.birth_date">
+                                <span x-text="new Date(viewEmployee.birth_date).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })"></span>
+                            </template>
+                            <template x-if="!viewEmployee.birth_date">
+                                <span>-</span>
+                            </template>
+                        </p>
+                    </div>
+
+                    {{-- Work Date --}}
+                    <div class="border-b border-gray-100 pb-3">
+                        <label class="block text-xs font-medium text-gray-500 mb-1">Work Date</label>
+                        <p class="text-sm text-gray-900 break-words" x-text="viewEmployee.work_date || '-'"></p>
+                    </div>
+
+                    {{-- Dress Size --}}
+                    <div class="border-b border-gray-100 pb-3">
+                        <label class="block text-xs font-medium text-gray-500 mb-1">Dress Size</label>
+                        <p class="text-sm text-gray-900" x-text="viewEmployee.dress_size || '-'"></p>
+                    </div>
+
+                    {{-- Salary System --}}
+                    <div class="border-b border-gray-100 pb-3">
+                        <label class="block text-xs font-medium text-gray-500 mb-1">Salary System</label>
+                        <p class="text-sm text-gray-900">
+                            <template x-if="viewEmployee.salary_system && viewEmployee.salary_cycle">
+                                <span x-text="`${viewEmployee.salary_system} (${viewEmployee.salary_cycle}x)`"></span>
+                            </template>
+                            <template x-if="!viewEmployee.salary_system || !viewEmployee.salary_cycle">
+                                <span x-text="viewEmployee.salary_system || '-'"></span>
+                            </template>
+                        </p>
+                    </div>
+
+                    {{-- Address with Copy Icon --}}
+                    <div class="border-b border-gray-100 pb-3">
+                        <label class="block text-xs font-medium text-gray-500 mb-1">Address</label>
+                        <div class="flex items-start gap-2 max-w-full">
+                            <p class="text-sm text-gray-900 flex-1 break-all min-w-0" x-text="viewEmployee.address || '-'"></p>
+                            <template x-if="viewEmployee.address">
+                                <button 
+                                    type="button"
+                                    :data-text="viewEmployee.address"
+                                    onclick="copyEmployeeText(this)"
+                                    class="relative text-gray-400 hover:text-primary transition-colors cursor-pointer flex-shrink-0 mt-0.5"
+                                    title="Copy address">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                                            d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                                    </svg>
+                                </button>
+                            </template>
+                        </div>
+                    </div>
+                    </div>
+                </div>
+
+                {{-- Fixed Footer --}}
+                <div class="flex justify-end gap-3 px-6 py-4 border-t border-gray-200 bg-white rounded-b-xl flex-shrink-0">
+                    <button type="button" @click="openModal=null"
+                        class="px-4 py-2 rounded-md bg-gray-100 hover:bg-gray-200 text-gray-700 cursor-pointer">Close</button>
+                </div>
+            </div>
+        </div>
     </div>
 @endsection
+
+@push('scripts')
+    {{-- Copy to Clipboard Function for Employee --}}
+    <script>
+        function copyEmployeeText(button) {
+            const text = button.getAttribute('data-text');
+            
+            if (!text) {
+                console.error('No text to copy');
+                return;
+            }
+            
+            // Fallback copy method (works in all browsers)
+            const textarea = document.createElement('textarea');
+            textarea.value = text;
+            textarea.style.position = 'fixed';
+            textarea.style.opacity = '0';
+            document.body.appendChild(textarea);
+            textarea.select();
+            textarea.setSelectionRange(0, 99999); // For mobile devices
+            
+            try {
+                const successful = document.execCommand('copy');
+                if (successful) {
+                    console.log('Copied:', text);
+                    
+                    // Create tooltip
+                    const tooltip = document.createElement('div');
+                    tooltip.textContent = 'Copied!';
+                    tooltip.className = 'absolute bg-gray-900 text-white text-xs px-2 py-1 rounded shadow-lg -top-8 left-1/2 transform -translate-x-1/2 z-50';
+                    tooltip.style.whiteSpace = 'nowrap';
+                    
+                    // Position relative to button
+                    button.style.position = 'relative';
+                    button.appendChild(tooltip);
+                    
+                    // Remove tooltip after 1.5 seconds
+                    setTimeout(function() {
+                        tooltip.remove();
+                    }, 1500);
+                }
+            } catch (err) {
+                console.error('Failed to copy:', err);
+            }
+            
+            document.body.removeChild(textarea);
+        }
+    </script>
+@endpush
