@@ -100,7 +100,7 @@
                             <div class="flex justify-center px-2 py-4">
                                 <img :src="(() => {
                                     const workOrder = showData?.work_order;
-                                    if (!workOrder || !workOrder.id || !workOrder.mockup_img_url) return '/images/work-order-null.png';
+                                    if (!workOrder || !workOrder.id || !workOrder.mockup_img_url) return '/images/work-order-null.png?v=' + Date.now();
                                     return '{{ route('work-orders.serve-mockup-image', ['workOrder' => '__ID__']) }}'.replace('__ID__', workOrder.id);
                                 })()"
                                     alt="Mockup" class="max-h-92 w-auto object-contain">
@@ -118,7 +118,7 @@
                                 <div class="p-2 bg-white flex justify-center items-center mt-2" style="height: 160px;">
                                     <img :src="(() => {
                                         const cutting = showData?.work_order?.cutting;
-                                        if (!cutting || !cutting.id || !cutting.custom_size_chart_img_url) return '/images/work-order-null.png';
+                                        if (!cutting || !cutting.id || !cutting.custom_size_chart_img_url) return '/images/work-order-null.png?v=' + Date.now();
                                         return '{{ route('work-orders.serve-cutting-image', ['cutting' => '__ID__']) }}'.replace('__ID__', cutting.id);
                                     })()"
                                         alt="Size Chart" class="max-h-[160px] w-auto object-contain">
