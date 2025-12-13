@@ -271,12 +271,22 @@
                                 @endif
 
                                 {{-- Remaining Due --}}
-                                <tr style="background-color: #dc2626;">
-                                    <td style="padding: 10px 12px; font-weight: 800; font-size: 14px; color: #ffffff;">Remaining Due</td>
-                                    <td style="padding: 10px 12px; text-align: right; font-weight: 800; font-size: 14px; color: #ffffff;">
-                                        Rp {{ number_format($remainingDue, 0, ',', '.') }}
-                                    </td>
-                                </tr>
+                                @if($remainingDue == 0)
+                                    {{-- LUNAS --}}
+                                    <tr style="background-color: #5a5a5a;">
+                                        <td colspan="2" style="padding: 12px; text-align: center; font-weight: 800; font-size: 20px; color: #ffffff;">
+                                            LUNAS
+                                        </td>
+                                    </tr>
+                                @else
+                                    {{-- Still have remaining due --}}
+                                    <tr style="background-color: #dc2626;">
+                                        <td style="padding: 10px 12px; font-weight: 800; font-size: 14px; color: #ffffff;">Remaining Due</td>
+                                        <td style="padding: 10px 12px; text-align: right; font-weight: 800; font-size: 14px; color: #ffffff;">
+                                            Rp {{ number_format($remainingDue, 0, ',', '.') }}
+                                        </td>
+                                    </tr>
+                                @endif
                             </table>
                         </div>
                     </td>

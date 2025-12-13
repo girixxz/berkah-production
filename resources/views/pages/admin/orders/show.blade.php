@@ -643,11 +643,23 @@
                 </div>
 
                 {{-- Remaining Due --}}
-                <div class="bg-gradient-to-br from-red-100 to-red-50 border border-red-300 rounded-lg p-4 shadow-sm">
-                    <p class="text-sm font-semibold text-red-700 mb-1">Remaining Due</p>
-                    <p class="text-2xl font-bold text-red-600">Rp
-                        {{ number_format($order->invoice->amount_due ?? 0, 0, ',', '.') }}</p>
-                </div>
+                @php
+                    $remainingDueAmount = $order->invoice->amount_due ?? 0;
+                @endphp
+                
+                @if($remainingDueAmount == 0)
+                    {{-- LUNAS - Same style as Total Price --}}
+                    <div class="bg-gradient-to-br from-gray-400 to-gray-300 rounded-lg p-4 shadow-sm items-center justify-center flex">
+                        <p class="text-3xl font-extrabold text-white">PAID OFF</p>
+                    </div>
+                @else
+                    {{-- Still have remaining due --}}
+                    <div class="bg-gradient-to-br from-red-100 to-red-50 border border-red-300 rounded-lg p-4 shadow-sm">
+                        <p class="text-sm font-semibold text-red-700 mb-1">Remaining Due</p>
+                        <p class="text-2xl font-bold text-red-600">Rp
+                            {{ number_format($remainingDueAmount, 0, ',', '.') }}</p>
+                    </div>
+                @endif
             </div>
 
             {{-- Payment Table --}}
@@ -1344,12 +1356,20 @@
                                             @endif
 
                                             {{-- Remaining Due --}}
-                                            <div class="flex justify-between items-center py-2.5 px-3 bg-red-600">
-                                                <span class="text-sm font-extrabold text-white">Remaining Due</span>
-                                                <span class="text-sm font-extrabold text-white">
-                                                    Rp {{ number_format($remainingDue, 0, ',', '.') }}
-                                                </span>
-                                            </div>
+                                            @if($remainingDue == 0)
+                                                {{-- LUNAS --}}
+                                                <div class="py-3 px-3 bg-[#5a5a5a] text-center">
+                                                    <span class="text-2xl font-extrabold text-white">LUNAS</span>
+                                                </div>
+                                            @else
+                                                {{-- Still have remaining due --}}
+                                                <div class="flex justify-between items-center py-2.5 px-3 bg-red-600">
+                                                    <span class="text-sm font-extrabold text-white">Remaining Due</span>
+                                                    <span class="text-sm font-extrabold text-white">
+                                                        Rp {{ number_format($remainingDue, 0, ',', '.') }}
+                                                    </span>
+                                                </div>
+                                            @endif
                                         </div>
                                     </div>
                                 </div>
