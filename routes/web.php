@@ -166,9 +166,6 @@ Route::middleware(['auth'])->group(function () {
             ->name('work-orders.update');
         Route::get('work-orders/{order}/finalize', [\App\Http\Controllers\WorkOrderController::class, 'finalize'])->name('work-orders.finalize');
         
-        // Work Order PDF Download
-        Route::get('work-orders/{workOrder}/download-pdf', [\App\Http\Controllers\WorkOrderController::class, 'downloadPdf'])->name('work-orders.download-pdf');
-        
         Route::get('payment-history', [\App\Http\Controllers\PaymentHistoryController::class, 'index'])->name('payment-history');
 
         // Customers
@@ -203,6 +200,9 @@ Route::middleware(['auth'])->group(function () {
     /* ---------- SHARED IMAGE ROUTES (ALL AUTHENTICATED USERS) ---------- */
     // These routes are accessible by all authenticated users (owner, admin, pm, karyawan)
     // Controllers will handle authorization internally
+    
+    // Work Order PDF Download (ALL ROLES)
+    Route::get('admin/work-orders/{workOrder}/download-pdf', [\App\Http\Controllers\WorkOrderController::class, 'downloadPdf'])->name('admin.work-orders.download-pdf');
     
     // Payment Images
     Route::get('payments/{payment}/image', [\App\Http\Controllers\PaymentController::class, 'serveImage'])->name('payments.serve-image');
