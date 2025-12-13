@@ -320,7 +320,7 @@
                             <div class="flex justify-center items-center px-2 py-4">
                                 <img :src="(() => {
                                     const printing = showData?.work_order?.printing;
-                                    if (!printing || !printing.id || !printing.detail_img_url) return '/images/work-order-null.png';
+                                    if (!printing || !printing.id || !printing.detail_img_url) return '/images/work-order-null.png?v=' + Date.now();
                                     return '{{ route('work-orders.serve-printing-image', ['printing' => '__ID__']) }}'.replace('__ID__', printing.id);
                                 })()"
                                     alt="Mockup" class="max-h-235 w-auto object-contain">
@@ -361,7 +361,7 @@
                             <div class="flex justify-center items-center px-2 py-4">
                                 <img :src="(() => {
                                     const placement = showData?.work_order?.printing_placement;
-                                    if (!placement || !placement.id || !placement.detail_img_url) return '/images/work-order-null.png';
+                                    if (!placement || !placement.id || !placement.detail_img_url) return '/images/work-order-null.png?v=' + Date.now();
                                     return '{{ route('work-orders.serve-placement-image', ['placement' => '__ID__']) }}'.replace('__ID__', placement.id);
                                 })()"
                                     alt="Mockup" class="max-h-235 w-auto object-contain">
@@ -416,7 +416,7 @@
                                     <div class="p-2 bg-white flex justify-center items-center h-54">
                                         <img :src="(() => {
                                             const sewing = showData?.work_order?.sewing;
-                                            if (!sewing || !sewing.id || !sewing.detail_img_url) return '/images/work-order-null.png';
+                                            if (!sewing || !sewing.id || !sewing.detail_img_url) return '/images/work-order-null.png?v=' + Date.now();
                                             return '{{ route('work-orders.serve-sewing-image', ['sewing' => '__ID__']) }}'.replace('__ID__', sewing.id);
                                         })()"
                                             alt="Posisi Label" class="h-50 w-auto object-contain">
@@ -518,7 +518,7 @@
                                     <div class="p-2 bg-white flex justify-center items-center h-54">
                                         <img :src="(() => {
                                             const packing = showData?.work_order?.packing;
-                                            if (!packing || !packing.id || !packing.hangtag_img_url) return '/images/work-order-null.png';
+                                            if (!packing || !packing.id || !packing.hangtag_img_url) return '/images/work-order-null.png?v=' + Date.now();
                                             return '{{ route('work-orders.serve-packing-image', ['packing' => '__ID__']) }}'.replace('__ID__', packing.id);
                                         })()"
                                             alt="Posisi Hangtag" class="h-50 w-auto object-contain">
