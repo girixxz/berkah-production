@@ -1358,7 +1358,7 @@
                                             {{-- Remaining Due --}}
                                             @if($remainingDue == 0)
                                                 {{-- LUNAS --}}
-                                                <div class="py-3 px-3 bg-[#5a5a5a] text-center">
+                                                <div class="py-3 px-3 bg-red-500 text-center">
                                                     <span class="text-2xl font-extrabold text-white">LUNAS</span>
                                                 </div>
                                             @else

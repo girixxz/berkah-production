@@ -273,7 +273,7 @@
                                 {{-- Remaining Due --}}
                                 @if($remainingDue == 0)
                                     {{-- LUNAS --}}
-                                    <tr style="background-color: #5a5a5a;">
+                                    <tr style="background-color: #dc2626;">
                                         <td colspan="2" style="padding: 12px; text-align: center; font-weight: 800; font-size: 20px; color: #ffffff;">
                                             LUNAS
                                         </td>
