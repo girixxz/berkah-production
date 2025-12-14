@@ -12,32 +12,12 @@ class UserSeeder extends Seeder
      */
     public function run(): void
     {
-        // Create one user for each role
-        User::factory()->create([
-            'fullname' => 'Owner User',
-            'username' => 'owner',
+        // Create default owner user
+        User::create([
+            'fullname' => 'STGRMFG',
+            'username' => 'stgrmfg',
+            'password' => bcrypt('berkahmanfaat123#'),
             'role' => 'owner',
         ]);
-
-        User::factory()->create([
-            'fullname' => 'Admin User',
-            'username' => 'admin',
-            'role' => 'admin',
-        ]);
-
-        User::factory()->create([
-            'fullname' => 'PM User',
-            'username' => 'pm',
-            'role' => 'pm',
-        ]);
-
-        User::factory()->create([
-            'fullname' => 'Karyawan User',
-            'username' => 'karyawan',
-            'role' => 'karyawan',
-        ]);
-
-        // Create additional random users
-        // User::factory(10)->create();
     }
 }

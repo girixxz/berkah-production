@@ -20,12 +20,11 @@ class DatabaseSeeder extends Seeder
         $this->call([
             UserSeeder::class,
             SaleSeeder::class,
-            // LocationSeeder::class, // No longer needed - using API
             ProductSeeder::class,
             ProductionStageSeeder::class,
-            WorkOrderDataSeeder::class, // Work Order Master Data
+            WorkOrderDataSeeder::class,
             CustomerSeeder::class,
-            // OrderSeeder::class,
+            OrderSeeder::class,
             WorkOrderDataSeeder::class
         ]);
     }
