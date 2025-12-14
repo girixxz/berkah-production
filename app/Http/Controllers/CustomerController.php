@@ -27,7 +27,7 @@ class CustomerController extends Controller
             })
             ->withCount('orders')
             ->withSum('orders', 'total_qty')
-            ->orderBy('created_at', 'desc')
+            ->orderBy('id', 'desc')
             ->paginate($perPage, ['*'], 'customer_page');
 
         // Get all customers with same filters for client-side search
@@ -38,7 +38,7 @@ class CustomerController extends Controller
             })
             ->withCount('orders')
             ->withSum('orders', 'total_qty')
-            ->orderBy('created_at', 'desc')
+            ->orderBy('id', 'desc')
             ->get();
 
         // No longer passing provinces - will be loaded via AJAX
