@@ -105,6 +105,16 @@
                     this.editEmployeeErrors = {};
                 }
             });
+
+            // Scroll to section after redirect from update
+            @if (session('scrollToSection'))
+                const section = document.getElementById('{{ session('scrollToSection') }}');
+                if (section) {
+                    setTimeout(() => {
+                        section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    }, 100);
+                }
+            @endif
         },
         
         setEditEmployee(employee) {
@@ -175,13 +185,17 @@
                                 <th class="py-2 px-4 text-right rounded-r-md w-20">Action</th>
                             </tr>
                         </thead>
-                        <tbody id="employees-tbody">
+                        <tbody id="employees-tbody" x-data="{
+                            get hasResults() {
+                                if (searchEmployee.trim() === '') return true;
+                                const search = searchEmployee.toLowerCase();
+                                return {{ Js::from($allEmployees->map(fn($e) => strtolower($e->fullname . ' ' . ($e->address ?? '')))) }}
+                                    .some(text => text.includes(search));
+                            }
+                        }">
                             @forelse ($employees as $employee)
                                 <tr class="border-t border-gray-200"
-                                    x-show="
-                                        {{ Js::from(strtolower($employee->fullname . ' ' . ($employee->address ?? ''))) }}
-                                        .includes(searchEmployee.toLowerCase())
-                                    ">
+                                    x-show="searchEmployee.trim() === ''">
                                     <td class="py-2 px-4">
                                         {{ ($employees->currentPage() - 1) * $employees->perPage() + $loop->iteration }}
                                     </td>
@@ -297,20 +311,140 @@
                                     </td>
                                 </tr>
                             @empty
-                                <tr>
+                                <tr x-show="searchEmployee.trim() === ''">
                                     <td colspan="8"
                                         class="py-3 px-4 text-center text-red-500 border-t border-gray-200">
                                         No Employees found.
                                     </td>
                                 </tr>
                             @endforelse
+
+                            @foreach ($allEmployees as $employee)
+                                <tr class="border-t border-gray-200"
+                                    x-show="searchEmployee.trim() !== '' && 
+                                        {{ Js::from(strtolower($employee->fullname . ' ' . ($employee->address ?? ''))) }}
+                                        .includes(searchEmployee.toLowerCase())">
+                                    <td class="py-2 px-4">{{ $loop->iteration }}</td>
+                                    <td class="py-2 px-4">{{ $employee->fullname }}</td>
+                                    <td class="py-2 px-4">
+                                        @if($employee->birth_date)
+                                            {{ \Carbon\Carbon::parse($employee->birth_date)->format('d M Y') }}
+                                        @else
+                                            -
+                                        @endif
+                                    </td>
+                                    <td class="py-2 px-4">{{ $employee->work_date ?? '-' }}</td>
+                                    <td class="py-2 px-4">{{ $employee->dress_size ?? '-' }}</td>
+                                    <td class="py-2 px-4">
+                                        @if($employee->salary_system && $employee->salary_cycle)
+                                            {{ $employee->salary_system }} ({{ $employee->salary_cycle }}x)
+                                        @else
+                                            {{ $employee->salary_system ?? '-' }}
+                                        @endif
+                                    </td>
+                                    <td class="py-2 px-4 max-w-64">
+                                        <div class="truncate" title="{{ $employee->address ?? '-' }}">
+                                            {{ $employee->address ?? '-' }}
+                                        </div>
+                                    </td>
+
+                                    <td class="py-2 px-4 text-right">
+                                        <div class="relative inline-block text-left" x-data="{
+                                            open: false,
+                                            dropdownStyle: {},
+                                            checkPosition() {
+                                                const button = this.$refs.button;
+                                                const rect = button.getBoundingClientRect();
+                                                const spaceBelow = window.innerHeight - rect.bottom;
+                                                const spaceAbove = rect.top;
+                                                const dropUp = spaceBelow < 200 && spaceAbove > spaceBelow;
+                                        
+                                                if (dropUp) {
+                                                    this.dropdownStyle = {
+                                                        position: 'fixed',
+                                                        top: (rect.top - 90) + 'px',
+                                                        left: (rect.right - 160) + 'px',
+                                                        width: '160px'
+                                                    };
+                                                } else {
+                                                    this.dropdownStyle = {
+                                                        position: 'fixed',
+                                                        top: (rect.bottom + 8) + 'px',
+                                                        left: (rect.right - 160) + 'px',
+                                                        width: '160px'
+                                                    };
+                                                }
+                                            }
+                                        }"
+                                            x-init="$watch('open', value => {
+                                                if (value) {
+                                                    const scrollContainer = $el.closest('.overflow-y-auto');
+                                                    const mainContent = document.querySelector('main');
+                                                    const closeOnScroll = () => { open = false; };
+                                            
+                                                    scrollContainer?.addEventListener('scroll', closeOnScroll);
+                                                    mainContent?.addEventListener('scroll', closeOnScroll);
+                                                    window.addEventListener('resize', closeOnScroll);
+                                                }
+                                            })">
+                                            <button x-ref="button" @click="checkPosition(); open = !open" type="button"
+                                                class="cursor-pointer inline-flex items-center justify-center w-8 h-8 rounded-md border border-gray-300 text-gray-600 hover:bg-gray-100"
+                                                title="Actions">
+                                                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                                    <path
+                                                        d="M6 10a2 2 0 11-4 0 2 2 0 014 0zM12 10a2 2 0 11-4 0 2 2 0 014 0zM16 12a2 2 0 100-4 2 2 0 000 4z" />
+                                                </svg>
+                                            </button>
+
+                                            <div x-show="open" @click.away="open = false" x-transition
+                                                :style="dropdownStyle"
+                                                class="rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-[9999]">
+                                                <div class="py-1">
+                                                    <button
+                                                        @click="setViewEmployee({{ $employee->toJson() }}); openModal = 'viewEmployee'; open = false"
+                                                        class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2">
+                                                        <svg class="w-4 h-4" fill="none" stroke="currentColor"
+                                                            viewBox="0 0 24 24">
+                                                            <path stroke-linecap="round" stroke-linejoin="round"
+                                                                stroke-width="2"
+                                                                d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                                            <path stroke-linecap="round" stroke-linejoin="round"
+                                                                stroke-width="2"
+                                                                d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                                        </svg>
+                                                        View Detail
+                                                    </button>
+
+                                                    <button
+                                                        @click="setEditEmployee({{ $employee->toJson() }}); openModal = 'editEmployee'; open = false"
+                                                        class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2">
+                                                        <svg class="w-4 h-4" fill="none" stroke="currentColor"
+                                                            viewBox="0 0 24 24">
+                                                            <path stroke-linecap="round" stroke-linejoin="round"
+                                                                stroke-width="2"
+                                                                d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                                        </svg>
+                                                        Edit
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                </tr>
+                            @endforeach
+
+                            <tr x-show="searchEmployee.trim() !== '' && !hasResults">
+                                <td colspan="8" class="py-3 px-4 text-center text-red-500 border-t border-gray-200">
+                                    No results found for "<span x-text="searchEmployee"></span>"
+                                </td>
+                            </tr>
                         </tbody>
                     </table>
                 </div>
             </div>
 
             {{-- Pagination --}}
-            <div class="mt-4" id="employees-pagination-container">
+            <div class="mt-4" id="employees-pagination-container" x-show="searchEmployee.trim() === ''">
                 <x-custom-pagination :paginator="$employees" />
             </div>
         </section>
@@ -794,6 +928,49 @@
 @endsection
 
 @push('scripts')
+    {{-- AJAX Pagination for Employees --}}
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            setupPagination();
+        });
+
+        function setupPagination() {
+            const paginationContainer = document.getElementById('employees-pagination-container');
+            if (!paginationContainer) return;
+
+            paginationContainer.addEventListener('click', function(e) {
+                const link = e.target.closest('a[href]');
+                if (!link) return;
+
+                e.preventDefault();
+                const url = link.getAttribute('href');
+
+                fetch(url, {
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                })
+                .then(response => response.text())
+                .then(html => {
+                    const parser = new DOMParser();
+                    const doc = parser.parseFromString(html, 'text/html');
+                    
+                    const newSection = doc.querySelector('#employees-section');
+                    const currentSection = document.querySelector('#employees-section');
+                    
+                    if (newSection && currentSection) {
+                        currentSection.innerHTML = newSection.innerHTML;
+                        setupPagination();
+                        
+                        // Scroll to section top
+                        currentSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    }
+                })
+                .catch(error => console.error('Error:', error));
+            });
+        }
+    </script>
+
     {{-- Copy to Clipboard Function for Employee --}}
     <script>
         function copyEmployeeText(button) {

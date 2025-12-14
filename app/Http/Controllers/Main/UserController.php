@@ -16,13 +16,14 @@ class UserController extends Controller
     public function index(Request $request)
     {
         $users = User::orderBy('created_at', 'desc')->paginate(10);
+        $allUsers = User::orderBy('created_at', 'desc')->get();
 
         // Handle AJAX request for pagination
         if ($request->ajax()) {
-            return view('pages.owner.manage-data.users', compact('users'));
+            return view('pages.owner.manage-data.users', compact('users', 'allUsers'));
         }
 
-        return view('pages.owner.manage-data.users', compact('users'));
+        return view('pages.owner.manage-data.users', compact('users', 'allUsers'));
     }
 
     /**
@@ -49,6 +50,7 @@ class UserController extends Controller
         User::create($validated);
 
         return redirect()->route('owner.manage-data.users.index')
+            ->with('scrollToSection', 'users-section')
             ->with('message', 'User created successfully')
             ->with('alert-type', 'success');
     }
@@ -82,6 +84,7 @@ class UserController extends Controller
         $user->update($validated);
 
         return redirect()->route('owner.manage-data.users.index')
+            ->with('scrollToSection', 'users-section')
             ->with('message', 'User updated successfully')
             ->with('alert-type', 'success');
     }
@@ -94,6 +97,7 @@ class UserController extends Controller
         // Prevent deleting own account
         if ($user->id === auth()->id()) {
             return redirect()->route('owner.manage-data.users.index')
+                ->with('scrollToSection', 'users-section')
                 ->with('message', 'You cannot delete your own account')
                 ->with('alert-type', 'warning');
         }
@@ -101,6 +105,7 @@ class UserController extends Controller
         $user->delete();
 
         return redirect()->route('owner.manage-data.users.index')
+            ->with('scrollToSection', 'users-section')
             ->with('message', 'User deleted successfully')
             ->with('alert-type', 'success');
     }

@@ -17,6 +17,11 @@ class EmployeeController extends Controller
             ->orderBy('created_at', 'desc')
             ->paginate(10);
 
+        // Get all employees for search functionality
+        $allEmployees = User::where('role', '!=', 'owner')
+            ->orderBy('created_at', 'desc')
+            ->get();
+
         // Split work_date for each employee (format: "Month Year")
         foreach ($employees as $employee) {
             if ($employee->work_date) {
@@ -29,12 +34,24 @@ class EmployeeController extends Controller
             }
         }
 
-        // Handle AJAX request for pagination
-        if ($request->ajax()) {
-            return view('pages.owner.manage-data.employees', compact('employees'));
+        // Split work_date for all employees
+        foreach ($allEmployees as $employee) {
+            if ($employee->work_date) {
+                $parts = explode(' ', $employee->work_date);
+                $employee->work_month = $parts[0] ?? '';
+                $employee->work_year = $parts[1] ?? '';
+            } else {
+                $employee->work_month = '';
+                $employee->work_year = '';
+            }
         }
 
-        return view('pages.owner.manage-data.employees', compact('employees'));
+        // Handle AJAX request for pagination
+        if ($request->ajax()) {
+            return view('pages.owner.manage-data.employees', compact('employees', 'allEmployees'));
+        }
+
+        return view('pages.owner.manage-data.employees', compact('employees', 'allEmployees'));
     }
 
     /**
@@ -113,6 +130,7 @@ class EmployeeController extends Controller
 
         return redirect()->route('owner.manage-data.employees.index')
             ->with('message', 'Employee updated successfully!')
-            ->with('alert-type', 'success');
+            ->with('alert-type', 'success')
+            ->with('scrollToSection', 'employees-section');
     }
 }

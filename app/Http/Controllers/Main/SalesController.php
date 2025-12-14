@@ -14,13 +14,14 @@ class SalesController extends Controller
     public function index(Request $request)
     {
         $sales = Sale::orderBy('created_at', 'desc')->paginate(10);
+        $allSales = Sale::orderBy('created_at', 'desc')->get();
 
         // Handle AJAX request for pagination
         if ($request->ajax()) {
-            return view('pages.owner.manage-data.sales', compact('sales'));
+            return view('pages.owner.manage-data.sales', compact('sales', 'allSales'));
         }
 
-        return view('pages.owner.manage-data.sales', compact('sales'));
+        return view('pages.owner.manage-data.sales', compact('sales', 'allSales'));
     }
 
     /**
@@ -39,6 +40,7 @@ class SalesController extends Controller
         Sale::create($validated);
 
         return redirect()->route('owner.manage-data.sales.index')
+            ->with('scrollToSection', 'sales-section')
             ->with('message', 'Sales created successfully')
             ->with('alert-type', 'success');
     }
@@ -59,6 +61,7 @@ class SalesController extends Controller
         $sale->update($validated);
 
         return redirect()->route('owner.manage-data.sales.index')
+            ->with('scrollToSection', 'sales-section')
             ->with('message', 'Sales updated successfully')
             ->with('alert-type', 'success');
     }
@@ -71,6 +74,7 @@ class SalesController extends Controller
         $sale->delete();
 
         return redirect()->route('owner.manage-data.sales.index')
+            ->with('scrollToSection', 'sales-section')
             ->with('message', 'Sales deleted successfully')
             ->with('alert-type', 'success');
     }
