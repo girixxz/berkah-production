@@ -35,6 +35,7 @@ class ManageProductsController extends Controller
         $perPageService = $request->input('per_page_service', 5);
         $perPageService = in_array($perPageService, [5, 10, 15, 20, 25]) ? $perPageService : 5;
         
+        // Paginate data normally
         $productCategories = ProductCategory::orderBy('sort_order', 'asc')->paginate($perPageProduct, ['*'], 'product_page');
         $materialCategories = MaterialCategory::orderBy('sort_order', 'asc')->paginate($perPageMaterial, ['*'], 'material_page');
         $materialTextures = MaterialTexture::orderBy('sort_order', 'asc')->paginate($perPageTexture, ['*'], 'texture_page');
@@ -42,6 +43,14 @@ class ManageProductsController extends Controller
         $materialSizes = MaterialSize::orderBy('sort_order', 'asc')->paginate($perPageSize, ['*'], 'size_page');
         $allMaterialSizes = MaterialSize::orderBy('sort_order', 'asc')->get(); // For sort modal
         $services = Service::orderBy('sort_order', 'asc')->paginate($perPageService, ['*'], 'service_page');
+
+        // Get ALL data for client-side search filtering (untuk mengatasi masalah search di pagination)
+        $allProductCategories = ProductCategory::orderBy('sort_order', 'asc')->get();
+        $allMaterialCategories = MaterialCategory::orderBy('sort_order', 'asc')->get();
+        $allMaterialTextures = MaterialTexture::orderBy('sort_order', 'asc')->get();
+        $allMaterialSleeves = MaterialSleeve::orderBy('sort_order', 'asc')->get();
+        // $allMaterialSizes already exists
+        $allServices = Service::orderBy('sort_order', 'asc')->get();
 
         return view('pages.owner.manage-data.products', compact(
             'productCategories',
@@ -51,6 +60,11 @@ class ManageProductsController extends Controller
             'materialSizes',
             'allMaterialSizes',
             'services',
+            'allProductCategories',
+            'allMaterialCategories',
+            'allMaterialTextures',
+            'allMaterialSleeves',
+            'allServices',
         ));
     }
 }

@@ -309,10 +309,21 @@
                                 <th class="py-2 px-4 text-right rounded-r-md">Action</th>
                             </tr>
                         </thead>
-                        <tbody>
+                        <tbody x-data="{
+                            get hasResults() {
+                                if (this.searchProduct.trim() === '') return true;
+                                const products = [
+                                    @foreach ($allProductCategories as $product)
+                                        '{{ strtolower($product->product_name) }}',
+                                    @endforeach
+                                ];
+                                return products.some(name => name.includes(this.searchProduct.toLowerCase()));
+                            }
+                        }">
+                            {{-- Data Paginated (untuk tampilan normal) --}}
                             @forelse ($productCategories as $product)
                                 <tr class="border-t border-gray-200"
-                                    x-show="searchProduct.length < 1 || '{{ strtolower($product->product_name) }}'.includes(searchProduct.toLowerCase())">
+                                    x-show="searchProduct.trim() === ''">
                                     <td class="py-2 px-4">{{ $productCategories->firstItem() + $loop->index }}</td>
                                     <td class="py-2 px-4">{{ $product->product_name }}</td>
                                     <td class="py-2 px-4 text-right">
@@ -396,18 +407,119 @@
                                     </td>
                                 </tr>
                             @empty
-                                <tr>
+                                <tr x-show="searchProduct.trim() === ''">
                                     <td colspan="3" class="py-3 px-4 text-center text-red-500 border-t border-gray-200">
                                         No Product Categories found.
                                     </td>
                                 </tr>
                             @endforelse
+
+                            {{-- Data ALL (untuk search) --}}
+                            @foreach ($allProductCategories as $index => $product)
+                                <tr class="border-t border-gray-200"
+                                    x-show="searchProduct.trim() !== '' && '{{ strtolower($product->product_name) }}'.includes(searchProduct.toLowerCase())">
+                                    <td class="py-2 px-4">{{ $index + 1 }}</td>
+                                    <td class="py-2 px-4">{{ $product->product_name }}</td>
+                                    <td class="py-2 px-4 text-right">
+                                        <div class="relative inline-block text-left" x-data="{
+                                            open: false,
+                                            dropdownStyle: {},
+                                            checkPosition() {
+                                                const button = this.$refs.button;
+                                                const rect = button.getBoundingClientRect();
+                                                const spaceBelow = window.innerHeight - rect.bottom;
+                                                const spaceAbove = rect.top;
+                                                const dropUp = spaceBelow < 200 && spaceAbove > spaceBelow;
+                                        
+                                                if (dropUp) {
+                                                    this.dropdownStyle = {
+                                                        position: 'fixed',
+                                                        top: (rect.top - 90) + 'px',
+                                                        left: (rect.right - 160) + 'px',
+                                                        width: '160px'
+                                                    };
+                                                } else {
+                                                    this.dropdownStyle = {
+                                                        position: 'fixed',
+                                                        top: (rect.bottom + 8) + 'px',
+                                                        left: (rect.right - 160) + 'px',
+                                                        width: '160px'
+                                                    };
+                                                }
+                                            }
+                                        }"
+                                            x-init="$watch('open', value => {
+                                                if (value) {
+                                                    const scrollContainer = $el.closest('.overflow-y-auto');
+                                                    const mainContent = document.querySelector('main');
+                                                    const closeOnScroll = () => { open = false; };
+                                            
+                                                    scrollContainer?.addEventListener('scroll', closeOnScroll);
+                                                    mainContent?.addEventListener('scroll', closeOnScroll);
+                                                    window.addEventListener('resize', closeOnScroll);
+                                                }
+                                            })">
+                                            <button x-ref="button" @click="checkPosition(); open = !open" type="button"
+                                                class="cursor-pointer inline-flex items-center justify-center w-8 h-8 rounded-md border border-gray-300 text-gray-600 hover:bg-gray-100"
+                                                title="Actions">
+                                                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                                    <path
+                                                        d="M6 10a2 2 0 11-4 0 2 2 0 014 0zM12 10a2 2 0 11-4 0 2 2 0 014 0zM16 12a2 2 0 100-4 2 2 0 000 4z" />
+                                                </svg>
+                                            </button>
+
+                                            <div x-show="open" @click.away="open = false" x-transition
+                                                :style="dropdownStyle"
+                                                class="rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-[9999]">
+                                                <div class="py-1">
+                                                    <button
+                                                        @click="editProduct = {{ $product->toJson() }}; openModal = 'editProduct'; open = false"
+                                                        class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2">
+                                                        <svg class="w-4 h-4" fill="none" stroke="currentColor"
+                                                            viewBox="0 0 24 24">
+                                                            <path stroke-linecap="round" stroke-linejoin="round"
+                                                                stroke-width="2"
+                                                                d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                                        </svg>
+                                                        Edit
+                                                    </button>
+
+                                                    <button type="button"
+                                                        @click="showDeleteProductConfirm = {{ $product->id }}; open = false"
+                                                        class="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100 flex items-center gap-2">
+                                                        <svg class="w-4 h-4" fill="none" stroke="currentColor"
+                                                            viewBox="0 0 24 24">
+                                                            <path stroke-linecap="round" stroke-linejoin="round"
+                                                                stroke-width="2"
+                                                                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                                        </svg>
+                                                        Delete
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                </tr>
+                            @endforeach
+                            
+                            {{-- Empty state for search with no results --}}
+                            <tr x-show="searchProduct.trim() !== '' && !hasResults" x-cloak>
+                                <td colspan="3" class="py-8 px-4 text-center text-gray-500 border-t border-gray-200">
+                                    <div class="flex flex-col items-center gap-2">
+                                        <svg class="w-12 h-12 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                                        </svg>
+                                        <p class="text-sm font-medium">No products found</p>
+                                        <p class="text-xs text-gray-400">Try searching with a different keyword</p>
+                                    </div>
+                                </td>
+                            </tr>
                         </tbody>
                     </table>
                 </div>
 
-                <!-- Pagination -->
-                <div id="product-pagination-container" class="mt-4">
+                <!-- Pagination - Hide saat search aktif -->
+                <div x-show="searchProduct.trim() === ''" id="product-pagination-container" class="mt-4">
                     <x-custom-pagination :paginator="$productCategories" />
                 </div>
             </div>
@@ -533,10 +645,20 @@
                                 <th class="py-2 px-4 text-right rounded-r-sm">Action</th>
                             </tr>
                         </thead>
-                        <tbody>
+                        <tbody x-data="{
+                            get hasResults() {
+                                if (this.searchMaterial.trim() === '') return true;
+                                const materials = [
+                                    @foreach ($allMaterialCategories as $material)
+                                        '{{ strtolower($material->material_name) }}',
+                                    @endforeach
+                                ];
+                                return materials.some(name => name.includes(this.searchMaterial.toLowerCase()));
+                            }
+                        }">
                             @forelse ($materialCategories as $material)
                                 <tr class="border-t border-gray-200"
-                                    x-show="searchMaterial.length < 1 || '{{ strtolower($material->material_name) }}'.includes(searchMaterial.toLowerCase())">
+                                    x-show="searchMaterial.trim() === ''">
                                     <td class="py-2 px-4">{{ $materialCategories->firstItem() + $loop->index }}</td>
                                     <td class="py-2 px-4">{{ $material->material_name }}</td>
                                     <td class="py-2 px-4 text-right">
@@ -620,19 +742,109 @@
                                     </td>
                                 </tr>
                             @empty
-                                <tr>
+                                <tr x-show="searchMaterial.trim() === ''">
                                     <td colspan="3"
                                         class="py-3 px-4 text-center text-red-500 border-t border-gray-200">
                                         No Material Categories found.
                                     </td>
                                 </tr>
                             @endforelse
+
+                            {{-- Data ALL (untuk search) --}}
+                            @foreach ($allMaterialCategories as $index => $material)
+                                <tr class="border-t border-gray-200"
+                                    x-show="searchMaterial.trim() !== '' && '{{ strtolower($material->material_name) }}'.includes(searchMaterial.toLowerCase())">
+                                    <td class="py-2 px-4">{{ $index + 1 }}</td>
+                                    <td class="py-2 px-4">{{ $material->material_name }}</td>
+                                    <td class="py-2 px-4 text-right">
+                                        <div class="relative inline-block text-left" x-data="{
+                                            open: false,
+                                            dropdownStyle: {},
+                                            checkPosition() {
+                                                const button = this.$refs.button;
+                                                const rect = button.getBoundingClientRect();
+                                                const spaceBelow = window.innerHeight - rect.bottom;
+                                                const spaceAbove = rect.top;
+                                                const dropUp = spaceBelow < 200 && spaceAbove > spaceBelow;
+                                                if (dropUp) {
+                                                    this.dropdownStyle = {
+                                                        position: 'fixed',
+                                                        top: (rect.top - 90) + 'px',
+                                                        left: (rect.right - 160) + 'px',
+                                                        width: '160px'
+                                                    };
+                                                } else {
+                                                    this.dropdownStyle = {
+                                                        position: 'fixed',
+                                                        top: (rect.bottom + 8) + 'px',
+                                                        left: (rect.right - 160) + 'px',
+                                                        width: '160px'
+                                                    };
+                                                }
+                                            }
+                                        }"
+                                            x-init="$watch('open', value => {
+                                                if (value) {
+                                                    const scrollContainer = $el.closest('.overflow-y-auto');
+                                                    const mainContent = document.querySelector('main');
+                                                    const closeOnScroll = () => { open = false; };
+                                                    scrollContainer?.addEventListener('scroll', closeOnScroll);
+                                                    mainContent?.addEventListener('scroll', closeOnScroll);
+                                                    window.addEventListener('resize', closeOnScroll);
+                                                }
+                                            })">
+                                            <button x-ref="button" @click="checkPosition(); open = !open" type="button"
+                                                class="cursor-pointer inline-flex items-center justify-center w-8 h-8 rounded-md border border-gray-300 text-gray-600 hover:bg-gray-100"
+                                                title="Actions">
+                                                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                                    <path d="M6 10a2 2 0 11-4 0 2 2 0 014 0zM12 10a2 2 0 11-4 0 2 2 0 014 0zM16 12a2 2 0 100-4 2 2 0 000 4z" />
+                                                </svg>
+                                            </button>
+                                            <div x-show="open" @click.away="open = false" x-transition
+                                                :style="dropdownStyle"
+                                                class="rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-[9999]">
+                                                <div class="py-1">
+                                                    <button
+                                                        @click="editMaterial = {{ $material->toJson() }}; openModal = 'editMaterial'; open = false"
+                                                        class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2">
+                                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                                        </svg>
+                                                        Edit
+                                                    </button>
+                                                    <button type="button"
+                                                        @click="showDeleteMaterialConfirm = {{ $material->id }}; open = false"
+                                                        class="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100 flex items-center gap-2">
+                                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                                        </svg>
+                                                        Delete
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                </tr>
+                            @endforeach
+
+                            {{-- Empty state for search --}}
+                            <tr x-show="searchMaterial.trim() !== '' && !hasResults" x-cloak>
+                                <td colspan="3" class="py-8 px-4 text-center text-gray-500 border-t border-gray-200">
+                                    <div class="flex flex-col items-center gap-2">
+                                        <svg class="w-12 h-12 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                                        </svg>
+                                        <p class="text-sm font-medium">No materials found</p>
+                                        <p class="text-xs text-gray-400">Try searching with a different keyword</p>
+                                    </div>
+                                </td>
+                            </tr>
                         </tbody>
                     </table>
                 </div>
 
                 <!-- Pagination -->
-                <div id="material-pagination-container" class="mt-4">
+                <div x-show="searchMaterial.trim() === ''" id="material-pagination-container" class="mt-4">
                     <x-custom-pagination :paginator="$materialCategories" />
                 </div>
             </div>
@@ -724,10 +936,20 @@
                                 <th class="py-2 px-4 text-right rounded-r-md">Action</th>
                             </tr>
                         </thead>
-                        <tbody>
+                        <tbody x-data="{
+                            get hasResults() {
+                                if (this.searchTexture.trim() === '') return true;
+                                const textures = [
+                                    @foreach ($allMaterialTextures as $texture)
+                                        '{{ strtolower($texture->texture_name) }}',
+                                    @endforeach
+                                ];
+                                return textures.some(name => name.includes(this.searchTexture.toLowerCase()));
+                            }
+                        }">
                             @forelse ($materialTextures as $texture)
                                 <tr class="border-t border-gray-200"
-                                    x-show="searchTexture.length < 1 || '{{ strtolower($texture->texture_name) }}'.includes(searchTexture.toLowerCase())">
+                                    x-show="searchTexture.trim() === ''">
                                     <td class="py-2 px-4">{{ $materialTextures->firstItem() + $loop->index }}</td>
                                     <td class="py-2 px-4">{{ $texture->texture_name }}</td>
                                     <td class="py-2 px-4 text-right">
@@ -811,20 +1033,83 @@
                                     </td>
                                 </tr>
                             @empty
-                                <tr>
+                                <tr x-show="searchTexture.trim() === ''">
                                     <td colspan="3"
                                         class="py-3 px-4 text-center text-red-500 border-t border-gray-200">
                                         No Material Textures found.
                                     </td>
                                 </tr>
                             @endforelse
+
+                            {{-- Data ALL (untuk search) --}}
+                            @foreach ($allMaterialTextures as $index => $texture)
+                                <tr class="border-t border-gray-200"
+                                    x-show="searchTexture.trim() !== '' && '{{ strtolower($texture->texture_name) }}'.includes(searchTexture.toLowerCase())">
+                                    <td class="py-2 px-4">{{ $index + 1 }}</td>
+                                    <td class="py-2 px-4">{{ $texture->texture_name }}</td>
+                                    <td class="py-2 px-4 text-right">
+                                        <div class="relative inline-block text-left" x-data="{
+                                            open: false,
+                                            dropdownStyle: {},
+                                            checkPosition() {
+                                                const button = this.$refs.button;
+                                                const rect = button.getBoundingClientRect();
+                                                const spaceBelow = window.innerHeight - rect.bottom;
+                                                const spaceAbove = rect.top;
+                                                const dropUp = spaceBelow < 200 && spaceAbove > spaceBelow;
+                                                if (dropUp) {
+                                                    this.dropdownStyle = { position: 'fixed', top: (rect.top - 90) + 'px', left: (rect.right - 160) + 'px', width: '160px' };
+                                                } else {
+                                                    this.dropdownStyle = { position: 'fixed', top: (rect.bottom + 8) + 'px', left: (rect.right - 160) + 'px', width: '160px' };
+                                                }
+                                            }
+                                        }"
+                                            x-init="$watch('open', value => {
+                                                if (value) {
+                                                    const scrollContainer = $el.closest('.overflow-y-auto');
+                                                    const mainContent = document.querySelector('main');
+                                                    const closeOnScroll = () => { open = false; };
+                                                    scrollContainer?.addEventListener('scroll', closeOnScroll);
+                                                    mainContent?.addEventListener('scroll', closeOnScroll);
+                                                    window.addEventListener('resize', closeOnScroll);
+                                                }
+                                            })">
+                                            <button x-ref="button" @click="checkPosition(); open = !open" type="button" class="cursor-pointer inline-flex items-center justify-center w-8 h-8 rounded-md border border-gray-300 text-gray-600 hover:bg-gray-100" title="Actions">
+                                                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path d="M6 10a2 2 0 11-4 0 2 2 0 014 0zM12 10a2 2 0 11-4 0 2 2 0 014 0zM16 12a2 2 0 100-4 2 2 0 000 4z" /></svg>
+                                            </button>
+                                            <div x-show="open" @click.away="open = false" x-transition :style="dropdownStyle" class="rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-[9999]">
+                                                <div class="py-1">
+                                                    <button @click="editTexture = {{ $texture->toJson() }}; openModal = 'editTexture'; open = false" class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2">
+                                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+                                                        Edit
+                                                    </button>
+                                                    <button type="button" @click="showDeleteTextureConfirm = {{ $texture->id }}; open = false" class="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100 flex items-center gap-2">
+                                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                                                        Delete
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                </tr>
+                            @endforeach
+
+                            <tr x-show="searchTexture.trim() !== '' && !hasResults" x-cloak>
+                                <td colspan="3" class="py-8 px-4 text-center text-gray-500 border-t border-gray-200">
+                                    <div class="flex flex-col items-center gap-2">
+                                        <svg class="w-12 h-12 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+                                        <p class="text-sm font-medium">No textures found</p>
+                                        <p class="text-xs text-gray-400">Try searching with a different keyword</p>
+                                    </div>
+                                </td>
+                            </tr>
                         </tbody>
 
                     </table>
                 </div>
 
                 <!-- Pagination -->
-                <div id="texture-pagination-container" class="mt-4">
+                <div x-show="searchTexture.trim() === ''" id="texture-pagination-container" class="mt-4">
                     <x-custom-pagination :paginator="$materialTextures" />
                 </div>
             </div>
@@ -914,10 +1199,20 @@
                                 <th class="py-2 px-4 text-right rounded-r-md">Action</th>
                             </tr>
                         </thead>
-                        <tbody>
+                        <tbody x-data="{
+                            get hasResults() {
+                                if (this.searchSleeve.trim() === '') return true;
+                                const sleeves = [
+                                    @foreach ($allMaterialSleeves as $sleeve)
+                                        '{{ strtolower($sleeve->sleeve_name) }}',
+                                    @endforeach
+                                ];
+                                return sleeves.some(name => name.includes(this.searchSleeve.toLowerCase()));
+                            }
+                        }">
                             @forelse ($materialSleeves as $sleeve)
                                 <tr class="border-t border-gray-200"
-                                    x-show="searchSleeve.length < 1 || '{{ strtolower($sleeve->sleeve_name) }}'.includes(searchSleeve.toLowerCase())">
+                                    x-show="searchSleeve.trim() === ''">
                                     <td class="py-2 px-4">{{ $materialSleeves->firstItem() + $loop->index }}</td>
                                     <td class="py-2 px-4">{{ $sleeve->sleeve_name }}</td>
                                     <td class="py-2 px-4 text-right">
@@ -1001,19 +1296,39 @@
                                     </td>
                                 </tr>
                             @empty
-                                <tr>
+                                <tr x-show="searchSleeve.trim() === ''">
                                     <td colspan="3"
                                         class="py-3 px-4 text-center text-red-500 border-t border-gray-200">
                                         No Material Sleeves found.
                                     </td>
                                 </tr>
                             @endforelse
+
+                            @foreach ($allMaterialSleeves as $index => $sleeve)
+                                <tr class="border-t border-gray-200"
+                                    x-show="searchSleeve.trim() !== '' && '{{ strtolower($sleeve->sleeve_name) }}'.includes(searchSleeve.toLowerCase())">
+                                    <td class="py-2 px-4">{{ $index + 1 }}</td>
+                                    <td class="py-2 px-4">{{ $sleeve->sleeve_name }}</td>
+                                    <td class="py-2 px-4 text-right">
+                                        <div class="relative inline-block text-left" x-data="{ open: false, dropdownStyle: {}, checkPosition() { const button = this.$refs.button; const rect = button.getBoundingClientRect(); const spaceBelow = window.innerHeight - rect.bottom; const spaceAbove = rect.top; const dropUp = spaceBelow < 200 && spaceAbove > spaceBelow; if (dropUp) { this.dropdownStyle = { position: 'fixed', top: (rect.top - 90) + 'px', left: (rect.right - 160) + 'px', width: '160px' }; } else { this.dropdownStyle = { position: 'fixed', top: (rect.bottom + 8) + 'px', left: (rect.right - 160) + 'px', width: '160px' }; } } }" x-init="$watch('open', value => { if (value) { const scrollContainer = $el.closest('.overflow-y-auto'); const mainContent = document.querySelector('main'); const closeOnScroll = () => { open = false; }; scrollContainer?.addEventListener('scroll', closeOnScroll); mainContent?.addEventListener('scroll', closeOnScroll); window.addEventListener('resize', closeOnScroll); } })">
+                                            <button x-ref="button" @click="checkPosition(); open = !open" type="button" class="cursor-pointer inline-flex items-center justify-center w-8 h-8 rounded-md border border-gray-300 text-gray-600 hover:bg-gray-100" title="Actions"><svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path d="M6 10a2 2 0 11-4 0 2 2 0 014 0zM12 10a2 2 0 11-4 0 2 2 0 014 0zM16 12a2 2 0 100-4 2 2 0 000 4z" /></svg></button>
+                                            <div x-show="open" @click.away="open = false" x-transition :style="dropdownStyle" class="rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-[9999]"><div class="py-1"><button @click="editSleeve = {{ $sleeve->toJson() }}; openModal = 'editSleeve'; open = false" class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>Edit</button><button type="button" @click="showDeleteSleeveConfirm = {{ $sleeve->id }}; open = false" class="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100 flex items-center gap-2"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>Delete</button></div></div>
+                                        </div>
+                                    </td>
+                                </tr>
+                            @endforeach
+
+                            <tr x-show="searchSleeve.trim() !== '' && !hasResults" x-cloak>
+                                <td colspan="3" class="py-8 px-4 text-center text-gray-500 border-t border-gray-200">
+                                    <div class="flex flex-col items-center gap-2"><svg class="w-12 h-12 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg><p class="text-sm font-medium">No sleeves found</p><p class="text-xs text-gray-400">Try searching with a different keyword</p></div>
+                                </td>
+                            </tr>
                         </tbody>
                     </table>
                 </div>
 
                 <!-- Pagination -->
-                <div id="sleeve-pagination-container" class="mt-4">
+                <div x-show="searchSleeve.trim() === ''" id="sleeve-pagination-container" class="mt-4">
                     <x-custom-pagination :paginator="$materialSleeves" />
                 </div>
             </div>
@@ -1107,109 +1422,65 @@
                                 <th class="py-2 px-4 text-right rounded-r-md">Action</th>
                             </tr>
                         </thead>
-                        <tbody>
+                        <tbody x-data="{
+                            get hasResults() {
+                                const search = searchSize.trim().toLowerCase();
+                                if (search === '') return true;
+                                @foreach ($allMaterialSizes as $size)
+                                    if ('{{ strtolower($size->size_name) }}'.includes(search)) return true;
+                                @endforeach
+                                return false;
+                            }
+                        }">
                             @forelse ($materialSizes as $size)
-                                <tr class="border-t border-gray-200"
-                                    x-show="searchSize.length < 1 || '{{ strtolower($size->size_name) }}'.includes(searchSize.toLowerCase())">
+                                <tr class="border-t border-gray-200" x-show="searchSize.trim() === ''">
                                     <td class="py-2 px-4">{{ $materialSizes->firstItem() + $loop->index }}</td>
                                     <td class="py-2 px-4">{{ $size->size_name }}</td>
-                                    <td class="py-2 px-4 text-right">Rp
-                                        {{ number_format($size->extra_price, 0, ',', '.') }}</td>
+                                    <td class="py-2 px-4 text-right">Rp {{ number_format($size->extra_price, 0, ',', '.') }}</td>
                                     <td class="py-2 px-4 text-right">
-                                        <div class="relative inline-block text-left" x-data="{
-                                            open: false,
-                                            dropdownStyle: {},
-                                            checkPosition() {
-                                                const button = this.$refs.button;
-                                                const rect = button.getBoundingClientRect();
-                                                const spaceBelow = window.innerHeight - rect.bottom;
-                                                const spaceAbove = rect.top;
-                                                const dropUp = spaceBelow < 200 && spaceAbove > spaceBelow;
-                                        
-                                                if (dropUp) {
-                                                    this.dropdownStyle = {
-                                                        position: 'fixed',
-                                                        top: (rect.top - 90) + 'px',
-                                                        left: (rect.right - 160) + 'px',
-                                                        width: '160px'
-                                                    };
-                                                } else {
-                                                    this.dropdownStyle = {
-                                                        position: 'fixed',
-                                                        top: (rect.bottom + 8) + 'px',
-                                                        left: (rect.right - 160) + 'px',
-                                                        width: '160px'
-                                                    };
-                                                }
-                                            }
-                                        }"
-                                            x-init="$watch('open', value => {
-                                                if (value) {
-                                                    const scrollContainer = $el.closest('.overflow-y-auto');
-                                                    const mainContent = document.querySelector('main');
-                                                    const closeOnScroll = () => { open = false; };
-                                            
-                                                    scrollContainer?.addEventListener('scroll', closeOnScroll);
-                                                    mainContent?.addEventListener('scroll', closeOnScroll);
-                                                    window.addEventListener('resize', closeOnScroll);
-                                                }
-                                            })">
-                                            <button x-ref="button" @click="checkPosition(); open = !open" type="button"
-                                                class="cursor-pointer inline-flex items-center justify-center w-8 h-8 rounded-md border border-gray-300 text-gray-600 hover:bg-gray-100"
-                                                title="Actions">
-                                                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                                                    <path
-                                                        d="M6 10a2 2 0 11-4 0 2 2 0 014 0zM12 10a2 2 0 11-4 0 2 2 0 014 0zM16 12a2 2 0 100-4 2 2 0 000 4z" />
-                                                </svg>
-                                            </button>
-
-                                            <div x-show="open" @click.away="open = false" x-transition
-                                                :style="dropdownStyle"
-                                                class="rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-[9999]">
-                                                <div class="py-1">
-                                                    <button
-                                                        @click="editSize = {{ $size->toJson() }}; openModal = 'editSize'; open = false"
-                                                        class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2">
-                                                        <svg class="w-4 h-4" fill="none" stroke="currentColor"
-                                                            viewBox="0 0 24 24">
-                                                            <path stroke-linecap="round" stroke-linejoin="round"
-                                                                stroke-width="2"
-                                                                d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                                                        </svg>
-                                                        Edit
-                                                    </button>
-
-                                                    <button type="button"
-                                                        @click="showDeleteSizeConfirm = {{ $size->id }}; open = false"
-                                                        class="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100 flex items-center gap-2">
-                                                        <svg class="w-4 h-4" fill="none" stroke="currentColor"
-                                                            viewBox="0 0 24 24">
-                                                            <path stroke-linecap="round" stroke-linejoin="round"
-                                                                stroke-width="2"
-                                                                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                                        </svg>
-                                                        Delete
-                                                    </button>
-                                                </div>
+                                        <div class="relative inline-block text-left" x-data="{ open: false, dropdownStyle: {}, checkPosition() { const button = this.$refs.button; const rect = button.getBoundingClientRect(); const spaceBelow = window.innerHeight - rect.bottom; const spaceAbove = rect.top; const dropUp = spaceBelow < 200 && spaceAbove > spaceBelow; if (dropUp) { this.dropdownStyle = { position: 'fixed', top: (rect.top - 90) + 'px', left: (rect.right - 160) + 'px', width: '160px' }; } else { this.dropdownStyle = { position: 'fixed', top: (rect.bottom + 8) + 'px', left: (rect.right - 160) + 'px', width: '160px' }; } } }" x-init="$watch('open', value => { if (value) { const scrollContainer = $el.closest('.overflow-y-auto'); const mainContent = document.querySelector('main'); const closeOnScroll = () => { open = false; }; scrollContainer?.addEventListener('scroll', closeOnScroll); mainContent?.addEventListener('scroll', closeOnScroll); window.addEventListener('resize', closeOnScroll); } })">
+                                            <button x-ref="button" @click="checkPosition(); open = !open" type="button" class="cursor-pointer inline-flex items-center justify-center w-8 h-8 rounded-md border border-gray-300 text-gray-600 hover:bg-gray-100" title="Actions"><svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path d="M6 10a2 2 0 11-4 0 2 2 0 014 0zM12 10a2 2 0 11-4 0 2 2 0 014 0zM16 12a2 2 0 100-4 2 2 0 000 4z" /></svg></button>
+                                            <div x-show="open" @click.away="open = false" x-transition :style="dropdownStyle" class="rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-[9999]">
+                                                <div class="py-1"><button @click="editSize = {{ $size->toJson() }}; openModal = 'editSize'; open = false" class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>Edit</button><button type="button" @click="showDeleteSizeConfirm = {{ $size->id }}; open = false" class="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100 flex items-center gap-2"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>Delete</button></div>
                                             </div>
                                         </div>
                                     </td>
                                 </tr>
                             @empty
-                                <tr>
-                                    <td colspan="4"
-                                        class="py-3 px-4 text-center text-red-500 border-t border-gray-200">
-                                        No Material Size found.
-                                    </td>
+                                <tr x-show="searchSize.trim() === ''">
+                                    <td colspan="4" class="py-3 px-4 text-center text-red-500 border-t border-gray-200">No Material Size found.</td>
                                 </tr>
                             @endforelse
+
+                            @foreach ($allMaterialSizes as $size)
+                                <tr class="border-t border-gray-200" x-show="searchSize.trim() !== '' && '{{ strtolower($size->size_name) }}'.includes(searchSize.trim().toLowerCase())">
+                                    <td class="py-2 px-4">{{ $loop->iteration }}</td>
+                                    <td class="py-2 px-4">{{ $size->size_name }}</td>
+                                    <td class="py-2 px-4 text-right">Rp {{ number_format($size->extra_price, 0, ',', '.') }}</td>
+                                    <td class="py-2 px-4 text-right">
+                                        <div class="relative inline-block text-left" x-data="{ open: false, dropdownStyle: {}, checkPosition() { const button = this.$refs.button; const rect = button.getBoundingClientRect(); const spaceBelow = window.innerHeight - rect.bottom; const spaceAbove = rect.top; const dropUp = spaceBelow < 200 && spaceAbove > spaceBelow; if (dropUp) { this.dropdownStyle = { position: 'fixed', top: (rect.top - 90) + 'px', left: (rect.right - 160) + 'px', width: '160px' }; } else { this.dropdownStyle = { position: 'fixed', top: (rect.bottom + 8) + 'px', left: (rect.right - 160) + 'px', width: '160px' }; } } }" x-init="$watch('open', value => { if (value) { const scrollContainer = $el.closest('.overflow-y-auto'); const mainContent = document.querySelector('main'); const closeOnScroll = () => { open = false; }; scrollContainer?.addEventListener('scroll', closeOnScroll); mainContent?.addEventListener('scroll', closeOnScroll); window.addEventListener('resize', closeOnScroll); } })">
+                                            <button x-ref="button" @click="checkPosition(); open = !open" type="button" class="cursor-pointer inline-flex items-center justify-center w-8 h-8 rounded-md border border-gray-300 text-gray-600 hover:bg-gray-100" title="Actions"><svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path d="M6 10a2 2 0 11-4 0 2 2 0 014 0zM12 10a2 2 0 11-4 0 2 2 0 014 0zM16 12a2 2 0 100-4 2 2 0 000 4z" /></svg></button>
+                                            <div x-show="open" @click.away="open = false" x-transition :style="dropdownStyle" class="rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-[9999]">
+                                                <div class="py-1"><button @click="editSize = {{ $size->toJson() }}; openModal = 'editSize'; open = false" class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>Edit</button><button type="button" @click="showDeleteSizeConfirm = {{ $size->id }}; open = false" class="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100 flex items-center gap-2"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>Delete</button></div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                </tr>
+                            @endforeach
+
+                            <tr x-show="searchSize.trim() !== '' && !hasResults" class="border-t border-gray-200">
+                                <td colspan="4" class="py-8 text-center text-gray-500">
+                                    <svg class="mx-auto h-12 w-12 text-gray-400 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+                                    <p class="text-sm">No size found for "<span x-text="searchSize"></span>"</p>
+                                </td>
+                            </tr>
                         </tbody>
 
                     </table>
                 </div>
 
                 <!-- Pagination -->
-                <div id="size-pagination-container" class="mt-4">
+                <div id="size-pagination-container" class="mt-4" x-show="searchSize.trim() === ''">
                     <x-custom-pagination :paginator="$materialSizes" />
                 </div>
             </div>
@@ -1302,107 +1573,63 @@
                                 <th class="py-2 px-4 text-right rounded-r-md">Action</th>
                             </tr>
                         </thead>
-                        <tbody>
+                        <tbody x-data="{
+                            get hasResults() {
+                                const search = searchService.trim().toLowerCase();
+                                if (search === '') return true;
+                                @foreach ($allServices as $service)
+                                    if ('{{ strtolower($service->service_name) }}'.includes(search)) return true;
+                                @endforeach
+                                return false;
+                            }
+                        }">
                             @forelse ($services as $service)
-                                <tr class="border-t border-gray-200"
-                                    x-show="searchService.length < 1 || '{{ strtolower($service->service_name) }}'.includes(searchService.toLowerCase())">
+                                <tr class="border-t border-gray-200" x-show="searchService.trim() === ''">
                                     <td class="py-2 px-4">{{ $services->firstItem() + $loop->index }}</td>
                                     <td class="py-2 px-4">{{ $service->service_name }}</td>
                                     <td class="py-2 px-4 text-right">
-                                        <div class="relative inline-block text-left" x-data="{
-                                            open: false,
-                                            dropdownStyle: {},
-                                            checkPosition() {
-                                                const button = this.$refs.button;
-                                                const rect = button.getBoundingClientRect();
-                                                const spaceBelow = window.innerHeight - rect.bottom;
-                                                const spaceAbove = rect.top;
-                                                const dropUp = spaceBelow < 200 && spaceAbove > spaceBelow;
-                                        
-                                                if (dropUp) {
-                                                    this.dropdownStyle = {
-                                                        position: 'fixed',
-                                                        top: (rect.top - 90) + 'px',
-                                                        left: (rect.right - 160) + 'px',
-                                                        width: '160px'
-                                                    };
-                                                } else {
-                                                    this.dropdownStyle = {
-                                                        position: 'fixed',
-                                                        top: (rect.bottom + 8) + 'px',
-                                                        left: (rect.right - 160) + 'px',
-                                                        width: '160px'
-                                                    };
-                                                }
-                                            }
-                                        }"
-                                            x-init="$watch('open', value => {
-                                                if (value) {
-                                                    const scrollContainer = $el.closest('.overflow-y-auto');
-                                                    const mainContent = document.querySelector('main');
-                                                    const closeOnScroll = () => { open = false; };
-                                            
-                                                    scrollContainer?.addEventListener('scroll', closeOnScroll);
-                                                    mainContent?.addEventListener('scroll', closeOnScroll);
-                                                    window.addEventListener('resize', closeOnScroll);
-                                                }
-                                            })">
-                                            <button x-ref="button" @click="checkPosition(); open = !open" type="button"
-                                                class="cursor-pointer inline-flex items-center justify-center w-8 h-8 rounded-md border border-gray-300 text-gray-600 hover:bg-gray-100"
-                                                title="Actions">
-                                                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                                                    <path
-                                                        d="M6 10a2 2 0 11-4 0 2 2 0 014 0zM12 10a2 2 0 11-4 0 2 2 0 014 0zM16 12a2 2 0 100-4 2 2 0 000 4z" />
-                                                </svg>
-                                            </button>
-
-                                            <div x-show="open" @click.away="open = false" x-transition
-                                                :style="dropdownStyle"
-                                                class="rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-[9999]">
-                                                <div class="py-1">
-                                                    <button
-                                                        @click="editService = {{ $service->toJson() }}; openModal = 'editService'; open = false"
-                                                        class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2">
-                                                        <svg class="w-4 h-4" fill="none" stroke="currentColor"
-                                                            viewBox="0 0 24 24">
-                                                            <path stroke-linecap="round" stroke-linejoin="round"
-                                                                stroke-width="2"
-                                                                d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                                                        </svg>
-                                                        Edit
-                                                    </button>
-
-                                                    <button type="button"
-                                                        @click="showDeleteServiceConfirm = {{ $service->id }}; open = false"
-                                                        class="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100 flex items-center gap-2">
-                                                        <svg class="w-4 h-4" fill="none" stroke="currentColor"
-                                                            viewBox="0 0 24 24">
-                                                            <path stroke-linecap="round" stroke-linejoin="round"
-                                                                stroke-width="2"
-                                                                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                                        </svg>
-                                                        Delete
-                                                    </button>
-                                                </div>
+                                        <div class="relative inline-block text-left" x-data="{ open: false, dropdownStyle: {}, checkPosition() { const button = this.$refs.button; const rect = button.getBoundingClientRect(); const spaceBelow = window.innerHeight - rect.bottom; const spaceAbove = rect.top; const dropUp = spaceBelow < 200 && spaceAbove > spaceBelow; if (dropUp) { this.dropdownStyle = { position: 'fixed', top: (rect.top - 90) + 'px', left: (rect.right - 160) + 'px', width: '160px' }; } else { this.dropdownStyle = { position: 'fixed', top: (rect.bottom + 8) + 'px', left: (rect.right - 160) + 'px', width: '160px' }; } } }" x-init="$watch('open', value => { if (value) { const scrollContainer = $el.closest('.overflow-y-auto'); const mainContent = document.querySelector('main'); const closeOnScroll = () => { open = false; }; scrollContainer?.addEventListener('scroll', closeOnScroll); mainContent?.addEventListener('scroll', closeOnScroll); window.addEventListener('resize', closeOnScroll); } })">
+                                            <button x-ref="button" @click="checkPosition(); open = !open" type="button" class="cursor-pointer inline-flex items-center justify-center w-8 h-8 rounded-md border border-gray-300 text-gray-600 hover:bg-gray-100" title="Actions"><svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path d="M6 10a2 2 0 11-4 0 2 2 0 014 0zM12 10a2 2 0 11-4 0 2 2 0 014 0zM16 12a2 2 0 100-4 2 2 0 000 4z" /></svg></button>
+                                            <div x-show="open" @click.away="open = false" x-transition :style="dropdownStyle" class="rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-[9999]">
+                                                <div class="py-1"><button @click="editService = {{ $service->toJson() }}; openModal = 'editService'; open = false" class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>Edit</button><button type="button" @click="showDeleteServiceConfirm = {{ $service->id }}; open = false" class="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100 flex items-center gap-2"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>Delete</button></div>
                                             </div>
                                         </div>
                                     </td>
                                 </tr>
                             @empty
-                                <tr>
-                                    <td colspan="3"
-                                        class="py-3 px-4 text-center text-red-500 border-t border-gray-200">
-                                        No Services found.
-                                    </td>
+                                <tr x-show="searchService.trim() === ''">
+                                    <td colspan="3" class="py-3 px-4 text-center text-red-500 border-t border-gray-200">No Services found.</td>
                                 </tr>
                             @endforelse
+
+                            @foreach ($allServices as $service)
+                                <tr class="border-t border-gray-200" x-show="searchService.trim() !== '' && '{{ strtolower($service->service_name) }}'.includes(searchService.trim().toLowerCase())">
+                                    <td class="py-2 px-4">{{ $loop->iteration }}</td>
+                                    <td class="py-2 px-4">{{ $service->service_name }}</td>
+                                    <td class="py-2 px-4 text-right">
+                                        <div class="relative inline-block text-left" x-data="{ open: false, dropdownStyle: {}, checkPosition() { const button = this.$refs.button; const rect = button.getBoundingClientRect(); const spaceBelow = window.innerHeight - rect.bottom; const spaceAbove = rect.top; const dropUp = spaceBelow < 200 && spaceAbove > spaceBelow; if (dropUp) { this.dropdownStyle = { position: 'fixed', top: (rect.top - 90) + 'px', left: (rect.right - 160) + 'px', width: '160px' }; } else { this.dropdownStyle = { position: 'fixed', top: (rect.bottom + 8) + 'px', left: (rect.right - 160) + 'px', width: '160px' }; } } }" x-init="$watch('open', value => { if (value) { const scrollContainer = $el.closest('.overflow-y-auto'); const mainContent = document.querySelector('main'); const closeOnScroll = () => { open = false; }; scrollContainer?.addEventListener('scroll', closeOnScroll); mainContent?.addEventListener('scroll', closeOnScroll); window.addEventListener('resize', closeOnScroll); } })">
+                                            <button x-ref="button" @click="checkPosition(); open = !open" type="button" class="cursor-pointer inline-flex items-center justify-center w-8 h-8 rounded-md border border-gray-300 text-gray-600 hover:bg-gray-100" title="Actions"><svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path d="M6 10a2 2 0 11-4 0 2 2 0 014 0zM12 10a2 2 0 11-4 0 2 2 0 014 0zM16 12a2 2 0 100-4 2 2 0 000 4z" /></svg></button>
+                                            <div x-show="open" @click.away="open = false" x-transition :style="dropdownStyle" class="rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-[9999]">
+                                                <div class="py-1"><button @click="editService = {{ $service->toJson() }}; openModal = 'editService'; open = false" class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>Edit</button><button type="button" @click="showDeleteServiceConfirm = {{ $service->id }}; open = false" class="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100 flex items-center gap-2"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>Delete</button></div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                </tr>
+                            @endforeach
+
+                            <tr x-show="searchService.trim() !== '' && !hasResults" class="border-t border-gray-200">
+                                <td colspan="3" class="py-8 text-center text-gray-500">
+                                    <svg class="mx-auto h-12 w-12 text-gray-400 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+                                    <p class="text-sm">No service found for "<span x-text="searchService"></span>"</p>
+                                </td>
+                            </tr>
                         </tbody>
 
                     </table>
                 </div>
 
                 <!-- Pagination -->
-                <div id="service-pagination-container" class="mt-4">
+                <div id="service-pagination-container" class="mt-4" x-show="searchService.trim() === ''">
                     <x-custom-pagination :paginator="$services" />
                 </div>
             </div>
