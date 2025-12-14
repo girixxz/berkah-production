@@ -553,9 +553,16 @@
                             @endif
                         </tr>
                     </thead>
-                    <tbody class="divide-y divide-gray-200">
+                    <tbody class="divide-y divide-gray-200" x-data="{
+                        get hasResults() {
+                            if (!searchQuery || searchQuery.trim() === '') return true;
+                            const search = searchQuery.toLowerCase();
+                            return {{ Js::from($allPayments->map(fn($p) => strtolower(($p->invoice->invoice_no ?? '') . ' ' . ($p->invoice->order->customer->customer_name ?? '') . ' ' . ($p->invoice->order->customer->phone ?? '')))) }}
+                                .some(text => text.includes(search));
+                        }
+                    }">
                         @forelse ($payments as $payment)
-                            <tr class="hover:bg-gray-50" x-show="matchesSearch($el)"
+                            <tr class="hover:bg-gray-50" x-show="searchQuery.trim() === ''"
                                 data-invoice="{{ $payment->invoice->invoice_no ?? '' }}"
                                 data-customer="{{ $payment->invoice->order->customer->customer_name ?? '' }} {{ $payment->invoice->order->customer->phone ?? '' }}">
                                 {{-- Paid At --}}
@@ -698,7 +705,7 @@
                                 @endif
                             </tr>
                         @empty
-                            <tr x-show="!searchQuery">
+                            <tr x-show="searchQuery.trim() === ''">
                                 <td colspan="{{ $role === 'owner' ? '9' : '8' }}" class="py-8 text-center text-gray-400">
                                     <svg class="w-16 h-16 mx-auto mb-3 opacity-50" fill="none" stroke="currentColor"
                                         viewBox="0 0 24 24">
@@ -709,9 +716,122 @@
                                 </td>
                             </tr>
                         @endforelse
+
+                        @foreach ($allPayments as $payment)
+                            <tr class="hover:bg-gray-50" x-show="searchQuery.trim() !== '' && 
+                                {{ Js::from(strtolower(($payment->invoice->invoice_no ?? '') . ' ' . ($payment->invoice->order->customer->customer_name ?? '') . ' ' . ($payment->invoice->order->customer->phone ?? ''))) }}
+                                .includes(searchQuery.toLowerCase())">
+                                {{-- Paid At --}}
+                                <td class="py-3 px-4">
+                                    <span class="text-gray-700">{{ \Carbon\Carbon::parse($payment->paid_at)->format('d M Y H:i') }}</span>
+                                </td>
+
+                                {{-- Customer --}}
+                                <td class="py-3 px-4">
+                                    <div>
+                                        <p class="text-gray-700">{{ $payment->invoice->order->customer->customer_name ?? '-' }}</p>
+                                        <p class="text-xs text-gray-500">{{ $payment->invoice->order->customer->phone ?? '-' }}</p>
+                                    </div>
+                                </td>
+
+                                {{-- Order (Invoice + Product + Priority) --}}
+                                <td class="py-3 px-4">
+                                    <div class="flex items-center gap-1.5 flex-wrap">
+                                        <span class="font-medium text-gray-900">{{ $payment->invoice->invoice_no ?? '-' }}</span>
+                                        @if ($payment->invoice->order->productCategory)
+                                            <span class="px-1.5 py-0.5 text-[10px] font-semibold text-green-700 bg-green-100 rounded">
+                                                {{ strtoupper($payment->invoice->order->productCategory->product_name) }}
+                                            </span>
+                                        @endif
+                                        @if (isset($payment->invoice->order->priority) && strtolower($payment->invoice->order->priority) === 'high')
+                                            <span class="text-[10px] font-semibold text-red-600 italic">(HIGH)</span>
+                                        @endif
+                                    </div>
+                                </td>
+
+                                {{-- Payment Model (Method + Type) --}}
+                                <td class="py-3 px-4">
+                                    <div class="flex items-center gap-1.5 flex-wrap">
+                                        @php
+                                            $methodClass = $payment->payment_method === 'transfer' ? 'bg-blue-100 text-blue-800' : 'bg-purple-100 text-purple-800';
+                                            $typeClasses = ['dp' => 'bg-yellow-100 text-yellow-800', 'repayment' => 'bg-orange-100 text-orange-800', 'full_payment' => 'bg-green-100 text-green-800'];
+                                            $typeClass = $typeClasses[$payment->payment_type] ?? 'bg-gray-100 text-gray-800';
+                                        @endphp
+                                        <span class="px-1.5 py-0.5 rounded-full text-[10px] font-medium {{ $methodClass }} inline-block w-fit">
+                                            {{ strtoupper($payment->payment_method) }}
+                                        </span>
+                                        <span class="px-1.5 py-0.5 rounded-full text-[10px] font-medium {{ $typeClass }} inline-block w-fit">
+                                            {{ strtoupper(str_replace('_', ' ', $payment->payment_type)) }}
+                                        </span>
+                                    </div>
+                                </td>
+
+                                {{-- Amount --}}
+                                <td class="py-3 px-4">
+                                    <span class="text-gray-700">Rp {{ number_format($payment->amount, 0, ',', '.') }}</span>
+                                </td>
+
+                                {{-- Status --}}
+                                <td class="py-3 px-4">
+                                    @php
+                                        $statusClasses = ['pending' => 'bg-yellow-100 text-yellow-800', 'approved' => 'bg-green-100 text-green-800', 'rejected' => 'bg-red-100 text-red-800'];
+                                        $statusClass = $statusClasses[$payment->status] ?? 'bg-gray-100 text-gray-800';
+                                    @endphp
+                                    <span class="px-2 py-1 rounded-full text-xs font-medium {{ $statusClass }}">
+                                        {{ strtoupper($payment->status) }}
+                                    </span>
+                                </td>
+
+                                {{-- Notes --}}
+                                <td class="py-3 px-4">
+                                    <span class="text-gray-700 text-xs">{{ $payment->notes ?? '-' }}</span>
+                                </td>
+
+                                {{-- Attachment --}}
+                                <td class="py-3 px-4 text-center">
+                                    @if ($payment->img_url)
+                                        <button @click="selectedImage = '{{ route($role === 'owner' ? 'payments.serve-image' : 'payments.serve-image', $payment->id) }}'; showImageModal = true"
+                                            class="inline-flex items-center gap-1 px-3 py-1 bg-blue-100 text-blue-700 rounded-md hover:bg-blue-200 text-xs font-medium cursor-pointer">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                            </svg>
+                                            View
+                                        </button>
+                                    @else
+                                        <span class="text-gray-400 text-xs">-</span>
+                                    @endif
+                                </td>
+
+                                {{-- Action (Owner Only) --}}
+                                @if ($role === 'owner')
+                                    <td class="py-3 px-4">
+                                        <div class="flex justify-center gap-2">
+                                            @if ($payment->status === 'pending')
+                                                <button type="button" @click="showActionConfirm = {{ $payment->id }}; actionType = 'approve'"
+                                                    class="inline-flex items-center gap-1 px-3 py-1 bg-green-100 text-green-700 rounded-md hover:bg-green-200 text-xs font-medium cursor-pointer">
+                                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                                                    </svg>
+                                                    Approve
+                                                </button>
+                                                <button type="button" @click="showActionConfirm = {{ $payment->id }}; actionType = 'reject'"
+                                                    class="inline-flex items-center gap-1 px-3 py-1 bg-red-100 text-red-700 rounded-md hover:bg-red-200 text-xs font-medium cursor-pointer">
+                                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                                                    </svg>
+                                                    Reject
+                                                </button>
+                                            @else
+                                                <span class="text-gray-400 text-xs">-</span>
+                                            @endif
+                                        </div>
+                                    </td>
+                                @endif
+                            </tr>
+                        @endforeach
                         
                         {{-- Client-side No Results Message --}}
-                        <tr x-show="!hasVisibleRows && searchQuery" x-cloak>
+                        <tr x-show="searchQuery.trim() !== '' && !hasResults" x-cloak>
                             <td colspan="{{ $role === 'owner' ? '9' : '8' }}" class="py-8 text-center text-gray-400">
                                 <svg class="w-16 h-16 mx-auto mb-3 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -724,8 +844,8 @@
                 </table>
             </div>
 
-            {{-- Pagination - Always visible --}}
-            <div id="payment-history-pagination-container" class="mt-5">
+            {{-- Pagination - Hidden during search --}}
+            <div id="payment-history-pagination-container" class="mt-5" x-show="searchQuery.trim() === ''">
                 <x-custom-pagination :paginator="$payments" />
             </div>
 

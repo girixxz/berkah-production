@@ -110,12 +110,33 @@ class PaymentHistoryController extends Controller
             ->paginate($perPage)
             ->appends($request->except('page'));
 
+        // Get all payments for search functionality (with same filters)
+        $allPaymentsQuery = Payment::with(['invoice.order.customer', 'invoice.order.productCategory']);
+
+        // Apply same filter to allPayments
+        if ($filter === 'pending' || $filter === 'approved' || $filter === 'rejected') {
+            $allPaymentsQuery->where('status', $filter);
+        } elseif ($filter !== 'default') {
+            $allPaymentsQuery->where('payment_type', $filter);
+        }
+
+        // Apply same date filter to allPayments
+        if ($startDate && $endDate) {
+            $allPaymentsQuery->whereBetween('paid_at', [
+                Carbon::parse($startDate)->startOfDay(),
+                Carbon::parse($endDate)->endOfDay()
+            ]);
+        }
+
+        // Get all payments with same sorting
+        $allPayments = $allPaymentsQuery->orderBy('paid_at', 'desc')->get();
+
         // AJAX support - return rendered HTML for AJAX requests
         if ($request->ajax() || $request->wantsJson() || 
             $request->header('X-Requested-With') === 'XMLHttpRequest') {
-            return view('pages.admin.payment-history', compact('payments', 'stats', 'startDate', 'endDate', 'dateRange'))->render();
+            return view('pages.admin.payment-history', compact('payments', 'allPayments', 'stats', 'startDate', 'endDate', 'dateRange'))->render();
         }
         
-        return view('pages.admin.payment-history', compact('payments', 'stats', 'startDate', 'endDate', 'dateRange'));
+        return view('pages.admin.payment-history', compact('payments', 'allPayments', 'stats', 'startDate', 'endDate', 'dateRange'));
     }
 }
