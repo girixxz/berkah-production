@@ -301,6 +301,57 @@ class OrderController extends Controller
                 ->appends($request->except('page'));
         }
 
+        // Get all orders for search functionality (with same filters)
+        $allOrdersQuery = Order::with([
+            'customer',
+            'sales',
+            'productCategory',
+            'materialCategory',
+            'materialTexture',
+            'invoice'
+        ]);
+
+        // Apply same filter to allOrders
+        if ($filter === 'pending') {
+            $allOrdersQuery->where('production_status', 'pending');
+        } elseif ($filter === 'dp') {
+            $allOrdersQuery->whereHas('invoice', function ($q) {
+                $q->where('status', 'dp');
+            });
+        } elseif ($filter === 'wip') {
+            $allOrdersQuery->where('production_status', 'wip');
+        } elseif ($filter === 'finished') {
+            $allOrdersQuery->where('production_status', 'finished');
+        } elseif ($filter === 'cancelled') {
+            $allOrdersQuery->where('production_status', 'cancelled');
+        }
+
+        // Apply same date filter to allOrders
+        if ($startDate) {
+            $allOrdersQuery->whereDate('order_date', '>=', $startDate);
+        }
+        if ($endDate) {
+            $allOrdersQuery->whereDate('order_date', '<=', $endDate);
+        }
+
+        // Sort same as paginated orders
+        if ($filter === 'wip') {
+            $allOrders = $allOrdersQuery->orderBy('wip_date', 'desc')
+                ->orderBy('created_at', 'desc')
+                ->get();
+        } elseif ($filter === 'finished') {
+            $allOrders = $allOrdersQuery->orderBy('finished_date', 'desc')
+                ->orderBy('created_at', 'desc')
+                ->get();
+        } elseif ($filter === 'cancelled') {
+            $allOrders = $allOrdersQuery->orderBy('cancelled_date', 'desc')
+                ->orderBy('created_at', 'desc')
+                ->get();
+        } else {
+            $allOrders = $allOrdersQuery->orderBy('created_at', 'desc')
+                ->get();
+        }
+
         // Calculate statistics based on the same filters (no cache, real-time)
         $statsQuery = Order::query();
         
@@ -323,7 +374,7 @@ class OrderController extends Controller
             'cancelled' => (clone $statsQuery)->where('production_status', 'cancelled')->count(),
         ];
 
-        return view('pages.admin.orders.index', compact('orders', 'stats', 'dateRange', 'startDate', 'endDate'));
+        return view('pages.admin.orders.index', compact('orders', 'allOrders', 'stats', 'dateRange', 'startDate', 'endDate'));
     }
 
     /**
