@@ -598,87 +598,94 @@
                                         open: false,
                                         dropdownStyle: {},
                                         checkPosition() {
-                                            const button = $refs.button;
+                                            const button = this.$refs.button;
                                             const rect = button.getBoundingClientRect();
                                             const spaceBelow = window.innerHeight - rect.bottom;
                                             const spaceAbove = rect.top;
-                                            const dropdownHeight = 120;
-                                            if (spaceBelow < dropdownHeight && spaceAbove > dropdownHeight) {
+                                            const dropUp = spaceBelow < 200 && spaceAbove > spaceBelow;
+                                    
+                                            if (dropUp) {
                                                 this.dropdownStyle = {
                                                     position: 'fixed',
-                                                    bottom: (window.innerHeight - rect.top + 5) + 'px',
-                                                    left: rect.left + 'px',
-                                                    width: '150px',
-                                                    zIndex: 9999
+                                                    top: (rect.top - 130) + 'px',
+                                                    left: (rect.right - 160) + 'px',
+                                                    width: '160px'
                                                 };
                                             } else {
                                                 this.dropdownStyle = {
                                                     position: 'fixed',
-                                                    top: (rect.bottom + 5) + 'px',
-                                                    left: rect.left + 'px',
-                                                    width: '150px',
-                                                    zIndex: 9999
+                                                    top: (rect.bottom + 8) + 'px',
+                                                    left: (rect.right - 160) + 'px',
+                                                    width: '160px'
                                                 };
                                             }
                                         }
                                     }"
                                         x-init="$watch('open', value => {
+                                            if (value) {
+                                                const scrollContainer = $el.closest('.overflow-y-auto');
+                                                const mainContent = document.querySelector('main');
+                                                const closeOnScroll = () => { open = false; };
+                                        
+                                                scrollContainer?.addEventListener('scroll', closeOnScroll);
+                                                mainContent?.addEventListener('scroll', closeOnScroll);
+                                                window.addEventListener('resize', closeOnScroll);
+                                            }
                                         })">
+                                        {{-- Tombol Titik 3 Horizontal --}}
                                         <button x-ref="button" @click="checkPosition(); open = !open" type="button"
-                                            class="inline-flex justify-center items-center w-8 h-8 rounded-md text-gray-400 hover:text-gray-600 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-primary/20">
-                                            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                                            class="cursor-pointer inline-flex items-center justify-center w-8 h-8 rounded-md border border-gray-300 text-gray-600 hover:bg-gray-100"
+                                            title="Actions">
+                                            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
                                                 <path
-                                                    d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z" />
+                                                    d="M6 10a2 2 0 11-4 0 2 2 0 014 0zM12 10a2 2 0 11-4 0 2 2 0 014 0zM16 12a2 2 0 100-4 2 2 0 000 4z" />
                                             </svg>
                                         </button>
 
+                                        {{-- Dropdown Menu with Fixed Position --}}
                                         <div x-show="open" @click.away="open = false" x-transition :style="dropdownStyle"
-                                            class="bg-white divide-y divide-gray-100 rounded-lg shadow-lg border border-gray-200">
-                                            <ul class="py-1 text-sm text-gray-700">
-                                                <li>
-                                                    <a href="{{ route('admin.customers.show', $customer->id) }}"
-                                                        class="block px-4 py-2 hover:bg-gray-100 transition-colors cursor-pointer">
-                                                        <div class="flex items-center gap-2">
-                                                            <svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor"
-                                                                viewBox="0 0 24 24">
-                                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                                    d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                                    d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                                                            </svg>
-                                                            <span>Detail</span>
-                                                        </div>
-                                                    </a>
-                                                </li>
-                                                <li>
-                                                    <button type="button"
-                                                        @click="editCustomer = {{ Js::from($customer) }}; loadEditLocationData(); openModal = 'editCustomer'; open = false"
-                                                        class="w-full text-left block px-4 py-2 hover:bg-gray-100 transition-colors cursor-pointer">
-                                                        <div class="flex items-center gap-2">
-                                                            <svg class="w-4 h-4 text-yellow-600" fill="none" stroke="currentColor"
-                                                                viewBox="0 0 24 24">
-                                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                                    d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                                                            </svg>
-                                                            <span>Edit</span>
-                                                        </div>
-                                                    </button>
-                                                </li>
-                                                <li>
-                                                    <button type="button"
-                                                        @click="showDeleteCustomerConfirm = {{ $customer->id }}; open = false"
-                                                        class="w-full text-left block px-4 py-2 hover:bg-gray-100 transition-colors cursor-pointer">
-                                                        <div class="flex items-center gap-2">
-                                                            <svg class="w-4 h-4 text-red-600" fill="none" stroke="currentColor"
-                                                                viewBox="0 0 24 24">
-                                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                                            </svg>
-                                                            <span>Delete</span>
-                                                        </div>
-                                                    </button>
-                                                </li>
-                                            </ul>
+                                            class="rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-[9999]">
+                                            <div class="py-1">
+                                                {{-- Detail --}}
+                                                <a href="{{ route('admin.customers.show', $customer->id) }}"
+                                                    class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2">
+                                                    <svg class="w-4 h-4" fill="none" stroke="currentColor"
+                                                        viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round"
+                                                            stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                                        <path stroke-linecap="round" stroke-linejoin="round"
+                                                            stroke-width="2"
+                                                            d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                                    </svg>
+                                                    Detail
+                                                </a>
+
+                                                {{-- Edit --}}
+                                                <button
+                                                    @click="editCustomer = {{ $customer->toJson() }}; openModal = 'editCustomer'; loadEditLocationData(); open = false"
+                                                    class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2">
+                                                    <svg class="w-4 h-4" fill="none" stroke="currentColor"
+                                                        viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round"
+                                                            stroke-width="2"
+                                                            d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                                    </svg>
+                                                    Edit
+                                                </button>
+
+                                                {{-- Delete --}}
+                                                <button type="button"
+                                                    @click="showDeleteCustomerConfirm = {{ $customer->id }}; open = false"
+                                                    class="w-full text-left px-4 py-2 text-sm text-alert-danger hover:bg-gray-100 flex items-center gap-2">
+                                                    <svg class="w-4 h-4" fill="none" stroke="currentColor"
+                                                        viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round"
+                                                            stroke-width="2"
+                                                            d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                                    </svg>
+                                                    Delete
+                                                </button>
+                                            </div>
                                         </div>
                                     </div>
                                 </td>

@@ -103,7 +103,43 @@ class CustomerController extends Controller
         // Get orders with pagination
         $orders = $query->paginate($perPage);
 
-        return view('pages.admin.customers.show', compact('customer', 'orders', 'startDate', 'endDate', 'dateRange'));
+        // Get all orders with same filters for client-side search
+        $allOrdersQuery = $customer->orders()
+            ->with([
+                'productCategory',
+                'materialCategory',
+                'materialTexture',
+                'invoice',
+                'designVariants',
+                'orderStages'
+            ])
+            ->whereIn('production_status', ['wip', 'finished']);
+
+        // Apply same search filter
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $allOrdersQuery->where(function ($q) use ($search) {
+                $q->whereHas('productCategory', function ($q) use ($search) {
+                    $q->where('product_name', 'like', "%{$search}%");
+                })
+                ->orWhereHas('invoice', function ($q) use ($search) {
+                    $q->where('invoice_no', 'like', "%{$search}%");
+                })
+                ->orWhere('notes', 'like', "%{$search}%");
+            });
+        }
+
+        // Apply same date filter
+        if ($startDate && $endDate) {
+            $allOrdersQuery->whereBetween('order_date', [$startDate, $endDate]);
+        }
+
+        // Apply same sorting
+        $allOrdersQuery->orderBy('wip_date', 'desc');
+
+        $allOrders = $allOrdersQuery->get();
+
+        return view('pages.admin.customers.show', compact('customer', 'orders', 'allOrders', 'startDate', 'endDate', 'dateRange'));
     }
 
     /**

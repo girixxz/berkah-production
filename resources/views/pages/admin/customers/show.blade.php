@@ -411,13 +411,23 @@
                                     <th class="py-2 px-2 text-center font-medium rounded-r-lg w-[100px]">Status</th>
                                 </tr>
                             </thead>
-                            <tbody>
+                            <tbody x-data="{
+                                get hasResults() {
+                                    if (searchQuery.trim() === '') return true;
+                                    const rows = Array.from($el.querySelectorAll('tr[data-order]'));
+                                    return rows.some(row => {
+                                        const invoice = (row.getAttribute('data-invoice') || '').toLowerCase();
+                                        const product = (row.getAttribute('data-product') || '').toLowerCase();
+                                        return invoice.includes(searchQuery.toLowerCase()) || product.includes(searchQuery.toLowerCase());
+                                    });
+                                }
+                            }">
                                 @forelse ($orders as $order)
                                     @php
                                         $totalDesigns = $order->designVariants->count();
                                     @endphp
                                     <tr class="border-t border-gray-200 hover:bg-gray-50 cursor-pointer" x-data="{ showImageModal: false }"
-                                        x-show="matchesSearch($el)"
+                                        x-show="searchQuery.trim() === ''"
                                         data-invoice="{{ $order->invoice->invoice_number ?? '' }}"
                                         data-product="{{ $order->productCategory->product_name ?? '' }}"
                                         onclick="window.open('{{ route('admin.orders.show', $order->id) }}', '_blank')">
@@ -536,15 +546,144 @@
                                         </td>
                                     </tr>
                                 @empty
-                                    <tr x-show="!searchQuery">
+                                    <tr x-show="searchQuery.trim() === ''">
                                         <td colspan="7" class="py-8 text-center text-gray-500">
                                             No orders found
                                         </td>
                                     </tr>
                                 @endforelse
+
+                                @foreach ($allOrders as $order)
+                                    @php
+                                        $totalDesigns = $order->designVariants->count();
+                                    @endphp
+                                    <tr class="border-t border-gray-200 hover:bg-gray-50 cursor-pointer" x-data="{ showImageModal: false }"
+                                        data-order="true"
+                                        data-invoice="{{ $order->invoice->invoice_number ?? '' }}"
+                                        data-product="{{ $order->productCategory->product_name ?? '' }}"
+                                        x-show="searchQuery.trim() !== '' && (
+                                            '{{ strtolower($order->invoice->invoice_no ?? '') }}'.includes(searchQuery.toLowerCase()) ||
+                                            '{{ strtolower($order->productCategory->product_name ?? '') }}'.includes(searchQuery.toLowerCase())
+                                        )"
+                                        onclick="window.open('{{ route('admin.orders.show', $order->id) }}', '_blank')">
+                                        {{-- Mockup Column --}}
+                                        <td class="py-2 px-2 text-left">
+                                            <div @click="showImageModal = true; $event.stopPropagation()" 
+                                                class="inline-block w-40 h-25 bg-gray-100 rounded-lg overflow-hidden border border-gray-200 cursor-pointer hover:opacity-80 transition-opacity">
+                                                @if ($order->img_url)
+                                                    <img src="{{ route('orders.serve-image', $order) }}" alt="Order Image" 
+                                                        class="w-full h-full object-cover">
+                                                @else
+                                                    <div class="w-full h-full flex items-center justify-center">
+                                                        <svg class="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                                        </svg>
+                                                    </div>
+                                                @endif
+                                            </div>
+                                        </td>
+
+                                        {{-- Order Detail Column --}}
+                                        <td class="py-2 px-2">
+                                            <div class="space-y-0.5">
+                                                <div>
+                                                    <span class="inline-block w-16 text-xs text-gray-500">INVOICE</span>
+                                                    <span class="text-xs text-gray-500">:</span>
+                                                    <span class="ml-1 text-sm font-bold text-gray-900">
+                                                        {{ $order->invoice->invoice_no ?? 'N/A' }}
+                                                    </span>
+                                                </div>
+                                                <div>
+                                                    <span class="inline-block w-16 text-xs text-gray-500">PRODUCT</span>
+                                                    <span class="text-xs text-gray-500">:</span>
+                                                    <span class="ml-1 text-sm font-semibold text-gray-900">
+                                                        {{ $order->productCategory->product_name ?? '-' }}
+                                                    </span>
+                                                </div>
+                                                <div>
+                                                    <span class="inline-block w-16 text-xs text-gray-500">MATERIAL</span>
+                                                    <span class="text-xs text-gray-500">:</span>
+                                                    <span class="ml-1 text-sm text-gray-700">
+                                                        {{ $order->materialCategory->material_name ?? '-' }}
+                                                    </span>
+                                                </div>
+                                                <div>
+                                                    <span class="inline-block w-16 text-xs text-gray-500">QTY</span>
+                                                    <span class="text-xs text-gray-500">:</span>
+                                                    <span class="ml-1 text-sm font-semibold text-gray-900">
+                                                        {{ number_format($order->total_qty) }} pcs
+                                                    </span>
+                                                </div>
+                                            </div>
+
+                                            {{-- Image Modal --}}
+                                            @if ($order->img_url)
+                                                <div x-show="showImageModal" 
+                                                    x-cloak
+                                                    @click="showImageModal = false"
+                                                    class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+                                                    <div @click.stop class="relative max-w-4xl max-h-[90vh]">
+                                                        <button @click="showImageModal = false" 
+                                                                class="absolute -top-10 right-0 text-white hover:text-gray-300">
+                                                            <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                                                            </svg>
+                                                        </button>
+                                                        <img src="{{ route('orders.serve-image', $order) }}" 
+                                                            alt="Order Image Full" 
+                                                            class="max-w-full max-h-[90vh] object-contain rounded-lg shadow-2xl">
+                                                    </div>
+                                                </div>
+                                            @endif
+                                        </td>
+
+                                        {{-- Total Design Column --}}
+                                        <td class="py-2 px-2 text-center">
+                                            <div class="inline-flex items-center justify-center w-9 h-9 bg-gray-100 rounded-full">
+                                                <span class="text-sm font-bold text-gray-900">{{ $totalDesigns }}</span>
+                                            </div>
+                                            <p class="text-xs text-gray-500 mt-0.5">Design</p>
+                                        </td>
+
+                                        {{-- Total Bill Column --}}
+                                        <td class="py-2 px-2">
+                                            <span class="text-sm font-semibold text-gray-900">Rp {{ number_format($order->invoice->total_bill ?? 0, 0, ',', '.') }}</span>
+                                        </td>
+
+                                        {{-- Remaining Due Column --}}
+                                        <td class="py-2 px-2">
+                                            <span class="text-sm font-semibold text-red-600">Rp {{ number_format($order->invoice->amount_due ?? 0, 0, ',', '.') }}</span>
+                                        </td>
+
+                                        {{-- Finished Date Column --}}
+                                        <td class="py-2 px-2">
+                                            @if ($order->production_status === 'finished' && $order->finished_date)
+                                                <span class="text-sm text-gray-700">{{ \Carbon\Carbon::parse($order->finished_date)->format('d M Y') }}</span>
+                                            @else
+                                                <span class="text-sm text-gray-400">-</span>
+                                            @endif
+                                        </td>
+
+                                        {{-- Status Column --}}
+                                        <td class="py-2 px-2 text-center">
+                                            @if ($order->production_status === 'wip')
+                                                <span class="inline-flex items-center px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full text-xs font-semibold">
+                                                    WIP
+                                                </span>
+                                            @else
+                                                <span class="inline-flex items-center gap-1 px-2 py-0.5 bg-green-100 text-green-700 rounded-full text-xs font-semibold">
+                                                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                                                    </svg>
+                                                    FINISHED
+                                                </span>
+                                            @endif
+                                        </td>
+                                    </tr>
+                                @endforeach
                                 
                                 {{-- No Search Results Message --}}
-                                <tr x-show="searchQuery && !hasVisibleRows" x-cloak>
+                                <tr x-show="searchQuery.trim() !== '' && !hasResults" x-cloak>
                                     <td colspan="7" class="py-8 text-center text-gray-400">
                                         <svg class="w-16 h-16 mx-auto mb-3 opacity-50" fill="none"
                                             stroke="currentColor" viewBox="0 0 24 24">
@@ -560,14 +699,24 @@
                     </div>
 
                     {{-- Mobile/Tablet Card View --}}
-                    <div class="xl:hidden space-y-4">
+                    <div class="xl:hidden space-y-4" x-data="{
+                        get hasResults() {
+                            if (searchQuery.trim() === '') return true;
+                            const cards = Array.from($el.querySelectorAll('div[data-order-card]'));
+                            return cards.some(card => {
+                                const invoice = (card.getAttribute('data-invoice') || '').toLowerCase();
+                                const product = (card.getAttribute('data-product') || '').toLowerCase();
+                                return invoice.includes(searchQuery.toLowerCase()) || product.includes(searchQuery.toLowerCase());
+                            });
+                        }
+                    }">
                         @forelse ($orders as $order)
                             @php
                                 $totalDesigns = $order->designVariants->count();
                             @endphp
                             
                             <div x-data="{ showImageModal: false }" class="bg-white border border-gray-200 rounded-lg p-4 shadow-sm hover:bg-gray-50 cursor-pointer"
-                                x-show="matchesSearch($el)"
+                                x-show="searchQuery.trim() === ''"
                                 data-invoice="{{ $order->invoice->invoice_number ?? '' }}"
                                 data-product="{{ $order->productCategory->product_name ?? '' }}"
                                 onclick="window.open('{{ route('admin.orders.show', $order->id) }}', '_blank')">
@@ -682,13 +831,139 @@
                                 @endif
                             </div>
                         @empty
-                            <div x-show="!searchQuery" class="text-center py-8 text-gray-500">
+                            <div x-show="searchQuery.trim() === ''" class="text-center py-8 text-gray-500">
                                 No orders found
                             </div>
                         @endforelse
+
+                        @foreach ($allOrders as $order)
+                            @php
+                                $totalDesigns = $order->designVariants->count();
+                            @endphp
+                            
+                            <div x-data="{ showImageModal: false }" class="bg-white border border-gray-200 rounded-lg p-4 shadow-sm hover:bg-gray-50 cursor-pointer"
+                                data-order-card="true"
+                                data-invoice="{{ $order->invoice->invoice_number ?? '' }}"
+                                data-product="{{ $order->productCategory->product_name ?? '' }}"
+                                x-show="searchQuery.trim() !== '' && (
+                                    '{{ strtolower($order->invoice->invoice_no ?? '') }}'.includes(searchQuery.toLowerCase()) ||
+                                    '{{ strtolower($order->productCategory->product_name ?? '') }}'.includes(searchQuery.toLowerCase())
+                                )"
+                                onclick="window.open('{{ route('admin.orders.show', $order->id) }}', '_blank')">
+                                {{-- Header: Invoice & Status --}}
+                                <div class="flex items-start justify-between mb-3">
+                                    <div class="flex-1">
+                                        <h3 class="font-bold text-base text-gray-900">
+                                            {{ $order->invoice->invoice_no ?? 'N/A' }}
+                                        </h3>
+                                    </div>
+                                    <div class="flex flex-col items-end gap-1">
+                                        @if ($order->production_status === 'wip')
+                                            <span class="inline-flex items-center px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full text-xs font-semibold">
+                                                WIP
+                                            </span>
+                                        @else
+                                            <span class="inline-flex items-center gap-1 px-2 py-0.5 bg-green-100 text-green-700 rounded-full text-xs font-semibold">
+                                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                                                </svg>
+                                                FINISHED
+                                            </span>
+                                        @endif
+                                    </div>
+                                </div>
+
+                                {{-- Content: Image & Info --}}
+                                <div class="flex gap-3 mb-3">
+                                    {{-- Mockup Image --}}
+                                    <div @click="showImageModal = true; $event.stopPropagation()" 
+                                        class="flex-shrink-0 w-24 h-24 bg-gray-100 rounded-lg overflow-hidden border border-gray-200 cursor-pointer hover:opacity-80 transition-opacity">
+                                        @if ($order->img_url)
+                                            <img src="{{ route('orders.serve-image', $order) }}" alt="Order Image" 
+                                                class="w-full h-full object-cover">
+                                        @else
+                                            <div class="w-full h-full flex items-center justify-center">
+                                                <svg class="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                                </svg>
+                                            </div>
+                                        @endif
+                                    </div>
+
+                                    {{-- Order Info --}}
+                                    <div class="flex-1 space-y-1 text-sm">
+                                        <div class="flex">
+                                            <span class="text-gray-500 w-20 flex-shrink-0">Product</span>
+                                            <span class="text-gray-500">:</span>
+                                            <span class="ml-2 font-semibold text-gray-900">{{ $order->productCategory->product_name ?? '-' }}</span>
+                                        </div>
+                                        <div class="flex">
+                                            <span class="text-gray-500 w-20 flex-shrink-0">Material</span>
+                                            <span class="text-gray-500">:</span>
+                                            <span class="ml-2 text-gray-700">{{ $order->materialCategory->material_name ?? '-' }}</span>
+                                        </div>
+                                        <div class="flex">
+                                            <span class="text-gray-500 w-20 flex-shrink-0">QTY</span>
+                                            <span class="text-gray-500">:</span>
+                                            <span class="ml-2 font-semibold text-gray-900">{{ number_format($order->total_qty) }} pcs</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {{-- Footer: Design Count, Bill, Remaining, Finished Date --}}
+                                <div class="pt-2 border-t border-gray-100 space-y-2 text-xs">
+                                    <div class="flex items-center justify-between">
+                                        <div class="flex items-center gap-1">
+                                            <div class="w-6 h-6 bg-gray-100 rounded-full flex items-center justify-center">
+                                                <span class="text-xs font-bold text-gray-900">{{ $totalDesigns }}</span>
+                                            </div>
+                                            <span class="text-gray-500">Design</span>
+                                        </div>
+                                        <div class="text-right">
+                                            <div class="text-gray-500">Total Bill</div>
+                                            <div class="font-semibold text-gray-900">Rp {{ number_format($order->invoice->total_bill ?? 0, 0, ',', '.') }}</div>
+                                        </div>
+                                    </div>
+                                    <div class="flex items-center justify-between">
+                                        <div class="text-gray-500">Remaining Due</div>
+                                        <div class="font-semibold text-red-600">Rp {{ number_format($order->invoice->amount_due ?? 0, 0, ',', '.') }}</div>
+                                    </div>
+                                    <div class="flex items-center justify-between">
+                                        <div class="text-gray-500">Finished Date</div>
+                                        <div class="font-medium text-gray-900">
+                                            @if ($order->production_status === 'finished' && $order->finished_date)
+                                                {{ \Carbon\Carbon::parse($order->finished_date)->format('d M Y') }}
+                                            @else
+                                                <span class="text-gray-400">-</span>
+                                            @endif
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {{-- Image Modal --}}
+                                @if ($order->img_url)
+                                    <div x-show="showImageModal" 
+                                        x-cloak
+                                        @click="showImageModal = false"
+                                        class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+                                        <div @click.stop class="relative max-w-4xl max-h-[90vh]">
+                                            <button @click="showImageModal = false" 
+                                                    class="absolute -top-10 right-0 text-white hover:text-gray-300">
+                                                <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                                                </svg>
+                                            </button>
+                                            <img src="{{ route('orders.serve-image', $order) }}" 
+                                                alt="Order Image Full" 
+                                                class="max-w-full max-h-[90vh] object-contain rounded-lg shadow-2xl">
+                                        </div>
+                                    </div>
+                                @endif
+                            </div>
+                        @endforeach
                         
                         {{-- No Search Results Message for Mobile --}}
-                        <div x-show="searchQuery && !hasVisibleRows" x-cloak class="text-center py-8">
+                        <div x-show="searchQuery.trim() !== '' && !hasResults" x-cloak class="text-center py-8">
                             <svg class="w-16 h-16 mx-auto mb-3 text-gray-400 opacity-50" fill="none"
                                 stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -699,8 +974,8 @@
                         </div>
                     </div>
 
-                {{-- Pagination --}}
-                <div id="customer-orders-pagination-container" class="mt-5">
+                {{-- Pagination - Hidden during search --}}
+                <div id="customer-orders-pagination-container" class="mt-5" x-show="searchQuery.trim() === ''">
                     <x-custom-pagination :paginator="$orders" />
                 </div>
             </div>
