@@ -30,8 +30,19 @@ class CustomerController extends Controller
             ->orderBy('created_at', 'desc')
             ->paginate($perPage, ['*'], 'customer_page');
 
+        // Get all customers with same filters for client-side search
+        $allCustomers = Customer::with(['orders'])
+            ->when($search, function ($query, $search) {
+                return $query->where('customer_name', 'like', "%{$search}%")
+                    ->orWhere('phone', 'like', "%{$search}%");
+            })
+            ->withCount('orders')
+            ->withSum('orders', 'total_qty')
+            ->orderBy('created_at', 'desc')
+            ->get();
+
         // No longer passing provinces - will be loaded via AJAX
-        return view('pages.admin.customers', compact('customers'));
+        return view('pages.admin.customers', compact('customers', 'allCustomers'));
     }
 
     /**

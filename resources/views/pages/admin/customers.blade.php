@@ -411,13 +411,18 @@
                             <th class="py-2 px-4 text-right rounded-r-md">Action</th>
                         </tr>
                     </thead>
-                    <tbody>
+                    <tbody x-data="{
+                        get hasResults() {
+                            if (searchCustomer.trim() === '') return true;
+                            const rows = Array.from($el.querySelectorAll('tr[data-customer]'));
+                            return rows.some(row => {
+                                const searchData = row.getAttribute('data-customer').toLowerCase();
+                                return searchData.includes(searchCustomer.toLowerCase());
+                            });
+                        }
+                    }">
                         @forelse ($customers as $customer)
-                            <tr class="border-t border-gray-200"
-                                x-show="
-                                        '{{ strtolower($customer->customer_name) }} {{ strtolower($customer->phone ?? '') }}'
-                                        .includes(searchCustomer.toLowerCase())
-                                    ">
+                            <tr class="border-t border-gray-200" x-show="searchCustomer.trim() === ''">
                                 <td class="py-2 px-4">{{ $customers->firstItem() + $loop->index }}</td>
                                 <td class="py-2 px-4">
                                     <div class="flex flex-col">
@@ -546,18 +551,156 @@
                                 </td>
                             </tr>
                         @empty
-                            <tr>
+                            <tr x-show="searchCustomer.trim() === ''">
                                 <td colspan="6" class="py-3 px-4 text-center text-red-500 border-t border-gray-200">
                                     No Customers found.
                                 </td>
                             </tr>
                         @endforelse
+
+                        @foreach ($allCustomers as $customer)
+                            <tr class="border-t border-gray-200"
+                                data-customer="{{ strtolower($customer->customer_name . ' ' . ($customer->phone ?? '')) }}"
+                                x-show="searchCustomer.trim() !== '' && 
+                                    '{{ strtolower($customer->customer_name . ' ' . ($customer->phone ?? '')) }}'.includes(searchCustomer.toLowerCase())">
+                                <td class="py-2 px-4">{{ $loop->iteration }}</td>
+                                <td class="py-2 px-4">
+                                    <div class="flex flex-col">
+                                        <span class="font-medium">{{ $customer->customer_name }}</span>
+                                        <span class="text-xs text-gray-500">{{ $customer->phone ?? '-' }}</span>
+                                    </div>
+                                </td>
+                                <td class="py-2 px-4">
+                                    <span
+                                        class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-primary-light text-primary-dark">
+                                        {{ $customer->orders_count ?? 0 }} Orders
+                                    </span>
+                                </td>
+                                <td class="py-2 px-4">
+                                    <span class="font-medium">{{ number_format($customer->orders_sum_total_qty ?? 0) }}
+                                        pcs</span>
+                                </td>
+                                <td class="py-2 px-4">
+                                    <div class="text-xs max-w-xs">
+                                        @if ($customer->address || $customer->village || $customer->district || $customer->city || $customer->province)
+                                            {{ $customer->address ? $customer->address . ', ' : '' }}
+                                            {{ $customer->village ? $customer->village->village_name . ', ' : '' }}
+                                            {{ $customer->district ? $customer->district->district_name . ', ' : '' }}
+                                            {{ $customer->city ? $customer->city->city_name . ', ' : '' }}
+                                            {{ $customer->province ? $customer->province->province_name : '' }}
+                                        @else
+                                            <span class="text-gray-400">-</span>
+                                        @endif
+                                    </div>
+                                </td>
+                                <td class="py-2 px-4 text-right">
+                                    <div class="relative inline-block text-left" x-data="{
+                                        open: false,
+                                        dropdownStyle: {},
+                                        checkPosition() {
+                                            const button = $refs.button;
+                                            const rect = button.getBoundingClientRect();
+                                            const spaceBelow = window.innerHeight - rect.bottom;
+                                            const spaceAbove = rect.top;
+                                            const dropdownHeight = 120;
+                                            if (spaceBelow < dropdownHeight && spaceAbove > dropdownHeight) {
+                                                this.dropdownStyle = {
+                                                    position: 'fixed',
+                                                    bottom: (window.innerHeight - rect.top + 5) + 'px',
+                                                    left: rect.left + 'px',
+                                                    width: '150px',
+                                                    zIndex: 9999
+                                                };
+                                            } else {
+                                                this.dropdownStyle = {
+                                                    position: 'fixed',
+                                                    top: (rect.bottom + 5) + 'px',
+                                                    left: rect.left + 'px',
+                                                    width: '150px',
+                                                    zIndex: 9999
+                                                };
+                                            }
+                                        }
+                                    }"
+                                        x-init="$watch('open', value => {
+                                        })">
+                                        <button x-ref="button" @click="checkPosition(); open = !open" type="button"
+                                            class="inline-flex justify-center items-center w-8 h-8 rounded-md text-gray-400 hover:text-gray-600 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-primary/20">
+                                            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                                                <path
+                                                    d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z" />
+                                            </svg>
+                                        </button>
+
+                                        <div x-show="open" @click.away="open = false" x-transition :style="dropdownStyle"
+                                            class="bg-white divide-y divide-gray-100 rounded-lg shadow-lg border border-gray-200">
+                                            <ul class="py-1 text-sm text-gray-700">
+                                                <li>
+                                                    <a href="{{ route('admin.customers.show', $customer->id) }}"
+                                                        class="block px-4 py-2 hover:bg-gray-100 transition-colors cursor-pointer">
+                                                        <div class="flex items-center gap-2">
+                                                            <svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor"
+                                                                viewBox="0 0 24 24">
+                                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                                    d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                                    d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                                            </svg>
+                                                            <span>Detail</span>
+                                                        </div>
+                                                    </a>
+                                                </li>
+                                                <li>
+                                                    <button type="button"
+                                                        @click="editCustomer = {{ Js::from($customer) }}; loadEditLocationData(); openModal = 'editCustomer'; open = false"
+                                                        class="w-full text-left block px-4 py-2 hover:bg-gray-100 transition-colors cursor-pointer">
+                                                        <div class="flex items-center gap-2">
+                                                            <svg class="w-4 h-4 text-yellow-600" fill="none" stroke="currentColor"
+                                                                viewBox="0 0 24 24">
+                                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                                    d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                                            </svg>
+                                                            <span>Edit</span>
+                                                        </div>
+                                                    </button>
+                                                </li>
+                                                <li>
+                                                    <button type="button"
+                                                        @click="showDeleteCustomerConfirm = {{ $customer->id }}; open = false"
+                                                        class="w-full text-left block px-4 py-2 hover:bg-gray-100 transition-colors cursor-pointer">
+                                                        <div class="flex items-center gap-2">
+                                                            <svg class="w-4 h-4 text-red-600" fill="none" stroke="currentColor"
+                                                                viewBox="0 0 24 24">
+                                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                                            </svg>
+                                                            <span>Delete</span>
+                                                        </div>
+                                                    </button>
+                                                </li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </td>
+                            </tr>
+                        @endforeach
+                        
+                        {{-- Client-side No Results Message --}}
+                        <tr x-show="searchCustomer.trim() !== '' && !hasResults" x-cloak>
+                            <td colspan="6" class="py-8 text-center text-gray-400">
+                                <svg class="w-16 h-16 mx-auto mb-3 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                                </svg>
+                                <p class="text-sm">No customers match your search</p>
+                            </td>
+                        </tr>
                     </tbody>
                 </table>
             </div>
 
-            {{-- Pagination --}}
-            <div id="customers-pagination-container" class="mt-5">
+            {{-- Pagination - Hidden during search --}}
+            <div id="customers-pagination-container" class="mt-5" x-show="searchCustomer.trim() === ''">
                 @if ($customers->hasPages())
                     <x-custom-pagination :paginator="$customers" />
                 @endif
