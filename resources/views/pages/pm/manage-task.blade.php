@@ -640,14 +640,24 @@
                             <th class="py-3 px-3 text-center font-bold whitespace-nowrap rounded-r-lg">Action</th>
                         </tr>
                     </thead>
-                    <tbody class="divide-y divide-gray-200">
+                    <tbody class="divide-y divide-gray-200" x-data="{
+                        get hasResults() {
+                            if (searchQuery.trim() === '') return true;
+                            const rows = Array.from($el.querySelectorAll('tr[data-order]'));
+                            return rows.some(row => {
+                                const invoice = (row.getAttribute('data-invoice') || '').toLowerCase();
+                                const customer = (row.getAttribute('data-customer') || '').toLowerCase();
+                                return invoice.includes(searchQuery.toLowerCase()) || customer.includes(searchQuery.toLowerCase());
+                            });
+                        }
+                    }">
                         @forelse ($orders as $order)
                             @php
                                 // Get all order stages for this order
                                 $orderStagesMap = $order->orderStages->keyBy('stage_id');
                             @endphp
                             <tr class="hover:bg-gray-50"
-                                x-show="matchesSearch($el)"
+                                x-show="searchQuery.trim() === ''"
                                 data-invoice="{{ $order->invoice->invoice_no ?? '' }}"
                                 data-customer="{{ $order->customer->customer_name ?? '' }}">
                                 {{-- Customer --}}
@@ -864,7 +874,7 @@
                                 </td>
                             </tr>
                         @empty
-                            <tr x-show="!searchQuery" x-cloak>
+                            <tr x-show="searchQuery.trim() === ''" x-cloak>
                                 <td colspan="{{ 4 + count($productionStages) + 1 }}"
                                     class="py-8 text-center text-gray-400">
                                     <svg class="w-16 h-16 mx-auto mb-3 opacity-50" fill="none" stroke="currentColor"
@@ -876,7 +886,208 @@
                                 </td>
                             </tr>
                         @endforelse
-                        <tr x-show="!hasVisibleRows && searchQuery" x-cloak>
+
+                        @foreach ($allOrders as $order)
+                            @php
+                                // Get all order stages for this order
+                                $orderStagesMap = $order->orderStages->keyBy('stage_id');
+                            @endphp
+                            <tr class="hover:bg-gray-50"
+                                data-order="true"
+                                data-invoice="{{ $order->invoice->invoice_no ?? '' }}"
+                                data-customer="{{ $order->customer->customer_name ?? '' }}"
+                                x-show="searchQuery.trim() !== '' && (
+                                    '{{ strtolower($order->invoice->invoice_no ?? '') }}'.includes(searchQuery.toLowerCase()) ||
+                                    '{{ strtolower($order->customer->customer_name ?? '') }}'.includes(searchQuery.toLowerCase())
+                                )">
+                                {{-- Customer --}}
+                                <td class="py-3 px-3">
+                                    <div>
+                                        <p class="text-gray-700 whitespace-nowrap">
+                                            {{ $order->customer->customer_name ?? '-' }}</p>
+                                        <p class="text-[10px] text-gray-500">
+                                            @if($order->customer && $order->customer->phone)
+                                                {{ substr($order->customer->phone, 0, 4) }}****{{ substr($order->customer->phone, -3) }}
+                                            @else
+                                                -
+                                            @endif
+                                        </p>
+                                    </div>
+                                </td>
+
+                                {{-- Order (Invoice + Product + Priority) --}}
+                                <td class="py-3 px-3">
+                                    <div class="flex items-center gap-1.5 flex-wrap max-w-[200px]">
+                                        <span class="font-medium text-gray-900 text-[11px]">
+                                            {{ $order->invoice->invoice_no ?? '-' }}
+                                        </span>
+                                        @if ($order->productCategory)
+                                            <span
+                                                class="px-1.5 py-0.5 text-[10px] font-semibold text-green-700 bg-green-100 rounded">
+                                                {{ strtoupper($order->productCategory->product_name) }}
+                                            </span>
+                                        @endif
+                                        @if ($order->priority === 'high')
+                                            <span class="text-[10px] font-semibold text-red-600 italic">(HIGH)</span>
+                                        @endif
+                                    </div>
+                                </td>
+
+                                {{-- Date In --}}
+                                <td class="py-3 px-3 text-center">
+                                    <div class="flex flex-col items-center leading-tight">
+                                        <span class="text-gray-900 text-sm font-semibold">{{ \Carbon\Carbon::parse($order->order_date)->format('d') }}</span>
+                                        <span class="text-gray-600 text-[10px]">{{ \Carbon\Carbon::parse($order->order_date)->format('M') }}</span>
+                                        <span class="text-gray-500 text-[9px]">{{ \Carbon\Carbon::parse($order->order_date)->format('Y') }}</span>
+                                    </div>
+                                </td>
+
+                                {{-- Date Out (Deadline) --}}
+                                <td class="py-3 px-3 text-center">
+                                    <div class="flex flex-col items-center leading-tight">
+                                        <span class="text-gray-900 text-sm font-semibold">{{ \Carbon\Carbon::parse($order->deadline)->format('d') }}</span>
+                                        <span class="text-gray-600 text-[10px]">{{ \Carbon\Carbon::parse($order->deadline)->format('M') }}</span>
+                                        <span class="text-gray-500 text-[9px]">{{ \Carbon\Carbon::parse($order->deadline)->format('Y') }}</span>
+                                    </div>
+                                </td>
+
+                                {{-- Production Stages --}}
+                                @foreach ($productionStages as $stage)
+                                    @php
+                                        $orderStage = $orderStagesMap->get($stage->id);
+                                        $hasDate = $orderStage && $orderStage->start_date && $orderStage->deadline;
+                                        $status = $orderStage ? $orderStage->status : 'pending';
+                                        $statusColors = [
+                                            'pending' => 'text-gray-400',
+                                            'in_progress' => 'text-yellow-500',
+                                            'done' => 'text-green-500',
+                                        ];
+                                        $statusColor = $statusColors[$status] ?? 'text-gray-400';
+                                    @endphp
+                                    <td class="py-3 px-3">
+                                        <div class="flex flex-col items-center gap-1">
+                                            {{-- Date Button --}}
+                                            <button type="button"
+                                                @click="openStageModal({{ $order->id }}, {{ $stage->id }}, '{{ $stage->stage_name }}', '{{ $orderStage?->start_date?->format('Y-m-d') ?? '' }}', '{{ $orderStage?->deadline?->format('Y-m-d') ?? '' }}')"
+                                                class="p-1 rounded hover:bg-gray-200 transition-colors" title="Set Date">
+                                                <svg class="w-4 h-4 text-gray-600" fill="none" stroke="currentColor"
+                                                    viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                        d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                                </svg>
+                                            </button>
+
+                                            {{-- Date Display --}}
+                                            @if ($hasDate)
+                                                <div class="text-[9px] text-center">
+                                                    <div class="font-medium text-gray-700">{{ \Carbon\Carbon::parse($orderStage->start_date)->format('d M') }}</div>
+                                                    <div class="text-gray-500">{{ \Carbon\Carbon::parse($orderStage->deadline)->format('d M') }}</div>
+                                                </div>
+                                            @else
+                                                <div class="text-[9px] text-gray-400">No date</div>
+                                            @endif
+
+                                            {{-- Status Icon --}}
+                                            <div class="flex items-center gap-1">
+                                                @if ($status === 'done')
+                                                    <svg class="w-4 h-4 {{ $statusColor }}" fill="currentColor" viewBox="0 0 20 20">
+                                                        <path fill-rule="evenodd"
+                                                            d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                                                            clip-rule="evenodd" />
+                                                    </svg>
+                                                @elseif ($status === 'in_progress')
+                                                    <svg class="w-4 h-4 {{ $statusColor }}" fill="currentColor" viewBox="0 0 20 20">
+                                                        <path fill-rule="evenodd"
+                                                            d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z"
+                                                            clip-rule="evenodd" />
+                                                    </svg>
+                                                @else
+                                                    <svg class="w-4 h-4 {{ $statusColor }}" fill="currentColor" viewBox="0 0 20 20">
+                                                        <path fill-rule="evenodd"
+                                                            d="M10 18a8 8 0 100-16 8 8 0 000 16zM8 7a1 1 0 00-1 1v4a1 1 0 001 1h4a1 1 0 001-1V8a1 1 0 00-1-1H8z"
+                                                            clip-rule="evenodd" />
+                                                    </svg>
+                                                @endif
+                                            </div>
+                                        </div>
+                                    </td>
+                                @endforeach
+
+                                {{-- Action Column --}}
+                                <td class="py-3 px-3 text-center">
+                                    <div class="relative inline-block text-left" x-data="{
+                                        open: false,
+                                        dropdownStyle: {},
+                                        checkPosition() {
+                                            const button = this.$refs.button;
+                                            const dropdown = this.$refs.dropdown;
+                                            const rect = button.getBoundingClientRect();
+                                            const spaceBelow = window.innerHeight - rect.bottom;
+                                            const spaceAbove = rect.top;
+                                    
+                                            const dropdownHeight = dropdown ? dropdown.offsetHeight : 150;
+                                            const dropUp = spaceBelow < (dropdownHeight + 20) && spaceAbove > spaceBelow;
+                                    
+                                            if (dropUp) {
+                                                this.dropdownStyle = {
+                                                    position: 'fixed',
+                                                    top: (rect.top - dropdownHeight - 8) + 'px',
+                                                    left: (rect.right - 180) + 'px',
+                                                    width: '180px'
+                                                };
+                                            } else {
+                                                this.dropdownStyle = {
+                                                    position: 'fixed',
+                                                    top: (rect.bottom + 8) + 'px',
+                                                    left: (rect.right - 180) + 'px',
+                                                    width: '180px'
+                                                };
+                                            }
+                                        }
+                                    }"
+                                        x-init="$watch('open', value => {
+                                            if (value) {
+                                                const scrollContainer = $el.closest('.overflow-x-auto');
+                                                const mainContent = document.querySelector('main');
+                                                const closeOnScroll = () => { open = false; };
+                                        
+                                                scrollContainer?.addEventListener('scroll', closeOnScroll);
+                                                mainContent?.addEventListener('scroll', closeOnScroll);
+                                                window.addEventListener('resize', closeOnScroll);
+                                            }
+                                        })">
+                                        @if (!$isViewOnly)
+                                            <button x-ref="button" @click="checkPosition(); open = !open" type="button"
+                                                class="cursor-pointer inline-flex items-center justify-center w-8 h-8 rounded-md border border-gray-300 text-gray-600 hover:bg-gray-100"
+                                                title="Actions">
+                                                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                                    <path
+                                                        d="M6 10a2 2 0 11-4 0 2 2 0 014 0zM12 10a2 2 0 11-4 0 2 2 0 014 0zM16 12a2 2 0 100-4 2 2 0 000 4z" />
+                                                </svg>
+                                            </button>
+                                        @else
+                                            <span class="text-xs text-gray-400 italic px-2">View Only</span>
+                                        @endif
+
+                                        {{-- Dropdown Menu with Fixed Position --}}
+                                        <div x-show="open" @click.away="open = false" x-cloak x-ref="dropdown"
+                                            :style="dropdownStyle"
+                                            class="bg-white border border-gray-200 rounded-lg shadow-lg z-50 py-2">
+                                            <button type="button"
+                                                @click="openEditStageModal({{ $order->id }}, '{{ $order->invoice->invoice_no ?? '' }}', {{ Js::from($order->orderStages->map(function($os) use ($productionStages) { return ['id' => $os->id, 'stage_name' => $productionStages->firstWhere('id', $os->stage_id)?->stage_name ?? 'Unknown', 'status' => $os->status, 'start_date' => $os->start_date?->format('d M Y'), 'deadline' => $os->deadline?->format('d M Y')]; })) }}, '{{ $order->notes ?? '' }}'); open = false"
+                                                class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2">
+                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                        d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                                </svg>
+                                                Edit Stage Status
+                                            </button>
+                                        </div>
+                                    </div>
+                                </td>
+                            </tr>
+                        @endforeach
+                        <tr x-show="searchQuery.trim() !== '' && !hasResults" x-cloak>
                             <td colspan="{{ 4 + count($productionStages) + 1 }}"
                                 class="py-8 text-center text-gray-400">
                                 <svg class="w-16 h-16 mx-auto mb-3 opacity-50" fill="none" stroke="currentColor"
@@ -892,8 +1103,8 @@
                 </table>
             </div>
 
-            {{-- Pagination --}}
-            <div id="task-manager-pagination-container" class="mt-5">
+            {{-- Pagination - Hidden during search --}}
+            <div id="task-manager-pagination-container" class="mt-5" x-show="searchQuery.trim() === ''">
                 <x-custom-pagination :paginator="$orders" />
             </div>
         </div>

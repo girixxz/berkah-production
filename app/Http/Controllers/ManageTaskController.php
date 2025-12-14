@@ -131,6 +131,56 @@ class ManageTaskController extends Controller
                 ->appends($request->except('page'));
         }
 
+        // Get all orders with same filters for client-side search
+        $allOrdersQuery = Order::with([
+            'customer',
+            'invoice.payments',
+            'productCategory',
+            'orderStages.productionStage'
+        ])
+        ->whereIn('production_status', ['wip', 'finished']);
+
+        // Apply same filter based on production status
+        if ($filter === 'wip') {
+            $allOrdersQuery->where('production_status', 'wip');
+        } elseif ($filter === 'finished') {
+            $allOrdersQuery->where('production_status', 'finished');
+        }
+
+        // Apply same search
+        if ($search) {
+            $allOrdersQuery->where(function ($q) use ($search) {
+                $q->whereHas('invoice', function ($invoiceQuery) use ($search) {
+                    $invoiceQuery->where('invoice_no', 'like', "%{$search}%");
+                })
+                ->orWhereHas('customer', function ($customerQuery) use ($search) {
+                    $customerQuery->where('customer_name', 'like', "%{$search}%")
+                        ->orWhere('phone', 'like', "%{$search}%");
+                });
+            });
+        }
+
+        // Apply same date range filter
+        if ($startDate) {
+            $allOrdersQuery->whereDate('order_date', '>=', $startDate);
+        }
+        if ($endDate) {
+            $allOrdersQuery->whereDate('order_date', '<=', $endDate);
+        }
+
+        // Apply same sorting
+        if ($filter === 'finished') {
+            $allOrders = $allOrdersQuery
+                ->orderBy('finished_date', 'desc')
+                ->orderBy('created_at', 'desc')
+                ->get();
+        } else {
+            $allOrders = $allOrdersQuery
+                ->orderBy('wip_date', 'desc')
+                ->orderBy('created_at', 'desc')
+                ->get();
+        }
+
         // Calculate statistics
         $stats = [
             'total_orders' => Order::whereIn('production_status', ['wip', 'finished'])->count(),
@@ -141,10 +191,10 @@ class ManageTaskController extends Controller
         // AJAX support - return rendered HTML for AJAX requests
         if ($request->ajax() || $request->wantsJson() || 
             $request->header('X-Requested-With') === 'XMLHttpRequest') {
-            return view('pages.pm.manage-task', compact('orders', 'stats', 'productionStages', 'dateRange', 'startDate', 'endDate', 'isViewOnly'))->render();
+            return view('pages.pm.manage-task', compact('orders', 'allOrders', 'stats', 'productionStages', 'dateRange', 'startDate', 'endDate', 'isViewOnly'))->render();
         }
         
-        return view('pages.pm.manage-task', compact('orders', 'stats', 'productionStages', 'dateRange', 'startDate', 'endDate', 'isViewOnly'));
+        return view('pages.pm.manage-task', compact('orders', 'allOrders', 'stats', 'productionStages', 'dateRange', 'startDate', 'endDate', 'isViewOnly'));
     }
 
     /**
