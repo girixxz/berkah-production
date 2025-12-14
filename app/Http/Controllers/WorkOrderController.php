@@ -252,6 +252,35 @@ class WorkOrderController extends Controller
             ->paginate($perPage)
             ->appends($request->except('page'));
 
+        // Get all orders for search functionality (with same filters)
+        $allOrdersQuery = Order::with([
+            'customer',
+            'productCategory',
+            'invoice',
+            'orderItems',
+            'designVariants',
+            'workOrders'
+        ])
+        ->whereIn('production_status', ['wip', 'finished']);
+
+        // Apply same filter to allOrders
+        if ($filter === 'pending') {
+            $allOrdersQuery->where('work_order_status', 'pending');
+        } elseif ($filter === 'created') {
+            $allOrdersQuery->where('work_order_status', 'created');
+        }
+
+        // Apply same date filter to allOrders
+        if ($startDate) {
+            $allOrdersQuery->whereDate('wip_date', '>=', $startDate);
+        }
+        if ($endDate) {
+            $allOrdersQuery->whereDate('wip_date', '<=', $endDate);
+        }
+
+        // Get all orders with same sorting
+        $allOrders = $allOrdersQuery->orderBy('wip_date', 'desc')->get();
+
         // Calculate statistics
         $stats = [
             'total_orders' => Order::where('production_status', 'wip')->count(),
@@ -266,10 +295,10 @@ class WorkOrderController extends Controller
         // AJAX support - return rendered HTML for AJAX requests
         if ($request->ajax() || $request->wantsJson() || 
             $request->header('X-Requested-With') === 'XMLHttpRequest') {
-            return view('pages.admin.work-orders.index', compact('orders', 'stats', 'dateRange', 'startDate', 'endDate'))->render();
+            return view('pages.admin.work-orders.index', compact('orders', 'allOrders', 'stats', 'dateRange', 'startDate', 'endDate'))->render();
         }
         
-        return view('pages.admin.work-orders.index', compact('orders', 'stats', 'dateRange', 'startDate', 'endDate'));
+        return view('pages.admin.work-orders.index', compact('orders', 'allOrders', 'stats', 'dateRange', 'startDate', 'endDate'));
     }
 
     /**

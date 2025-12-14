@@ -477,9 +477,16 @@
                                 <th class="py-3 px-4 text-center font-bold rounded-r-lg">Action</th>
                             </tr>
                         </thead>
-                        <tbody class="divide-y divide-gray-200">
+                        <tbody class="divide-y divide-gray-200" x-data="{
+                            get hasResults() {
+                                if (!searchQuery || searchQuery.trim() === '') return true;
+                                const search = searchQuery.toLowerCase();
+                                return {{ Js::from($allOrders->map(fn($o) => strtolower(($o->invoice->invoice_no ?? '') . ' ' . ($o->customer->customer_name ?? '') . ' ' . ($o->customer->phone ?? '') . ' ' . ($o->productCategory->product_name ?? '')))) }}
+                                    .some(text => text.includes(search));
+                            }
+                        }">
                             @forelse ($orders as $order)
-                                <tr class="hover:bg-gray-50" x-show="matchesSearch($el)"
+                                <tr class="hover:bg-gray-50" x-show="searchQuery.trim() === ''"
                                     data-invoice="{{ $order->invoice->invoice_no ?? '' }}"
                                     data-customer="{{ $order->customer->customer_name ?? '' }} {{ $order->customer->phone ?? '' }}"
                                     data-product="{{ $order->productCategory->product_name ?? '' }}">
@@ -627,7 +634,7 @@
                                     </td>
                                 </tr>
                             @empty
-                                <tr x-show="!searchQuery">
+                                <tr x-show="searchQuery.trim() === ''">
                                     <td colspan="8" class="py-8 text-center text-gray-400">
                                         <svg class="w-16 h-16 mx-auto mb-3 opacity-50" fill="none"
                                             stroke="currentColor" viewBox="0 0 24 24">
@@ -639,9 +646,100 @@
                                     </td>
                                 </tr>
                             @endforelse
+
+                            @foreach ($allOrders as $order)
+                                <tr class="hover:bg-gray-50" x-show="searchQuery.trim() !== '' && 
+                                    {{ Js::from(strtolower(($order->invoice->invoice_no ?? '') . ' ' . ($order->customer->customer_name ?? '') . ' ' . ($order->customer->phone ?? '') . ' ' . ($order->productCategory->product_name ?? ''))) }}
+                                    .includes(searchQuery.toLowerCase())">
+                                    {{-- Invoice No with Priority --}}
+                                    <td class="py-3 px-4">
+                                        <div class="flex items-center gap-1.5 flex-wrap">
+                                            <span class="font-medium text-gray-900">{{ $order->invoice->invoice_no ?? '-' }}</span>
+                                            @if (isset($order->priority) && strtolower($order->priority) === 'high')
+                                                <span class="text-[10px] font-semibold text-red-600 italic">(HIGH)</span>
+                                            @endif
+                                        </div>
+                                    </td>
+
+                                    {{-- Customer --}}
+                                    <td class="py-3 px-4">
+                                        <div>
+                                            <p class="text-gray-700">{{ $order->customer->customer_name ?? '-' }}</p>
+                                            <p class="text-xs text-gray-500">{{ $order->customer->phone ?? '-' }}</p>
+                                        </div>
+                                    </td>
+
+                                    {{-- Product --}}
+                                    <td class="py-3 px-4">
+                                        <span class="text-gray-700">{{ $order->productCategory->product_name ?? '-' }}</span>
+                                    </td>
+
+                                    {{-- QTY --}}
+                                    <td class="py-3 px-4">
+                                        <span class="text-gray-700">{{ $order->orderItems->sum('qty') }}</span>
+                                    </td>
+
+                                    {{-- Total Design --}}
+                                    <td class="py-3 px-4">
+                                        <span class="text-gray-700">{{ $order->designVariants->count() }}</span>
+                                    </td>
+
+                                    {{-- Deadline --}}
+                                    <td class="py-3 px-4">
+                                        <span class="text-gray-700">{{ $order->deadline ? \Carbon\Carbon::parse($order->deadline)->format('d M Y') : '-' }}</span>
+                                    </td>
+
+                                    {{-- Status --}}
+                                    <td class="py-3 px-4">
+                                        @php
+                                            $totalDesigns = $order->designVariants->count();
+                                            $completedWorkOrders = $order->designVariants->filter(function($design) {
+                                                return $design->workOrder && $design->workOrder->status === 'created';
+                                            })->count();
+                                            $progressText = "({$completedWorkOrders}/{$totalDesigns})";
+                                        @endphp
+                                        
+                                        <div class="flex items-center gap-2">
+                                            @if ($order->work_order_status === 'created')
+                                                <span class="inline-flex items-center text-xs font-semibold text-green-700 bg-green-50 px-2.5 py-1 rounded-full">
+                                                    CREATED
+                                                </span>
+                                            @else
+                                                <span class="inline-flex items-center text-xs font-semibold text-yellow-700 bg-yellow-50 px-2.5 py-1 rounded-full">
+                                                    PENDING
+                                                </span>
+                                            @endif
+                                            <span class="text-xs text-gray-500 font-medium">{{ $progressText }}</span>
+                                        </div>
+                                    </td>
+
+                                    {{-- Action --}}
+                                    <td class="py-3 px-4">
+                                        <div class="flex justify-center">
+                                            <div class="relative inline-block text-left" x-data="{ open: false, dropdownStyle: {}, checkPosition() { const button = this.$refs.button; const rect = button.getBoundingClientRect(); const spaceBelow = window.innerHeight - rect.bottom; const spaceAbove = rect.top; const dropUp = spaceBelow < 200 && spaceAbove > spaceBelow; if (dropUp) { this.dropdownStyle = { position: 'fixed', top: (rect.top - 160) + 'px', left: (rect.right - 180) + 'px', width: '180px' }; } else { this.dropdownStyle = { position: 'fixed', top: (rect.bottom + 8) + 'px', left: (rect.right - 180) + 'px', width: '180px' }; } } }">
+                                                <button x-ref="button" @click="checkPosition(); open = !open" type="button" class="cursor-pointer inline-flex items-center justify-center w-8 h-8 rounded-md border border-gray-300 text-gray-600 hover:bg-gray-100" title="Actions">
+                                                    <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                                        <path d="M6 10a2 2 0 11-4 0 2 2 0 014 0zM12 10a2 2 0 11-4 0 2 2 0 014 0zM16 12a2 2 0 100-4 2 2 0 000 4z" />
+                                                    </svg>
+                                                </button>
+
+                                                <div x-show="open" @click.away="open = false" x-cloak x-ref="dropdown" :style="dropdownStyle" class="bg-white border border-gray-200 rounded-md shadow-lg z-50 py-1">
+                                                    <a href="{{ route('admin.work-orders.manage', $order->id) }}" class="px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2">
+                                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                                        </svg>
+                                                        Manage WO
+                                                    </a>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                </tr>
+                            @endforeach
                             
                             {{-- Client-side No Results Message --}}
-                            <tr x-show="!hasVisibleRows && searchQuery" x-cloak>
+                            <tr x-show="searchQuery.trim() !== '' && !hasResults" x-cloak>
                                 <td colspan="8" class="py-8 text-center text-gray-400">
                                     <svg class="w-16 h-16 mx-auto mb-3 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -654,8 +752,8 @@
                     </table>
                 </div>
 
-                {{-- Pagination - Always visible --}}
-                <div id="work-orders-pagination-container" class="mt-5">
+                {{-- Pagination - Hide during search --}}
+                <div id="work-orders-pagination-container" class="mt-5" x-show="searchQuery.trim() === ''">
                     <x-custom-pagination :paginator="$orders" />
                 </div>
             </div>
