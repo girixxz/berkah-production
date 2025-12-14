@@ -477,9 +477,20 @@
                                 <th class="py-3 px-4 text-center font-bold rounded-r-lg">Action</th>
                             </tr>
                         </thead>
-                        <tbody class="divide-y divide-gray-200">
+                        <tbody class="divide-y divide-gray-200" x-data="{
+                            get hasResults() {
+                                if (searchQuery.trim() === '') return true;
+                                const rows = Array.from($el.querySelectorAll('tr[data-order]'));
+                                return rows.some(row => {
+                                    const invoice = (row.getAttribute('data-invoice') || '').toLowerCase();
+                                    const customer = (row.getAttribute('data-customer') || '').toLowerCase();
+                                    const product = (row.getAttribute('data-product') || '').toLowerCase();
+                                    return invoice.includes(searchQuery.toLowerCase()) || customer.includes(searchQuery.toLowerCase()) || product.includes(searchQuery.toLowerCase());
+                                });
+                            }
+                        }">
                             @forelse ($orders as $order)
-                                <tr class="hover:bg-gray-50" x-show="matchesSearch($el)"
+                                <tr class="hover:bg-gray-50" x-show="searchQuery.trim() === ''"
                                     data-invoice="{{ $order->invoice->invoice_no ?? '' }}"
                                     data-customer="{{ $order->customer->customer_name ?? '' }} {{ $order->customer->phone ?? '' }}"
                                     data-product="{{ $order->productCategory->product_name ?? '' }}">
@@ -619,7 +630,7 @@
                                     </td>
                                 </tr>
                             @empty
-                                <tr x-show="!searchQuery">
+                                <tr x-show="searchQuery.trim() === ''">
                                     <td colspan="8" class="py-8 text-center text-gray-400">
                                         <svg class="w-16 h-16 mx-auto mb-3 opacity-50" fill="none"
                                             stroke="currentColor" viewBox="0 0 24 24">
@@ -630,8 +641,158 @@
                                     </td>
                                 </tr>
                             @endforelse
+
+                            @foreach ($allOrders as $order)
+                                <tr class="hover:bg-gray-50"
+                                    data-order="true"
+                                    data-invoice="{{ $order->invoice->invoice_no ?? '' }}"
+                                    data-customer="{{ $order->customer->customer_name ?? '' }} {{ $order->customer->phone ?? '' }}"
+                                    data-product="{{ $order->productCategory->product_name ?? '' }}"
+                                    x-show="searchQuery.trim() !== '' && (
+                                        '{{ strtolower($order->invoice->invoice_no ?? '') }}'.includes(searchQuery.toLowerCase()) ||
+                                        '{{ strtolower($order->customer->customer_name ?? '') }}'.includes(searchQuery.toLowerCase()) ||
+                                        '{{ strtolower($order->customer->phone ?? '') }}'.includes(searchQuery.toLowerCase()) ||
+                                        '{{ strtolower($order->productCategory->product_name ?? '') }}'.includes(searchQuery.toLowerCase())
+                                    )">
+                                    {{-- Invoice No with Priority --}}
+                                    <td class="py-3 px-4">
+                                        <div class="flex items-center gap-1.5 flex-wrap">
+                                            <span
+                                                class="font-medium text-gray-900">{{ $order->invoice->invoice_no ?? '-' }}</span>
+                                            @if (isset($order->priority) && strtolower($order->priority) === 'high')
+                                                <span class="text-[10px] font-semibold text-red-600 italic">(HIGH)</span>
+                                            @endif
+                                        </div>
+                                    </td>
+
+                                    {{-- Customer --}}
+                                    <td class="py-3 px-4">
+                                        <div>
+                                            <p class="text-gray-700">
+                                                {{ $order->customer->customer_name ?? '-' }}
+                                            </p>
+                                            <p class="text-xs text-gray-500">{{ $order->customer->phone ?? '-' }}</p>
+                                        </div>
+                                    </td>
+
+                                    {{-- Product --}}
+                                    <td class="py-3 px-4">
+                                        <span
+                                            class="text-gray-700">{{ $order->productCategory->product_name ?? '-' }}</span>
+                                    </td>
+
+                                    {{-- QTY --}}
+                                    <td class="py-3 px-4">
+                                        <span class="text-gray-700">{{ $order->orderItems->sum('qty') }}</span>
+                                    </td>
+
+                                    {{-- Finished Date --}}
+                                    <td class="py-3 px-4">
+                                        <span
+                                            class="text-gray-700">{{ $order->finished_date ? \Carbon\Carbon::parse($order->finished_date)->format('d M Y H:i') : '-' }}</span>
+                                    </td>
+
+                                    {{-- Shipping Date --}}
+                                    <td class="py-3 px-4">
+                                        <span
+                                            class="text-gray-700">{{ $order->shipping_date ? \Carbon\Carbon::parse($order->shipping_date)->format('d M Y H:i') : '-' }}</span>
+                                    </td>
+
+                                    {{-- Shipping Type --}}
+                                    <td class="py-3 px-4">
+                                        @php
+                                            $shippingTypeClasses = [
+                                                'pickup' => 'bg-purple-100 text-purple-800',
+                                                'delivery' => 'bg-green-100 text-green-800',
+                                            ];
+                                            $shippingTypeClass =
+                                                $shippingTypeClasses[$order->shipping_type] ??
+                                                'bg-gray-100 text-gray-800';
+                                        @endphp
+                                        <span class="px-2 py-1 rounded-full text-xs font-medium {{ $shippingTypeClass }}">
+                                            {{ strtoupper($order->shipping_type) }}
+                                        </span>
+                                    </td>
+
+                                    {{-- Action --}}
+                                    <td class="py-3 px-4">
+                                        <div class="flex justify-center">
+                                            <div class="relative inline-block text-left" x-data="{
+                                                open: false,
+                                                dropdownStyle: {},
+                                                checkPosition() {
+                                                    const button = this.$refs.button;
+                                                    const rect = button.getBoundingClientRect();
+                                                    const spaceBelow = window.innerHeight - rect.bottom;
+                                                    const spaceAbove = rect.top;
+                                                    const dropUp = spaceBelow < 200 && spaceAbove > spaceBelow;
+                                            
+                                                    if (dropUp) {
+                                                        this.dropdownStyle = {
+                                                            position: 'fixed',
+                                                            top: (rect.top - 160) + 'px',
+                                                            left: (rect.right - 180) + 'px',
+                                                            width: '180px'
+                                                        };
+                                                    } else {
+                                                        this.dropdownStyle = {
+                                                            position: 'fixed',
+                                                            top: (rect.bottom + 8) + 'px',
+                                                            left: (rect.right - 180) + 'px',
+                                                            width: '180px'
+                                                        };
+                                                    }
+                                                }
+                                            }"
+                                                x-init="$watch('open', value => {
+                                                    if (value) {
+                                                        const scrollContainer = $el.closest('.overflow-x-auto');
+                                                        const mainContent = document.querySelector('main');
+                                                        const closeOnScroll = () => { open = false; };
+                                                
+                                                        scrollContainer?.addEventListener('scroll', closeOnScroll);
+                                                        mainContent?.addEventListener('scroll', closeOnScroll);
+                                                        window.addEventListener('resize', closeOnScroll);
+                                                    }
+                                                })">
+                                                {{-- Three Dot Button HORIZONTAL --}}
+                                                <button x-ref="button" @click="checkPosition(); open = !open"
+                                                    type="button"
+                                                    class="cursor-pointer inline-flex items-center justify-center w-8 h-8 rounded-md border border-gray-300 text-gray-600 hover:bg-gray-100"
+                                                    title="Actions">
+                                                    <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                                        <path
+                                                            d="M6 10a2 2 0 11-4 0 2 2 0 014 0zM12 10a2 2 0 11-4 0 2 2 0 014 0zM16 12a2 2 0 100-4 2 2 0 000 4z" />
+                                                    </svg>
+                                                </button>
+
+                                                {{-- Dropdown Menu with Fixed Position --}}
+                                                <div x-show="open" @click.away="open = false" x-cloak x-ref="dropdown"
+                                                    :style="dropdownStyle"
+                                                    class="bg-white border border-gray-200 rounded-md shadow-lg z-50 py-1">
+                                                    {{-- View Detail --}}
+                                                    <a href="{{ route('admin.orders.show', $order->id) }}"
+                                                        target="_blank"
+                                                        class="px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2">
+                                                        <svg class="w-4 h-4" fill="none" stroke="currentColor"
+                                                            viewBox="0 0 24 24">
+                                                            <path stroke-linecap="round" stroke-linejoin="round"
+                                                                stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                                            <path stroke-linecap="round" stroke-linejoin="round"
+                                                                stroke-width="2"
+                                                                d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                                        </svg>
+                                                        View Detail
+                                                    </a>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                </tr>
+                            @endforeach
+
                             {{-- No results after client-side filter --}}
-                            <tr x-show="!hasVisibleRows && searchQuery" x-cloak>
+                            <tr x-show="searchQuery.trim() !== '' && !hasResults" x-cloak>
                                 <td colspan="8" class="py-8 text-center text-gray-400">
                                     <svg class="w-16 h-16 mx-auto mb-3 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -643,8 +804,8 @@
                     </table>
                 </div>
 
-                {{-- Pagination - Always show --}}
-                <div id="shipping-pagination-container" class="mt-5">
+                {{-- Pagination - Hidden during search --}}
+                <div id="shipping-pagination-container" class="mt-5" x-show="searchQuery.trim() === ''">
                     <x-custom-pagination :paginator="$orders" />
                 </div>
             </div>

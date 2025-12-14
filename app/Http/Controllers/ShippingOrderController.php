@@ -99,6 +99,46 @@ class ShippingOrderController extends Controller
             ->paginate($perPage)
             ->appends($request->except('page'));
 
+        // Get all orders with same filters for client-side search
+        $allOrdersQuery = Order::with([
+            'customer',
+            'productCategory',
+            'invoice'
+        ])
+        ->where('production_status', 'finished')
+        ->where('shipping_status', 'shipped');
+
+        // Apply same filter based on shipping type
+        if ($filter === 'pickup') {
+            $allOrdersQuery->where('shipping_type', 'pickup');
+        } elseif ($filter === 'delivery') {
+            $allOrdersQuery->where('shipping_type', 'delivery');
+        }
+
+        // Apply same search
+        if ($search) {
+            $allOrdersQuery->where(function ($q) use ($search) {
+                $q->whereHas('invoice', function ($invoiceQuery) use ($search) {
+                    $invoiceQuery->where('invoice_no', 'like', "%{$search}%");
+                })
+                ->orWhereHas('customer', function ($customerQuery) use ($search) {
+                    $customerQuery->where('customer_name', 'like', "%{$search}%")
+                        ->orWhere('phone', 'like', "%{$search}%");
+                });
+            });
+        }
+
+        // Apply same date range filter
+        if ($startDate) {
+            $allOrdersQuery->whereDate('shipping_date', '>=', $startDate);
+        }
+        if ($endDate) {
+            $allOrdersQuery->whereDate('shipping_date', '<=', $endDate);
+        }
+
+        // Same ordering
+        $allOrders = $allOrdersQuery->orderBy('shipping_date', 'desc')->get();
+
         // Calculate statistics
         $stats = [
             'total_shipped' => Order::where('production_status', 'finished')
@@ -116,9 +156,9 @@ class ShippingOrderController extends Controller
 
         // Check if AJAX request
         if ($request->ajax() || $request->wantsJson() || $request->header('X-Requested-With') === 'XMLHttpRequest') {
-            return view('pages.admin.shipping-orders.index', compact('orders', 'stats', 'dateRange', 'startDate', 'endDate'))->render();
+            return view('pages.admin.shipping-orders.index', compact('orders', 'allOrders', 'stats', 'dateRange', 'startDate', 'endDate'))->render();
         }
 
-        return view('pages.admin.shipping-orders.index', compact('orders', 'stats', 'dateRange', 'startDate', 'endDate'));
+        return view('pages.admin.shipping-orders.index', compact('orders', 'allOrders', 'stats', 'dateRange', 'startDate', 'endDate'));
     }
 }
