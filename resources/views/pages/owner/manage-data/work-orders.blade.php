@@ -215,7 +215,7 @@
                     if (section) {
                         section.scrollIntoView({ behavior: 'smooth', block: 'start' });
                     }
-                }, 100);
+                }, 300);
             }
 
             this.$watch('openModal', value => {
@@ -419,10 +419,18 @@
                                 <th class="py-2 px-4 text-right rounded-r-md">Action</th>
                             </tr>
                         </thead>
-                        <tbody>
+                        <tbody x-data="{
+                            get hasResults() {
+                                const search = searchCuttingPattern.trim().toLowerCase();
+                                if (search === '') return true;
+                                @foreach ($allCuttingPatterns as $pattern)
+                                    if ('{{ strtolower($pattern->name) }}'.includes(search)) return true;
+                                @endforeach
+                                return false;
+                            }
+                        }">
                             @forelse ($cuttingPatterns as $cuttingPattern)
-                                <tr class="border-t border-gray-200"
-                                    x-show="searchCuttingPattern.length < 1 || '{{ strtolower($cuttingPattern->name) }}'.includes(searchCuttingPattern.toLowerCase())">
+                                <tr class="border-t border-gray-200" x-show="searchCuttingPattern.trim() === ''">
                                     <td class="py-2 px-4">{{ $cuttingPatterns->firstItem() + $loop->index }}</td>
                                     <td class="py-2 px-4">{{ $cuttingPattern->name }}</td>
                                     <td class="py-2 px-4 text-right">
@@ -506,18 +514,38 @@
                                     </td>
                                 </tr>
                             @empty
-                                <tr>
-                                    <td colspan="3" class="py-3 px-4 text-center text-red-500 border-t border-gray-200">
-                                        No Cutting Patterns founds.
-                                    </td>
+                                <tr x-show="searchCuttingPattern.trim() === ''">
+                                    <td colspan="3" class="py-3 px-4 text-center text-red-500 border-t border-gray-200">No Cutting Patterns found.</td>
                                 </tr>
                             @endforelse
+
+                            @foreach ($allCuttingPatterns as $pattern)
+                                <tr class="border-t border-gray-200" x-show="searchCuttingPattern.trim() !== '' && '{{ strtolower($pattern->name) }}'.includes(searchCuttingPattern.trim().toLowerCase())">
+                                    <td class="py-2 px-4">{{ $loop->iteration }}</td>
+                                    <td class="py-2 px-4">{{ $pattern->name }}</td>
+                                    <td class="py-2 px-4 text-right">
+                                        <div class="relative inline-block text-left" x-data="{ open: false, dropdownStyle: {}, checkPosition() { const button = this.$refs.button; const rect = button.getBoundingClientRect(); const spaceBelow = window.innerHeight - rect.bottom; const spaceAbove = rect.top; const dropUp = spaceBelow < 200 && spaceAbove > spaceBelow; if (dropUp) { this.dropdownStyle = { position: 'fixed', top: (rect.top - 90) + 'px', left: (rect.right - 160) + 'px', width: '160px' }; } else { this.dropdownStyle = { position: 'fixed', top: (rect.bottom + 8) + 'px', left: (rect.right - 160) + 'px', width: '160px' }; } } }" x-init="$watch('open', value => { if (value) { const scrollContainer = $el.closest('.overflow-y-auto'); const mainContent = document.querySelector('main'); const closeOnScroll = () => { open = false; }; scrollContainer?.addEventListener('scroll', closeOnScroll); mainContent?.addEventListener('scroll', closeOnScroll); window.addEventListener('resize', closeOnScroll); } })">
+                                            <button x-ref="button" @click="checkPosition(); open = !open" type="button" class="cursor-pointer inline-flex items-center justify-center w-8 h-8 rounded-md border border-gray-300 text-gray-600 hover:bg-gray-100" title="Actions"><svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path d="M6 10a2 2 0 11-4 0 2 2 0 014 0zM12 10a2 2 0 11-4 0 2 2 0 014 0zM16 12a2 2 0 100-4 2 2 0 000 4z" /></svg></button>
+                                            <div x-show="open" @click.away="open = false" x-transition :style="dropdownStyle" class="rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-[9999]">
+                                                <div class="py-1"><button @click="editCuttingPattern = {{ $pattern->toJson() }}; openModal = 'editCuttingPattern'; open = false" class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>Edit</button><button type="button" @click="showDeleteCuttingPatternConfirm = {{ $pattern->id }}; open = false" class="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100 flex items-center gap-2"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>Delete</button></div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                </tr>
+                            @endforeach
+
+                            <tr x-show="searchCuttingPattern.trim() !== '' && !hasResults" class="border-t border-gray-200">
+                                <td colspan="3" class="py-8 text-center text-gray-500">
+                                    <svg class="mx-auto h-12 w-12 text-gray-400 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+                                    <p class="text-sm">No cutting pattern found for "<span x-text="searchCuttingPattern"></span>"</p>
+                                </td>
+                            </tr>
                         </tbody>
                     </table>
                 </div>
 
                 <!-- Pagination -->
-                <div id="cutting-pattern-pagination-container" class="mt-4">
+                <div id="cutting-pattern-pagination-container" class="mt-4" x-show="searchCuttingPattern.trim() === ''">
                     <x-custom-pagination :paginator="$cuttingPatterns" />
                 </div>
             </div>
@@ -643,10 +671,18 @@
                                 <th class="py-2 px-4 text-right rounded-r-sm">Action</th>
                             </tr>
                         </thead>
-                        <tbody>
+                        <tbody x-data="{
+                            get hasResults() {
+                                const search = searchChainCloth.trim().toLowerCase();
+                                if (search === '') return true;
+                                @foreach ($allChainCloths as $cloth)
+                                    if ('{{ strtolower($cloth->name) }}'.includes(search)) return true;
+                                @endforeach
+                                return false;
+                            }
+                        }">
                             @forelse ($chainCloths as $chainCloth)
-                                <tr class="border-t border-gray-200"
-                                    x-show="searchChainCloth.length < 1 || '{{ strtolower($chainCloth->name) }}'.includes(searchChainCloth.toLowerCase())">
+                                <tr class="border-t border-gray-200" x-show="searchChainCloth.trim() === ''">
                                     <td class="py-2 px-4">{{ $chainCloths->firstItem() + $loop->index }}</td>
                                     <td class="py-2 px-4">{{ $chainCloth->name }}</td>
                                     <td class="py-2 px-4 text-right">
@@ -730,19 +766,38 @@
                                     </td>
                                 </tr>
                             @empty
-                                <tr>
-                                    <td colspan="3"
-                                        class="py-3 px-4 text-center text-red-500 border-t border-gray-200">
-                                        No Chain Cloths founds.
-                                    </td>
+                                <tr x-show="searchChainCloth.trim() === ''">
+                                    <td colspan="3" class="py-3 px-4 text-center text-red-500 border-t border-gray-200">No Chain Cloths found.</td>
                                 </tr>
                             @endforelse
+
+                            @foreach ($allChainCloths as $cloth)
+                                <tr class="border-t border-gray-200" x-show="searchChainCloth.trim() !== '' && '{{ strtolower($cloth->name) }}'.includes(searchChainCloth.trim().toLowerCase())">
+                                    <td class="py-2 px-4">{{ $loop->iteration }}</td>
+                                    <td class="py-2 px-4">{{ $cloth->name }}</td>
+                                    <td class="py-2 px-4 text-right">
+                                        <div class="relative inline-block text-left" x-data="{ open: false, dropdownStyle: {}, checkPosition() { const button = this.$refs.button; const rect = button.getBoundingClientRect(); const spaceBelow = window.innerHeight - rect.bottom; const spaceAbove = rect.top; const dropUp = spaceBelow < 200 && spaceAbove > spaceBelow; if (dropUp) { this.dropdownStyle = { position: 'fixed', top: (rect.top - 90) + 'px', left: (rect.right - 160) + 'px', width: '160px' }; } else { this.dropdownStyle = { position: 'fixed', top: (rect.bottom + 8) + 'px', left: (rect.right - 160) + 'px', width: '160px' }; } } }" x-init="$watch('open', value => { if (value) { const scrollContainer = $el.closest('.overflow-y-auto'); const mainContent = document.querySelector('main'); const closeOnScroll = () => { open = false; }; scrollContainer?.addEventListener('scroll', closeOnScroll); mainContent?.addEventListener('scroll', closeOnScroll); window.addEventListener('resize', closeOnScroll); } })">
+                                            <button x-ref="button" @click="checkPosition(); open = !open" type="button" class="cursor-pointer inline-flex items-center justify-center w-8 h-8 rounded-md border border-gray-300 text-gray-600 hover:bg-gray-100" title="Actions"><svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path d="M6 10a2 2 0 11-4 0 2 2 0 014 0zM12 10a2 2 0 11-4 0 2 2 0 014 0zM16 12a2 2 0 100-4 2 2 0 000 4z" /></svg></button>
+                                            <div x-show="open" @click.away="open = false" x-transition :style="dropdownStyle" class="rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-[9999]">
+                                                <div class="py-1"><button @click="editChainCloth = {{ $cloth->toJson() }}; openModal = 'editChainCloth'; open = false" class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>Edit</button><button type="button" @click="showDeleteChainClothConfirm = {{ $cloth->id }}; open = false" class="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100 flex items-center gap-2"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>Delete</button></div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                </tr>
+                            @endforeach
+
+                            <tr x-show="searchChainCloth.trim() !== '' && !hasResults" class="border-t border-gray-200">
+                                <td colspan="3" class="py-8 text-center text-gray-500">
+                                    <svg class="mx-auto h-12 w-12 text-gray-400 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+                                    <p class="text-sm">No chain cloth found for "<span x-text="searchChainCloth"></span>"</p>
+                                </td>
+                            </tr>
                         </tbody>
                     </table>
                 </div>
 
                 <!-- Pagination -->
-                <div id="chain-cloth-pagination-container" class="mt-4">
+                <div id="chain-cloth-pagination-container" class="mt-4" x-show="searchChainCloth.trim() === ''">
                     <x-custom-pagination :paginator="$chainCloths" />
                 </div>
             </div>
@@ -868,10 +923,18 @@
                                 <th class="py-2 px-4 text-right rounded-r-md">Action</th>
                             </tr>
                         </thead>
-                        <tbody>
+                        <tbody x-data="{
+                            get hasResults() {
+                                const search = searchRibSize.trim().toLowerCase();
+                                if (search === '') return true;
+                                @foreach ($allRibSizes as $size)
+                                    if ('{{ strtolower($size->name) }}'.includes(search)) return true;
+                                @endforeach
+                                return false;
+                            }
+                        }">
                             @forelse ($ribSizes as $ribSize)
-                                <tr class="border-t border-gray-200"
-                                    x-show="searchRibSize.length < 1 || '{{ strtolower($ribSize->name) }}'.includes(searchRibSize.toLowerCase())">
+                                <tr class="border-t border-gray-200" x-show="searchRibSize.trim() === ''">
                                     <td class="py-2 px-4">{{ $ribSizes->firstItem() + $loop->index }}</td>
                                     <td class="py-2 px-4">{{ $ribSize->name }}</td>
                                     <td class="py-2 px-4 text-right">
@@ -955,20 +1018,39 @@
                                     </td>
                                 </tr>
                             @empty
-                                <tr>
-                                    <td colspan="3"
-                                        class="py-3 px-4 text-center text-red-500 border-t border-gray-200">
-                                        No Rib Sizes founds.
-                                    </td>
+                                <tr x-show="searchRibSize.trim() === ''">
+                                    <td colspan="3" class="py-3 px-4 text-center text-red-500 border-t border-gray-200">No Rib Sizes found.</td>
                                 </tr>
                             @endforelse
+
+                            @foreach ($allRibSizes as $size)
+                                <tr class="border-t border-gray-200" x-show="searchRibSize.trim() !== '' && '{{ strtolower($size->name) }}'.includes(searchRibSize.trim().toLowerCase())">
+                                    <td class="py-2 px-4">{{ $loop->iteration }}</td>
+                                    <td class="py-2 px-4">{{ $size->name }}</td>
+                                    <td class="py-2 px-4 text-right">
+                                        <div class="relative inline-block text-left" x-data="{ open: false, dropdownStyle: {}, checkPosition() { const button = this.$refs.button; const rect = button.getBoundingClientRect(); const spaceBelow = window.innerHeight - rect.bottom; const spaceAbove = rect.top; const dropUp = spaceBelow < 200 && spaceAbove > spaceBelow; if (dropUp) { this.dropdownStyle = { position: 'fixed', top: (rect.top - 90) + 'px', left: (rect.right - 160) + 'px', width: '160px' }; } else { this.dropdownStyle = { position: 'fixed', top: (rect.bottom + 8) + 'px', left: (rect.right - 160) + 'px', width: '160px' }; } } }" x-init="$watch('open', value => { if (value) { const scrollContainer = $el.closest('.overflow-y-auto'); const mainContent = document.querySelector('main'); const closeOnScroll = () => { open = false; }; scrollContainer?.addEventListener('scroll', closeOnScroll); mainContent?.addEventListener('scroll', closeOnScroll); window.addEventListener('resize', closeOnScroll); } })">
+                                            <button x-ref="button" @click="checkPosition(); open = !open" type="button" class="cursor-pointer inline-flex items-center justify-center w-8 h-8 rounded-md border border-gray-300 text-gray-600 hover:bg-gray-100" title="Actions"><svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path d="M6 10a2 2 0 11-4 0 2 2 0 014 0zM12 10a2 2 0 11-4 0 2 2 0 014 0zM16 12a2 2 0 100-4 2 2 0 000 4z" /></svg></button>
+                                            <div x-show="open" @click.away="open = false" x-transition :style="dropdownStyle" class="rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-[9999]">
+                                                <div class="py-1"><button @click="editRibSize = {{ $size->toJson() }}; openModal = 'editRibSize'; open = false" class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>Edit</button><button type="button" @click="showDeleteRibSizeConfirm = {{ $size->id }}; open = false" class="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100 flex items-center gap-2"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>Delete</button></div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                </tr>
+                            @endforeach
+
+                            <tr x-show="searchRibSize.trim() !== '' && !hasResults" class="border-t border-gray-200">
+                                <td colspan="3" class="py-8 text-center text-gray-500">
+                                    <svg class="mx-auto h-12 w-12 text-gray-400 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+                                    <p class="text-sm">No rib size found for "<span x-text="searchRibSize"></span>"</p>
+                                </td>
+                            </tr>
                         </tbody>
 
                     </table>
                 </div>
 
                 <!-- Pagination -->
-                <div id="rib-size-pagination-container" class="mt-4">
+                <div id="rib-size-pagination-container" class="mt-4" x-show="searchRibSize.trim() === ''">
                     <x-custom-pagination :paginator="$ribSizes" />
                 </div>
             </div>
@@ -1092,10 +1174,18 @@
                                 <th class="py-2 px-4 text-right rounded-r-md">Action</th>
                             </tr>
                         </thead>
-                        <tbody>
+                        <tbody x-data="{
+                            get hasResults() {
+                                const search = searchPrintInk.trim().toLowerCase();
+                                if (search === '') return true;
+                                @foreach ($allPrintInks as $ink)
+                                    if ('{{ strtolower($ink->name) }}'.includes(search)) return true;
+                                @endforeach
+                                return false;
+                            }
+                        }">
                             @forelse ($printInks as $printInk)
-                                <tr class="border-t border-gray-200"
-                                    x-show="searchPrintInk.length < 1 || '{{ strtolower($printInk->name) }}'.includes(searchPrintInk.toLowerCase())">
+                                <tr class="border-t border-gray-200" x-show="searchPrintInk.trim() === ''">
                                     <td class="py-2 px-4">{{ $printInks->firstItem() + $loop->index }}</td>
                                     <td class="py-2 px-4">{{ $printInk->name }}</td>
                                     <td class="py-2 px-4 text-right">
@@ -1179,19 +1269,38 @@
                                     </td>
                                 </tr>
                             @empty
-                                <tr>
-                                    <td colspan="3"
-                                        class="py-3 px-4 text-center text-red-500 border-t border-gray-200">
-                                        No Print Inks founds.
-                                    </td>
+                                <tr x-show="searchPrintInk.trim() === ''">
+                                    <td colspan="3" class="py-3 px-4 text-center text-red-500 border-t border-gray-200">No Print Inks found.</td>
                                 </tr>
                             @endforelse
+
+                            @foreach ($allPrintInks as $ink)
+                                <tr class="border-t border-gray-200" x-show="searchPrintInk.trim() !== '' && '{{ strtolower($ink->name) }}'.includes(searchPrintInk.trim().toLowerCase())">
+                                    <td class="py-2 px-4">{{ $loop->iteration }}</td>
+                                    <td class="py-2 px-4">{{ $ink->name }}</td>
+                                    <td class="py-2 px-4 text-right">
+                                        <div class="relative inline-block text-left" x-data="{ open: false, dropdownStyle: {}, checkPosition() { const button = this.$refs.button; const rect = button.getBoundingClientRect(); const spaceBelow = window.innerHeight - rect.bottom; const spaceAbove = rect.top; const dropUp = spaceBelow < 200 && spaceAbove > spaceBelow; if (dropUp) { this.dropdownStyle = { position: 'fixed', top: (rect.top - 90) + 'px', left: (rect.right - 160) + 'px', width: '160px' }; } else { this.dropdownStyle = { position: 'fixed', top: (rect.bottom + 8) + 'px', left: (rect.right - 160) + 'px', width: '160px' }; } } }" x-init="$watch('open', value => { if (value) { const scrollContainer = $el.closest('.overflow-y-auto'); const mainContent = document.querySelector('main'); const closeOnScroll = () => { open = false; }; scrollContainer?.addEventListener('scroll', closeOnScroll); mainContent?.addEventListener('scroll', closeOnScroll); window.addEventListener('resize', closeOnScroll); } })">
+                                            <button x-ref="button" @click="checkPosition(); open = !open" type="button" class="cursor-pointer inline-flex items-center justify-center w-8 h-8 rounded-md border border-gray-300 text-gray-600 hover:bg-gray-100" title="Actions"><svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path d="M6 10a2 2 0 11-4 0 2 2 0 014 0zM12 10a2 2 0 11-4 0 2 2 0 014 0zM16 12a2 2 0 100-4 2 2 0 000 4z" /></svg></button>
+                                            <div x-show="open" @click.away="open = false" x-transition :style="dropdownStyle" class="rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-[9999]">
+                                                <div class="py-1"><button @click="editPrintInk = {{ $ink->toJson() }}; openModal = 'editPrintInk'; open = false" class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>Edit</button><button type="button" @click="showDeletePrintInkConfirm = {{ $ink->id }}; open = false" class="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100 flex items-center gap-2"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>Delete</button></div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                </tr>
+                            @endforeach
+
+                            <tr x-show="searchPrintInk.trim() !== '' && !hasResults" class="border-t border-gray-200">
+                                <td colspan="3" class="py-8 text-center text-gray-500">
+                                    <svg class="mx-auto h-12 w-12 text-gray-400 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+                                    <p class="text-sm">No print ink found for "<span x-text="searchPrintInk"></span>"</p>
+                                </td>
+                            </tr>
                         </tbody>
                     </table>
                 </div>
 
                 <!-- Pagination -->
-                <div id="print-ink-pagination-container" class="mt-4">
+                <div id="print-ink-pagination-container" class="mt-4" x-show="searchPrintInk.trim() === ''">
                     <x-custom-pagination :paginator="$printInks" />
                 </div>
             </div>
@@ -1318,10 +1427,18 @@
                                 <th class="py-2 px-4 text-right rounded-r-md">Action</th>
                             </tr>
                         </thead>
-                        <tbody>
+                        <tbody x-data="{
+                            get hasResults() {
+                                const search = searchFinishing.trim().toLowerCase();
+                                if (search === '') return true;
+                                @foreach ($allFinishings as $finish)
+                                    if ('{{ strtolower($finish->name) }}'.includes(search)) return true;
+                                @endforeach
+                                return false;
+                            }
+                        }">
                             @forelse ($finishings as $finishing)
-                                <tr class="border-t border-gray-200"
-                                    x-show="searchFinishing.length < 1 || '{{ strtolower($finishing->name) }}'.includes(searchFinishing.toLowerCase())">
+                                <tr class="border-t border-gray-200" x-show="searchFinishing.trim() === ''">
                                     <td class="py-2 px-4">{{ $finishings->firstItem() + $loop->index }}</td>
                                     <td class="py-2 px-4">{{ $finishing->name }}</td>
                                     <td class="py-2 px-4 text-right">
@@ -1405,20 +1522,39 @@
                                     </td>
                                 </tr>
                             @empty
-                                <tr>
-                                    <td colspan="4"
-                                        class="py-3 px-4 text-center text-red-500 border-t border-gray-200">
-                                        No Finishings founds.
-                                    </td>
+                                <tr x-show="searchFinishing.trim() === ''">
+                                    <td colspan="3" class="py-3 px-4 text-center text-red-500 border-t border-gray-200">No Finishings found.</td>
                                 </tr>
                             @endforelse
+
+                            @foreach ($allFinishings as $finish)
+                                <tr class="border-t border-gray-200" x-show="searchFinishing.trim() !== '' && '{{ strtolower($finish->name) }}'.includes(searchFinishing.trim().toLowerCase())">
+                                    <td class="py-2 px-4">{{ $loop->iteration }}</td>
+                                    <td class="py-2 px-4">{{ $finish->name }}</td>
+                                    <td class="py-2 px-4 text-right">
+                                        <div class="relative inline-block text-left" x-data="{ open: false, dropdownStyle: {}, checkPosition() { const button = this.$refs.button; const rect = button.getBoundingClientRect(); const spaceBelow = window.innerHeight - rect.bottom; const spaceAbove = rect.top; const dropUp = spaceBelow < 200 && spaceAbove > spaceBelow; if (dropUp) { this.dropdownStyle = { position: 'fixed', top: (rect.top - 90) + 'px', left: (rect.right - 160) + 'px', width: '160px' }; } else { this.dropdownStyle = { position: 'fixed', top: (rect.bottom + 8) + 'px', left: (rect.right - 160) + 'px', width: '160px' }; } } }" x-init="$watch('open', value => { if (value) { const scrollContainer = $el.closest('.overflow-y-auto'); const mainContent = document.querySelector('main'); const closeOnScroll = () => { open = false; }; scrollContainer?.addEventListener('scroll', closeOnScroll); mainContent?.addEventListener('scroll', closeOnScroll); window.addEventListener('resize', closeOnScroll); } })">
+                                            <button x-ref="button" @click="checkPosition(); open = !open" type="button" class="cursor-pointer inline-flex items-center justify-center w-8 h-8 rounded-md border border-gray-300 text-gray-600 hover:bg-gray-100" title="Actions"><svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path d="M6 10a2 2 0 11-4 0 2 2 0 014 0zM12 10a2 2 0 11-4 0 2 2 0 014 0zM16 12a2 2 0 100-4 2 2 0 000 4z" /></svg></button>
+                                            <div x-show="open" @click.away="open = false" x-transition :style="dropdownStyle" class="rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-[9999]">
+                                                <div class="py-1"><button @click="editFinishing = {{ $finish->toJson() }}; openModal = 'editFinishing'; open = false" class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>Edit</button><button type="button" @click="showDeleteFinishingConfirm = {{ $finish->id }}; open = false" class="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100 flex items-center gap-2"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>Delete</button></div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                </tr>
+                            @endforeach
+
+                            <tr x-show="searchFinishing.trim() !== '' && !hasResults" class="border-t border-gray-200">
+                                <td colspan="3" class="py-8 text-center text-gray-500">
+                                    <svg class="mx-auto h-12 w-12 text-gray-400 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+                                    <p class="text-sm">No finishing found for "<span x-text="searchFinishing"></span>"</p>
+                                </td>
+                            </tr>
                         </tbody>
 
                     </table>
                 </div>
 
                 <!-- Pagination -->
-                <div id="finishing-pagination-container" class="mt-4">
+                <div id="finishing-pagination-container" class="mt-4" x-show="searchFinishing.trim() === ''">
                     <x-custom-pagination :paginator="$finishings" />
                 </div>
             </div>
@@ -1545,10 +1681,18 @@
                                 <th class="py-2 px-4 text-right rounded-r-md">Action</th>
                             </tr>
                         </thead>
-                        <tbody>
+                        <tbody x-data="{
+                            get hasResults() {
+                                const search = searchNeckOverdeck.trim().toLowerCase();
+                                if (search === '') return true;
+                                @foreach ($allNeckOverdecks as $overdeck)
+                                    if ('{{ strtolower($overdeck->name) }}'.includes(search)) return true;
+                                @endforeach
+                                return false;
+                            }
+                        }">
                             @forelse ($neckOverdecks as $neckOverdeck)
-                                <tr class="border-t border-gray-200"
-                                    x-show="searchNeckOverdeck.length < 1 || '{{ strtolower($neckOverdeck->name) }}'.includes(searchNeckOverdeck.toLowerCase())">
+                                <tr class="border-t border-gray-200" x-show="searchNeckOverdeck.trim() === ''">
                                     <td class="py-2 px-4">{{ $neckOverdecks->firstItem() + $loop->index }}</td>
                                     <td class="py-2 px-4">{{ $neckOverdeck->name }}</td>
                                     <td class="py-2 px-4 text-right">
@@ -1632,20 +1776,122 @@
                                     </td>
                                 </tr>
                             @empty
-                                <tr>
+                                <tr x-show="searchNeckOverdeck.trim() === ''">
                                     <td colspan="3"
                                         class="py-3 px-4 text-center text-red-500 border-t border-gray-200">
                                         No NeckOverdecks found.
                                     </td>
                                 </tr>
                             @endforelse
+
+                            {{-- ALL NeckOverdecks for Search --}}
+                            @foreach ($allNeckOverdecks as $neckOverdeck)
+                                <tr x-show="searchNeckOverdeck.trim() !== '' && '{{ strtolower($neckOverdeck->name) }}'.includes(searchNeckOverdeck.trim().toLowerCase())">
+                                    <td class="py-2 px-4 border-t border-gray-200">{{ $loop->iteration }}</td>
+                                    <td class="py-2 px-4 border-t border-gray-200">{{ $neckOverdeck->name }}</td>
+                                    <td class="py-2 px-4 text-right border-t border-gray-200">
+                                        <div class="relative inline-block text-left" x-data="{
+                                            open: false,
+                                            dropdownStyle: {},
+                                            checkPosition() {
+                                                const button = this.$refs.button;
+                                                const rect = button.getBoundingClientRect();
+                                                const spaceBelow = window.innerHeight - rect.bottom;
+                                                const spaceAbove = rect.top;
+                                                const dropUp = spaceBelow < 200 && spaceAbove > spaceBelow;
+                                        
+                                                if (dropUp) {
+                                                    this.dropdownStyle = {
+                                                        position: 'fixed',
+                                                        top: (rect.top - 90) + 'px',
+                                                        left: (rect.right - 160) + 'px',
+                                                        width: '160px'
+                                                    };
+                                                } else {
+                                                    this.dropdownStyle = {
+                                                        position: 'fixed',
+                                                        top: (rect.bottom + 8) + 'px',
+                                                        left: (rect.right - 160) + 'px',
+                                                        width: '160px'
+                                                    };
+                                                }
+                                            }
+                                        }"
+                                            x-init="$watch('open', value => {
+                                                if (value) {
+                                                    const scrollContainer = $el.closest('.overflow-y-auto');
+                                                    const mainContent = document.querySelector('main');
+                                                    const closeOnScroll = () => { open = false; };
+                                            
+                                                    scrollContainer?.addEventListener('scroll', closeOnScroll);
+                                                    mainContent?.addEventListener('scroll', closeOnScroll);
+                                                    window.addEventListener('resize', closeOnScroll);
+                                                }
+                                            })">
+                                            <button x-ref="button" @click="checkPosition(); open = !open" type="button"
+                                                class="cursor-pointer inline-flex items-center justify-center w-8 h-8 rounded-md border border-gray-300 text-gray-600 hover:bg-gray-100"
+                                                title="Actions">
+                                                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                                    <path
+                                                        d="M6 10a2 2 0 11-4 0 2 2 0 014 0zM12 10a2 2 0 11-4 0 2 2 0 014 0zM16 12a2 2 0 100-4 2 2 0 000 4z" />
+                                                </svg>
+                                            </button>
+
+                                            <div x-show="open" @click.away="open = false" x-transition
+                                                :style="dropdownStyle"
+                                                class="rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-[9999]">
+                                                <div class="py-1">
+                                                    <button
+                                                        @click="editNeckOverdeck = {{ $neckOverdeck->toJson() }}; openModal = 'editNeckOverdeck'; open = false"
+                                                        class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2">
+                                                        <svg class="w-4 h-4" fill="none" stroke="currentColor"
+                                                            viewBox="0 0 24 24">
+                                                            <path stroke-linecap="round" stroke-linejoin="round"
+                                                                stroke-width="2"
+                                                                d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                                        </svg>
+                                                        Edit
+                                                    </button>
+
+                                                    <button type="button"
+                                                        @click="showDeleteNeckOverdeckConfirm = {{ $neckOverdeck->id }}; open = false"
+                                                        class="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100 flex items-center gap-2">
+                                                        <svg class="w-4 h-4" fill="none" stroke="currentColor"
+                                                            viewBox="0 0 24 24">
+                                                            <path stroke-linecap="round" stroke-linejoin="round"
+                                                                stroke-width="2"
+                                                                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                                        </svg>
+                                                        Delete
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                </tr>
+                            @endforeach
+
+                            {{-- No Results Found for Search --}}
+                            <tr x-show="searchNeckOverdeck.trim() !== '' && !hasResults">
+                                <td colspan="3" class="py-16 text-center border-t border-gray-200">
+                                    <div class="flex flex-col items-center justify-center space-y-3">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16 text-gray-400" fill="none"
+                                            viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                                        </svg>
+                                        <p class="text-gray-500 text-lg">No results found for "<span
+                                                x-text="searchNeckOverdeck"></span>"</p>
+                                    </div>
+                                </td>
+                            </tr>
                         </tbody>
 
                     </table>
                 </div>
 
                 <!-- Pagination -->
-                <div id="neck-overdeck-pagination-container" class="mt-4">
+                <div id="neck-overdeck-pagination-container" class="mt-4" x-show="searchNeckOverdeck.trim() === ''">
                     <x-custom-pagination :paginator="$neckOverdecks" />
                 </div>
             </div>
@@ -1771,10 +2017,18 @@
                                 <th class="py-2 px-4 text-right rounded-r-md">Action</th>
                             </tr>
                         </thead>
-                        <tbody>
+                        <tbody x-data="{
+                            get hasResults() {
+                                const search = searchUnderarmOverdeck.trim().toLowerCase();
+                                if (search === '') return true;
+                                @foreach ($allUnderarmOverdecks as $overdeck)
+                                    if ('{{ strtolower($overdeck->name) }}'.includes(search)) return true;
+                                @endforeach
+                                return false;
+                            }
+                        }">
                             @forelse ($underarmOverdecks as $underarmOverdeck)
-                                <tr class="border-t border-gray-200"
-                                    x-show="searchUnderarmOverdeck.length < 1 || '{{ strtolower($underarmOverdeck->name) }}'.includes(searchUnderarmOverdeck.toLowerCase())">
+                                <tr class="border-t border-gray-200" x-show="searchUnderarmOverdeck.trim() === ''">
                                     <td class="py-2 px-4">{{ $underarmOverdecks->firstItem() + $loop->index }}</td>
                                     <td class="py-2 px-4">{{ $underarmOverdeck->name }}</td>
                                     <td class="py-2 px-4 text-right">
@@ -1858,20 +2112,39 @@
                                     </td>
                                 </tr>
                             @empty
-                                <tr>
-                                    <td colspan="3"
-                                        class="py-3 px-4 text-center text-red-500 border-t border-gray-200">
-                                        No UnderarmOverdecks found.
-                                    </td>
+                                <tr x-show="searchUnderarmOverdeck.trim() === ''">
+                                    <td colspan="3" class="py-3 px-4 text-center text-red-500 border-t border-gray-200">No UnderarmOverdecks found.</td>
                                 </tr>
                             @endforelse
+
+                            @foreach ($allUnderarmOverdecks as $overdeck)
+                                <tr class="border-t border-gray-200" x-show="searchUnderarmOverdeck.trim() !== '' && '{{ strtolower($overdeck->name) }}'.includes(searchUnderarmOverdeck.trim().toLowerCase())">
+                                    <td class="py-2 px-4">{{ $loop->iteration }}</td>
+                                    <td class="py-2 px-4">{{ $overdeck->name }}</td>
+                                    <td class="py-2 px-4 text-right">
+                                        <div class="relative inline-block text-left" x-data="{ open: false, dropdownStyle: {}, checkPosition() { const button = this.$refs.button; const rect = button.getBoundingClientRect(); const spaceBelow = window.innerHeight - rect.bottom; const spaceAbove = rect.top; const dropUp = spaceBelow < 200 && spaceAbove > spaceBelow; if (dropUp) { this.dropdownStyle = { position: 'fixed', top: (rect.top - 90) + 'px', left: (rect.right - 160) + 'px', width: '160px' }; } else { this.dropdownStyle = { position: 'fixed', top: (rect.bottom + 8) + 'px', left: (rect.right - 160) + 'px', width: '160px' }; } } }" x-init="$watch('open', value => { if (value) { const scrollContainer = $el.closest('.overflow-y-auto'); const mainContent = document.querySelector('main'); const closeOnScroll = () => { open = false; }; scrollContainer?.addEventListener('scroll', closeOnScroll); mainContent?.addEventListener('scroll', closeOnScroll); window.addEventListener('resize', closeOnScroll); } })">
+                                            <button x-ref="button" @click="checkPosition(); open = !open" type="button" class="cursor-pointer inline-flex items-center justify-center w-8 h-8 rounded-md border border-gray-300 text-gray-600 hover:bg-gray-100" title="Actions"><svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path d="M6 10a2 2 0 11-4 0 2 2 0 014 0zM12 10a2 2 0 11-4 0 2 2 0 014 0zM16 12a2 2 0 100-4 2 2 0 000 4z" /></svg></button>
+                                            <div x-show="open" @click.away="open = false" x-transition :style="dropdownStyle" class="rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-[9999]">
+                                                <div class="py-1"><button @click="editUnderarmOverdeck = {{ $overdeck->toJson() }}; openModal = 'editUnderarmOverdeck'; open = false" class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>Edit</button><button type="button" @click="showDeleteUnderarmOverdeckConfirm = {{ $overdeck->id }}; open = false" class="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100 flex items-center gap-2"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>Delete</button></div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                </tr>
+                            @endforeach
+
+                            <tr x-show="searchUnderarmOverdeck.trim() !== '' && !hasResults" class="border-t border-gray-200">
+                                <td colspan="3" class="py-8 text-center text-gray-500">
+                                    <svg class="mx-auto h-12 w-12 text-gray-400 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+                                    <p class="text-sm">No underarm overdeck found for "<span x-text="searchUnderarmOverdeck"></span>"</p>
+                                </td>
+                            </tr>
                         </tbody>
 
                     </table>
                 </div>
 
                 <!-- Pagination -->
-                <div id="underarm-overdeck-pagination-container" class="mt-4">
+                <div id="underarm-overdeck-pagination-container" class="mt-4" x-show="searchUnderarmOverdeck.trim() === ''">
                     <x-custom-pagination :paginator="$underarmOverdecks" />
                 </div>
             </div>
@@ -1997,10 +2270,18 @@
                                 <th class="py-2 px-4 text-right rounded-r-md">Action</th>
                             </tr>
                         </thead>
-                        <tbody>
+                        <tbody x-data="{
+                            get hasResults() {
+                                const search = searchSideSplit.trim().toLowerCase();
+                                if (search === '') return true;
+                                @foreach ($allSideSplits as $split)
+                                    if ('{{ strtolower($split->name) }}'.includes(search)) return true;
+                                @endforeach
+                                return false;
+                            }
+                        }">
                             @forelse ($sideSplits as $sideSplit)
-                                <tr class="border-t border-gray-200"
-                                    x-show="searchSideSplit.length < 1 || '{{ strtolower($sideSplit->name) }}'.includes(searchSideSplit.toLowerCase())">
+                                <tr class="border-t border-gray-200" x-show="searchSideSplit.trim() === ''">
                                     <td class="py-2 px-4">{{ $sideSplits->firstItem() + $loop->index }}</td>
                                     <td class="py-2 px-4">{{ $sideSplit->name }}</td>
                                     <td class="py-2 px-4 text-right">
@@ -2084,20 +2365,39 @@
                                     </td>
                                 </tr>
                             @empty
-                                <tr>
-                                    <td colspan="3"
-                                        class="py-3 px-4 text-center text-red-500 border-t border-gray-200">
-                                        No SideSplits found.
-                                    </td>
+                                <tr x-show="searchSideSplit.trim() === ''">
+                                    <td colspan="3" class="py-3 px-4 text-center text-red-500 border-t border-gray-200">No SideSplits found.</td>
                                 </tr>
                             @endforelse
+
+                            @foreach ($allSideSplits as $split)
+                                <tr class="border-t border-gray-200" x-show="searchSideSplit.trim() !== '' && '{{ strtolower($split->name) }}'.includes(searchSideSplit.trim().toLowerCase())">
+                                    <td class="py-2 px-4">{{ $loop->iteration }}</td>
+                                    <td class="py-2 px-4">{{ $split->name }}</td>
+                                    <td class="py-2 px-4 text-right">
+                                        <div class="relative inline-block text-left" x-data="{ open: false, dropdownStyle: {}, checkPosition() { const button = this.$refs.button; const rect = button.getBoundingClientRect(); const spaceBelow = window.innerHeight - rect.bottom; const spaceAbove = rect.top; const dropUp = spaceBelow < 200 && spaceAbove > spaceBelow; if (dropUp) { this.dropdownStyle = { position: 'fixed', top: (rect.top - 90) + 'px', left: (rect.right - 160) + 'px', width: '160px' }; } else { this.dropdownStyle = { position: 'fixed', top: (rect.bottom + 8) + 'px', left: (rect.right - 160) + 'px', width: '160px' }; } } }" x-init="$watch('open', value => { if (value) { const scrollContainer = $el.closest('.overflow-y-auto'); const mainContent = document.querySelector('main'); const closeOnScroll = () => { open = false; }; scrollContainer?.addEventListener('scroll', closeOnScroll); mainContent?.addEventListener('scroll', closeOnScroll); window.addEventListener('resize', closeOnScroll); } })">
+                                            <button x-ref="button" @click="checkPosition(); open = !open" type="button" class="cursor-pointer inline-flex items-center justify-center w-8 h-8 rounded-md border border-gray-300 text-gray-600 hover:bg-gray-100" title="Actions"><svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path d="M6 10a2 2 0 11-4 0 2 2 0 014 0zM12 10a2 2 0 11-4 0 2 2 0 014 0zM16 12a2 2 0 100-4 2 2 0 000 4z" /></svg></button>
+                                            <div x-show="open" @click.away="open = false" x-transition :style="dropdownStyle" class="rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-[9999]">
+                                                <div class="py-1"><button @click="editSideSplit = {{ $split->toJson() }}; openModal = 'editSideSplit'; open = false" class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>Edit</button><button type="button" @click="showDeleteSideSplitConfirm = {{ $split->id }}; open = false" class="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100 flex items-center gap-2"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>Delete</button></div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                </tr>
+                            @endforeach
+
+                            <tr x-show="searchSideSplit.trim() !== '' && !hasResults" class="border-t border-gray-200">
+                                <td colspan="3" class="py-8 text-center text-gray-500">
+                                    <svg class="mx-auto h-12 w-12 text-gray-400 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+                                    <p class="text-sm">No side split found for "<span x-text="searchSideSplit"></span>"</p>
+                                </td>
+                            </tr>
                         </tbody>
 
                     </table>
                 </div>
 
                 <!-- Pagination -->
-                <div id="side-split-pagination-container" class="mt-4">
+                <div id="side-split-pagination-container" class="mt-4" x-show="searchSideSplit.trim() === ''">
                     <x-custom-pagination :paginator="$sideSplits" />
                 </div>
             </div>
@@ -2223,10 +2523,18 @@
                                 <th class="py-2 px-4 text-right rounded-r-md">Action</th>
                             </tr>
                         </thead>
-                        <tbody>
+                        <tbody x-data="{
+                            get hasResults() {
+                                const search = searchSewingLabel.trim().toLowerCase();
+                                if (search === '') return true;
+                                @foreach ($allSewingLabels as $label)
+                                    if ('{{ strtolower($label->name) }}'.includes(search)) return true;
+                                @endforeach
+                                return false;
+                            }
+                        }">
                             @forelse ($sewingLabels as $sewingLabel)
-                                <tr class="border-t border-gray-200"
-                                    x-show="searchSewingLabel.length < 1 || '{{ strtolower($sewingLabel->name) }}'.includes(searchSewingLabel.toLowerCase())">
+                                <tr class="border-t border-gray-200" x-show="searchSewingLabel.trim() === ''">
                                     <td class="py-2 px-4">{{ $sewingLabels->firstItem() + $loop->index }}</td>
                                     <td class="py-2 px-4">{{ $sewingLabel->name }}</td>
                                     <td class="py-2 px-4 text-right">
@@ -2310,20 +2618,39 @@
                                     </td>
                                 </tr>
                             @empty
-                                <tr>
-                                    <td colspan="3"
-                                        class="py-3 px-4 text-center text-red-500 border-t border-gray-200">
-                                        No SewingLabels found.
-                                    </td>
+                                <tr x-show="searchSewingLabel.trim() === ''">
+                                    <td colspan="3" class="py-3 px-4 text-center text-red-500 border-t border-gray-200">No SewingLabels found.</td>
                                 </tr>
                             @endforelse
+
+                            @foreach ($allSewingLabels as $label)
+                                <tr class="border-t border-gray-200" x-show="searchSewingLabel.trim() !== '' && '{{ strtolower($label->name) }}'.includes(searchSewingLabel.trim().toLowerCase())">
+                                    <td class="py-2 px-4">{{ $loop->iteration }}</td>
+                                    <td class="py-2 px-4">{{ $label->name }}</td>
+                                    <td class="py-2 px-4 text-right">
+                                        <div class="relative inline-block text-left" x-data="{ open: false, dropdownStyle: {}, checkPosition() { const button = this.$refs.button; const rect = button.getBoundingClientRect(); const spaceBelow = window.innerHeight - rect.bottom; const spaceAbove = rect.top; const dropUp = spaceBelow < 200 && spaceAbove > spaceBelow; if (dropUp) { this.dropdownStyle = { position: 'fixed', top: (rect.top - 90) + 'px', left: (rect.right - 160) + 'px', width: '160px' }; } else { this.dropdownStyle = { position: 'fixed', top: (rect.bottom + 8) + 'px', left: (rect.right - 160) + 'px', width: '160px' }; } } }" x-init="$watch('open', value => { if (value) { const scrollContainer = $el.closest('.overflow-y-auto'); const mainContent = document.querySelector('main'); const closeOnScroll = () => { open = false; }; scrollContainer?.addEventListener('scroll', closeOnScroll); mainContent?.addEventListener('scroll', closeOnScroll); window.addEventListener('resize', closeOnScroll); } })">
+                                            <button x-ref="button" @click="checkPosition(); open = !open" type="button" class="cursor-pointer inline-flex items-center justify-center w-8 h-8 rounded-md border border-gray-300 text-gray-600 hover:bg-gray-100" title="Actions"><svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path d="M6 10a2 2 0 11-4 0 2 2 0 014 0zM12 10a2 2 0 11-4 0 2 2 0 014 0zM16 12a2 2 0 100-4 2 2 0 000 4z" /></svg></button>
+                                            <div x-show="open" @click.away="open = false" x-transition :style="dropdownStyle" class="rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-[9999]">
+                                                <div class="py-1"><button @click="editSewingLabel = {{ $label->toJson() }}; openModal = 'editSewingLabel'; open = false" class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>Edit</button><button type="button" @click="showDeleteSewingLabelConfirm = {{ $label->id }}; open = false" class="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100 flex items-center gap-2"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>Delete</button></div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                </tr>
+                            @endforeach
+
+                            <tr x-show="searchSewingLabel.trim() !== '' && !hasResults" class="border-t border-gray-200">
+                                <td colspan="3" class="py-8 text-center text-gray-500">
+                                    <svg class="mx-auto h-12 w-12 text-gray-400 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+                                    <p class="text-sm">No sewing label found for "<span x-text="searchSewingLabel"></span>"</p>
+                                </td>
+                            </tr>
                         </tbody>
 
                     </table>
                 </div>
 
                 <!-- Pagination -->
-                <div id="sewing-label-pagination-container" class="mt-4">
+                <div id="sewing-label-pagination-container" class="mt-4" x-show="searchSewingLabel.trim() === ''">
                     <x-custom-pagination :paginator="$sewingLabels" />
                 </div>
             </div>
@@ -2449,10 +2776,18 @@
                                 <th class="py-2 px-4 text-right rounded-r-md">Action</th>
                             </tr>
                         </thead>
-                        <tbody>
+                        <tbody x-data="{
+                            get hasResults() {
+                                const search = searchPlasticPacking.trim().toLowerCase();
+                                if (search === '') return true;
+                                @foreach ($allPlasticPackings as $packing)
+                                    if ('{{ strtolower($packing->name) }}'.includes(search)) return true;
+                                @endforeach
+                                return false;
+                            }
+                        }">
                             @forelse ($plasticPackings as $plasticPacking)
-                                <tr class="border-t border-gray-200"
-                                    x-show="searchPlasticPacking.length < 1 || '{{ strtolower($plasticPacking->name) }}'.includes(searchPlasticPacking.toLowerCase())">
+                                <tr class="border-t border-gray-200" x-show="searchPlasticPacking.trim() === ''">
                                     <td class="py-2 px-4">{{ $plasticPackings->firstItem() + $loop->index }}</td>
                                     <td class="py-2 px-4">{{ $plasticPacking->name }}</td>
                                     <td class="py-2 px-4 text-right">
@@ -2536,20 +2871,122 @@
                                     </td>
                                 </tr>
                             @empty
-                                <tr>
+                                <tr x-show="searchPlasticPacking.trim() === ''">
                                     <td colspan="3"
                                         class="py-3 px-4 text-center text-red-500 border-t border-gray-200">
                                         No PlasticPackings found.
                                     </td>
                                 </tr>
                             @endforelse
+
+                            {{-- ALL PlasticPackings for Search --}}
+                            @foreach ($allPlasticPackings as $plasticPacking)
+                                <tr x-show="searchPlasticPacking.trim() !== '' && '{{ strtolower($plasticPacking->name) }}'.includes(searchPlasticPacking.trim().toLowerCase())">
+                                    <td class="py-2 px-4 border-t border-gray-200">{{ $loop->iteration }}</td>
+                                    <td class="py-2 px-4 border-t border-gray-200">{{ $plasticPacking->name }}</td>
+                                    <td class="py-2 px-4 text-right border-t border-gray-200">
+                                        <div class="relative inline-block text-left" x-data="{
+                                            open: false,
+                                            dropdownStyle: {},
+                                            checkPosition() {
+                                                const button = this.$refs.button;
+                                                const rect = button.getBoundingClientRect();
+                                                const spaceBelow = window.innerHeight - rect.bottom;
+                                                const spaceAbove = rect.top;
+                                                const dropUp = spaceBelow < 200 && spaceAbove > spaceBelow;
+                                        
+                                                if (dropUp) {
+                                                    this.dropdownStyle = {
+                                                        position: 'fixed',
+                                                        top: (rect.top - 90) + 'px',
+                                                        left: (rect.right - 160) + 'px',
+                                                        width: '160px'
+                                                    };
+                                                } else {
+                                                    this.dropdownStyle = {
+                                                        position: 'fixed',
+                                                        top: (rect.bottom + 8) + 'px',
+                                                        left: (rect.right - 160) + 'px',
+                                                        width: '160px'
+                                                    };
+                                                }
+                                            }
+                                        }"
+                                            x-init="$watch('open', value => {
+                                                if (value) {
+                                                    const scrollContainer = $el.closest('.overflow-y-auto');
+                                                    const mainContent = document.querySelector('main');
+                                                    const closeOnScroll = () => { open = false; };
+                                            
+                                                    scrollContainer?.addEventListener('scroll', closeOnScroll);
+                                                    mainContent?.addEventListener('scroll', closeOnScroll);
+                                                    window.addEventListener('resize', closeOnScroll);
+                                                }
+                                            })">
+                                            <button x-ref="button" @click="checkPosition(); open = !open" type="button"
+                                                class="cursor-pointer inline-flex items-center justify-center w-8 h-8 rounded-md border border-gray-300 text-gray-600 hover:bg-gray-100"
+                                                title="Actions">
+                                                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                                    <path
+                                                        d="M6 10a2 2 0 11-4 0 2 2 0 014 0zM12 10a2 2 0 11-4 0 2 2 0 014 0zM16 12a2 2 0 100-4 2 2 0 000 4z" />
+                                                </svg>
+                                            </button>
+
+                                            <div x-show="open" @click.away="open = false" x-transition
+                                                :style="dropdownStyle"
+                                                class="rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-[9999]">
+                                                <div class="py-1">
+                                                    <button
+                                                        @click="editPlasticPacking = {{ $plasticPacking->toJson() }}; openModal = 'editPlasticPacking'; open = false"
+                                                        class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2">
+                                                        <svg class="w-4 h-4" fill="none" stroke="currentColor"
+                                                            viewBox="0 0 24 24">
+                                                            <path stroke-linecap="round" stroke-linejoin="round"
+                                                                stroke-width="2"
+                                                                d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                                        </svg>
+                                                        Edit
+                                                    </button>
+
+                                                    <button type="button"
+                                                        @click="showDeletePlasticPackingConfirm = {{ $plasticPacking->id }}; open = false"
+                                                        class="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100 flex items-center gap-2">
+                                                        <svg class="w-4 h-4" fill="none" stroke="currentColor"
+                                                            viewBox="0 0 24 24">
+                                                            <path stroke-linecap="round" stroke-linejoin="round"
+                                                                stroke-width="2"
+                                                                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                                        </svg>
+                                                        Delete
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                </tr>
+                            @endforeach
+
+                            {{-- No Results Found for Search --}}
+                            <tr x-show="searchPlasticPacking.trim() !== '' && !hasResults">
+                                <td colspan="3" class="py-16 text-center border-t border-gray-200">
+                                    <div class="flex flex-col items-center justify-center space-y-3">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16 text-gray-400" fill="none"
+                                            viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                                        </svg>
+                                        <p class="text-gray-500 text-lg">No results found for "<span
+                                                x-text="searchPlasticPacking"></span>"</p>
+                                    </div>
+                                </td>
+                            </tr>
                         </tbody>
 
                     </table>
                 </div>
 
                 <!-- Pagination -->
-                <div id="plastic-packing-pagination-container" class="mt-4">
+                <div id="plastic-packing-pagination-container" class="mt-4" x-show="searchPlasticPacking.trim() === ''">
                     <x-custom-pagination :paginator="$plasticPackings" />
                 </div>
             </div>
@@ -2675,10 +3112,18 @@
                                 <th class="py-2 px-4 text-right rounded-r-md">Action</th>
                             </tr>
                         </thead>
-                        <tbody>
+                        <tbody x-data="{
+                            get hasResults() {
+                                const search = searchSticker.trim().toLowerCase();
+                                if (search === '') return true;
+                                @foreach ($allStickers as $stick)
+                                    if ('{{ strtolower($stick->name) }}'.includes(search)) return true;
+                                @endforeach
+                                return false;
+                            }
+                        }">
                             @forelse ($stickers as $sticker)
-                                <tr class="border-t border-gray-200"
-                                    x-show="searchSticker.length < 1 || '{{ strtolower($sticker->name) }}'.includes(searchSticker.toLowerCase())">
+                                <tr class="border-t border-gray-200" x-show="searchSticker.trim() === ''">
                                     <td class="py-2 px-4">{{ $stickers->firstItem() + $loop->index }}</td>
                                     <td class="py-2 px-4">{{ $sticker->name }}</td>
                                     <td class="py-2 px-4 text-right">
@@ -2762,20 +3207,122 @@
                                     </td>
                                 </tr>
                             @empty
-                                <tr>
+                                <tr x-show="searchSticker.trim() === ''">
                                     <td colspan="3"
                                         class="py-3 px-4 text-center text-red-500 border-t border-gray-200">
                                         No Stickers found.
                                     </td>
                                 </tr>
                             @endforelse
+
+                            {{-- ALL Stickers for Search --}}
+                            @foreach ($allStickers as $sticker)
+                                <tr x-show="searchSticker.trim() !== '' && '{{ strtolower($sticker->name) }}'.includes(searchSticker.trim().toLowerCase())">
+                                    <td class="py-2 px-4 border-t border-gray-200">{{ $loop->iteration }}</td>
+                                    <td class="py-2 px-4 border-t border-gray-200">{{ $sticker->name }}</td>
+                                    <td class="py-2 px-4 text-right border-t border-gray-200">
+                                        <div class="relative inline-block text-left" x-data="{
+                                            open: false,
+                                            dropdownStyle: {},
+                                            checkPosition() {
+                                                const button = this.$refs.button;
+                                                const rect = button.getBoundingClientRect();
+                                                const spaceBelow = window.innerHeight - rect.bottom;
+                                                const spaceAbove = rect.top;
+                                                const dropUp = spaceBelow < 200 && spaceAbove > spaceBelow;
+                                        
+                                                if (dropUp) {
+                                                    this.dropdownStyle = {
+                                                        position: 'fixed',
+                                                        top: (rect.top - 90) + 'px',
+                                                        left: (rect.right - 160) + 'px',
+                                                        width: '160px'
+                                                    };
+                                                } else {
+                                                    this.dropdownStyle = {
+                                                        position: 'fixed',
+                                                        top: (rect.bottom + 8) + 'px',
+                                                        left: (rect.right - 160) + 'px',
+                                                        width: '160px'
+                                                    };
+                                                }
+                                            }
+                                        }"
+                                            x-init="$watch('open', value => {
+                                                if (value) {
+                                                    const scrollContainer = $el.closest('.overflow-y-auto');
+                                                    const mainContent = document.querySelector('main');
+                                                    const closeOnScroll = () => { open = false; };
+                                            
+                                                    scrollContainer?.addEventListener('scroll', closeOnScroll);
+                                                    mainContent?.addEventListener('scroll', closeOnScroll);
+                                                    window.addEventListener('resize', closeOnScroll);
+                                                }
+                                            })">
+                                            <button x-ref="button" @click="checkPosition(); open = !open" type="button"
+                                                class="cursor-pointer inline-flex items-center justify-center w-8 h-8 rounded-md border border-gray-300 text-gray-600 hover:bg-gray-100"
+                                                title="Actions">
+                                                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                                    <path
+                                                        d="M6 10a2 2 0 11-4 0 2 2 0 014 0zM12 10a2 2 0 11-4 0 2 2 0 014 0zM16 12a2 2 0 100-4 2 2 0 000 4z" />
+                                                </svg>
+                                            </button>
+
+                                            <div x-show="open" @click.away="open = false" x-transition
+                                                :style="dropdownStyle"
+                                                class="rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-[9999]">
+                                                <div class="py-1">
+                                                    <button
+                                                        @click="editSticker = {{ $sticker->toJson() }}; openModal = 'editSticker'; open = false"
+                                                        class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2">
+                                                        <svg class="w-4 h-4" fill="none" stroke="currentColor"
+                                                            viewBox="0 0 24 24">
+                                                            <path stroke-linecap="round" stroke-linejoin="round"
+                                                                stroke-width="2"
+                                                                d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                                        </svg>
+                                                        Edit
+                                                    </button>
+
+                                                    <button type="button"
+                                                        @click="showDeleteStickerConfirm = {{ $sticker->id }}; open = false"
+                                                        class="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100 flex items-center gap-2">
+                                                        <svg class="w-4 h-4" fill="none" stroke="currentColor"
+                                                            viewBox="0 0 24 24">
+                                                            <path stroke-linecap="round" stroke-linejoin="round"
+                                                                stroke-width="2"
+                                                                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                                        </svg>
+                                                        Delete
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                </tr>
+                            @endforeach
+
+                            {{-- No Results Found for Search --}}
+                            <tr x-show="searchSticker.trim() !== '' && !hasResults">
+                                <td colspan="3" class="py-16 text-center border-t border-gray-200">
+                                    <div class="flex flex-col items-center justify-center space-y-3">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16 text-gray-400" fill="none"
+                                            viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                                        </svg>
+                                        <p class="text-gray-500 text-lg">No results found for "<span
+                                                x-text="searchSticker"></span>"</p>
+                                    </div>
+                                </td>
+                            </tr>
                         </tbody>
 
                     </table>
                 </div>
 
                 <!-- Pagination -->
-                <div id="sticker-pagination-container" class="mt-4">
+                <div id="sticker-pagination-container" class="mt-4" x-show="searchSticker.trim() === ''">
                     <x-custom-pagination :paginator="$stickers" />
                 </div>
             </div>
@@ -4138,24 +4685,38 @@
 
         {{-- AJAX Pagination Script --}}
         <script>
-            // Function to setup pagination for a specific container
+            // Global setup function
+            function setupAllPagination() {
+                setupPagination('cutting-pattern-pagination-container', 'cutting-patterns');
+                setupPagination('chain-cloth-pagination-container', 'chain-cloths');
+                setupPagination('rib-size-pagination-container', 'rib-sizes');
+                setupPagination('print-ink-pagination-container', 'print-inks');
+                setupPagination('finishing-pagination-container', 'finishings');
+                setupPagination('neck-overdeck-pagination-container', 'neck-overdecks');
+                setupPagination('underarm-overdeck-pagination-container', 'underarm-overdecks');
+                setupPagination('side-split-pagination-container', 'side-splits');
+                setupPagination('sewing-label-pagination-container', 'sewing-labels');
+                setupPagination('plastic-packing-pagination-container', 'plastic-packings');
+                setupPagination('sticker-pagination-container', 'stickers');
+            }
+
             function setupPagination(containerId, sectionId) {
                 const container = document.getElementById(containerId);
                 if (!container) return;
 
-                // Prevent duplicate listeners
-                if (container._paginationListener) return;
-                container._paginationListener = true;
+                // Remove existing listener to prevent duplicates
+                const oldListener = container._paginationListener;
+                if (oldListener) {
+                    container.removeEventListener('click', oldListener);
+                }
 
-                container.addEventListener('click', function(e) {
+                // Create new listener
+                const listener = function(e) {
                     const link = e.target.closest('a[href*="page="]');
                     if (!link) return;
 
                     e.preventDefault();
-                    const url = link.href;
-
-                    // Show loading indicator
-                    if (typeof NProgress !== 'undefined') NProgress.start();
+                    const url = link.getAttribute('href');
 
                     fetch(url, {
                             headers: {
@@ -4166,71 +4727,51 @@
                         .then(html => {
                             const parser = new DOMParser();
                             const doc = parser.parseFromString(html, 'text/html');
-                            const newContent = doc.getElementById(containerId);
 
-                            if (newContent) {
-                                container.innerHTML = newContent.innerHTML;
-
-                                // Scroll to section top
-                                const section = document.getElementById(sectionId);
-                                if (section) {
-                                    setTimeout(() => {
-                                        section.scrollIntoView({
-                                            behavior: 'smooth',
-                                            block: 'start'
-                                        });
-                                    }, 100);
-                                }
+                            // Update the section content
+                            const newSection = doc.getElementById(sectionId);
+                            const currentSection = document.getElementById(sectionId);
+                            if (newSection && currentSection) {
+                                currentSection.innerHTML = newSection.innerHTML;
                             }
 
-                            if (typeof NProgress !== 'undefined') NProgress.done();
+                            // Scroll to top of section
+                            if (currentSection) {
+                                setTimeout(() => {
+                                    currentSection.scrollIntoView({
+                                        behavior: 'smooth',
+                                        block: 'start'
+                                    });
+                                }, 100);
+                            }
+
+                            // Re-setup pagination for this section after update
+                            setupPagination(containerId, sectionId);
                         })
                         .catch(error => {
-                            console.error('Pagination error:', error);
-                            if (typeof NProgress !== 'undefined') NProgress.done();
+                            console.error('Error loading pagination:', error);
                         });
-                });
+                };
+
+                // Attach listener and store reference
+                container.addEventListener('click', listener);
+                container._paginationListener = listener;
             }
 
-            // Global function to setup all pagination containers
-            function setupAllPagination() {
-                const paginationContainers = [
-                    'cutting-pattern-pagination-container',
-                    'chain-cloth-pagination-container',
-                    'rib-size-pagination-container',
-                    'print-ink-pagination-container',
-                    'finishing-pagination-container',
-                    'neck-overdeck-pagination-container',
-                    'underarm-overdeck-pagination-container',
-                    'side-split-pagination-container',
-                    'sewing-label-pagination-container',
-                    'plastic-packing-pagination-container',
-                    'sticker-pagination-container'
-                ];
+            // Setup on initial load
+            document.addEventListener('DOMContentLoaded', function() {
+                setupAllPagination();
+            });
 
-                const sectionIds = [
-                    'cutting-patterns',
-                    'chain-cloths',
-                    'rib-sizes',
-                    'print-inks',
-                    'finishings',
-                    'neck-overdecks',
-                    'underarm-overdecks',
-                    'side-splits',
-                    'sewing-labels',
-                    'plastic-packings',
-                    'stickers'
-                ];
+            // Setup after Turbo navigation
+            document.addEventListener('turbo:load', function() {
+                setupAllPagination();
+            });
 
-                paginationContainers.forEach((containerId, index) => {
-                    setupPagination(containerId, sectionIds[index]);
-                });
-            }
-
-            // Setup pagination on different events to handle Turbo navigation
-            document.addEventListener('DOMContentLoaded', setupAllPagination);
-            document.addEventListener('turbo:load', setupAllPagination);
-            document.addEventListener('turbo:render', setupAllPagination);
+            // Setup after Turbo render (for cached pages)
+            document.addEventListener('turbo:render', function() {
+                setupAllPagination();
+            });
         </script>
 
     </div>

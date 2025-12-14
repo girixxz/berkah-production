@@ -54,24 +54,37 @@ class ManageWorkOrderDataController extends Controller
         $perPageSticker = $request->input('per_page_sticker', 5);
         $perPageSticker = in_array($perPageSticker, [5, 10, 15, 20, 25]) ? $perPageSticker : 5;
         
-        // Cutting Data
+        // Cutting Data - Paginated
         $cuttingPatterns = CuttingPattern::orderBy('sort_order', 'asc')->paginate($perPageCuttingPattern, ['*'], 'cutting_pattern_page');
         $chainCloths = ChainCloth::orderBy('sort_order', 'asc')->paginate($perPageChainCloth, ['*'], 'chain_cloth_page');
         $ribSizes = RibSize::orderBy('sort_order', 'asc')->paginate($perPageRibSize, ['*'], 'rib_size_page');
 
-        // Printing Data
+        // Printing Data - Paginated
         $printInks = PrintInk::orderBy('sort_order', 'asc')->paginate($perPagePrintInk, ['*'], 'print_ink_page');
         $finishings = Finishing::orderBy('sort_order', 'asc')->paginate($perPageFinishing, ['*'], 'finishing_page');
 
-        // Sewing Data
+        // Sewing Data - Paginated
         $neckOverdecks = NeckOverdeck::orderBy('sort_order', 'asc')->paginate($perPageNeckOverdeck, ['*'], 'neck_overdeck_page');
         $underarmOverdecks = UnderarmOverdeck::orderBy('sort_order', 'asc')->paginate($perPageUnderarmOverdeck, ['*'], 'underarm_overdeck_page');
         $sideSplits = SideSplit::orderBy('sort_order', 'asc')->paginate($perPageSideSplit, ['*'], 'side_split_page');
         $sewingLabels = SewingLabel::orderBy('sort_order', 'asc')->paginate($perPageSewingLabel, ['*'], 'sewing_label_page');
 
-        // Packing Data
+        // Packing Data - Paginated
         $plasticPackings = PlasticPacking::orderBy('sort_order', 'asc')->paginate($perPagePlasticPacking, ['*'], 'plastic_packing_page');
         $stickers = Sticker::orderBy('sort_order', 'asc')->paginate($perPageSticker, ['*'], 'sticker_page');
+
+        // ALL Data for search functionality
+        $allCuttingPatterns = CuttingPattern::orderBy('sort_order', 'asc')->get();
+        $allChainCloths = ChainCloth::orderBy('sort_order', 'asc')->get();
+        $allRibSizes = RibSize::orderBy('sort_order', 'asc')->get();
+        $allPrintInks = PrintInk::orderBy('sort_order', 'asc')->get();
+        $allFinishings = Finishing::orderBy('sort_order', 'asc')->get();
+        $allNeckOverdecks = NeckOverdeck::orderBy('sort_order', 'asc')->get();
+        $allUnderarmOverdecks = UnderarmOverdeck::orderBy('sort_order', 'asc')->get();
+        $allSideSplits = SideSplit::orderBy('sort_order', 'asc')->get();
+        $allSewingLabels = SewingLabel::orderBy('sort_order', 'asc')->get();
+        $allPlasticPackings = PlasticPacking::orderBy('sort_order', 'asc')->get();
+        $allStickers = Sticker::orderBy('sort_order', 'asc')->get();
 
         return view('pages.owner.manage-data.work-orders', compact(
             'cuttingPatterns',
@@ -84,7 +97,18 @@ class ManageWorkOrderDataController extends Controller
             'sideSplits',
             'sewingLabels',
             'plasticPackings',
-            'stickers'
+            'stickers',
+            'allCuttingPatterns',
+            'allChainCloths',
+            'allRibSizes',
+            'allPrintInks',
+            'allFinishings',
+            'allNeckOverdecks',
+            'allUnderarmOverdecks',
+            'allSideSplits',
+            'allSewingLabels',
+            'allPlasticPackings',
+            'allStickers'
         ));
     }
 }
