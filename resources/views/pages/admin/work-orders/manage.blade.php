@@ -607,9 +607,9 @@
                                                 ->values()
                                                 ->toArray();
 
-                                            // Get all sleeves and sizes from database
-                                            $allSleeves = \App\Models\MaterialSleeve::all()->pluck('name')->toArray();
-                                            $allSizes = \App\Models\MaterialSize::all()->pluck('name')->toArray();
+                                            // Get all sleeves and sizes from database (ordered by sort_order)
+                                            $allSleeves = \App\Models\MaterialSleeve::orderBy('sort_order')->get()->pluck('name')->toArray();
+                                            $allSizes = \App\Models\MaterialSize::orderBy('sort_order')->get()->pluck('name')->toArray();
 
                                             // Fill sleeves to minimum 4
                                             $displaySleeves = $usedSleeves;
