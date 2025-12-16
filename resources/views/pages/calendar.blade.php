@@ -44,6 +44,14 @@
         modalTasks: [],
         isLoading: false,
         selectedFilter: '{{ $filter ?? 'create' }}',
+        // View mode state
+        viewMode: '{{ request('view', 'monthly') }}',
+        // Current month and year state (for monthly)
+        currentMonth: {{ request('month', $currentDate->month) }},
+        currentYear: {{ request('year', $currentDate->year) }},
+        // Current week state (for weekly - format: YYYY-Wnn)
+        currentWeek: '{{ request('week', '') }}',
+        displayText: '{{ $viewMode === 'weekly' ? ($weekDisplayText ?? $currentDate->format('F Y')) : $currentDate->format('F Y') }}',
         // Select dropdown state
         selectOpen: false,
         selectOptions: [
@@ -65,15 +73,88 @@
             // Trigger AJAX filter
             this.applyFilter(option.value);
         },
-        applyFilter(filterValue) {
+        switchViewMode(mode) {
+            this.viewMode = mode;
+            if (mode === 'monthly') {
+                this.loadCalendar(this.currentMonth, this.currentYear);
+            } else if (mode === 'weekly') {
+                this.loadWeekly(this.currentWeek || this.getCurrentWeek());
+            }
+        },
+        getCurrentWeek() {
+            const now = new Date();
+            const year = now.getFullYear();
+            const onejan = new Date(year, 0, 1);
+            const week = Math.ceil((((now - onejan) / 86400000) + onejan.getDay() + 1) / 7);
+            return year + '-W' + String(week).padStart(2, '0');
+        },
+        navigateMonth(direction) {
+            if (this.viewMode === 'weekly') {
+                this.navigateWeek(direction);
+                return;
+            }
+            
+            // Calculate new month/year
+            let newMonth = this.currentMonth;
+            let newYear = this.currentYear;
+            
+            if (direction === 'prev') {
+                newMonth--;
+                if (newMonth < 1) {
+                    newMonth = 12;
+                    newYear--;
+                }
+            } else if (direction === 'next') {
+                newMonth++;
+                if (newMonth > 12) {
+                    newMonth = 1;
+                    newYear++;
+                }
+            } else if (direction === 'reset') {
+                const now = new Date();
+                newMonth = now.getMonth() + 1;
+                newYear = now.getFullYear();
+            }
+            
+            this.loadCalendar(newMonth, newYear);
+        },
+        navigateWeek(direction) {
+            let weekStr = this.currentWeek || this.getCurrentWeek();
+            const [year, week] = weekStr.split('-W').map(Number);
+            
+            let newYear = year;
+            let newWeek = week;
+            
+            if (direction === 'prev') {
+                newWeek--;
+                if (newWeek < 1) {
+                    newWeek = 52;
+                    newYear--;
+                }
+            } else if (direction === 'next') {
+                newWeek++;
+                if (newWeek > 52) {
+                    newWeek = 1;
+                    newYear++;
+                }
+            } else if (direction === 'reset') {
+                weekStr = this.getCurrentWeek();
+                this.loadWeekly(weekStr);
+                return;
+            }
+            
+            const newWeekStr = newYear + '-W' + String(newWeek).padStart(2, '0');
+            this.loadWeekly(newWeekStr);
+        },
+        loadCalendar(month, year) {
             this.isLoading = true;
-            this.selectedFilter = filterValue;
             
             // Build URL with query params
             const params = new URLSearchParams();
-            params.set('filter', filterValue);
-            params.set('month', '{{ request('month', $currentDate->month) }}');
-            params.set('year', '{{ request('year', $currentDate->year) }}');
+            params.set('filter', this.selectedFilter);
+            params.set('view', 'monthly');
+            params.set('month', month);
+            params.set('year', year);
             
             const url = '{{ route('calendar') }}?' + params.toString();
             
@@ -93,6 +174,16 @@
                 
                 if (newSection) {
                     document.getElementById('calendar-section').innerHTML = newSection.innerHTML;
+                    
+                    // Update state
+                    this.currentMonth = month;
+                    this.currentYear = year;
+                    this.viewMode = 'monthly';
+                    
+                    // Update display text
+                    const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 
+                                       'July', 'August', 'September', 'October', 'November', 'December'];
+                    this.displayText = monthNames[month - 1] + ' ' + year;
                 }
                 
                 this.isLoading = false;
@@ -104,6 +195,62 @@
                 NProgress.done();
             });
         },
+        loadWeekly(weekStr) {
+            this.isLoading = true;
+            
+            // Build URL with query params
+            const params = new URLSearchParams();
+            params.set('filter', this.selectedFilter);
+            params.set('view', 'weekly');
+            params.set('week', weekStr);
+            
+            const url = '{{ route('calendar') }}?' + params.toString();
+            
+            // Fetch content via AJAX with loading bar
+            NProgress.start();
+            
+            fetch(url, {
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+            .then(response => response.text())
+            .then(html => {
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(html, 'text/html');
+                const newSection = doc.getElementById('calendar-section');
+                
+                if (newSection) {
+                    document.getElementById('calendar-section').innerHTML = newSection.innerHTML;
+                    
+                    // Update state
+                    this.currentWeek = weekStr;
+                    this.viewMode = 'weekly';
+                    
+                    // Update display text from section data attribute
+                    const displayAttr = newSection.getAttribute('data-display-text');
+                    if (displayAttr) {
+                        this.displayText = displayAttr;
+                    }
+                }
+                
+                this.isLoading = false;
+                NProgress.done();
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                this.isLoading = false;
+                NProgress.done();
+            });
+        },
+        applyFilter(filterValue) {
+            this.selectedFilter = filterValue;
+            if (this.viewMode === 'weekly') {
+                this.loadWeekly(this.currentWeek || this.getCurrentWeek());
+            } else {
+                this.loadCalendar(this.currentMonth, this.currentYear);
+            }
+        },
         openModal(date, tasks) {
             this.modalDate = date;
             this.modalTasks = tasks;
@@ -111,97 +258,199 @@
         }
     }" class="h-full flex flex-col">
 
-        {{-- Header --}}
-        <div class="p-2 flex-shrink-0 bg-white border-b border-gray-200">
-            <div class="flex flex-col gap-3 sm:gap-4 items-center">
-                <div class="w-full sm:w-120">
-                    {{-- Custom Select Component (Hard-write mirip select-form.blade.php) --}}
-                    <div class="relative w-full">
-                        {{-- Trigger --}}
-                        <button type="button" @click="selectOpen = !selectOpen"
-                            class="w-full flex justify-between items-center rounded-md border border-gray-200 px-3 py-2 text-sm text-gray-700 bg-white
-                                   focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors">
-                            <span x-text="selectSelected ? selectSelected.name : '-- Select Filter --'"
-                                :class="!selectSelected ? 'text-gray-400' : 'text-gray-900'"></span>
-                            <svg class="w-4 h-4 text-gray-400 transition-transform" :class="selectOpen && 'rotate-180'" fill="none"
-                                stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-                            </svg>
-                        </button>
-
-                        {{-- Dropdown --}}
-                        <div x-show="selectOpen" @click.away="selectOpen = false" x-cloak 
-                            x-transition:enter="transition ease-out duration-100"
-                            x-transition:enter-start="opacity-0 scale-95" 
-                            x-transition:enter-end="opacity-100 scale-100"
-                            x-transition:leave="transition ease-in duration-75" 
-                            x-transition:leave-start="opacity-100 scale-100"
-                            x-transition:leave-end="opacity-0 scale-95"
-                            class="absolute z-20 mt-1 w-full bg-white border border-gray-200 rounded-md shadow-lg">
-                            <ul class="max-h-60 overflow-y-auto py-1">
-                                <template x-for="option in selectOptions" :key="option.value">
-                                    <li @click="selectOption(option)"
-                                        class="px-4 py-2 cursor-pointer text-sm hover:bg-primary/5 transition-colors"
-                                        :class="{ 'bg-primary/10 font-medium text-primary': selectSelected && selectSelected.value === option.value }">
-                                        <span x-text="option.name"></span>
-                                    </li>
-                                </template>
-                            </ul>
-                        </div>
+        {{-- Header - Responsive Layout --}}
+        <div class="p-3 flex-shrink-0 bg-white border-b border-gray-200">
+            <div class="flex flex-col lg:grid lg:grid-cols-3 gap-3 lg:gap-4 lg:items-center">
+                {{-- Left: Monthly/Weekly Buttons --}}
+                <div class="flex gap-2 justify-center lg:justify-start">
+                    <button type="button" @click="switchViewMode('monthly')" 
+                        :class="viewMode === 'monthly' ? 'bg-primary text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'"
+                        class="px-4 py-2 rounded-lg text-sm font-medium transition-colors">
+                        Monthly
+                    </button>
+                    <button type="button" @click="switchViewMode('weekly')" 
+                        :class="viewMode === 'weekly' ? 'bg-primary text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'"
+                        class="px-4 py-2 rounded-lg text-sm font-medium transition-colors">
+                        Weekly
+                    </button>
+                </div>
+                
+                {{-- Center: Select Form --}}
+                <div class="relative w-full order-2 lg:order-none">
+                    <button type="button" @click="selectOpen = !selectOpen"
+                        class="w-full flex justify-between items-center rounded-md border border-gray-200 px-3 py-2 text-sm text-gray-700 bg-white focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors">
+                        <span x-text="selectSelected ? selectSelected.name : '-- Select Filter --'"
+                            :class="!selectSelected ? 'text-gray-400' : 'text-gray-900'"></span>
+                        <svg class="w-4 h-4 text-gray-400 transition-transform" :class="selectOpen && 'rotate-180'" fill="none"
+                            stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                        </svg>
+                    </button>
+                    <div x-show="selectOpen" @click.away="selectOpen = false" x-cloak 
+                        x-transition:enter="transition ease-out duration-100"
+                        x-transition:enter-start="opacity-0 scale-95" 
+                        x-transition:enter-end="opacity-100 scale-100"
+                        x-transition:leave="transition ease-in duration-75" 
+                        x-transition:leave-start="opacity-100 scale-100"
+                        x-transition:leave-end="opacity-0 scale-95"
+                        class="absolute z-20 mt-1 w-full bg-white border border-gray-200 rounded-md shadow-lg">
+                        <ul class="max-h-60 overflow-y-auto py-1">
+                            <template x-for="option in selectOptions" :key="option.value">
+                                <li @click="selectOption(option)"
+                                    class="px-4 py-2 cursor-pointer text-sm hover:bg-primary/5 transition-colors"
+                                    :class="{ 'bg-primary/10 font-medium text-primary': selectSelected && selectSelected.value === option.value }">
+                                    <span x-text="option.name"></span>
+                                </li>
+                            </template>
+                        </ul>
                     </div>
                 </div>
-                <div class="flex items-center gap-3 justify-center">
-                    {{-- Previous Month --}}
-                    <a :href="`{{ route('calendar') }}?filter=${selectedFilter}&month={{ $prevMonth->month }}&year={{ $prevMonth->year }}`" 
+
+                {{-- Right: Navigation --}}
+                <div class="flex items-center gap-3 justify-center lg:justify-end order-3 lg:order-none">
+                    <button type="button" @click="navigateMonth('prev')" 
                        class="p-2 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer flex-shrink-0">
                         <svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
                         </svg>
-                    </a>
-
-                    {{-- Current Month/Year Display --}}
-                    <div class="px-3 sm:px-4 py-2 text-center min-w-[140px] sm:min-w-[150px]">
-                        <span class="text-sm sm:text-base font-semibold text-gray-900 whitespace-nowrap">
+                    </button>
+                    <div class="px-3 lg:px-4 py-2 text-center min-w-[140px] lg:min-w-[150px]">
+                        <span class="text-sm lg:text-base font-semibold text-gray-900 whitespace-nowrap" x-text="displayText">
                             {{ $currentDate->format('F Y') }}
                         </span>
                     </div>
-
-                    {{-- Next Month --}}
-                    <a :href="`{{ route('calendar') }}?filter=${selectedFilter}&month={{ $nextMonth->month }}&year={{ $nextMonth->year }}`" 
+                    <button type="button" @click="navigateMonth('next')" 
                        class="p-2 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer flex-shrink-0">
                         <svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
                         </svg>
-                    </a>
-
-                    {{-- Reset Button --}}
-                    <a :href="`{{ route('calendar') }}?filter=${selectedFilter}`" 
-                       class="px-3 sm:px-4 py-2 bg-primary hover:bg-primary-dark text-white text-sm font-medium rounded-lg transition-colors cursor-pointer flex-shrink-0">
+                    </button>
+                    <button type="button" @click="navigateMonth('reset')" 
+                       class="px-3 lg:px-4 py-2 bg-primary hover:bg-primary-dark text-white text-sm font-medium rounded-lg transition-colors cursor-pointer flex-shrink-0"
+                       x-text="viewMode === 'weekly' ? 'This Week' : 'This Month'">
                         This Month
-                    </a>
+                    </button>
                 </div>
             </div>
         </div>
 
         {{-- Calendar Section (for AJAX reload) --}}
-        <section id="calendar-section" class="flex-1 overflow-hidden flex flex-col">
+        <section id="calendar-section" class="flex-1 overflow-hidden flex flex-col" 
+            data-display-text="{{ $viewMode === 'weekly' ? $weekDisplayText : $currentDate->format('F Y') }}">
             <div id="calendar-wrapper" class="calendar-wrapper flex-1 overflow-hidden flex flex-col" :class="{ 'opacity-50 pointer-events-none': isLoading }">
             <div class="calendar-grid flex-1 flex flex-col overflow-hidden shadow-sm">
                 {{-- Calendar Header (Days of Week) --}}
                 <div class="grid grid-cols-7 bg-primary-light border-y border-gray-300">
-                    @foreach (['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'] as $day)
-                        <div class="py-2 text-center text-sm font-semibold border-r border-gray-300 last:border-r-0">
-                            {{ $day }}
-                        </div>
-                    @endforeach
+                    @if ($viewMode === 'weekly' && isset($calendar[0]))
+                        {{-- Weekly mode: Show day with date inline --}}
+                        @foreach ($calendar[0] as $day)
+                            <div class="py-2 text-center text-sm font-semibold border-r border-gray-300 last:border-r-0">
+                                {{ $day['date']->format('D') }} <span class="text-xs font-normal text-gray-600">({{ $day['date']->format('d') }})</span>
+                            </div>
+                        @endforeach
+                    @else
+                        {{-- Monthly mode: Show day only --}}
+                        @foreach (['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'] as $day)
+                            <div class="py-2 text-center text-sm font-semibold border-r border-gray-300 last:border-r-0">
+                                {{ $day }}
+                            </div>
+                        @endforeach
+                    @endif
                 </div>
 
                 {{-- Calendar Body (Weeks and Days) --}}
                 <div class="flex-1 flex flex-col">
-                    @foreach ($calendar as $week)
-                        <div class="grid grid-cols-7 border-b border-gray-200 last:border-b-0 flex-1">
-                            @foreach ($week as $day)
-                                <div class="calendar-cell border-r border-gray-200 last:border-r-0 p-1.5 {{ !$day['isCurrentMonth'] ? 'bg-gray-50' : 'bg-white' }}">
+                    @if ($viewMode === 'weekly')
+                        {{-- Weekly mode: Show only first week (1 row with full height) --}}
+                        @if (isset($calendar[0]))
+                            <div class="grid grid-cols-7 flex-1">
+                                @foreach ($calendar[0] as $day)
+                                    <div class="border-r border-gray-200 last:border-r-0 p-2 {{ $day['isToday'] ? 'bg-blue-50' : 'bg-white' }} overflow-y-auto">
+                                        {{-- Tasks for this day --}}
+                                        @if (count($day['tasks']) > 0)
+                                            <div class="space-y-1">
+                                                {{-- Weekly: Show ALL tasks (no limit) --}}
+                                                @foreach ($day['tasks'] as $orderStage)
+                                                    @php
+                                                        // Check if ALL stages of this order are done (for create/deadline mode)
+                                                        $allStagesDone = $orderStage->order->orderStages->every(function($stage) {
+                                                            return strtolower($stage->status) === 'done';
+                                                        });
+                                                        
+                                                        // In stage mode, use the current stage status
+                                                        // In create/deadline mode, only show done if ALL stages done
+                                                        $status = strtolower($orderStage->status ?? '');
+                                                        $isHighPriority = strtolower($orderStage->order->priority ?? '') === 'high';
+                                                        $isDone = ($filter === 'create' || $filter === 'deadline') ? $allStagesDone : ($status === 'done');
+                                                        $isFinished = strtolower($orderStage->order->production_status ?? '') === 'finished';
+                                                        
+                                                        // Set colors based on status and priority
+                                                        if ($isFinished) {
+                                                            // Order finished (light gray with white text)
+                                                            $bgClass = 'bg-gray-400';
+                                                            $borderClass = 'border-gray-500';
+                                                            $textClass = 'text-white';
+                                                            $separatorClass = 'text-white opacity-70';
+                                                        } elseif ($isDone) {
+                                                            // Status: done (gray)
+                                                            $bgClass = 'bg-gray-200';
+                                                            $borderClass = 'border-gray-400';
+                                                            $textClass = 'text-gray-600';
+                                                            $separatorClass = 'text-gray-400';
+                                                        } elseif ($isHighPriority) {
+                                                            // Status: in_progress + Priority: high (red)
+                                                            $bgClass = 'bg-red-500';
+                                                            $borderClass = 'border-red-600';
+                                                            $textClass = 'text-white';
+                                                            $separatorClass = 'text-white opacity-70';
+                                                        } else {
+                                                            // Status: in_progress + Priority: normal (custom yellow #eddfad)
+                                                            $bgClass = 'bg-[#eddfad]';
+                                                            $borderClass = 'border-[#d4c973]';
+                                                            $textClass = 'text-gray-900';
+                                                            $separatorClass = 'text-gray-600';
+                                                        }
+                                                    @endphp
+                                                    <a href="{{ route('karyawan.task.work-order', ['order' => $orderStage->order->id]) }}" target="_blank"
+                                                        class="block px-1.5 py-0.5 rounded border {{ $bgClass }} {{ $borderClass }} text-[9px] font-medium cursor-pointer hover:opacity-80 transition-opacity">
+                                                        <div class="flex items-center justify-between gap-1">
+                                                            <div class="flex items-center gap-1 {{ $textClass }} flex-1 min-w-0">
+                                                                <span class="font-semibold truncate">
+                                                                    {{ $orderStage->order->customer->customer_name ?? 'N/A' }}
+                                                                </span>
+                                                                <span class="{{ $separatorClass }}">•</span>
+                                                                <span class="truncate">
+                                                                    {{ $orderStage->order->productCategory->product_name ?? 'N/A' }}
+                                                                </span>
+                                                                <span class="{{ $separatorClass }}">•</span>
+                                                                <span class="font-medium">
+                                                                    {{ $orderStage->order->total_qty ?? 0 }}
+                                                                </span>
+                                                                @if ($isHighPriority && !$isDone && !$isFinished)
+                                                                    <span class="{{ $separatorClass }}">•</span>
+                                                                    <span class="font-bold italic">HIGH</span>
+                                                                @endif
+                                                            </div>
+                                                            @if ($isFinished)
+                                                                <span class="text-white font-bold italic flex-shrink-0">FINISHED</span>
+                                                            @elseif ($isDone)
+                                                                <span class="text-gray-500 font-bold italic flex-shrink-0">DONE</span>
+                                                            @endif
+                                                        </div>
+                                                    </a>
+                                                @endforeach
+                                            </div>
+                                        @endif
+                                    </div>
+                                @endforeach
+                            </div>
+                        @endif
+                    @else
+                        {{-- Monthly mode: Show all weeks --}}
+                        @foreach ($calendar as $week)
+                            <div class="grid grid-cols-7 border-b border-gray-200 last:border-b-0 flex-1">
+                                @foreach ($week as $day)
+                                <div class="calendar-cell border-r border-gray-200 last:border-r-0 p-1.5 {{ $day['isToday'] ? 'bg-blue-50' : (!$day['isCurrentMonth'] ? 'bg-gray-50' : 'bg-white') }}">
                                     {{-- Date Number --}}
                                     <div class="flex items-center justify-between mb-1">
                                         <span class="text-xs font-medium {{ $day['isToday'] ? 'text-primary font-bold' : ($day['isCurrentMonth'] ? 'text-gray-900' : 'text-gray-400') }}">
@@ -318,6 +567,7 @@
                             @endforeach
                         </div>
                     @endforeach
+                    @endif
                 </div>
             </div>
         </section>

@@ -32,22 +32,50 @@ class CalendarController extends Controller
         
         $selectedStage = ProductionStage::find($selectedStageId);
 
-        // Get month and year from request (default to current month/year)
-        $month = $request->input('month', Carbon::now()->month);
-        $year = $request->input('year', Carbon::now()->year);
-
-        // Create Carbon instance for the selected month
-        $currentDate = Carbon::create($year, $month, 1);
+        // Get view mode (monthly or weekly)
+        $viewMode = $request->input('view', 'monthly');
         
-        // Get first day of month and last day of month
-        $startOfMonth = $currentDate->copy()->startOfMonth();
-        $endOfMonth = $currentDate->copy()->endOfMonth();
+        if ($viewMode === 'weekly') {
+            // Weekly view
+            $weekParam = $request->input('week');
+            
+            if ($weekParam) {
+                // Parse week format: YYYY-Wnn (e.g., 2024-W50)
+                [$year, $weekNum] = sscanf($weekParam, '%d-W%d');
+                $currentDate = Carbon::now()->setISODate($year, $weekNum);
+            } else {
+                // Default to current week
+                $currentDate = Carbon::now();
+            }
+            
+            // Get start and end of week (Sunday to Saturday)
+            $startOfCalendar = $currentDate->copy()->startOfWeek(Carbon::SUNDAY);
+            $endOfCalendar = $currentDate->copy()->endOfWeek(Carbon::SATURDAY);
+            
+            // Weekly display text (e.g., "Dec 15 - Dec 21, 2024")
+            $weekDisplayText = $startOfCalendar->format('M d') . ' - ' . $endOfCalendar->format('M d, Y');
+            
+        } else {
+            // Monthly view (default)
+            // Get month and year from request (default to current month/year)
+            $month = $request->input('month', Carbon::now()->month);
+            $year = $request->input('year', Carbon::now()->year);
 
-        // Get the first day to display (previous month if needed to fill calendar grid)
-        $startOfCalendar = $startOfMonth->copy()->startOfWeek(Carbon::SUNDAY);
-        
-        // Get the last day to display (next month if needed to fill calendar grid)
-        $endOfCalendar = $endOfMonth->copy()->endOfWeek(Carbon::SATURDAY);
+            // Create Carbon instance for the selected month
+            $currentDate = Carbon::create($year, $month, 1);
+            
+            // Get first day of month and last day of month
+            $startOfMonth = $currentDate->copy()->startOfMonth();
+            $endOfMonth = $currentDate->copy()->endOfMonth();
+
+            // Get the first day to display (previous month if needed to fill calendar grid)
+            $startOfCalendar = $startOfMonth->copy()->startOfWeek(Carbon::SUNDAY);
+            
+            // Get the last day to display (next month if needed to fill calendar grid)
+            $endOfCalendar = $endOfMonth->copy()->endOfWeek(Carbon::SATURDAY);
+            
+            $weekDisplayText = null;
+        }
 
         // Get data based on mode
         $orderStages = collect();
@@ -151,19 +179,36 @@ class CalendarController extends Controller
         $calendar = [];
         $currentDay = $startOfCalendar->copy();
         
-        while ($currentDay <= $endOfCalendar) {
+        if ($viewMode === 'weekly') {
+            // Weekly mode: Build only 1 week (7 days)
             $week = [];
             for ($i = 0; $i < 7; $i++) {
                 $dateKey = $currentDay->format('Y-m-d');
                 $week[] = [
                     'date' => $currentDay->copy(),
-                    'isCurrentMonth' => $currentDay->month == $month,
+                    'isCurrentMonth' => true, // All days in weekly view are "current"
                     'isToday' => $currentDay->isToday(),
                     'tasks' => $tasksByDate[$dateKey] ?? [],
                 ];
                 $currentDay->addDay();
             }
             $calendar[] = $week;
+        } else {
+            // Monthly mode: Build full month calendar
+            while ($currentDay <= $endOfCalendar) {
+                $week = [];
+                for ($i = 0; $i < 7; $i++) {
+                    $dateKey = $currentDay->format('Y-m-d');
+                    $week[] = [
+                        'date' => $currentDay->copy(),
+                        'isCurrentMonth' => $currentDay->month == $month,
+                        'isToday' => $currentDay->isToday(),
+                        'tasks' => $tasksByDate[$dateKey] ?? [],
+                    ];
+                    $currentDay->addDay();
+                }
+                $calendar[] = $week;
+            }
         }
 
         // Get previous and next month/year
@@ -178,10 +223,14 @@ class CalendarController extends Controller
                 'selectedStageId',
                 'filter',
                 'mode',
+                'viewMode',
                 'currentDate',
                 'calendar',
                 'prevMonth',
-                'nextMonth'
+                'nextMonth',
+                'weekDisplayText',
+                'startOfCalendar',
+                'endOfCalendar'
             ));
         }
 
@@ -191,10 +240,14 @@ class CalendarController extends Controller
             'selectedStageId',
             'filter',
             'mode',
+            'viewMode',
             'currentDate',
             'calendar',
             'prevMonth',
-            'nextMonth'
+            'nextMonth',
+            'weekDisplayText',
+            'startOfCalendar',
+            'endOfCalendar'
         ));
     }
 }
