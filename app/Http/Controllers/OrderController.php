@@ -173,7 +173,7 @@ class OrderController extends Controller
      */
     public function index(Request $request)
     {
-        $filter = $request->input('filter', 'default');
+        $filter = $request->input('filter', 'wip');
         $search = $request->input('search');
         $startDate = $request->input('start_date');
         $endDate = $request->input('end_date');

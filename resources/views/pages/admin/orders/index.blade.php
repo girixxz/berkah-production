@@ -12,7 +12,7 @@
 
     {{-- Root Alpine State --}}
     <div x-data="{
-        activeFilter: '{{ request('filter', 'default') }}',
+        activeFilter: '{{ request('filter', 'wip') }}',
         searchQuery: '{{ request('search') }}',
         startDate: '{{ $startDate ?? '' }}',
         endDate: '{{ $endDate ?? '' }}',
@@ -345,12 +345,12 @@
 
                     {{-- Left: Filter Buttons --}}
                     <div class="grid grid-cols-3 md:flex md:flex-wrap gap-2" id="filter-section">
-                        {{-- Default - Green (Primary) --}}
+                        {{-- All - Green (Primary) --}}
                         <button type="button" @click="activeFilter = 'default'; applyFilter();"
                             :class="activeFilter === 'default' ? 'bg-primary text-white' :
                                 'bg-gray-100 text-gray-700 hover:bg-gray-200'"
                             class="px-4 py-2 rounded-md text-sm font-medium transition-colors text-center">
-                            Default
+                            All
                         </button>
                         {{-- Pending - Yellow --}}
                         <button type="button" @click="activeFilter = 'pending'; applyFilter();"
