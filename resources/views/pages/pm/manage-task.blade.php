@@ -13,7 +13,7 @@
 
     {{-- Root Alpine State --}}
     <div x-data="{
-        activeFilter: '{{ request('filter', 'default') }}',
+        activeFilter: '{{ request('filter', 'wip') }}',
         searchQuery: '{{ request('search') }}',
         startDate: '{{ $startDate ?? '' }}',
         endDate: '{{ $endDate ?? '' }}',
@@ -404,17 +404,17 @@
                         :class="activeFilter === 'default' ? 'bg-primary text-white' :
                             'bg-gray-100 text-gray-700 hover:bg-gray-200'"
                         class="px-4 py-2 rounded-md text-sm font-medium transition-colors text-center">
-                        Default
+                        All
                     </button>
                     <button @click="activeFilter = 'wip'; applyFilter();"
-                        :class="activeFilter === 'wip' ? 'bg-primary text-white' :
-                            'bg-gray-100 text-gray-700 hover:bg-gray-200'"
+                        :class="activeFilter === 'wip' ? 'bg-blue-500 text-white' :
+                            'bg-gray-100 text-gray-700 hover:bg-blue-50'"
                         class="px-4 py-2 rounded-md text-sm font-medium transition-colors text-center">
                         WIP
                     </button>
                     <button @click="activeFilter = 'finished'; applyFilter();"
-                        :class="activeFilter === 'finished' ? 'bg-primary text-white' :
-                            'bg-gray-100 text-gray-700 hover:bg-gray-200'"
+                        :class="activeFilter === 'finished' ? 'bg-green-500 text-white' :
+                            'bg-gray-100 text-gray-700 hover:bg-green-50'"
                         class="px-4 py-2 rounded-md text-sm font-medium transition-colors text-center">
                         Finished
                     </button>
