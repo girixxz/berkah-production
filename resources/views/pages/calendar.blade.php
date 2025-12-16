@@ -343,15 +343,15 @@
                 <div class="grid grid-cols-7 bg-primary-light border-y border-gray-300">
                     @if ($viewMode === 'weekly' && isset($calendar[0]))
                         {{-- Weekly mode: Show day with date inline --}}
-                        @foreach ($calendar[0] as $day)
-                            <div class="py-2 text-center text-sm font-semibold border-r border-gray-300 last:border-r-0">
-                                {{ $day['date']->format('D') }} <span class="text-xs font-normal text-gray-600">({{ $day['date']->format('d') }})</span>
+                        @foreach ($calendar[0] as $index => $day)
+                            <div class="py-2 text-center text-sm font-semibold border-r border-gray-300 last:border-r-0 {{ $index === 0 ? 'bg-red-500 text-white' : '' }}">
+                                {{ $day['date']->format('D') }} <span class="text-xs font-normal {{ $index === 0 ? 'text-white opacity-90' : 'text-gray-600' }}">({{ $day['date']->format('d') }})</span>
                             </div>
                         @endforeach
                     @else
                         {{-- Monthly mode: Show day only --}}
-                        @foreach (['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'] as $day)
-                            <div class="py-2 text-center text-sm font-semibold border-r border-gray-300 last:border-r-0">
+                        @foreach (['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'] as $index => $day)
+                            <div class="py-2 text-center text-sm font-semibold border-r border-gray-300 last:border-r-0 {{ $index === 0 ? 'bg-red-500 text-white' : '' }}">
                                 {{ $day }}
                             </div>
                         @endforeach
@@ -364,8 +364,8 @@
                         {{-- Weekly mode: Show only first week (1 row with full height) --}}
                         @if (isset($calendar[0]))
                             <div class="grid grid-cols-7 flex-1">
-                                @foreach ($calendar[0] as $day)
-                                    <div class="border-r border-gray-200 last:border-r-0 p-2 {{ $day['isToday'] ? 'bg-blue-50' : 'bg-white' }} overflow-y-auto">
+                                @foreach ($calendar[0] as $index => $day)
+                                    <div class="border-r border-gray-200 last:border-r-0 p-2 {{ $day['isToday'] ? 'bg-blue-50' : ($index === 0 ? 'bg-red-50' : 'bg-white') }} overflow-y-auto">
                                         {{-- Tasks for this day --}}
                                         @if (count($day['tasks']) > 0)
                                             <div class="space-y-1">
@@ -449,8 +449,8 @@
                         {{-- Monthly mode: Show all weeks --}}
                         @foreach ($calendar as $week)
                             <div class="grid grid-cols-7 border-b border-gray-200 last:border-b-0 flex-1">
-                                @foreach ($week as $day)
-                                <div class="calendar-cell border-r border-gray-200 last:border-r-0 p-1.5 {{ $day['isToday'] ? 'bg-blue-50' : (!$day['isCurrentMonth'] ? 'bg-gray-50' : 'bg-white') }}">
+                                @foreach ($week as $index => $day)
+                                <div class="calendar-cell border-r border-gray-200 last:border-r-0 p-1.5 {{ $day['isToday'] ? 'bg-blue-50' : ($index === 0 ? 'bg-red-50' : (!$day['isCurrentMonth'] ? 'bg-gray-50' : 'bg-white')) }}">
                                     {{-- Date Number --}}
                                     <div class="flex items-center justify-between mb-1">
                                         <span class="text-xs font-medium {{ $day['isToday'] ? 'text-primary font-bold' : ($day['isCurrentMonth'] ? 'text-gray-900' : 'text-gray-400') }}">
