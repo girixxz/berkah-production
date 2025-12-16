@@ -74,8 +74,11 @@ class DashboardController extends Controller
             'total_products' => ProductCategory::count(),
         ];
 
-        // Get Order By Sales Data (using same date filter as stats)
-        $salesData = $this->getOrderBySalesData($startDate, $endDate);
+        // Get Order By Sales Data (INDEPENDENT - with own year/month params)
+        $salesYear = $request->input('sales_year', now()->year);
+        $salesMonth = $request->input('sales_month', now()->month);
+        $salesPage = $request->input('sales_page', 1);
+        $salesData = $this->getOrderBySalesDataByMonth($salesYear, $salesMonth, $salesPage);
 
         return view('pages.owner.dashboard', compact('stats', 'salesData', 'dateRange', 'startDate', 'endDate'));
     }
@@ -145,6 +148,74 @@ class DashboardController extends Controller
             $currentPage,
             [
                 'path' => request()->url(),
+                'pageName' => 'sales_page',
+            ]
+        );
+    }
+
+    /**
+     * Get Order By Sales data by month/year with pagination (INDEPENDENT)
+     */
+    private function getOrderBySalesDataByMonth($year, $month, $page = 1)
+    {
+        // Calculate date range from year/month
+        $startDate = sprintf('%04d-%02d-01', $year, $month);
+        $endDate = date('Y-m-t', strtotime($startDate)); // Last day of month
+        
+        // Get all sales first
+        $sales = Sale::all();
+        
+        $salesData = $sales->map(function($sale) use ($startDate, $endDate) {
+            // Query orders for this sales with date filter
+            $ordersQuery = Order::where('sales_id', $sale->id)
+                ->whereBetween('order_date', [$startDate, $endDate]);
+            
+            $orders = $ordersQuery->with(['orderItems', 'invoice'])->get();
+            
+            // Filter hanya WIP dan Finished (exclude pending & cancelled)
+            $validOrders = $orders->whereIn('production_status', ['wip', 'finished']);
+            
+            // Calculate totals hanya dari WIP & Finished
+            $totalOrders = $validOrders->count();
+            $totalQty = $validOrders->sum(function($order) {
+                return $order->orderItems->sum('qty');
+            });
+            
+            // Revenue dari order WIP dan Finished
+            $revenue = $validOrders->sum(function($order) {
+                return $order->invoice->total_bill ?? 0;
+            });
+            
+            return (object) [
+                'id' => $sale->id,
+                'sales_name' => $sale->sales_name,
+                'total_orders' => $totalOrders,
+                'total_qty' => $totalQty,
+                'revenue' => $revenue,
+            ];
+        })
+        // TIDAK filter sales dengan 0 order - tampilkan semua
+        ->sortByDesc('revenue')
+        ->values();
+        
+        // Manual pagination
+        $perPage = 4;
+        $currentPage = $page;
+        $total = $salesData->count();
+        $lastPage = (int) ceil($total / $perPage);
+        $currentPage = max(1, min($currentPage, max(1, $lastPage)));
+        
+        // Create Laravel paginator manually
+        $offset = ($currentPage - 1) * $perPage;
+        $items = $salesData->slice($offset, $perPage)->values();
+        
+        return new \Illuminate\Pagination\LengthAwarePaginator(
+            $items,
+            $total,
+            $perPage,
+            $currentPage,
+            [
+                'path' => route('owner.dashboard'),
                 'pageName' => 'sales_page',
             ]
         );
