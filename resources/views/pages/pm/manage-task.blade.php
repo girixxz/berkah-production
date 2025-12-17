@@ -851,8 +851,8 @@
                                                 @click="open = false; 
                                                         openEditStageModal(
                                                             {{ $order->id }}, 
-                                                            '{{ $order->invoice->invoice_no ?? '' }}',
-                                                            {{ json_encode(
+                                                            {{ Js::from($order->invoice->invoice_no ?? '') }},
+                                                            {{ Js::from(
                                                                 $order->orderStages->map(
                                                                     fn($os) => [
                                                                         'id' => $os->id,
@@ -862,7 +862,7 @@
                                                                     ],
                                                                 ),
                                                             ) }},
-                                                            '{{ addslashes($order->notes ?? '') }}'
+                                                            {{ Js::from($order->notes ?? '') }}
                                                         )"
                                                 class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2">
                                                 <svg class="w-4 h-4" fill="none" stroke="currentColor"
@@ -1077,7 +1077,7 @@
                                             :style="dropdownStyle"
                                             class="bg-white border border-gray-200 rounded-lg shadow-lg z-50 py-2">
                                             <button type="button"
-                                                @click="openEditStageModal({{ $order->id }}, '{{ $order->invoice->invoice_no ?? '' }}', {{ Js::from($order->orderStages->map(function($os) use ($productionStages) { return ['id' => $os->id, 'stage_name' => $productionStages->firstWhere('id', $os->stage_id)?->stage_name ?? 'Unknown', 'status' => $os->status, 'start_date' => $os->start_date?->format('d M Y'), 'deadline' => $os->deadline?->format('d M Y')]; })) }}, '{{ $order->notes ?? '' }}'); open = false"
+                                                @click="openEditStageModal({{ $order->id }}, {{ Js::from($order->invoice->invoice_no ?? '') }}, {{ Js::from($order->orderStages->map(function($os) use ($productionStages) { return ['id' => $os->id, 'stage_name' => $productionStages->firstWhere('id', $os->stage_id)?->stage_name ?? 'Unknown', 'status' => $os->status, 'start_date' => $os->start_date?->format('d M Y'), 'deadline' => $os->deadline?->format('d M Y')]; })) }}, {{ Js::from($order->notes ?? '') }}); open = false"
                                                 class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2">
                                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
