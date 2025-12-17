@@ -32,7 +32,7 @@
         editStageData: {
             orderId: null,
             invoiceNo: '',
-            orderStages: [],
+            orderStages: null,
             orderNotes: ''
         },
         originalStages: {},
@@ -163,6 +163,9 @@
                         type: 'success' 
                     }
                 }));
+                
+                // Close modal after successful update
+                this.showEditStageModal = false;
                 
                 // Refresh table data
                 this.refreshTableData();
@@ -1289,74 +1292,68 @@
                     <div>
                         <h4 class="text-sm font-semibold text-gray-700 mb-3">Production Stages</h4>
                         <div class="space-y-3">
-                            <template x-for="stage in editStageData.orderStages" :key="stage.id">
+                            <template x-for="stage in (editStageData.orderStages || [])" :key="stage.id">
                                 <div class="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 transition-colors">
                                     <div class="flex items-center justify-between">
                                         {{-- Stage Name & Current Status --}}
                                         <div class="flex items-center gap-3">
                                             <div class="w-10 h-10 rounded-full flex items-center justify-center"
                                                 :class="{
-                                                    'bg-yellow-500': stage.status === 'pending',
-                                                    'bg-blue-500': stage.status === 'in_progress',
-                                                    'bg-primary': stage.status === 'done'
+                                                    'bg-yellow-500': stage?.status === 'pending',
+                                                    'bg-blue-500': stage?.status === 'in_progress',
+                                                    'bg-primary': stage?.status === 'done'
                                                 }">
                                                 <svg class="w-5 h-5 text-white"
                                                     fill="currentColor" viewBox="0 0 20 20">
-                                                    <template x-if="stage.status === 'done'">
-                                                        <path fill-rule="evenodd"
-                                                            d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                                                            clip-rule="evenodd" />
-                                                    </template>
-                                                    <template x-if="stage.status === 'in_progress'">
-                                                        <path fill-rule="evenodd"
-                                                            d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z"
-                                                            clip-rule="evenodd" />
-                                                    </template>
-                                                    <template x-if="stage.status === 'pending'">
-                                                        <path fill-rule="evenodd"
-                                                            d="M10 18a8 8 0 100-16 8 8 0 000 16zM8 7a1 1 0 00-1 1v4a1 1 0 001 1h4a1 1 0 001-1V8a1 1 0 00-1-1H8z"
-                                                            clip-rule="evenodd" />
-                                                    </template>
+                                                    <path x-show="stage?.status === 'done'" fill-rule="evenodd"
+                                                        d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                                                        clip-rule="evenodd" />
+                                                    <path x-show="stage?.status === 'in_progress'" fill-rule="evenodd"
+                                                        d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z"
+                                                        clip-rule="evenodd" />
+                                                    <path x-show="stage?.status === 'pending'" fill-rule="evenodd"
+                                                        d="M10 18a8 8 0 100-16 8 8 0 000 16zM8 7a1 1 0 00-1 1v4a1 1 0 001 1h4a1 1 0 001-1V8a1 1 0 00-1-1H8z"
+                                                        clip-rule="evenodd" />
                                                 </svg>
                                             </div>
                                             <div>
                                                 {{-- Always show full name --}}
-                                                <p class="font-medium text-gray-900 text-sm" x-text="stage.stage_name"></p>
+                                                <p class="font-medium text-gray-900 text-sm" x-text="stage?.stage_name || 'Unknown'"></p>
                                                 <p class="text-xs text-gray-500">
                                                     <span class="hidden sm:inline">Current: </span>
                                                     <span class="font-medium capitalize"
-                                                        x-text="stage.status.replace('_', ' ')"></span>
+                                                        x-text="stage?.status?.replace('_', ' ') || '-'"></span>
                                                 </p>
                                             </div>
                                         </div>
 
                                         {{-- Status Buttons - PENDING (Yellow), IN PROGRESS (Blue), and DONE (Green) - SOLID --}}
                                         <div class="flex flex-wrap gap-1.5 sm:gap-2">
-                                            <button type="button" @click="changeStageStatus(stage.id, 'pending')"
+                                            <button type="button" @click="changeStageStatus(stage?.id, 'pending')"
                                                 :disabled="isUpdatingStatus || {{ $isViewOnly ? 'true' : 'false' }}"
                                                 :class="[
-                                                    stage.status === 'pending' ? 'bg-yellow-500 text-white' : 'bg-gray-200 hover:bg-yellow-400 text-gray-700 hover:text-white',
-                                                    pendingChanges[stage.id] === 'pending' ? 'shadow-lg shadow-yellow-500/50' : ''
+                                                    stage?.status === 'pending' ? 'bg-yellow-500 text-white' : 'bg-gray-200 hover:bg-yellow-400 text-gray-700 hover:text-white',
+                                                    pendingChanges[stage?.id] === 'pending' ? 'shadow-lg shadow-yellow-500/50' : ''
                                                 ]"
                                                 class="px-2 sm:px-3 py-1.5 rounded-md text-[10px] sm:text-xs font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed">
                                                 <span class="hidden sm:inline">Pending</span>
                                                 <span class="sm:hidden">P</span>
                                             </button>
-                                            <button type="button" @click="changeStageStatus(stage.id, 'in_progress')"
+                                            <button type="button" @click="changeStageStatus(stage?.id, 'in_progress')"
                                                 :disabled="isUpdatingStatus || {{ $isViewOnly ? 'true' : 'false' }}"
                                                 :class="[
-                                                    stage.status === 'in_progress' ? 'bg-blue-500 text-white' : 'bg-gray-200 hover:bg-blue-400 text-gray-700 hover:text-white',
-                                                    pendingChanges[stage.id] === 'in_progress' ? 'shadow-lg shadow-blue-500/50' : ''
+                                                    stage?.status === 'in_progress' ? 'bg-blue-500 text-white' : 'bg-gray-200 hover:bg-blue-400 text-gray-700 hover:text-white',
+                                                    pendingChanges[stage?.id] === 'in_progress' ? 'shadow-lg shadow-blue-500/50' : ''
                                                 ]"
                                                 class="px-2 sm:px-3 py-1.5 rounded-md text-[10px] sm:text-xs font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed">
                                                 <span class="hidden sm:inline">In Progress</span>
                                                 <span class="sm:hidden">IP</span>
                                             </button>
-                                            <button type="button" @click="changeStageStatus(stage.id, 'done')"
+                                            <button type="button" @click="changeStageStatus(stage?.id, 'done')"
                                                 :disabled="isUpdatingStatus || {{ $isViewOnly ? 'true' : 'false' }}"
                                                 :class="[
-                                                    stage.status === 'done' ? 'bg-primary text-white' : 'bg-gray-200 hover:bg-primary text-gray-700 hover:text-white',
-                                                    pendingChanges[stage.id] === 'done' ? 'shadow-lg shadow-primary/50' : ''
+                                                    stage?.status === 'done' ? 'bg-primary text-white' : 'bg-gray-200 hover:bg-primary text-gray-700 hover:text-white',
+                                                    pendingChanges[stage?.id] === 'done' ? 'shadow-lg shadow-primary/50' : ''
                                                 ]"
                                                 class="px-2 sm:px-3 py-1.5 rounded-md text-[10px] sm:text-xs font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed">
                                                 <span class="hidden sm:inline">Done</span>
@@ -1388,11 +1385,10 @@
                         Close
                     </button>
                 </div>
-                </div>
             </div>
         </div>
 
-    </div>
+    </template>
 @endsection
 
 @push('scripts')
