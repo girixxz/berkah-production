@@ -1022,19 +1022,19 @@
         function orderForm() {
             return {
                 // ====== STATE UTAMA ======
-                priority: '{{ old('priority', $order->priority) }}',
-                order_date: '{{ old('order_date', $order->order_date->format('Y-m-d')) }}',
-                deadline: '{{ old('deadline', $order->deadline->format('Y-m-d')) }}',
-                customer_id: '{{ old('customer_id', $order->customer_id) }}',
-                sales_id: '{{ old('sales_id', $order->sales_id) }}',
-                product_category_id: '{{ old('product_category_id', $order->product_category_id) }}',
-                product_color: '{{ old('product_color', $order->product_color) }}',
-                material_category_id: '{{ old('material_category_id', $order->material_category_id) }}',
-                material_texture_id: '{{ old('material_texture_id', $order->material_texture_id) }}',
-                notes: '{{ old('notes', $order->notes) }}',
+                priority: @json(old('priority', $order->priority)),
+                order_date: @json(old('order_date', $order->order_date->format('Y-m-d'))),
+                deadline: @json(old('deadline', $order->deadline->format('Y-m-d'))),
+                customer_id: @json(old('customer_id', $order->customer_id)),
+                sales_id: @json(old('sales_id', $order->sales_id)),
+                product_category_id: @json(old('product_category_id', $order->product_category_id)),
+                product_color: @json(old('product_color', $order->product_color)),
+                material_category_id: @json(old('material_category_id', $order->material_category_id)),
+                material_texture_id: @json(old('material_texture_id', $order->material_texture_id)),
+                notes: @json(old('notes', $order->notes)),
                 discount: {{ old('discount', $order->discount ?? 0) }},
                 discountDisplay: '{{ old('discount', $order->discount ?? 0) ? number_format($order->discount, 0, ',', '.') : '' }}',
-                shipping_type: '{{ old('shipping_type', $order->shipping_type) }}',
+                shipping_type: @json(old('shipping_type', $order->shipping_type)),
 
                 // ====== DETAIL ======
                 designVariants: [],
