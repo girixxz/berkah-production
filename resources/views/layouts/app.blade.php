@@ -252,7 +252,7 @@
             setInterval(() => {
                 updateNotificationBell();
                 loadNotificationList();
-            }, 10000);
+            }, 60000);
 
             // Update on turbo navigation
             document.addEventListener('turbo:load', function() {
