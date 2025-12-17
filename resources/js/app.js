@@ -5,7 +5,7 @@ import * as Turbo from "@hotwired/turbo";
 
 // Disable prefetch untuk avoid loading bar trigger saat hover
 Turbo.session.drive = true;
-Turbo.setProgressBarDelay(0); // Disable Turbo's default progress bar
+Turbo.config.progressBarDelay = 0; // Disable Turbo's default progress bar (use NProgress instead)
 
 Turbo.start();
 
