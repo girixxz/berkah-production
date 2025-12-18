@@ -115,13 +115,13 @@
                                 <div class="bg-[#FFFF00] border-b-2 border-black p-1.5">
                                     <h3 class="font-bold text-sm text-black text-center">Size Chart Custom</h3>
                                 </div>
-                                <div class="p-2 bg-white flex justify-center items-center mt-2" style="height: 160px;">
+                                <div class="p-2 bg-white flex justify-center items-center mt-2" style="height: 186px;">
                                     <img :src="(() => {
                                         const cutting = showData?.work_order?.cutting;
                                         if (!cutting || !cutting.id || !cutting.custom_size_chart_img_url) return '/images/work-order-null.png?v=' + Date.now();
                                         return '{{ route('work-orders.serve-cutting-image', ['cutting' => '__ID__']) }}'.replace('__ID__', cutting.id);
                                     })()"
-                                        alt="Size Chart" class="max-h-[160px] w-auto object-contain">
+                                        alt="Size Chart" class="max-h-[186px] w-auto object-contain">
                                 </div>
                             </div>
 
@@ -155,7 +155,14 @@
                                             </td>
                                         </tr>
                                         <tr>
-                                            <td class="bg-[#00B0F0]  p-1.5 font-semibold border-x-2 border-b-2">Pola
+                                            <td class="bg-[#00B0F0] border-x-2 border-b-2 p-1.5 font-semibold">Warna Kain
+                                            </td>
+                                            <td class="border-b-2 p-1.5"
+                                                x-text="showData?.color || '-'">
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td class="bg-[#FFFF00]  p-1.5 font-semibold border-x-2 border-b-2">Pola
                                                 Potong
                                             </td>
                                             <td class="border-b-2 p-1.5"
@@ -163,14 +170,14 @@
                                             </td>
                                         </tr>
                                         <tr>
-                                            <td class="bg-[#FFFF00]  p-1.5 font-semibold border-x-2 border-b-2">Kain
+                                            <td class="bg-[#00B0F0]  p-1.5 font-semibold border-x-2 border-b-2">Kain
                                                 Rantai
                                             </td>
                                             <td class="border-b-2 p-1.5"
                                                 x-text="showData?.work_order?.cutting?.chain_cloth_name || '-'"></td>
                                         </tr>
                                         <tr>
-                                            <td class="bg-[#00B0F0]  p-1.5 font-semibold border-x-2 border-b-2">Ukuran
+                                            <td class="bg-[#FFFF00]  p-1.5 font-semibold border-x-2 border-b-2">Ukuran
                                                 Rib
                                             </td>
                                             <td class="border-b-2 p-1.5"
@@ -178,7 +185,7 @@
                                             </td>
                                         </tr>
                                         <tr>
-                                            <td class="bg-[#FFFF00]  p-1.5 font-semibold border-x-2 border-b-2">Notes
+                                            <td class="bg-[#00B0F0]  p-1.5 font-semibold border-x-2 border-b-2">Notes
                                             </td>
                                             <td class="border-b-2 p-1.5 text-xs"
                                                 x-text="showData?.work_order?.cutting?.notes || '-'">
@@ -573,7 +580,7 @@
                                     <span class="font-bold text-md ">Notes:</span>
                                 </div>
                                 <div class="p-2 bg-white h-[60px] border-x-2 border-b-2 border-black">
-                                    <p class="text-xs" x-text="showData?.work_order?.sewing?.notes || ''"></p>
+                                    <p class="text-xs" x-text="showData?.work_order?.packing?.notes || ''"></p>
                                     </p>
                                 </div>
                             </div>

@@ -677,6 +677,7 @@
                                                 id: {{ $design->id }},
                                                 variant_index: {{ $index + 1 }},
                                                 design_name: {{ Js::from($design->design_name) }},
+                                                color: {{ Js::from($design->color ?? '-') }},
                                                 product_category: {{ Js::from($order->productCategory->name ?? '-') }},
                                                 material_category: {{ Js::from($order->materialCategory->name ?? '-') }},
                                                 material_texture: {{ Js::from($order->materialTexture->name ?? '-') }},
