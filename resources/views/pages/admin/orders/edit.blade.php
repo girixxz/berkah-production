@@ -825,6 +825,7 @@
         {{-- Hidden inputs for design variants and additionals --}}
         <template x-for="(design, dIndex) in designVariants" :key="'design-' + dIndex">
             <div>
+                <input type="hidden" :name="'designs[' + dIndex + '][id]'" :value="design.id || ''">
                 <input type="hidden" :name="'designs[' + dIndex + '][name]'" x-model="design.name">
                 <template x-for="(variant, vIndex) in design.sleeveVariants" :key="'variant-' + dIndex + '-' + vIndex">
                     <div>
@@ -1176,22 +1177,26 @@
                     const oldDesigns = @json(old('designs', []));
                     const designMap = {};
 
-                    // Group items by design name
+                    // Group items by design name, also track design ID
                     Object.values(oldDesigns).forEach(design => {
                         if (design.items) {
                             Object.values(design.items).forEach(item => {
                                 const designName = item.design_name;
                                 if (!designMap[designName]) {
-                                    designMap[designName] = [];
+                                    designMap[designName] = {
+                                        id: design.id || null,
+                                        items: []
+                                    };
                                 }
-                                designMap[designName].push(item);
+                                designMap[designName].items.push(item);
                             });
                         }
                     });
 
                     // Rebuild design variants structure
                     Object.keys(designMap).forEach(designName => {
-                        const items = designMap[designName];
+                        const designInfo = designMap[designName];
+                        const items = designInfo.items;
                         const sleeveMap = {};
 
                         // Group by sleeve_id
@@ -1234,6 +1239,7 @@
                         });
 
                         this.designVariants.push({
+                            id: designInfo.id, // Store existing ID or null for new
                             name: designName,
                             sleeveVariants: sleeveVariants,
                             error: ''
@@ -1244,6 +1250,7 @@
                 // ====== DESIGN VARIANT HANDLER ======
                 addDesignVariant() {
                     this.designVariants.push({
+                        id: null, // New design has no ID
                         name: '',
                         sleeveVariants: [],
                         error: ''

@@ -773,53 +773,48 @@ class OrderController extends Controller
             // Get existing design variants with work orders
             $existingDesigns = $order->designVariants()->with('workOrder')->get();
             
-            // Map existing designs by name for quick lookup
-            $existingDesignsMap = $existingDesigns->keyBy('design_name');
+            // Map existing designs by ID for quick lookup
+            $existingDesignsMap = $existingDesigns->keyBy('id');
             
-            // Track which design names are in the new data
-            $newDesignNames = collect($request->designs)->map(function($designData) {
-                return $designData['items'][0]['design_name'];
-            })->unique();
+            // Track which design IDs are in the new data
+            $newDesignIds = collect($request->designs)
+                ->pluck('id')
+                ->filter() // Remove null values (new designs)
+                ->map(fn($id) => (int)$id);
             
             // Delete ONLY design variants that:
             // 1. Don't exist in new data (removed by user)
-            // 2. OR don't have work orders yet (safe to recreate)
             foreach ($existingDesigns as $existingDesign) {
-                $shouldDelete = !$newDesignNames->contains($existingDesign->design_name) || 
-                               !$existingDesign->workOrder;
+                $shouldDelete = !$newDesignIds->contains($existingDesign->id);
                 
                 if ($shouldDelete) {
                     // Delete order items for this design first
                     OrderItem::where('design_variant_id', $existingDesign->id)->delete();
                     
-                    // Then delete the design (if no work order, will be recreated)
-                    if (!$existingDesign->workOrder) {
-                        $existingDesign->delete();
-                    }
+                    // Delete the design variant (if has work order, will cascade properly)
+                    $existingDesign->delete();
                 }
             }
             
-            // Delete order items for designs that will be updated (have work orders)
-            foreach ($newDesignNames as $designName) {
-                if ($existingDesignsMap->has($designName)) {
-                    $existingDesign = $existingDesignsMap->get($designName);
-                    if ($existingDesign->workOrder) {
-                        // Only delete order items, keep the design variant
-                        OrderItem::where('design_variant_id', $existingDesign->id)->delete();
-                    }
-                }
+            // Delete order items for all existing designs that will be updated
+            foreach ($newDesignIds as $designId) {
+                OrderItem::where('design_variant_id', $designId)->delete();
             }
 
             // Process each design from request
             foreach ($request->designs as $designData) {
                 $designName = $designData['items'][0]['design_name'];
+                $designId = $designData['id'] ?? null;
                 
-                // Use existing design variant if it has work orders, otherwise create new
-                if ($existingDesignsMap->has($designName) && $existingDesignsMap->get($designName)->workOrder) {
-                    // REUSE existing design variant (preserves work orders via FK)
-                    $designVariant = $existingDesignsMap->get($designName);
+                // If ID exists and found in existing designs, UPDATE it
+                if ($designId && $existingDesignsMap->has($designId)) {
+                    // UPDATE existing design variant (preserves work orders via FK)
+                    $designVariant = $existingDesignsMap->get($designId);
+                    $designVariant->update([
+                        'design_name' => $designName,
+                    ]);
                 } else {
-                    // CREATE new design variant (no work order exists)
+                    // CREATE new design variant
                     $designVariant = DesignVariant::create([
                         'order_id' => $order->id,
                         'design_name' => $designName,
