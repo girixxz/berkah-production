@@ -110,11 +110,11 @@ use Illuminate\Support\Facades\Storage;
                 <div style="background: #FFFF00; border: 2px solid black; padding: 4px; text-align: center; font-weight: bold; font-size: 10pt;">
                     Size Chart Custom
                 </div>
-                <div style="text-align: center; padding: 8px; border: 2px solid black; border-top: 0; height: 160px; overflow: hidden;">
+                <div style="text-align: center; padding: 8px; border: 2px solid black; border-top: 0; height: 186px; overflow: hidden;">
                     @if($workOrder->cutting && $workOrder->cutting->custom_size_chart_img_url)
-                        <img src="{{ Storage::disk('local')->path($workOrder->cutting->custom_size_chart_img_url) }}" alt="Size Chart" style="max-height: 140px; max-width: 100%; width: auto; height: auto; object-fit: contain;">
+                        <img src="{{ Storage::disk('local')->path($workOrder->cutting->custom_size_chart_img_url) }}" alt="Size Chart" style="max-height: 166px; max-width: 100%; width: auto; height: auto; object-fit: contain;">
                     @else
-                        <img src="{{ public_path('images/work-order-null.png') }}" alt="Size Chart" style="max-height: 140px; max-width: 100%; width: auto; height: auto; object-fit: contain;">
+                        <img src="{{ public_path('images/work-order-null.png') }}" alt="Size Chart" style="max-height: 166px; max-width: 100%; width: auto; height: auto; object-fit: contain;">
                     @endif
                 </div>
             </td>
@@ -134,7 +134,11 @@ use Illuminate\Support\Facades\Storage;
                         <td>{{ $order->materialCategory->name ?? '-' }}{{ $order->materialTexture ? ' - ' . $order->materialTexture->name : '' }}</td>
                     </tr>
                     <tr>
-                        <td class="bg-blue" style="font-weight: bold;">Pola Potong</td>
+                        <td class="bg-blue" style="font-weight: bold;">Warna Kain</td>
+                        <td>{{ $designVariant->color ?? '-' }}</td>
+                    </tr>
+                    <tr>
+                        <td class="bg-yellow" style="font-weight: bold;">Pola Potong</td>
                         <td>{{ $workOrder->cutting->cuttingPattern->name ?? '-' }}</td>
                     </tr>
                     <tr>
