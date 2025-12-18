@@ -327,6 +327,8 @@
             console.log('Opening show modal for design:', design);
             console.log('Product Category:', design.product_category);
             console.log('Order items:', design.order_items);
+            console.log('Sleeves (should be sorted):', design.sleeves);
+            console.log('Sizes (should be sorted):', design.sizes);
             this.showData = design;
             this.showModal = true;
             this.zoomLevel = 100;
@@ -593,44 +595,65 @@
                                                 $design->id,
                                             );
 
-                                            // Get unique sleeves and sizes from order items
-                                            $usedSleeves = $designOrderItems
-                                                ->pluck('sleeve.name')
+                                            // Get unique sleeve and size IDs from order items
+                                            $usedSleeveIds = $designOrderItems
+                                                ->pluck('sleeve_id')
                                                 ->unique()
                                                 ->filter()
                                                 ->values()
                                                 ->toArray();
-                                            $usedSizes = $designOrderItems
-                                                ->pluck('size.name')
+                                            $usedSizeIds = $designOrderItems
+                                                ->pluck('size_id')
                                                 ->unique()
                                                 ->filter()
                                                 ->values()
                                                 ->toArray();
 
-                                            // Get all sleeves and sizes from database (ordered by sort_order)
-                                            $allSleeves = \App\Models\MaterialSleeve::orderBy('sort_order')->get()->pluck('name')->toArray();
-                                            $allSizes = \App\Models\MaterialSize::orderBy('sort_order')->get()->pluck('name')->toArray();
+                                            // Query sleeves/sizes that are used, with proper ORDER BY sort_order
+                                            $usedSleevesQuery = \App\Models\MaterialSleeve::whereIn('id', $usedSleeveIds)
+                                                ->orderBy('sort_order')
+                                                ->get();
+                                            
+                                            \Log::info('Used Sleeve IDs: ' . json_encode($usedSleeveIds));
+                                            \Log::info('Query result with sort_order:', $usedSleevesQuery->map(fn($s) => [
+                                                'id' => $s->id,
+                                                'name' => $s->sleeve_name,
+                                                'sort' => $s->sort_order
+                                            ])->toArray());
+                                            
+                                            $usedSleeves = $usedSleevesQuery->pluck('sleeve_name')->toArray();
+                                            
+                                            $usedSizes = \App\Models\MaterialSize::whereIn('id', $usedSizeIds)
+                                                ->orderBy('sort_order')
+                                                ->pluck('size_name')
+                                                ->toArray();
 
-                                            // Fill sleeves to minimum 4
-                                            $displaySleeves = $usedSleeves;
-                                            if (count($displaySleeves) < 4) {
+                                            // Get all sleeve/size names for filling (ordered by sort_order)
+                                            $allSleeves = \App\Models\MaterialSleeve::orderBy('sort_order')->pluck('sleeve_name')->toArray();
+                                            $allSizes = \App\Models\MaterialSize::orderBy('sort_order')->pluck('size_name')->toArray();
+
+                                            // Fill sleeves to minimum 4 - combine used + remaining BUT maintain global sort_order
+                                            if (count($usedSleeves) < 4) {
+                                                // Get sleeves that are NOT used
                                                 $remainingSleeves = array_diff($allSleeves, $usedSleeves);
-                                                $neededCount = 4 - count($displaySleeves);
-                                                $displaySleeves = array_merge(
-                                                    $displaySleeves,
-                                                    array_slice($remainingSleeves, 0, $neededCount),
-                                                );
+                                                $neededCount = 4 - count($usedSleeves);
+                                                // Combine used + needed remaining
+                                                $combined = array_merge($usedSleeves, array_slice($remainingSleeves, 0, $neededCount));
+                                                // Re-sort based on global $allSleeves order
+                                                $displaySleeves = array_values(array_intersect($allSleeves, $combined));
+                                            } else {
+                                                $displaySleeves = $usedSleeves;
                                             }
 
-                                            // Fill sizes to minimum 6
-                                            $displaySizes = $usedSizes;
-                                            if (count($displaySizes) < 6) {
+                                            // Fill sizes to minimum 6 - combine used + remaining BUT maintain global sort_order
+                                            if (count($usedSizes) < 6) {
                                                 $remainingSizes = array_diff($allSizes, $usedSizes);
-                                                $neededCount = 6 - count($displaySizes);
-                                                $displaySizes = array_merge(
-                                                    $displaySizes,
-                                                    array_slice($remainingSizes, 0, $neededCount),
-                                                );
+                                                $neededCount = 6 - count($usedSizes);
+                                                $combined = array_merge($usedSizes, array_slice($remainingSizes, 0, $neededCount));
+                                                // Re-sort based on global $allSizes order
+                                                $displaySizes = array_values(array_intersect($allSizes, $combined));
+                                            } else {
+                                                $displaySizes = $usedSizes;
                                             }
 
                                             // Prepare order items data
@@ -643,6 +666,11 @@
                                                     ],
                                                 )
                                                 ->values();
+
+                                            // Debug: Log the sorted data
+                                            \Log::info('Design Variant ID: ' . $design->id);
+                                            \Log::info('Display Sleeves (sorted): ' . json_encode($displaySleeves));
+                                            \Log::info('Display Sizes (sorted): ' . json_encode($displaySizes));
                                         @endphp
                                         <button
                                             @click="openShowModal({
