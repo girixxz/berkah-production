@@ -15,7 +15,9 @@ class DatabaseSeeder extends Seeder
     public function run(): void
     {
         // Clear all uploaded images from storage
-        $this->clearStorageFiles();
+        // WARNING: DISABLED to prevent data loss in production
+        // Only enable in local development when needed
+        // $this->clearStorageFiles();
 
         $this->call([
             UserSeeder::class,

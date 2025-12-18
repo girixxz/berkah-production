@@ -11,11 +11,8 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('design_variants', function (Blueprint $table) {
-            $table->id();
-            $table->foreignId('order_id')->constrained('orders')->onDelete('cascade');
-            $table->string('design_name', 100);
-            $table->timestamps();
+        Schema::table('design_variants', function (Blueprint $table) {
+            $table->string('color', 100)->after('design_name');
         });
     }
 
@@ -24,6 +21,8 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('design_variants');
+        Schema::table('design_variants', function (Blueprint $table) {
+            $table->dropColumn('color');
+        });
     }
 };
