@@ -24,7 +24,7 @@ class DatabaseSeeder extends Seeder
             ProductionStageSeeder::class,
             WorkOrderDataSeeder::class,
             CustomerSeeder::class,
-            OrderSeeder::class,
+            // OrderSeeder::class,
             WorkOrderDataSeeder::class
         ]);
     }

@@ -129,23 +129,6 @@
                         </div>
                     </div>
 
-                    {{-- Color --}}
-                    <div class="relative flex flex-col md:flex-row md:items-center gap-2 md:gap-3">
-                        <label class="text-sm text-gray-600 md:w-24">Color <span class="text-red-500">*</span></label>
-                        <div class="relative w-full">
-                            <input type="text" name="product_color" x-model="product_color"
-                                value="{{ old('product_color') }}"
-                                :class="errors.product_color ? 'border-red-500' : 'border-gray-300'"
-                                class="w-full rounded-md border px-3 py-2 text-sm text-gray-700
-                                focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
-                                placeholder="Enter color" />
-                            <p x-show="errors.product_color" x-text="errors.product_color" class="absolute left-0 -bottom-5 text-xs text-red-600"></p>
-                            @error('product_color')
-                                <p class="absolute left-0 -bottom-5 text-xs text-red-600">{{ $message }}</p>
-                            @enderror
-                        </div>
-                    </div>
-
                     {{-- Materials --}}
                     <div class="relative flex flex-col md:flex-row md:items-center gap-2 md:gap-3">
                         <label class="text-sm text-gray-600 md:w-24">Material <span class="text-red-500">*</span></label>
@@ -171,7 +154,7 @@
                     <label class="text-sm text-gray-600 md:w-14">Note</label>
                     <div class="relative w-full md:flex-1">
                         <textarea rows="3" name="notes" x-model="notes"
-                            class="w-full min-h-[165px] rounded-md border border-gray-300 px-3 py-2 text-sm
+                            class="w-full min-h-[105px] rounded-md border border-gray-300 px-3 py-2 text-sm
                             focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
                             placeholder="Write notes here...">{{ old('notes') }}</textarea>
                         @error('notes')
@@ -208,24 +191,31 @@
                     </button>
 
 
-                    {{-- Design Name & Add Sleeve Variant --}}
+                    {{-- Design Name, Color & Add Sleeve Variant --}}
                     <div class="flex flex-col md:flex-row gap-3 mt-8 md:mt-0">
-                        <div class="relative w-full md:w-72">
+                        <div class="relative w-full md:w-64">
                             <input type="text" placeholder="Design Name" x-model="design.name"
                                 class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-primary focus:ring-primary/20 focus:outline-none focus:ring-2" />
                             <span x-show="design.error" x-text="design.error"
                                 class="absolute left-0 -bottom-5 text-xs text-red-600"></span>
                         </div>
 
+                        <div class="relative w-full md:w-32">
+                            <input type="text" placeholder="Color" x-model="design.color"
+                                class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-primary focus:ring-primary/20 focus:outline-none focus:ring-2" />
+                            <span x-show="design.colorError" x-text="design.colorError"
+                                class="absolute left-0 -bottom-5 text-xs text-red-600"></span>
+                        </div>
+
                         <div class="flex flex-col md:flex-row gap-2 items-start md:items-center">
-                            <button type="button" @click="if(design.name.trim() !== '') addSleeveVariant(dIndex)"
-                                :class="design.name.trim() === '' ?
+                            <button type="button" @click="if(design.name.trim() !== '' && design.color.trim() !== '') addSleeveVariant(dIndex)"
+                                :class="design.name.trim() === '' || design.color.trim() === '' ?
                                     'cursor-not-allowed bg-gray-300 text-white' :
                                     'bg-primary hover:bg-primary-dark text-white'"
                                 class="px-3 py-2 rounded-md text-sm whitespace-nowrap w-full md:w-auto">
                                 + Add Sleeve
                             </button>
-                            <span class="italic text-xs text-gray-400 hidden md:inline">(Fill design name first)</span>
+                            <span class="italic text-xs text-gray-400 hidden md:inline">(Fill name & color first)</span>
                         </div>
                     </div>
 
@@ -825,6 +815,7 @@
         <template x-for="(design, dIndex) in designVariants" :key="'design-' + dIndex">
             <div>
                 <input type="hidden" :name="'designs[' + dIndex + '][name]'" x-model="design.name">
+                <input type="hidden" :name="'designs[' + dIndex + '][color]'" x-model="design.color">
                 <template x-for="(variant, vIndex) in design.sleeveVariants" :key="'variant-' + dIndex + '-' + vIndex">
                     <div>
                         <template x-for="(row, rIndex) in variant.rows"
@@ -1365,7 +1356,6 @@
                 customer_id: '{{ old('customer_id') }}',
                 sales_id: '{{ old('sales_id') }}',
                 product_category_id: '{{ old('product_category_id') }}',
-                product_color: '{{ old('product_color') }}',
                 material_category_id: '{{ old('material_category_id') }}',
                 material_texture_id: '{{ old('material_texture_id') }}',
                 notes: '{{ old('notes') }}',
@@ -1432,7 +1422,6 @@
                         }
                     });
                     this.$watch('product_category_id', (value) => { if (value) delete this.errors.product_category_id; });
-                    this.$watch('product_color', (value) => { if (value && value.trim() !== '') delete this.errors.product_color; });
                     this.$watch('material_category_id', (value) => { if (value) delete this.errors.material_category_id; });
                     this.$watch('material_texture_id', (value) => { if (value) delete this.errors.material_texture_id; });
                     
@@ -1518,8 +1507,10 @@
 
                         this.designVariants.push({
                             name: designName,
+                            color: '',
                             sleeveVariants: sleeveVariants,
-                            error: ''
+                            error: '',
+                            colorError: ''
                         });
                     });
                 },
@@ -1528,8 +1519,10 @@
                 addDesignVariant() {
                     this.designVariants.push({
                         name: '',
+                        color: '',
                         sleeveVariants: [],
-                        error: ''
+                        error: '',
+                        colorError: ''
                     });
                 },
                 addSleeveVariant(dIndex) {
@@ -1665,12 +1658,6 @@
                         isValid = false;
                     }
 
-                    // Validate Color
-                    if (!this.product_color || this.product_color.trim() === '') {
-                        this.errors.product_color = 'Color is required';
-                        isValid = false;
-                    }
-
                     // Validate Material Category
                     if (!this.material_category_id || this.material_category_id === '') {
                         this.errors.material_category_id = 'Material is required';
@@ -1698,6 +1685,21 @@
                         // Validate each design variant
                         let hasItems = false;
                         this.designVariants.forEach((design, dIndex) => {
+                            // Reset errors
+                            design.error = '';
+                            design.colorError = '';
+
+                            // Validate design name
+                            if (!design.name || design.name.trim() === '') {
+                                design.error = 'Design name is required';
+                                isValid = false;
+                            }
+
+                            // Validate design color
+                            if (!design.color || design.color.trim() === '') {
+                                design.colorError = 'Color is required';
+                                isValid = false;
+                            }
                             // Check design name
                             if (!design.name || design.name.trim() === '') {
                                 design.error = 'Design name is required';

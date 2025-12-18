@@ -350,8 +350,8 @@
                     </p>
                 </div>
                 <div>
-                    <p class="text-xs md:text-sm font-semibold text-gray-900 mb-1">Color</p>
-                    <p class="text-sm md:text-base font-normal text-gray-700">{{ $order->product_color ?? '-' }}</p>
+                    <p class="text-xs md:text-sm font-semibold text-gray-900 mb-1">Total Design</p>
+                    <p class="text-sm md:text-base font-normal text-gray-700">{{ count($designVariants) }} Design{{ count($designVariants) > 1 ? 's' : '' }}</p>
                 </div>
                 <div>
                     <p class="text-xs md:text-sm font-semibold text-gray-900 mb-1">Shipping</p>

@@ -484,7 +484,6 @@ class OrderController extends Controller
             'order_date' => 'required|date',
             'deadline' => 'required|date|after_or_equal:order_date',
             'product_category_id' => 'required|exists:product_categories,id',
-            'product_color' => 'required|string|max:100',
             'material_category_id' => 'required|exists:material_categories,id',
             'material_texture_id' => 'required|exists:material_textures,id',
             'shipping_type' => 'required|in:pickup,delivery',
@@ -495,6 +494,8 @@ class OrderController extends Controller
             'grand_total' => 'required|numeric|min:0',
             'order_image' => 'nullable|image|mimes:jpeg,jpg,png|max:25600',
             'designs' => 'required|array|min:1',
+            'designs.*.name' => 'required|string|max:100',
+            'designs.*.color' => 'required|string|max:100',
             'designs.*.items' => 'required|array|min:1',
             'designs.*.items.*.design_name' => 'required|string',
             'designs.*.items.*.sleeve_id' => 'required|exists:material_sleeves,id',
@@ -512,7 +513,6 @@ class OrderController extends Controller
             'deadline.required' => 'Deadline is required.',
             'deadline.after_or_equal' => 'Deadline must be the same as or after the order date.',
             'product_category_id.required' => 'Product category is required.',
-            'product_color.required' => 'Product color is required.',
             'material_category_id.required' => 'Material category is required.',
             'material_texture_id.required' => 'Material texture is required.',
             'shipping_type.required' => 'Shipping type is required.',
@@ -547,7 +547,6 @@ class OrderController extends Controller
                 'order_date' => $validated['order_date'],
                 'deadline' => $validated['deadline'],
                 'product_category_id' => $validated['product_category_id'],
-                'product_color' => $validated['product_color'],
                 'material_category_id' => $validated['material_category_id'],
                 'material_texture_id' => $validated['material_texture_id'],
                 'shipping_type' => $validated['shipping_type'],
@@ -562,12 +561,11 @@ class OrderController extends Controller
 
             // Create Design Variants and Order Items
             foreach ($request->designs as $designData) {
-                // Group items by design_name
-                $designName = $designData['items'][0]['design_name'];
-                
+                // Create design variant with name and color
                 $designVariant = DesignVariant::create([
                     'order_id' => $order->id,
-                    'design_name' => $designName,
+                    'design_name' => $designData['name'],
+                    'color' => $designData['color'],
                 ]);
 
                 foreach ($designData['items'] as $item) {
@@ -683,7 +681,6 @@ class OrderController extends Controller
             'order_date' => 'required|date',
             'deadline' => 'required|date|after_or_equal:order_date',
             'product_category_id' => 'required|exists:product_categories,id',
-            'product_color' => 'required|string|max:100',
             'material_category_id' => 'required|exists:material_categories,id',
             'material_texture_id' => 'required|exists:material_textures,id',
             'shipping_type' => 'required|in:pickup,delivery',
@@ -693,6 +690,8 @@ class OrderController extends Controller
             'discount' => 'nullable|numeric|min:0',
             'grand_total' => 'required|numeric|min:0',
             'designs' => 'required|array|min:1',
+            'designs.*.name' => 'required|string|max:100',
+            'designs.*.color' => 'required|string|max:100',
             'designs.*.items' => 'required|array|min:1',
             'designs.*.items.*.design_name' => 'required|string',
             'designs.*.items.*.sleeve_id' => 'required|exists:material_sleeves,id',
@@ -710,7 +709,6 @@ class OrderController extends Controller
             'deadline.required' => 'Deadline is required.',
             'deadline.after_or_equal' => 'Deadline must be the same as or after the order date.',
             'product_category_id.required' => 'Product category is required.',
-            'product_color.required' => 'Product color is required.',
             'material_category_id.required' => 'Material category is required.',
             'material_texture_id.required' => 'Material texture is required.',
             'shipping_type.required' => 'Shipping type is required.',
@@ -762,7 +760,6 @@ class OrderController extends Controller
                 'order_date' => $validated['order_date'],
                 'deadline' => $validated['deadline'],
                 'product_category_id' => $validated['product_category_id'],
-                'product_color' => $validated['product_color'],
                 'material_category_id' => $validated['material_category_id'],
                 'material_texture_id' => $validated['material_texture_id'],
                 'shipping_type' => $validated['shipping_type'],
@@ -829,7 +826,8 @@ class OrderController extends Controller
 
             // Process each design from request
             foreach ($request->designs as $designData) {
-                $designName = $designData['items'][0]['design_name'];
+                $designName = $designData['name'];
+                $designColor = $designData['color'];
                 $designId = !empty($designData['id']) && $designData['id'] !== '0' ? (int)$designData['id'] : null;
                 
                 // If ID exists and found in existing designs, UPDATE it
@@ -841,22 +839,27 @@ class OrderController extends Controller
                         'design_variant_id' => $designVariant->id,
                         'old_name' => $designVariant->design_name,
                         'new_name' => $designName,
+                        'old_color' => $designVariant->color,
+                        'new_color' => $designColor,
                         'has_work_order' => $designVariant->workOrder ? 'YES (ID: ' . $designVariant->workOrder->id . ')' : 'NO'
                     ]);
                     
                     $designVariant->update([
                         'design_name' => $designName,
+                        'color' => $designColor,
                     ]);
                 } else {
                     // CREATE new design variant
                     Log::info('Creating new design variant', [
                         'order_id' => $order->id,
-                        'design_name' => $designName
+                        'design_name' => $designName,
+                        'color' => $designColor
                     ]);
                     
                     $designVariant = DesignVariant::create([
                         'order_id' => $order->id,
                         'design_name' => $designName,
+                        'color' => $designColor,
                     ]);
                 }
 

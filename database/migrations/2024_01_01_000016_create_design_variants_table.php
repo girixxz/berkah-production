@@ -15,6 +15,7 @@ return new class extends Migration
             $table->id();
             $table->foreignId('order_id')->constrained('orders')->onDelete('cascade');
             $table->string('design_name', 100);
+            $table->string('color', 100);
             $table->timestamps();
         });
     }

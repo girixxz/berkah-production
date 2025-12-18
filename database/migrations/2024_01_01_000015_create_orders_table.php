@@ -25,7 +25,6 @@ return new class extends Migration
             
             // Product & Material Info
             $table->foreignId('product_category_id')->constrained('product_categories')->onDelete('cascade');
-            $table->string('product_color', 100);
             $table->foreignId('material_category_id')->constrained('material_categories')->onDelete('cascade');
             $table->foreignId('material_texture_id')->constrained('material_textures')->onDelete('cascade');
             $table->text('notes')->nullable();

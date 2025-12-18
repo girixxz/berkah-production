@@ -16,7 +16,6 @@ class Order extends Model
         'order_date',
         'deadline',
         'product_category_id',
-        'product_color',
         'material_category_id',
         'material_texture_id',
         'notes',
