@@ -658,7 +658,8 @@
                                     data-invoice="{{ $order->invoice->invoice_no ?? '' }}"
                                     data-customer="{{ $order->customer->customer_name ?? '' }}"
                                     data-product="{{ $order->productCategory->product_name ?? '' }}"
-                                    data-designs="{{ $order->designVariants->pluck('design_name')->filter()->implode(' ') }}">
+                                    data-designs="{{ $order->designVariants->pluck('design_name')->filter()->implode(' ') }}"
+                                    x-data="{ productDropdownOpen: false }">
                                     {{-- Invoice No with Shipping Type and Priority --}}
                                     <td class="py-3 px-4">
                                         <div class="flex items-center gap-1.5 flex-wrap">
@@ -691,8 +692,72 @@
 
                                     {{-- Product --}}
                                     <td class="py-3 px-4">
-                                        <span
-                                            class="text-gray-700">{{ $order->productCategory->product_name ?? '-' }}</span>
+                                        <div x-data="{
+                                            open: false,
+                                            dropdownStyle: {},
+                                            checkPosition() {
+                                                const button = this.$refs.productBtn;
+                                                const rect = button.getBoundingClientRect();
+                                                const spaceBelow = window.innerHeight - rect.bottom;
+                                                const spaceAbove = rect.top;
+                                                const dropUp = spaceBelow < 250 && spaceAbove > spaceBelow;
+                                        
+                                                if (dropUp) {
+                                                    this.dropdownStyle = {
+                                                        position: 'fixed',
+                                                        bottom: (window.innerHeight - rect.top + 8) + 'px',
+                                                        left: rect.left + 'px',
+                                                        minWidth: '320px',
+                                                        maxWidth: '400px'
+                                                    };
+                                                } else {
+                                                    this.dropdownStyle = {
+                                                        position: 'fixed',
+                                                        top: (rect.bottom + 8) + 'px',
+                                                        left: rect.left + 'px',
+                                                        minWidth: '320px',
+                                                        maxWidth: '400px'
+                                                    };
+                                                }
+                                            }
+                                        }" x-init="$watch('open', value => {
+                                            if (value) {
+                                                const closeOnScroll = () => { open = false; };
+                                                window.addEventListener('scroll', closeOnScroll, { once: true });
+                                                window.addEventListener('resize', closeOnScroll, { once: true });
+                                            }
+                                        })" class="relative inline-block">
+                                            {{-- Product Badge (Clickable) --}}
+                                            <button type="button" x-ref="productBtn" @click="checkPosition(); open = !open"
+                                                class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs bg-gray-100 hover:bg-gray-200 transition-colors cursor-pointer">
+                                                <span>{{ $order->productCategory->product_name ?? '-' }}</span>
+                                                <svg class="w-3.5 h-3.5 transition-transform" :class="open && 'rotate-180'" 
+                                                    fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                                                </svg>
+                                            </button>
+
+                                            {{-- Dropdown with Design Variants --}}
+                                            <div x-show="open" @click.away="open = false" x-cloak
+                                                :style="dropdownStyle"
+                                                class="bg-white border border-gray-200 rounded-lg shadow-xl z-50 p-4">
+                                                <h4 class="text-sm font-semibold text-gray-700 mb-3">Design Variants:</h4>
+                                                @if($order->designVariants->count() > 0)
+                                                    <div class="grid grid-cols-2 gap-2">
+                                                        @foreach($order->designVariants->take(10) as $design)
+                                                            <div class="px-3 py-2 bg-gray-50 rounded-md text-xs text-gray-700 border border-gray-200">
+                                                                {{ $design->design_name }}
+                                                            </div>
+                                                        @endforeach
+                                                    </div>
+                                                    @if($order->designVariants->count() > 10)
+                                                        <p class="text-xs text-gray-500 mt-2 italic">+ {{ $order->designVariants->count() - 10 }} more...</p>
+                                                    @endif
+                                                @else
+                                                    <p class="text-xs text-gray-400 italic">No design variants</p>
+                                                @endif
+                                            </div>
+                                        </div>
                                     </td>
 
                                     {{-- QTY --}}
@@ -941,8 +1006,72 @@
 
                                     {{-- Product --}}
                                     <td class="py-3 px-4">
-                                        <span
-                                            class="text-gray-700">{{ $order->productCategory->product_name ?? '-' }}</span>
+                                        <div x-data="{
+                                            open: false,
+                                            dropdownStyle: {},
+                                            checkPosition() {
+                                                const button = this.$refs.productBtn;
+                                                const rect = button.getBoundingClientRect();
+                                                const spaceBelow = window.innerHeight - rect.bottom;
+                                                const spaceAbove = rect.top;
+                                                const dropUp = spaceBelow < 250 && spaceAbove > spaceBelow;
+                                        
+                                                if (dropUp) {
+                                                    this.dropdownStyle = {
+                                                        position: 'fixed',
+                                                        bottom: (window.innerHeight - rect.top + 8) + 'px',
+                                                        left: rect.left + 'px',
+                                                        minWidth: '320px',
+                                                        maxWidth: '400px'
+                                                    };
+                                                } else {
+                                                    this.dropdownStyle = {
+                                                        position: 'fixed',
+                                                        top: (rect.bottom + 8) + 'px',
+                                                        left: rect.left + 'px',
+                                                        minWidth: '320px',
+                                                        maxWidth: '400px'
+                                                    };
+                                                }
+                                            }
+                                        }" x-init="$watch('open', value => {
+                                            if (value) {
+                                                const closeOnScroll = () => { open = false; };
+                                                window.addEventListener('scroll', closeOnScroll, { once: true });
+                                                window.addEventListener('resize', closeOnScroll, { once: true });
+                                            }
+                                        })" class="relative inline-block">
+                                            {{-- Product Badge (Clickable) --}}
+                                            <button type="button" x-ref="productBtn" @click="checkPosition(); open = !open"
+                                                class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs bg-gray-100 hover:bg-gray-200 transition-colors cursor-pointer">
+                                                <span>{{ $order->productCategory->product_name ?? '-' }}</span>
+                                                <svg class="w-3.5 h-3.5 transition-transform" :class="open && 'rotate-180'" 
+                                                    fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                                                </svg>
+                                            </button>
+
+                                            {{-- Dropdown with Design Variants --}}
+                                            <div x-show="open" @click.away="open = false" x-cloak
+                                                :style="dropdownStyle"
+                                                class="bg-white border border-gray-200 rounded-lg shadow-xl z-50 p-4">
+                                                <h4 class="text-sm font-semibold text-gray-700 mb-3">Design Variants:</h4>
+                                                @if($order->designVariants->count() > 0)
+                                                    <div class="grid grid-cols-2 gap-2">
+                                                        @foreach($order->designVariants->take(10) as $design)
+                                                            <div class="px-3 py-2 bg-gray-50 rounded-md text-xs text-gray-700 border border-gray-200">
+                                                                {{ $design->design_name }}
+                                                            </div>
+                                                        @endforeach
+                                                    </div>
+                                                    @if($order->designVariants->count() > 10)
+                                                        <p class="text-xs text-gray-500 mt-2 italic">+ {{ $order->designVariants->count() - 10 }} more...</p>
+                                                    @endif
+                                                @else
+                                                    <p class="text-xs text-gray-400 italic">No design variants</p>
+                                                @endif
+                                            </div>
+                                        </div>
                                     </td>
 
                                     {{-- QTY --}}
@@ -1202,7 +1331,72 @@
                                         </div>
                                     </td>
                                     <td class="py-3 px-4">
-                                        <span class="text-gray-700">{{ $order->productCategory->product_name ?? '-' }}</span>
+                                        <div x-data="{
+                                            open: false,
+                                            dropdownStyle: {},
+                                            checkPosition() {
+                                                const button = this.$refs.productBtn;
+                                                const rect = button.getBoundingClientRect();
+                                                const spaceBelow = window.innerHeight - rect.bottom;
+                                                const spaceAbove = rect.top;
+                                                const dropUp = spaceBelow < 250 && spaceAbove > spaceBelow;
+                                        
+                                                if (dropUp) {
+                                                    this.dropdownStyle = {
+                                                        position: 'fixed',
+                                                        bottom: (window.innerHeight - rect.top + 8) + 'px',
+                                                        left: rect.left + 'px',
+                                                        minWidth: '320px',
+                                                        maxWidth: '400px'
+                                                    };
+                                                } else {
+                                                    this.dropdownStyle = {
+                                                        position: 'fixed',
+                                                        top: (rect.bottom + 8) + 'px',
+                                                        left: rect.left + 'px',
+                                                        minWidth: '320px',
+                                                        maxWidth: '400px'
+                                                    };
+                                                }
+                                            }
+                                        }" x-init="$watch('open', value => {
+                                            if (value) {
+                                                const closeOnScroll = () => { open = false; };
+                                                window.addEventListener('scroll', closeOnScroll, { once: true });
+                                                window.addEventListener('resize', closeOnScroll, { once: true });
+                                            }
+                                        })" class="relative inline-block">
+                                            {{-- Product Badge (Clickable) --}}
+                                            <button type="button" x-ref="productBtn" @click="checkPosition(); open = !open"
+                                                class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs bg-gray-100 hover:bg-gray-200 transition-colors cursor-pointer">
+                                                <span>{{ $order->productCategory->product_name ?? '-' }}</span>
+                                                <svg class="w-3.5 h-3.5 transition-transform" :class="open && 'rotate-180'" 
+                                                    fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                                                </svg>
+                                            </button>
+
+                                            {{-- Dropdown with Design Variants --}}
+                                            <div x-show="open" @click.away="open = false" x-cloak
+                                                :style="dropdownStyle"
+                                                class="bg-white border border-gray-200 rounded-lg shadow-xl z-50 p-4">
+                                                <h4 class="text-sm font-semibold text-gray-700 mb-3">Design Variants:</h4>
+                                                @if($order->designVariants->count() > 0)
+                                                    <div class="grid grid-cols-2 gap-2">
+                                                        @foreach($order->designVariants->take(10) as $design)
+                                                            <div class="px-3 py-2 bg-gray-50 rounded-md text-xs text-gray-700 border border-gray-200">
+                                                                {{ $design->design_name }}
+                                                            </div>
+                                                        @endforeach
+                                                    </div>
+                                                    @if($order->designVariants->count() > 10)
+                                                        <p class="text-xs text-gray-500 mt-2 italic">+ {{ $order->designVariants->count() - 10 }} more...</p>
+                                                    @endif
+                                                @else
+                                                    <p class="text-xs text-gray-400 italic">No design variants</p>
+                                                @endif
+                                            </div>
+                                        </div>
                                     </td>
                                     <td class="py-3 px-4">
                                         <span class="text-gray-700">{{ $order->orderItems->sum('qty') }}</span>
@@ -1270,7 +1464,72 @@
                                         </div>
                                     </td>
                                     <td class="py-3 px-4">
-                                        <span class="text-gray-700">{{ $order->productCategory->product_name ?? '-' }}</span>
+                                        <div x-data="{
+                                            open: false,
+                                            dropdownStyle: {},
+                                            checkPosition() {
+                                                const button = this.$refs.productBtn;
+                                                const rect = button.getBoundingClientRect();
+                                                const spaceBelow = window.innerHeight - rect.bottom;
+                                                const spaceAbove = rect.top;
+                                                const dropUp = spaceBelow < 250 && spaceAbove > spaceBelow;
+                                        
+                                                if (dropUp) {
+                                                    this.dropdownStyle = {
+                                                        position: 'fixed',
+                                                        bottom: (window.innerHeight - rect.top + 8) + 'px',
+                                                        left: rect.left + 'px',
+                                                        minWidth: '320px',
+                                                        maxWidth: '400px'
+                                                    };
+                                                } else {
+                                                    this.dropdownStyle = {
+                                                        position: 'fixed',
+                                                        top: (rect.bottom + 8) + 'px',
+                                                        left: rect.left + 'px',
+                                                        minWidth: '320px',
+                                                        maxWidth: '400px'
+                                                    };
+                                                }
+                                            }
+                                        }" x-init="$watch('open', value => {
+                                            if (value) {
+                                                const closeOnScroll = () => { open = false; };
+                                                window.addEventListener('scroll', closeOnScroll, { once: true });
+                                                window.addEventListener('resize', closeOnScroll, { once: true });
+                                            }
+                                        })" class="relative inline-block">
+                                            {{-- Product Badge (Clickable) --}}
+                                            <button type="button" x-ref="productBtn" @click="checkPosition(); open = !open"
+                                                class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs bg-gray-100 hover:bg-gray-200 transition-colors cursor-pointer">
+                                                <span>{{ $order->productCategory->product_name ?? '-' }}</span>
+                                                <svg class="w-3.5 h-3.5 transition-transform" :class="open && 'rotate-180'" 
+                                                    fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                                                </svg>
+                                            </button>
+
+                                            {{-- Dropdown with Design Variants --}}
+                                            <div x-show="open" @click.away="open = false" x-cloak
+                                                :style="dropdownStyle"
+                                                class="bg-white border border-gray-200 rounded-lg shadow-xl z-50 p-4">
+                                                <h4 class="text-sm font-semibold text-gray-700 mb-3">Design Variants:</h4>
+                                                @if($order->designVariants->count() > 0)
+                                                    <div class="grid grid-cols-2 gap-2">
+                                                        @foreach($order->designVariants->take(10) as $design)
+                                                            <div class="px-3 py-2 bg-gray-50 rounded-md text-xs text-gray-700 border border-gray-200">
+                                                                {{ $design->design_name }}
+                                                            </div>
+                                                        @endforeach
+                                                    </div>
+                                                    @if($order->designVariants->count() > 10)
+                                                        <p class="text-xs text-gray-500 mt-2 italic">+ {{ $order->designVariants->count() - 10 }} more...</p>
+                                                    @endif
+                                                @else
+                                                    <p class="text-xs text-gray-400 italic">No design variants</p>
+                                                @endif
+                                            </div>
+                                        </div>
                                     </td>
                                     <td class="py-3 px-4">
                                         <span class="text-gray-700">{{ $order->orderItems->sum('qty') }}</span>
