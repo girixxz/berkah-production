@@ -189,7 +189,8 @@ class OrderController extends Controller
             'productCategory',
             'materialCategory',
             'materialTexture',
-            'invoice'
+            'invoice',
+            'designVariants'
         ]);
 
         // Apply filter based on production status or payment status
@@ -216,6 +217,12 @@ class OrderController extends Controller
                 ->orWhereHas('customer', function ($customerQuery) use ($search) {
                     $customerQuery->where('customer_name', 'like', "%{$search}%")
                         ->orWhere('phone', 'like', "%{$search}%");
+                })
+                ->orWhereHas('designVariants', function ($designQuery) use ($search) {
+                    $designQuery->where('design_name', 'like', "%{$search}%");
+                })
+                ->orWhereHas('productCategory', function ($productQuery) use ($search) {
+                    $productQuery->where('product_name', 'like', "%{$search}%");
                 });
             });
         }
@@ -308,7 +315,8 @@ class OrderController extends Controller
             'productCategory',
             'materialCategory',
             'materialTexture',
-            'invoice'
+            'invoice',
+            'designVariants'
         ]);
 
         // Apply same filter to allOrders

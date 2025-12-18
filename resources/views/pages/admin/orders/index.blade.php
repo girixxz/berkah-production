@@ -33,7 +33,8 @@
             const invoiceNo = (row.getAttribute('data-invoice') || '').toLowerCase();
             const customer = (row.getAttribute('data-customer') || '').toLowerCase();
             const product = (row.getAttribute('data-product') || '').toLowerCase();
-            return invoiceNo.includes(query) || customer.includes(query) || product.includes(query);
+            const designs = (row.getAttribute('data-designs') || '').toLowerCase();
+            return invoiceNo.includes(query) || customer.includes(query) || product.includes(query) || designs.includes(query);
         },
         get hasVisibleRows() {
             if (!this.searchQuery || this.searchQuery.trim() === '') return true;
@@ -637,7 +638,7 @@
                             get hasResults() {
                                 if (!searchQuery || searchQuery.trim() === '') return true;
                                 const search = searchQuery.toLowerCase();
-                                return {{ Js::from($allOrders->map(fn($o) => strtolower(($o->invoice->invoice_no ?? '') . ' ' . ($o->customer->customer_name ?? '') . ' ' . ($o->productCategory->product_name ?? '')))) }}
+                                return {{ Js::from($allOrders->map(fn($o) => strtolower(($o->invoice->invoice_no ?? '') . ' ' . ($o->customer->customer_name ?? '') . ' ' . ($o->productCategory->product_name ?? '') . ' ' . $o->designVariants->pluck('design_name')->filter()->implode(' ')))) }}
                                     .some(text => text.includes(search));
                             }
                         }">
@@ -656,7 +657,8 @@
                                     data-finished-row
                                     data-invoice="{{ $order->invoice->invoice_no ?? '' }}"
                                     data-customer="{{ $order->customer->customer_name ?? '' }}"
-                                    data-product="{{ $order->productCategory->product_name ?? '' }}">
+                                    data-product="{{ $order->productCategory->product_name ?? '' }}"
+                                    data-designs="{{ $order->designVariants->pluck('design_name')->filter()->implode(' ') }}">
                                     {{-- Invoice No with Shipping Type and Priority --}}
                                     <td class="py-3 px-4">
                                         <div class="flex items-center gap-1.5 flex-wrap">
@@ -905,7 +907,8 @@
                                     data-default-row
                                     data-invoice="{{ $order->invoice->invoice_no ?? '' }}"
                                     data-customer="{{ $order->customer->customer_name ?? '' }}"
-                                    data-product="{{ $order->productCategory->product_name ?? '' }}">
+                                    data-product="{{ $order->productCategory->product_name ?? '' }}"
+                                    data-designs="{{ $order->designVariants->pluck('design_name')->filter()->implode(' ') }}">
                                     {{-- Invoice No with Shipping Type and Priority --}}
                                     <td class="py-3 px-4">
                                         <div class="flex items-center gap-1.5 flex-wrap">
@@ -1170,7 +1173,8 @@
                                     $pendingCount = $pendingPayments->count();
                                     $pendingAmount = $pendingPayments->sum('amount');
                                     
-                                    $searchText = strtolower(($order->invoice->invoice_no ?? '') . ' ' . ($order->customer->customer_name ?? '') . ' ' . ($order->productCategory->product_name ?? ''));
+                                    $designNames = $order->designVariants->pluck('design_name')->filter()->implode(' ');
+                                    $searchText = strtolower(($order->invoice->invoice_no ?? '') . ' ' . ($order->customer->customer_name ?? '') . ' ' . ($order->productCategory->product_name ?? '') . ' ' . $designNames);
                                 @endphp
 
                                 {{-- Finished Filter Row for All Orders --}}
