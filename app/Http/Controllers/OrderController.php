@@ -777,10 +777,22 @@ class OrderController extends Controller
             $existingDesignsMap = $existingDesigns->keyBy('id');
             
             // Track which design IDs are in the new data
+            // Filter out null/empty values and convert to integers
             $newDesignIds = collect($request->designs)
                 ->pluck('id')
-                ->filter() // Remove null values (new designs)
-                ->map(fn($id) => (int)$id);
+                ->filter(fn($id) => !is_null($id) && $id !== '' && $id !== '0') // Remove null, empty string, and "0"
+                ->map(fn($id) => (int)$id)
+                ->unique();
+            
+            Log::info('Order Update - Design Tracking', [
+                'order_id' => $order->id,
+                'existing_design_ids' => $existingDesigns->pluck('id')->toArray(),
+                'new_design_ids' => $newDesignIds->toArray(),
+                'designs_data' => collect($request->designs)->map(fn($d) => [
+                    'id' => $d['id'] ?? 'NULL',
+                    'name' => $d['items'][0]['design_name'] ?? 'N/A'
+                ])->toArray()
+            ]);
             
             // Delete ONLY design variants that:
             // 1. Don't exist in new data (removed by user)
@@ -788,6 +800,12 @@ class OrderController extends Controller
                 $shouldDelete = !$newDesignIds->contains($existingDesign->id);
                 
                 if ($shouldDelete) {
+                    Log::info('Deleting design variant', [
+                        'design_variant_id' => $existingDesign->id,
+                        'design_name' => $existingDesign->design_name,
+                        'has_work_order' => $existingDesign->workOrder ? 'YES' : 'NO'
+                    ]);
+                    
                     // Delete order items for this design first
                     OrderItem::where('design_variant_id', $existingDesign->id)->delete();
                     
@@ -804,17 +822,30 @@ class OrderController extends Controller
             // Process each design from request
             foreach ($request->designs as $designData) {
                 $designName = $designData['items'][0]['design_name'];
-                $designId = $designData['id'] ?? null;
+                $designId = !empty($designData['id']) && $designData['id'] !== '0' ? (int)$designData['id'] : null;
                 
                 // If ID exists and found in existing designs, UPDATE it
                 if ($designId && $existingDesignsMap->has($designId)) {
                     // UPDATE existing design variant (preserves work orders via FK)
                     $designVariant = $existingDesignsMap->get($designId);
+                    
+                    Log::info('Updating design variant', [
+                        'design_variant_id' => $designVariant->id,
+                        'old_name' => $designVariant->design_name,
+                        'new_name' => $designName,
+                        'has_work_order' => $designVariant->workOrder ? 'YES (ID: ' . $designVariant->workOrder->id . ')' : 'NO'
+                    ]);
+                    
                     $designVariant->update([
                         'design_name' => $designName,
                     ]);
                 } else {
                     // CREATE new design variant
+                    Log::info('Creating new design variant', [
+                        'order_id' => $order->id,
+                        'design_name' => $designName
+                    ]);
+                    
                     $designVariant = DesignVariant::create([
                         'order_id' => $order->id,
                         'design_name' => $designName,

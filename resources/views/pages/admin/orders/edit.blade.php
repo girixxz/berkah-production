@@ -1165,6 +1165,7 @@
                         });
 
                         this.designVariants.push({
+                            id: items[0].design_variant_id, // Store existing ID
                             name: designName,
                             sleeveVariants: sleeveVariants,
                             error: ''
