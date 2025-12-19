@@ -787,7 +787,9 @@
                             <div class="flex-1 min-w-0 flex flex-col justify-center gap-1">
                                 <h3 class="text-base md:text-lg font-semibold text-gray-900">
                                     Variant {{ $index + 1 }}
-                                    @if ($design->design_name)
+                                    @if ($design->design_name && $design->color)
+                                        <span class="text-gray-600 italic">( {{ $design->design_name }} - {{ $design->color }} )</span>
+                                    @elseif ($design->design_name)
                                         <span class="text-gray-600 italic">( {{ $design->design_name }} )</span>
                                     @endif
                                 </h3>
