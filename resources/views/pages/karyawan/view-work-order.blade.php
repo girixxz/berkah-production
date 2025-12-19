@@ -142,8 +142,8 @@
                     </p>
                 </div>
                 <div>
-                    <p class="text-xs md:text-sm font-semibold text-gray-900 mb-1">Color</p>
-                    <p class="text-sm md:text-base font-normal text-gray-700">{{ $order->product_color ?? '-' }}</p>
+                    <p class="text-xs md:text-sm font-semibold text-gray-900 mb-1">Total Design</p>
+                    <p class="text-sm md:text-base font-normal text-gray-700">{{ $order->designVariants->count() ?? 0 }}</p>
                 </div>
                 <div>
                     <p class="text-xs md:text-sm font-semibold text-gray-900 mb-1">Shipping</p>
@@ -193,8 +193,8 @@
                             <div class="flex-1 min-w-0 flex flex-col justify-center gap-1">
                                 <h3 class="text-base md:text-lg font-semibold text-gray-900">
                                     Variant {{ $index + 1 }}
-                                    @if ($design->design_name)
-                                        <span class="text-gray-600 italic">( {{ $design->design_name }} )</span>
+                                    @if ($design->design_name || $design->color)
+                                        <span class="text-gray-600 italic">( {{ $design->design_name ?? '' }}{{ $design->design_name && $design->color ? ' - ' : '' }}{{ $design->color ?? '' }} )</span>
                                     @endif
                                 </h3>
                                 @if ($design->workOrder && $design->workOrder->status === 'created')
