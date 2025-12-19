@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Customer;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
@@ -212,6 +213,9 @@ class CustomerController extends Controller
             ]);
 
             $customer->update($validated);
+
+            // Clear location cache for this customer
+            Cache::forget("customer_location_{$customer->id}");
 
             // Success - modal will close automatically (no session flash on success)
             return redirect()->route('admin.customers.index')
