@@ -324,7 +324,7 @@
                     <p class="text-xs md:text-sm font-semibold text-gray-900 mb-1">Village</p>
                     <p class="text-sm md:text-base font-normal text-gray-700" x-text="locationData.village_name"></p>
                 </div>
-                <div class="col-span-2 md:col-span-2">
+                <div>
                     <p class="text-xs md:text-sm font-semibold text-gray-900 mb-1">Address</p>
                     <p class="text-sm md:text-base font-normal text-gray-700">{{ $order->customer->address }}</p>
                 </div>
