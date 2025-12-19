@@ -1100,18 +1100,27 @@
                     const orderItems = @json($order->orderItems()->with(['designVariant', 'size', 'sleeve'])->get());
                     const designMap = {};
 
-                    // Group items by design name
+                    // Group items by design name + color combination
                     orderItems.forEach(item => {
                         const designName = item.design_variant.design_name;
-                        if (!designMap[designName]) {
-                            designMap[designName] = [];
+                        const designColor = item.design_variant.color || '';
+                        const designKey = designName + '|' + designColor;
+                        if (!designMap[designKey]) {
+                            designMap[designKey] = {
+                                name: designName,
+                                color: designColor,
+                                items: []
+                            };
                         }
-                        designMap[designName].push(item);
+                        designMap[designKey].items.push(item);
                     });
 
                     // Rebuild design variants structure
-                    Object.keys(designMap).forEach(designName => {
-                        const items = designMap[designName];
+                    Object.keys(designMap).forEach(designKey => {
+                        const designData = designMap[designKey];
+                        const designName = designData.name;
+                        const designColor = designData.color;
+                        const items = designData.items;
                         const sleeveMap = {};
 
                         // Group by sleeve_id
@@ -1160,7 +1169,7 @@
                         this.designVariants.push({
                             id: items[0].design_variant_id, // Store existing ID
                             name: designName,
-                            color: items[0].design_variant.color || '',
+                            color: designColor,
                             sleeveVariants: sleeveVariants,
                             error: '',
                             colorError: ''
@@ -1173,26 +1182,31 @@
                     const oldDesigns = @json(old('designs', []));
                     const designMap = {};
 
-                    // Group items by design name, also track design ID and color
+                    // Group items by design name + color combination
                     Object.values(oldDesigns).forEach(design => {
                         if (design.items) {
                             Object.values(design.items).forEach(item => {
                                 const designName = item.design_name;
-                                if (!designMap[designName]) {
-                                    designMap[designName] = {
+                                const designColor = design.color || '';
+                                const designKey = designName + '|' + designColor;
+                                if (!designMap[designKey]) {
+                                    designMap[designKey] = {
                                         id: design.id || null,
-                                        color: design.color || '',
+                                        name: designName,
+                                        color: designColor,
                                         items: []
                                     };
                                 }
-                                designMap[designName].items.push(item);
+                                designMap[designKey].items.push(item);
                             });
                         }
                     });
 
                     // Rebuild design variants structure
-                    Object.keys(designMap).forEach(designName => {
-                        const designInfo = designMap[designName];
+                    Object.keys(designMap).forEach(designKey => {
+                        const designInfo = designMap[designKey];
+                        const designName = designInfo.name;
+                        const designColor = designInfo.color;
                         const items = designInfo.items;
                         const sleeveMap = {};
 
@@ -1242,7 +1256,7 @@
                         this.designVariants.push({
                             id: designInfo.id, // Store existing ID or null for new
                             name: designName,
-                            color: designInfo.color || '',
+                            color: designColor,
                             sleeveVariants: sleeveVariants,
                             error: '',
                             colorError: ''
