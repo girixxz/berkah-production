@@ -746,7 +746,7 @@
                                                     <div class="grid grid-cols-2 gap-2">
                                                         @foreach($order->designVariants->take(10) as $design)
                                                             <div class="px-3 py-2 bg-gray-50 rounded-md text-xs text-gray-700 border border-gray-200">
-                                                                {{ $design->design_name }}
+                                                                {{ $design->design_name }}{{ $design->color ? ' - ' . $design->color : '' }}
                                                             </div>
                                                         @endforeach
                                                     </div>
@@ -1060,7 +1060,7 @@
                                                     <div class="grid grid-cols-2 gap-2">
                                                         @foreach($order->designVariants->take(10) as $design)
                                                             <div class="px-3 py-2 bg-gray-50 rounded-md text-xs text-gray-700 border border-gray-200">
-                                                                {{ $design->design_name }}
+                                                                {{ $design->design_name }}{{ $design->color ? ' - ' . $design->color : '' }}
                                                             </div>
                                                         @endforeach
                                                     </div>
@@ -1385,7 +1385,7 @@
                                                     <div class="grid grid-cols-2 gap-2">
                                                         @foreach($order->designVariants->take(10) as $design)
                                                             <div class="px-3 py-2 bg-gray-50 rounded-md text-xs text-gray-700 border border-gray-200">
-                                                                {{ $design->design_name }}
+                                                                {{ $design->design_name }}{{ $design->color ? ' - ' . $design->color : '' }}
                                                             </div>
                                                         @endforeach
                                                     </div>
@@ -1518,7 +1518,7 @@
                                                     <div class="grid grid-cols-2 gap-2">
                                                         @foreach($order->designVariants->take(10) as $design)
                                                             <div class="px-3 py-2 bg-gray-50 rounded-md text-xs text-gray-700 border border-gray-200">
-                                                                {{ $design->design_name }}
+                                                                {{ $design->design_name }}{{ $design->color ? ' - ' . $design->color : '' }}
                                                             </div>
                                                         @endforeach
                                                     </div>

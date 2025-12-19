@@ -456,10 +456,21 @@
             </template>
 
             {{-- Button Add Design Variant --}}
-            <button type="button" @click="addDesignVariant()"
-                class="w-full md:w-auto px-3 py-2 rounded-md text-sm font-medium cursor-pointer bg-primary hover:bg-green-700 text-white">
-                + Add Design Variant
-            </button>
+            <div class="flex flex-col md:flex-row md:items-center gap-2">
+                <button type="button" 
+                    @click="canAddDesignVariant && addDesignVariant()"
+                    :disabled="!canAddDesignVariant"
+                    :class="canAddDesignVariant ? 
+                        'bg-primary hover:bg-green-700 cursor-pointer' : 
+                        'bg-gray-300 text-gray-500 cursor-not-allowed'"
+                    class="w-full md:w-auto px-3 py-2 rounded-md text-sm font-medium text-white">
+                    + Add Design Variant
+                </button>
+                <p x-show="!canAddDesignVariant && designVariants.length > 0" 
+                   class="text-xs text-gray-500 italic">
+                    (Complete last variant first)
+                </p>
+            </div>
 
             {{-- GRAND TOTAL (Seluruh Design) --}}
             <div x-show="designVariants.length > 0" class="mt-4 overflow-x-auto -mx-4 md:mx-0">
@@ -1382,6 +1393,30 @@
                 selectedSizes: [],
                 showDeleteSizeConfirm: null,
 
+                // Computed: Check if can add new design variant
+                get canAddDesignVariant() {
+                    // If no designs yet, can add
+                    if (this.designVariants.length === 0) return true;
+                    
+                    // Check last design variant
+                    const lastDesign = this.designVariants[this.designVariants.length - 1];
+                    
+                    // Must have name and color
+                    if (!lastDesign.name || !lastDesign.name.trim() || !lastDesign.color || !lastDesign.color.trim()) {
+                        return false;
+                    }
+                    
+                    // Must have at least one sleeve variant with items
+                    if (lastDesign.sleeveVariants.length === 0) return false;
+                    
+                    // Check if at least one sleeve has items with quantity
+                    const hasValidItems = lastDesign.sleeveVariants.some(sleeve => 
+                        sleeve.rows.length > 0 && sleeve.rows.some(row => row.qty && parseInt(row.qty) > 0)
+                    );
+                    
+                    return hasValidItems;
+                },
+
                 // INIT
                 init() {
                     // Set customer_id if new customer was just added
@@ -1682,6 +1717,23 @@
                         this.errors.designs = 'At least one design variant is required';
                         isValid = false;
                     } else {
+                        // Check for duplicate design name + color combination
+                        const designCombinations = new Map();
+                        for (let i = 0; i < this.designVariants.length; i++) {
+                            const design = this.designVariants[i];
+                            const combination = (design.name || '').trim().toLowerCase() + '|' + (design.color || '').trim().toLowerCase();
+                            
+                            if (design.name && design.color && designCombinations.has(combination)) {
+                                this.errors.designs = `Duplicate design variant: "${design.name}" with color "${design.color}". Each design name and color combination must be unique.`;
+                                isValid = false;
+                                break;
+                            }
+                            
+                            if (design.name && design.color) {
+                                designCombinations.set(combination, i);
+                            }
+                        }
+                        
                         // Validate each design variant
                         let hasItems = false;
                         this.designVariants.forEach((design, dIndex) => {

@@ -378,7 +378,7 @@
                 $grandTotalPrice = 0;
             @endphp
 
-            @foreach ($designVariants as $designName => $variants)
+            @foreach ($designVariants as $designKey => $designData)
                 @php
                     $designTotalQty = 0;
                     $designTotalPrice = 0;
@@ -386,12 +386,18 @@
 
                 <div class="border border-gray-300 rounded-lg p-4 mb-4">
                     {{-- Label Design Variant - Row Layout --}}
-                    <div class="flex items-center gap-2 mb-4">
-                        <span class="text-xs font-semibold text-gray-900 uppercase tracking-wide">Design Variant:</span>
-                        <h3 class="text-md font-normal text-gray-700">{{ $designName }}</h3>
+                    <div class="flex items-center gap-4 mb-4">
+                        <div class="flex items-center gap-2">
+                            <span class="text-xs font-semibold text-gray-900 uppercase tracking-wide">Design Variant:</span>
+                            <h3 class="text-md font-normal text-gray-700">{{ $designData['name'] }}</h3>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span class="text-xs font-semibold text-gray-900 uppercase tracking-wide">Color:</span>
+                            <h3 class="text-md font-normal text-gray-700">{{ $designData['color'] }}</h3>
+                        </div>
                     </div>
 
-                    @foreach ($variants as $sleeveData)
+                    @foreach ($designData['sleeves'] as $sleeveData)
                         @php
                             $sleeveTotalQty = 0;
                             $sleeveTotalPrice = 0;
@@ -478,7 +484,7 @@
                     @endforeach
 
                     {{-- TOTAL per Design (Gabungan semua sleeve) --}}
-                    @if (count($variants) > 0)
+                    @if (count($designData['sleeves']) > 0)
                         <div class="mt-4 overflow-x-auto -mx-4 md:mx-0">
                             <div class="inline-block min-w-full align-middle">
                                 <div class="overflow-hidden">
@@ -495,7 +501,7 @@
                                         <tbody>
                                             <tr class="bg-gradient-to-br from-red-100 to-red-50">
                                                 <td colspan="3" class="py-3 px-4 text-center font-bold text-red-600">
-                                                    TOTAL ({{ $designName }})
+                                                    TOTAL ({{ $designData['name'] }} - {{ $designData['color'] }})
                                                 </td>
                                                 <td class="py-3 px-4 font-bold text-red-600 text-center whitespace-nowrap">
                                                     {{ $designTotalQty }}
@@ -1198,11 +1204,6 @@
                                                 <td class="text-black">{{ $order->materialCategory->name ?? '-' }} - {{ $order->materialTexture->name ?? '-' }}</td>
                                             </tr>
                                             <tr>
-                                                <td class="text-black font-semibold py-1" style="width: 75px; padding-right: 4px;">Color</td>
-                                                <td class="text-black font-semibold" style="width: 8px; padding-right: 8px;">:</td>
-                                                <td class="text-black">{{ $order->product_color ?? '-' }}</td>
-                                            </tr>
-                                            <tr>
                                                 <td class="text-black font-semibold py-1" style="width: 75px; padding-right: 4px;">Total QTY</td>
                                                 <td class="text-black font-semibold" style="width: 8px; padding-right: 8px;">:</td>
                                                 <td class="text-black font-semibold">{{ $order->orderItems->sum('qty') }} pcs</td>
@@ -1232,7 +1233,7 @@
                                                 {{-- Variant Header --}}
                                                 <tr class="bg-gray-100">
                                                     <td colspan="4" class="py-1.5 px-3 font-semibold text-gray-900">
-                                                        Variant: {{ $variant->design_name }}
+                                                        Variant: {{ $variant->design_name }}{{ $variant->color ? ' - ' . $variant->color : '' }}
                                                     </td>
                                                 </tr>
 

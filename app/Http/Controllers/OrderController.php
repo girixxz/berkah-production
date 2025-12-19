@@ -424,30 +424,37 @@ class OrderController extends Controller
             'extraServices.service'
         ]);
 
-        // Group order items by design variant and sleeve
+        // Group order items by design variant (name + color) and sleeve
         $designVariants = [];
         
         foreach ($order->orderItems as $item) {
             $designName = $item->designVariant->design_name;
+            $designColor = $item->designVariant->color;
+            // Create unique key: "DesignName|Color"
+            $designKey = $designName . '|' . $designColor;
             $sleeveId = $item->sleeve_id;
             $sleeveName = $item->sleeve->sleeve_name;
             
-            if (!isset($designVariants[$designName])) {
-                $designVariants[$designName] = [];
+            if (!isset($designVariants[$designKey])) {
+                $designVariants[$designKey] = [
+                    'name' => $designName,
+                    'color' => $designColor,
+                    'sleeves' => []
+                ];
             }
             
-            if (!isset($designVariants[$designName][$sleeveId])) {
+            if (!isset($designVariants[$designKey]['sleeves'][$sleeveId])) {
                 // Calculate base price from first item (unit_price - extra_price)
                 $basePrice = $item->unit_price - ($item->size->extra_price ?? 0);
                 
-                $designVariants[$designName][$sleeveId] = [
+                $designVariants[$designKey]['sleeves'][$sleeveId] = [
                     'sleeve_name' => $sleeveName,
                     'base_price' => $basePrice,
                     'items' => []
                 ];
             }
             
-            $designVariants[$designName][$sleeveId]['items'][] = $item;
+            $designVariants[$designKey]['sleeves'][$sleeveId]['items'][] = $item;
         }
 
         return view('pages.admin.orders.show', [
@@ -524,6 +531,20 @@ class OrderController extends Controller
             'additionals.*.price.required_with' => 'Price is required.',
             'additionals.*.price.min' => 'Price must be at least 0.',
         ]);
+
+        // Custom validation: Check for duplicate design name + color combination
+        $designCombinations = [];
+        foreach ($request->designs as $index => $design) {
+            $combination = strtolower(trim($design['name'])) . '|' . strtolower(trim($design['color']));
+            
+            if (in_array($combination, $designCombinations)) {
+                return back()->withErrors([
+                    'designs' => "Duplicate design variant found: '{$design['name']}' with color '{$design['color']}'. Each design name and color combination must be unique."
+                ])->withInput();
+            }
+            
+            $designCombinations[] = $combination;
+        }
 
         DB::beginTransaction();
 

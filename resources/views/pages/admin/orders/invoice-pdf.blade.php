@@ -113,12 +113,6 @@
                             </tr>
                             <tr>
                                 <td style="width: 40%;"></td>
-                                <td style="color: #000000; font-weight: 600; padding: 4px 0; width: 75px; padding-right: 4px; white-space: nowrap;">Color</td>
-                                <td style="color: #000000; font-weight: 600; width: 8px; padding-right: 8px; white-space: nowrap;">:</td>
-                                <td style="color: #000000; white-space: nowrap;">{{ $order->product_color ?? '-' }}</td>
-                            </tr>
-                            <tr>
-                                <td style="width: 40%;"></td>
                                 <td style="color: #000000; font-weight: 600; padding: 4px 0; width: 75px; padding-right: 4px; white-space: nowrap;">Total QTY</td>
                                 <td style="color: #000000; font-weight: 600; width: 8px; padding-right: 8px; white-space: nowrap;">:</td>
                                 <td style="color: #000000; font-weight: 600; white-space: nowrap;">{{ $order->orderItems->sum('qty') }} pcs</td>
@@ -149,7 +143,7 @@
                             {{-- Variant Header --}}
                             <tr style="background-color: #f3f4f6;" class="no-break">
                                 <td colspan="4" style="padding: 6px 12px; font-weight: 600; color: #111827; border-top: 1px solid #e5e7eb;">
-                                    Variant: {{ $variant->design_name }}
+                                    Variant: {{ $variant->design_name }}{{ $variant->color ? ' - ' . $variant->color : '' }}
                                 </td>
                             </tr>
 
