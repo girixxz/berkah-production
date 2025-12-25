@@ -26,7 +26,9 @@ class ShippingOrderController extends Controller
         $query = Order::with([
             'customer',
             'productCategory',
-            'invoice'
+            'invoice',
+            'orderItems',
+            'designVariants'
         ])
         ->where('production_status', 'finished')
         ->where('shipping_status', 'shipped');
@@ -47,6 +49,12 @@ class ShippingOrderController extends Controller
                 ->orWhereHas('customer', function ($customerQuery) use ($search) {
                     $customerQuery->where('customer_name', 'like', "%{$search}%")
                         ->orWhere('phone', 'like', "%{$search}%");
+                })
+                ->orWhereHas('productCategory', function ($productQuery) use ($search) {
+                    $productQuery->where('product_name', 'like', "%{$search}%");
+                })
+                ->orWhereHas('designVariants', function ($designQuery) use ($search) {
+                    $designQuery->where('design_name', 'like', "%{$search}%");
                 });
             });
         }
@@ -103,7 +111,9 @@ class ShippingOrderController extends Controller
         $allOrdersQuery = Order::with([
             'customer',
             'productCategory',
-            'invoice'
+            'invoice',
+            'orderItems',
+            'designVariants'
         ])
         ->where('production_status', 'finished')
         ->where('shipping_status', 'shipped');
@@ -124,6 +134,12 @@ class ShippingOrderController extends Controller
                 ->orWhereHas('customer', function ($customerQuery) use ($search) {
                     $customerQuery->where('customer_name', 'like', "%{$search}%")
                         ->orWhere('phone', 'like', "%{$search}%");
+                })
+                ->orWhereHas('productCategory', function ($productQuery) use ($search) {
+                    $productQuery->where('product_name', 'like', "%{$search}%");
+                })
+                ->orWhereHas('designVariants', function ($designQuery) use ($search) {
+                    $designQuery->where('design_name', 'like', "%{$search}%");
                 });
             });
         }
