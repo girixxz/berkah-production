@@ -465,6 +465,36 @@ class PaymentController extends Controller
                         ]
                     );
                 }
+
+                // Set deadline for PO and Material stages based on order priority
+                // Priority normal: +3 days, Priority high: +1 day
+                $daysToAdd = ($order->priority === 'high') ? 1 : 3;
+                $startDate = now();
+                $deadline = now()->addDays($daysToAdd);
+
+                // Update PO stage: set start_date, deadline, and status
+                $poStage = ProductionStage::where('stage_name', 'PO')->first();
+                if ($poStage) {
+                    OrderStage::where('order_id', $order->id)
+                        ->where('stage_id', $poStage->id)
+                        ->update([
+                            'start_date' => $startDate,
+                            'deadline' => $deadline,
+                            'status' => 'in_progress'
+                        ]);
+                }
+
+                // Update Material stage: set start_date, deadline, and status
+                $materialStage = ProductionStage::where('stage_name', 'Material')->first();
+                if ($materialStage) {
+                    OrderStage::where('order_id', $order->id)
+                        ->where('stage_id', $materialStage->id)
+                        ->update([
+                            'start_date' => $startDate,
+                            'deadline' => $deadline,
+                            'status' => 'in_progress'
+                        ]);
+                }
             }
 
             DB::commit();
