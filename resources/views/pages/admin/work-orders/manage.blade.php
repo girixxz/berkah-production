@@ -90,6 +90,17 @@
             this.errors = {};
             let isValid = true;
     
+            // ✅ VALIDASI MOCKUP - WAJIB!
+            // Cek apakah ada mockup baru di-upload atau mockup lama sudah ada
+            const mockupInput = this.$refs.mockupInput;
+            const hasMockupFile = mockupInput && mockupInput.files && mockupInput.files.length > 0;
+            const hasExistingMockup = this.formData.mockup_img_url && !this.deletedImages.mockup_img;
+            
+            if (!hasMockupFile && !hasExistingMockup) {
+                this.errors.mockup_img = 'Mockup wajib di-upload!';
+                isValid = false;
+            }
+    
             // Validasi Cutting - SEMUA REQUIRED!
             if (!this.formData.cutting_pattern_id) {
                 this.errors.cutting_pattern_id = 'Pola Potong harus dipilih!';
@@ -142,7 +153,6 @@
                 isValid = false;
             }
     
-            // Semua image sudah optional, tidak perlu validasi frontend
             return isValid;
         },
         handleSubmit() {
