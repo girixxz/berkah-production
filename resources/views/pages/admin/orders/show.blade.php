@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'Order Detail')
+@section('title', str_replace(['INV-', 'INV'], '', $order->invoice->invoice_no) . ' ' . $order->customer->customer_name . ' Detail')
 
 @push('styles')
     <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400..700;1,400..700&display=swap" rel="stylesheet" />
