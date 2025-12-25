@@ -540,7 +540,7 @@
                 <table class="min-w-full text-sm">
                     <thead class="bg-primary-light text-gray-600">
                         <tr>
-                            <th class="py-3 px-4 text-left font-bold rounded-l-lg">Paid At</th>
+                            <th class="py-3 px-4 text-left font-bold rounded-l-lg">Paid Date</th>
                             <th class="py-3 px-4 text-left font-bold">Customer</th>
                             <th class="py-3 px-4 text-left font-bold">Order</th>
                             <th class="py-3 px-4 text-left font-bold">Payment Model</th>
@@ -548,9 +548,7 @@
                             <th class="py-3 px-4 text-left font-bold">Status</th>
                             <th class="py-3 px-4 text-left font-bold">Notes</th>
                             <th class="py-3 px-4 text-center font-bold">Attachment</th>
-                            @if ($role === 'owner')
-                                <th class="py-3 px-4 text-center font-bold rounded-r-lg">Action</th>
-                            @endif
+                            <th class="py-3 px-4 text-center font-bold rounded-r-lg">Action Date</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-200" x-data="{
@@ -669,9 +667,9 @@
                                     @endif
                                 </td>
 
-                                {{-- Action (Owner Only) --}}
-                                @if ($role === 'owner')
-                                    <td class="py-3 px-4">
+                                {{-- Action Date --}}
+                                <td class="py-3 px-4">
+                                    @if ($role === 'owner')
                                         <div class="flex justify-center gap-2">
                                             @if ($payment->status === 'pending')
                                                 {{-- Approve Button --}}
@@ -698,15 +696,44 @@
                                                     Reject
                                                 </button>
                                             @else
-                                                <span class="text-gray-400 text-xs">-</span>
+                                                <div class="text-center">
+                                                    <span class="text-xs font-medium {{ $payment->status === 'approved' ? 'text-green-700' : 'text-red-700' }}">
+                                                        {{ ucfirst($payment->status) }} on
+                                                    </span>
+                                                    <div class="text-xs text-gray-600">
+                                                        {{ \Carbon\Carbon::parse($payment->updated_at)->format('d M Y') }}
+                                                    </div>
+                                                    <div class="text-xs text-gray-500">
+                                                        {{ \Carbon\Carbon::parse($payment->updated_at)->format('H:i') }} WIB
+                                                    </div>
+                                                </div>
                                             @endif
                                         </div>
-                                    </td>
-                                @endif
+                                    @else
+                                        {{-- Admin View --}}
+                                        <div class="text-center">
+                                            @if ($payment->status === 'pending')
+                                                <span class="px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-600">
+                                                    Unconfirmed
+                                                </span>
+                                            @else
+                                                <span class="text-xs font-medium {{ $payment->status === 'approved' ? 'text-green-700' : 'text-red-700' }}">
+                                                    {{ ucfirst($payment->status) }} on
+                                                </span>
+                                                <div class="text-xs text-gray-600">
+                                                    {{ \Carbon\Carbon::parse($payment->updated_at)->format('d M Y') }}
+                                                </div>
+                                                <div class="text-xs text-gray-500">
+                                                    {{ \Carbon\Carbon::parse($payment->updated_at)->format('H:i') }} WIB
+                                                </div>
+                                            @endif
+                                        </div>
+                                    @endif
+                                </td>
                             </tr>
                         @empty
                             <tr x-show="searchQuery.trim() === ''">
-                                <td colspan="{{ $role === 'owner' ? '9' : '8' }}" class="py-8 text-center text-gray-400">
+                                <td colspan="9" class="py-8 text-center text-gray-400">
                                     <svg class="w-16 h-16 mx-auto mb-3 opacity-50" fill="none" stroke="currentColor"
                                         viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -802,9 +829,9 @@
                                     @endif
                                 </td>
 
-                                {{-- Action (Owner Only) --}}
-                                @if ($role === 'owner')
-                                    <td class="py-3 px-4">
+                                {{-- Action Date --}}
+                                <td class="py-3 px-4">
+                                    @if ($role === 'owner')
                                         <div class="flex justify-center gap-2">
                                             @if ($payment->status === 'pending')
                                                 <button type="button" @click="showActionConfirm = {{ $payment->id }}; actionType = 'approve'"
@@ -822,17 +849,46 @@
                                                     Reject
                                                 </button>
                                             @else
-                                                <span class="text-gray-400 text-xs">-</span>
+                                                <div class="text-center">
+                                                    <span class="text-xs font-medium {{ $payment->status === 'approved' ? 'text-green-700' : 'text-red-700' }}">
+                                                        {{ ucfirst($payment->status) }} on
+                                                    </span>
+                                                    <div class="text-xs text-gray-600">
+                                                        {{ \Carbon\Carbon::parse($payment->updated_at)->format('d M Y') }}
+                                                    </div>
+                                                    <div class="text-xs text-gray-500">
+                                                        {{ \Carbon\Carbon::parse($payment->updated_at)->format('H:i') }} WIB
+                                                    </div>
+                                                </div>
                                             @endif
                                         </div>
-                                    </td>
-                                @endif
+                                    @else
+                                        {{-- Admin View --}}
+                                        <div class="text-center">
+                                            @if ($payment->status === 'pending')
+                                                <span class="px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-600">
+                                                    Unconfirmed
+                                                </span>
+                                            @else
+                                                <span class="text-xs font-medium {{ $payment->status === 'approved' ? 'text-green-700' : 'text-red-700' }}">
+                                                    {{ ucfirst($payment->status) }} on
+                                                </span>
+                                                <div class="text-xs text-gray-600">
+                                                    {{ \Carbon\Carbon::parse($payment->updated_at)->format('d M Y') }}
+                                                </div>
+                                                <div class="text-xs text-gray-500">
+                                                    {{ \Carbon\Carbon::parse($payment->updated_at)->format('H:i') }} WIB
+                                                </div>
+                                            @endif
+                                        </div>
+                                    @endif
+                                </td>
                             </tr>
                         @endforeach
                         
                         {{-- Client-side No Results Message --}}
                         <tr x-show="searchQuery.trim() !== '' && !hasResults" x-cloak>
-                            <td colspan="{{ $role === 'owner' ? '9' : '8' }}" class="py-8 text-center text-gray-400">
+                            <td colspan="9" class="py-8 text-center text-gray-400">
                                 <svg class="w-16 h-16 mx-auto mb-3 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                                 </svg>

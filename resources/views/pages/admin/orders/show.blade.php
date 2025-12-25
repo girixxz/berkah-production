@@ -680,7 +680,8 @@
                                 <th class="py-3 px-4 text-left">Amount</th>
                                 <th class="py-3 px-4 text-left">Status</th>
                                 <th class="py-3 px-4 text-left">Notes</th>
-                                <th class="py-3 px-4 text-left rounded-r-lg">Attachment</th>
+                                <th class="py-3 px-4 text-left">Attachment</th>
+                                <th class="py-3 px-4 text-center rounded-r-lg">Action Date</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -736,6 +737,26 @@
                                         @else
                                             <span class="text-gray-400 text-xs">No attachment</span>
                                         @endif
+                                    </td>
+                                    {{-- Action Date --}}
+                                    <td class="py-3 px-4">
+                                        <div class="text-center">
+                                            @if ($payment->status === 'pending')
+                                                <span class="px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-600">
+                                                    Unconfirmed
+                                                </span>
+                                            @else
+                                                <span class="text-xs font-medium {{ $payment->status === 'approved' ? 'text-green-700' : 'text-red-700' }}">
+                                                    {{ ucfirst($payment->status) }} on
+                                                </span>
+                                                <div class="text-xs text-gray-600">
+                                                    {{ \Carbon\Carbon::parse($payment->updated_at)->format('d M Y') }}
+                                                </div>
+                                                <div class="text-xs text-gray-500">
+                                                    {{ \Carbon\Carbon::parse($payment->updated_at)->format('H:i') }} WIB
+                                                </div>
+                                            @endif
+                                        </div>
                                     </td>
                                 </tr>
                             @endforeach
