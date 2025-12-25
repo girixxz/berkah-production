@@ -66,8 +66,9 @@
                 </div>
                 <p class="text-sm text-gray-500">
                     <span>Variant </span><span x-text="showData?.variant_index || '1'"></span>
-                    <span class="italic" x-show="showData?.design_name"> ( </span><span class="italic"
-                        x-text="showData?.design_name || ''"></span><span class="italic" x-show="showData?.design_name">
+                    <span class="italic" x-show="showData?.design_name || showData?.color"> ( </span><span class="italic"
+                        x-text="showData?.design_name || ''"></span><span class="italic" x-show="showData?.design_name && showData?.color"> - </span><span class="italic"
+                        x-text="showData?.color || ''"></span><span class="italic" x-show="showData?.design_name || showData?.color">
                         )</span>
                 </p>
             </div>
