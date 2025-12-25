@@ -457,7 +457,7 @@
                                         <div class="space-y-1">
                                             {{-- Days Left Info - Above Progress Bar in One Line --}}
                                             <div class="flex items-center justify-between text-xs">
-                                                <span class="text-gray-500">{{ $startDate->format('d/m') }}</span>
+                                                <span class="text-gray-500">{{ $startDate->format('d M') }}</span>
                                                 @if ($daysRemaining > 0)
                                                     <span class="text-orange-600 font-medium">{{ $daysRemaining }} days left</span>
                                                 @elseif ($daysRemaining === 0)
@@ -465,7 +465,7 @@
                                                 @else
                                                     <span class="text-red-600 font-medium">{{ abs($daysRemaining) }} days overdue</span>
                                                 @endif
-                                                <span class="text-gray-500">{{ $deadline->format('d/m') }}</span>
+                                                <span class="text-gray-500">{{ $deadline->format('d M') }}</span>
                                             </div>
 
                                             {{-- Progress Bar --}}
