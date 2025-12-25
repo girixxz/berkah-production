@@ -745,8 +745,12 @@
                                                 @if($order->designVariants->count() > 0)
                                                     <div class="grid grid-cols-2 gap-2">
                                                         @foreach($order->designVariants->take(10) as $design)
-                                                            <div class="px-3 py-2 bg-gray-50 rounded-md text-xs text-gray-700 border border-gray-200">
-                                                                {{ $design->design_name }}{{ $design->color ? ' - ' . $design->color : '' }}
+                                                            <div class="px-3 py-2 bg-gray-50 rounded-md text-xs text-gray-700 border border-gray-200 flex items-center gap-1" 
+                                                                title="{{ $design->design_name }}{{ $design->color ? ' - ' . $design->color : '' }}">
+                                                                <span class="truncate">{{ $design->design_name }}</span>
+                                                                @if($design->color)
+                                                                    <span class="flex-shrink-0">- {{ $design->color }}</span>
+                                                                @endif
                                                             </div>
                                                         @endforeach
                                                     </div>
@@ -1059,8 +1063,12 @@
                                                 @if($order->designVariants->count() > 0)
                                                     <div class="grid grid-cols-2 gap-2">
                                                         @foreach($order->designVariants->take(10) as $design)
-                                                            <div class="px-3 py-2 bg-gray-50 rounded-md text-xs text-gray-700 border border-gray-200">
-                                                                {{ $design->design_name }}{{ $design->color ? ' - ' . $design->color : '' }}
+                                                            <div class="px-3 py-2 bg-gray-50 rounded-md text-xs text-gray-700 border border-gray-200 flex items-center gap-1" 
+                                                                title="{{ $design->design_name }}{{ $design->color ? ' - ' . $design->color : '' }}">
+                                                                <span class="truncate">{{ $design->design_name }}</span>
+                                                                @if($design->color)
+                                                                    <span class="flex-shrink-0">- {{ $design->color }}</span>
+                                                                @endif
                                                             </div>
                                                         @endforeach
                                                     </div>
@@ -1384,8 +1392,12 @@
                                                 @if($order->designVariants->count() > 0)
                                                     <div class="grid grid-cols-2 gap-2">
                                                         @foreach($order->designVariants->take(10) as $design)
-                                                            <div class="px-3 py-2 bg-gray-50 rounded-md text-xs text-gray-700 border border-gray-200">
-                                                                {{ $design->design_name }}{{ $design->color ? ' - ' . $design->color : '' }}
+                                                            <div class="px-3 py-2 bg-gray-50 rounded-md text-xs text-gray-700 border border-gray-200 flex items-center gap-1" 
+                                                                title="{{ $design->design_name }}{{ $design->color ? ' - ' . $design->color : '' }}">
+                                                                <span class="truncate">{{ $design->design_name }}</span>
+                                                                @if($design->color)
+                                                                    <span class="flex-shrink-0">- {{ $design->color }}</span>
+                                                                @endif
                                                             </div>
                                                         @endforeach
                                                     </div>
@@ -1517,8 +1529,12 @@
                                                 @if($order->designVariants->count() > 0)
                                                     <div class="grid grid-cols-2 gap-2">
                                                         @foreach($order->designVariants->take(10) as $design)
-                                                            <div class="px-3 py-2 bg-gray-50 rounded-md text-xs text-gray-700 border border-gray-200">
-                                                                {{ $design->design_name }}{{ $design->color ? ' - ' . $design->color : '' }}
+                                                            <div class="px-3 py-2 bg-gray-50 rounded-md text-xs text-gray-700 border border-gray-200 flex items-center gap-1" 
+                                                                title="{{ $design->design_name }}{{ $design->color ? ' - ' . $design->color : '' }}">
+                                                                <span class="truncate">{{ $design->design_name }}</span>
+                                                                @if($design->color)
+                                                                    <span class="flex-shrink-0">- {{ $design->color }}</span>
+                                                                @endif
                                                             </div>
                                                         @endforeach
                                                     </div>

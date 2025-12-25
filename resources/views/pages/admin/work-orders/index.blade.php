@@ -25,17 +25,8 @@
             const invoiceNo = (row.getAttribute('data-invoice') || '').toLowerCase();
             const customer = (row.getAttribute('data-customer') || '').toLowerCase();
             const product = (row.getAttribute('data-product') || '').toLowerCase();
-            return invoiceNo.includes(query) || customer.includes(query) || product.includes(query);
-        },
-        get hasVisibleRows() {
-            if (!this.searchQuery || this.searchQuery.trim() === '') return true;
-            const tbody = document.querySelector('tbody');
-            if (!tbody) return true;
-            const rows = tbody.querySelectorAll('tr[data-invoice]');
-            for (let row of rows) {
-                if (this.matchesSearch(row)) return true;
-            }
-            return false;
+            const designs = (row.getAttribute('data-designs') || '').toLowerCase();
+            return invoiceNo.includes(query) || customer.includes(query) || product.includes(query) || designs.includes(query);
         },
         init() {
             const toastMessage = sessionStorage.getItem('toast_message');
@@ -481,7 +472,7 @@
                             get hasResults() {
                                 if (!searchQuery || searchQuery.trim() === '') return true;
                                 const search = searchQuery.toLowerCase();
-                                return {{ Js::from($allOrders->map(fn($o) => strtolower(($o->invoice->invoice_no ?? '') . ' ' . ($o->customer->customer_name ?? '') . ' ' . ($o->customer->phone ?? '') . ' ' . ($o->productCategory->product_name ?? '')))) }}
+                                return {{ Js::from($allOrders->map(fn($o) => strtolower(($o->invoice->invoice_no ?? '') . ' ' . ($o->customer->customer_name ?? '') . ' ' . ($o->customer->phone ?? '') . ' ' . ($o->productCategory->product_name ?? '') . ' ' . $o->designVariants->pluck('design_name')->filter()->implode(' ')))) }}
                                     .some(text => text.includes(search));
                             }
                         }">
@@ -489,7 +480,8 @@
                                 <tr class="hover:bg-gray-50" x-show="searchQuery.trim() === ''"
                                     data-invoice="{{ $order->invoice->invoice_no ?? '' }}"
                                     data-customer="{{ $order->customer->customer_name ?? '' }} {{ $order->customer->phone ?? '' }}"
-                                    data-product="{{ $order->productCategory->product_name ?? '' }}">
+                                    data-product="{{ $order->productCategory->product_name ?? '' }}"
+                                    data-designs="{{ $order->designVariants->pluck('design_name')->filter()->implode(' ') }}">
                                     {{-- Invoice No with Priority --}}
                                     <td class="py-3 px-4">
                                         <div class="flex items-center gap-1.5 flex-wrap">
@@ -513,8 +505,75 @@
 
                                     {{-- Product --}}
                                     <td class="py-3 px-4">
-                                        <span
-                                            class="text-gray-700">{{ $order->productCategory->product_name ?? '-' }}</span>
+                                        <div x-data="{
+                                            open: false,
+                                            dropdownStyle: {},
+                                            checkPosition() {
+                                                const button = this.$refs.productBtn;
+                                                const rect = button.getBoundingClientRect();
+                                                const spaceBelow = window.innerHeight - rect.bottom;
+                                                const spaceAbove = rect.top;
+                                                const dropUp = spaceBelow < 250 && spaceAbove > spaceBelow;
+                                        
+                                                if (dropUp) {
+                                                    this.dropdownStyle = {
+                                                        position: 'fixed',
+                                                        bottom: (window.innerHeight - rect.top + 8) + 'px',
+                                                        left: rect.left + 'px',
+                                                        minWidth: '320px',
+                                                        maxWidth: '400px'
+                                                    };
+                                                } else {
+                                                    this.dropdownStyle = {
+                                                        position: 'fixed',
+                                                        top: (rect.bottom + 8) + 'px',
+                                                        left: rect.left + 'px',
+                                                        minWidth: '320px',
+                                                        maxWidth: '400px'
+                                                    };
+                                                }
+                                            }
+                                        }" x-init="$watch('open', value => {
+                                            if (value) {
+                                                const closeOnScroll = () => { open = false; };
+                                                window.addEventListener('scroll', closeOnScroll, { once: true });
+                                                window.addEventListener('resize', closeOnScroll, { once: true });
+                                            }
+                                        })" class="relative inline-block">
+                                            {{-- Product Badge (Clickable) --}}
+                                            <button type="button" x-ref="productBtn" @click="checkPosition(); open = !open"
+                                                class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs bg-gray-100 hover:bg-gray-200 transition-colors cursor-pointer">
+                                                <span>{{ $order->productCategory->product_name ?? '-' }}</span>
+                                                <svg class="w-3.5 h-3.5 transition-transform" :class="open && 'rotate-180'" 
+                                                    fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                                                </svg>
+                                            </button>
+
+                                            <div x-show="open" @click.away="open = false" x-cloak
+                                                :style="dropdownStyle"
+                                                class="bg-white border border-gray-200 rounded-lg shadow-xl z-50 p-4">
+                                                <h4 class="text-sm font-semibold text-gray-700 mb-3">Design Variants:</h4>
+                                                @if($order->designVariants->count() > 0)
+                                                    <div class="grid grid-cols-2 gap-2">
+                                                        @foreach($order->designVariants->take(10) as $design)
+                                                            <div class="px-3 py-2 bg-gray-50 rounded-md text-xs text-gray-700 border border-gray-200 flex items-center gap-1" 
+                                                                title="{{ $design->design_name }}{{ $design->color ? ' - ' . $design->color : '' }}">
+                                                                <span class="truncate">{{ $design->design_name }}</span>
+                                                                @if($design->color)
+                                                                    <span class="flex-shrink-0">- {{ $design->color }}</span>
+                                                                @endif
+                                                            </div>
+                                                        @endforeach
+                                                    </div>
+                                                    @if($order->designVariants->count() > 10)
+                                                        <p class="text-xs text-gray-500 mt-2 italic">+ {{ $order->designVariants->count() - 10 }} more...</p>
+                                                    @endif
+                                                @else
+                                                    <p class="text-xs text-gray-400 italic">No design variants</p>
+                                                @endif
+                                            </div>
+                                        </div>
                                     </td>
 
                                     {{-- QTY --}}
@@ -648,9 +707,12 @@
                             @endforelse
 
                             @foreach ($allOrders as $order)
-                                <tr class="hover:bg-gray-50" x-show="searchQuery.trim() !== '' && 
-                                    {{ Js::from(strtolower(($order->invoice->invoice_no ?? '') . ' ' . ($order->customer->customer_name ?? '') . ' ' . ($order->customer->phone ?? '') . ' ' . ($order->productCategory->product_name ?? ''))) }}
-                                    .includes(searchQuery.toLowerCase())">
+                                @php
+                                    $designNames = $order->designVariants->pluck('design_name')->filter()->implode(' ');
+                                    $searchText = strtolower(($order->invoice->invoice_no ?? '') . ' ' . ($order->customer->customer_name ?? '') . ' ' . ($order->customer->phone ?? '') . ' ' . ($order->productCategory->product_name ?? '') . ' ' . $designNames);
+                                @endphp
+
+                                <tr class="hover:bg-gray-50" x-show="searchQuery.trim() !== '' && '{{ $searchText }}'.includes(searchQuery.toLowerCase())">
                                     {{-- Invoice No with Priority --}}
                                     <td class="py-3 px-4">
                                         <div class="flex items-center gap-1.5 flex-wrap">
@@ -669,9 +731,76 @@
                                         </div>
                                     </td>
 
-                                    {{-- Product --}}
+                                    {{-- Product with Dropdown --}}
                                     <td class="py-3 px-4">
-                                        <span class="text-gray-700">{{ $order->productCategory->product_name ?? '-' }}</span>
+                                        <div x-data="{
+                                            open: false,
+                                            dropdownStyle: {},
+                                            checkPosition() {
+                                                const button = this.$refs.productBtn;
+                                                const rect = button.getBoundingClientRect();
+                                                const spaceBelow = window.innerHeight - rect.bottom;
+                                                const spaceAbove = rect.top;
+                                                const dropUp = spaceBelow < 250 && spaceAbove > spaceBelow;
+                                        
+                                                if (dropUp) {
+                                                    this.dropdownStyle = {
+                                                        position: 'fixed',
+                                                        bottom: (window.innerHeight - rect.top + 8) + 'px',
+                                                        left: rect.left + 'px',
+                                                        minWidth: '320px',
+                                                        maxWidth: '400px'
+                                                    };
+                                                } else {
+                                                    this.dropdownStyle = {
+                                                        position: 'fixed',
+                                                        top: (rect.bottom + 8) + 'px',
+                                                        left: rect.left + 'px',
+                                                        minWidth: '320px',
+                                                        maxWidth: '400px'
+                                                    };
+                                                }
+                                            }
+                                        }" x-init="$watch('open', value => {
+                                            if (value) {
+                                                const closeOnScroll = () => { open = false; };
+                                                window.addEventListener('scroll', closeOnScroll, { once: true });
+                                                window.addEventListener('resize', closeOnScroll, { once: true });
+                                            }
+                                        })" class="relative inline-block">
+                                            <button type="button" x-ref="productBtn" @click="checkPosition(); open = !open"
+                                                class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs bg-gray-100 hover:bg-gray-200 transition-colors cursor-pointer">
+                                                <span>{{ $order->productCategory->product_name ?? '-' }}</span>
+                                                <svg class="w-3.5 h-3.5 transition-transform" :class="open && 'rotate-180'" 
+                                                    fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                                                </svg>
+                                            </button>
+
+                                            <div x-show="open" @click.away="open = false" x-cloak
+                                                :style="dropdownStyle"
+                                                class="bg-white border border-gray-200 rounded-lg shadow-xl z-50 p-4">
+                                                <h4 class="text-sm font-semibold text-gray-700 mb-3">Design Variants:</h4>
+                                                @if($order->designVariants->count() > 0)
+                                                    <div class="grid grid-cols-2 gap-2">
+                                                        @foreach($order->designVariants->take(10) as $design)
+                                                            <div class="px-3 py-2 bg-gray-50 rounded-md text-xs text-gray-700 border border-gray-200 flex items-center gap-1" 
+                                                                title="{{ $design->design_name }}{{ $design->color ? ' - ' . $design->color : '' }}">
+                                                                <span class="truncate">{{ $design->design_name }}</span>
+                                                                @if($design->color)
+                                                                    <span class="flex-shrink-0">- {{ $design->color }}</span>
+                                                                @endif
+                                                            </div>
+                                                        @endforeach
+                                                    </div>
+                                                    @if($order->designVariants->count() > 10)
+                                                        <p class="text-xs text-gray-500 mt-2 italic">+ {{ $order->designVariants->count() - 10 }} more...</p>
+                                                    @endif
+                                                @else
+                                                    <p class="text-xs text-gray-400 italic">No design variants</p>
+                                                @endif
+                                            </div>
+                                        </div>
                                     </td>
 
                                     {{-- QTY --}}
@@ -744,8 +873,8 @@
                                     <svg class="w-16 h-16 mx-auto mb-3 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                                     </svg>
-                                    <p class="text-sm">No results found for "<span x-text="searchQuery"></span>"</p>
-                                    <p class="text-xs text-gray-500 mt-1">Try searching with different keywords</p>
+                                    <p class="text-sm font-medium text-gray-700">No results found for "<span x-text="searchQuery"></span>"</p>
+                                    <p class="text-xs text-gray-500 mt-1">Try different keywords or filters</p>
                                 </td>
                             </tr>
                         </tbody>
