@@ -261,18 +261,30 @@
         {{-- Header - Responsive Layout --}}
         <div class="p-3 flex-shrink-0 bg-white border-b border-gray-200">
             <div class="flex flex-col lg:grid lg:grid-cols-3 gap-3 lg:gap-4 lg:items-center">
-                {{-- Left: Monthly/Weekly Buttons --}}
-                <div class="flex gap-2 justify-center lg:justify-start">
-                    <button type="button" @click="switchViewMode('monthly')" 
-                        :class="viewMode === 'monthly' ? 'bg-primary text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'"
-                        class="px-4 py-2 rounded-lg text-sm font-medium transition-colors">
-                        Monthly
-                    </button>
-                    <button type="button" @click="switchViewMode('weekly')" 
-                        :class="viewMode === 'weekly' ? 'bg-primary text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'"
-                        class="px-4 py-2 rounded-lg text-sm font-medium transition-colors">
-                        Weekly
-                    </button>
+                {{-- Left: Back to Task & Monthly/Weekly Buttons --}}
+                <div class="flex items-center justify-between lg:justify-start gap-2">
+                    {{-- Back to Task Button --}}
+                    <a href="{{ route('karyawan.task') }}" 
+                        class="text-white flex items-center gap-2 px-4 py-2 bg-red-500 hover:bg-red-400 rounded-lg text-sm font-medium transition-colors">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+                        </svg>
+                        Back to Task
+                    </a>
+                    
+                    {{-- Monthly/Weekly Toggle --}}
+                    <div class="flex gap-2">
+                        <button type="button" @click="switchViewMode('monthly')" 
+                            :class="viewMode === 'monthly' ? 'bg-primary text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'"
+                            class="px-4 py-2 rounded-lg text-sm font-medium transition-colors">
+                            Monthly
+                        </button>
+                        <button type="button" @click="switchViewMode('weekly')" 
+                            :class="viewMode === 'weekly' ? 'bg-primary text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'"
+                            class="px-4 py-2 rounded-lg text-sm font-medium transition-colors">
+                            Weekly
+                        </button>
+                    </div>
                 </div>
                 
                 {{-- Center: Select Form --}}
@@ -359,7 +371,7 @@
                 </div>
 
                 {{-- Calendar Body (Weeks and Days) --}}
-                <div class="flex-1 flex flex-col">
+                <div class="flex-1 flex flex-col overflow-y-auto">
                     @if ($viewMode === 'weekly')
                         {{-- Weekly mode: Show only first week (1 row with full height) --}}
                         @if (isset($calendar[0]))
@@ -461,8 +473,8 @@
                                     {{-- Tasks for this day --}}
                                     @if (count($day['tasks']) > 0 && $index !== 0)
                                         <div class="space-y-1 flex-1">
-                                            {{-- Show max 4 tasks --}}
-                                            @foreach (array_slice($day['tasks'], 0, 4) as $orderStage)
+                                            {{-- Show max 4 tasks (2 on mobile, 4 on desktop) --}}
+                                            @foreach (array_slice($day['tasks'], 0, 4) as $taskIndex => $orderStage)
                                                 @php
                                                     // Check if ALL stages of this order are done (for create/deadline mode)
                                                     $allStagesDone = $orderStage->order->orderStages->every(function($stage) {
@@ -504,7 +516,7 @@
                                                     }
                                                 @endphp
                                                 <a href="{{ route('karyawan.task.work-order', ['order' => $orderStage->order->id]) }}" target="_blank"
-                                                    class="block px-1.5 py-0.5 rounded border {{ $bgClass }} {{ $borderClass }} text-[9px] font-medium cursor-pointer hover:opacity-80 transition-opacity">
+                                                    class="block px-1.5 py-0.5 rounded border {{ $bgClass }} {{ $borderClass }} text-[9px] font-medium cursor-pointer hover:opacity-80 transition-opacity {{ $taskIndex >= 2 ? 'hidden md:block' : '' }}">
                                                     <div class="flex items-center justify-between gap-1">
                                                         <div class="flex items-center gap-1 {{ $textClass }} flex-1 min-w-0">
                                                             <span class="font-semibold truncate">
@@ -532,7 +544,7 @@
                                                 </a>
                                             @endforeach
 
-                                            {{-- View All button if more than 4 tasks --}}
+                                            {{-- View All button if more than 4 tasks (desktop) or more than 2 tasks (mobile) --}}
                                             @if (count($day['tasks']) > 4)
                                                 <button type="button"
                                                     @click="openModal('{{ $day['date']->format('l, d F Y') }}', {{ collect($day['tasks'])->map(function ($os) use ($filter) {
@@ -557,8 +569,35 @@
                                                             'deadline' => $os->deadline ? $os->deadline->format('d M Y') : 'N/A',
                                                         ];
                                                     })->toJson() }})"
-                                                    class="w-full text-center text-[9px] font-medium text-primary hover:text-primary-dark transition-colors cursor-pointer border-t border-gray-200 pt-1 mt-0.5">
+                                                    class="hidden md:block w-full text-center text-[9px] font-medium text-primary hover:text-primary-dark transition-colors cursor-pointer border-t border-gray-200 pt-1 mt-0.5">
                                                     View All ({{ count($day['tasks']) - 4 }}+ More)
+                                                </button>
+                                            @endif
+                                            @if (count($day['tasks']) > 2)
+                                                <button type="button"
+                                                    @click="openModal('{{ $day['date']->format('l, d F Y') }}', {{ collect($day['tasks'])->map(function ($os) use ($filter) {
+                                                        $isHigh = strtolower($os->order->priority ?? '') === 'high';
+                                                        $isFinished = strtolower($os->order->production_status ?? '') === 'finished';
+                                                        $allStagesDone = $os->order->orderStages->every(function($stage) {
+                                                            return strtolower($stage->status) === 'done';
+                                                        });
+                                                        $taskStatus = ($filter === 'create' || $filter === 'deadline') ? ($allStagesDone ? 'done' : 'in_progress') : $os->status;
+                                                        
+                                                        return [
+                                                            'id' => $os->id,
+                                                            'order_id' => $os->order->id,
+                                                            'invoice' => $os->order->invoice->invoice_no ?? 'N/A',
+                                                            'product' => $os->order->productCategory->product_name ?? 'N/A',
+                                                            'customer' => $os->order->customer->customer_name ?? 'N/A',
+                                                            'qty' => $os->order->total_qty ?? 0,
+                                                            'priority' => $isHigh ? 'high' : 'normal',
+                                                            'status' => $taskStatus,
+                                                            'production_status' => $isFinished ? 'finished' : 'in_progress',
+                                                            'deadline' => $os->deadline ? $os->deadline->format('d M Y') : 'N/A',
+                                                        ];
+                                                    })->toJson() }})"
+                                                    class="block md:hidden w-full text-center text-[9px] font-medium text-primary hover:text-primary-dark transition-colors cursor-pointer border-t border-gray-200 pt-1 mt-0.5">
+                                                    View All ({{ count($day['tasks']) - 2 }}+ More)
                                                 </button>
                                             @endif
                                         </div>
