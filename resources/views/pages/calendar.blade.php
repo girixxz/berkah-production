@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>Production Calendar - {{ config('app.name') }}</title>
+    <title>Production Calendar</title>
     {{-- Favicon --}}
     <link rel="icon" type="image/svg+xml" href="{{ asset('favicon.svg') }}">
     <link rel="alternate icon" href="{{ asset('favicon.ico') }}">
@@ -367,7 +367,7 @@
                                 @foreach ($calendar[0] as $index => $day)
                                     <div class="border-r border-gray-200 last:border-r-0 p-2 {{ $day['isToday'] ? 'bg-blue-50' : ($index === 0 ? 'bg-red-50' : 'bg-white') }} overflow-y-auto">
                                         {{-- Tasks for this day --}}
-                                        @if (count($day['tasks']) > 0)
+                                        @if (count($day['tasks']) > 0 && $index !== 0)
                                             <div class="space-y-1">
                                                 {{-- Weekly: Show ALL tasks (no limit) --}}
                                                 @foreach ($day['tasks'] as $orderStage)
@@ -459,7 +459,7 @@
                                     </div>
 
                                     {{-- Tasks for this day --}}
-                                    @if (count($day['tasks']) > 0)
+                                    @if (count($day['tasks']) > 0 && $index !== 0)
                                         <div class="space-y-1 flex-1">
                                             {{-- Show max 4 tasks --}}
                                             @foreach (array_slice($day['tasks'], 0, 4) as $orderStage)
