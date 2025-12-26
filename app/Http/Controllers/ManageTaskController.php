@@ -257,7 +257,17 @@ class ManageTaskController extends Controller
 
         try {
             $orderStage = OrderStage::findOrFail($validated['order_stage_id']);
-            $orderStage->update(['status' => $validated['status']]);
+            
+            // If status is changed to pending, clear start_date and deadline
+            if ($validated['status'] === 'pending') {
+                $orderStage->update([
+                    'status' => $validated['status'],
+                    'start_date' => null,
+                    'deadline' => null,
+                ]);
+            } else {
+                $orderStage->update(['status' => $validated['status']]);
+            }
             
             // Auto-check if all stages are done and update order production status
             $order = $orderStage->order;

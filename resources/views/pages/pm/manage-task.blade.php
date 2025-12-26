@@ -859,6 +859,8 @@
                                                                         'stage_id' => $os->stage_id,
                                                                         'stage_name' => $os->productionStage->stage_name,
                                                                         'status' => $os->status,
+                                                                        'start_date' => $os->start_date?->format('d M Y'),
+                                                                        'deadline' => $os->deadline?->format('d M Y'),
                                                                     ],
                                                                 ),
                                                             ) }},
@@ -1293,7 +1295,8 @@
                         <h4 class="text-sm font-semibold text-gray-700 mb-3">Production Stages</h4>
                         <div class="space-y-3">
                             <template x-for="stage in (editStageData.orderStages || [])" :key="stage.id">
-                                <div class="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 transition-colors">
+                                <div class="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 transition-colors"
+                                    x-data="{ hasDate: stage?.start_date && stage?.deadline }">
                                     <div class="flex items-center justify-between">
                                         {{-- Stage Name & Current Status --}}
                                         <div class="flex items-center gap-3">
@@ -1340,7 +1343,7 @@
                                                 <span class="sm:hidden">P</span>
                                             </button>
                                             <button type="button" @click="changeStageStatus(stage?.id, 'in_progress')"
-                                                :disabled="isUpdatingStatus || {{ $isViewOnly ? 'true' : 'false' }}"
+                                                :disabled="isUpdatingStatus || {{ $isViewOnly ? 'true' : 'false' }} || !hasDate"
                                                 :class="[
                                                     stage?.status === 'in_progress' ? 'bg-blue-500 text-white' : 'bg-gray-200 hover:bg-blue-400 text-gray-700 hover:text-white',
                                                     pendingChanges[stage?.id] === 'in_progress' ? 'shadow-lg shadow-blue-500/50' : ''
@@ -1350,7 +1353,7 @@
                                                 <span class="sm:hidden">IP</span>
                                             </button>
                                             <button type="button" @click="changeStageStatus(stage?.id, 'done')"
-                                                :disabled="isUpdatingStatus || {{ $isViewOnly ? 'true' : 'false' }}"
+                                                :disabled="isUpdatingStatus || {{ $isViewOnly ? 'true' : 'false' }} || !hasDate"
                                                 :class="[
                                                     stage?.status === 'done' ? 'bg-primary text-white' : 'bg-gray-200 hover:bg-primary text-gray-700 hover:text-white',
                                                     pendingChanges[stage?.id] === 'done' ? 'shadow-lg shadow-primary/50' : ''
