@@ -1353,7 +1353,7 @@
                                                 <span class="sm:hidden">IP</span>
                                             </button>
                                             <button type="button" @click="changeStageStatus(stage?.id, 'done')"
-                                                :disabled="isUpdatingStatus || {{ $isViewOnly ? 'true' : 'false' }} || !hasDate"
+                                                :disabled="isUpdatingStatus || {{ $isViewOnly ? 'true' : 'false' }}"
                                                 :class="[
                                                     stage?.status === 'done' ? 'bg-primary text-white' : 'bg-gray-200 hover:bg-primary text-gray-700 hover:text-white',
                                                     pendingChanges[stage?.id] === 'done' ? 'shadow-lg shadow-primary/50' : ''
