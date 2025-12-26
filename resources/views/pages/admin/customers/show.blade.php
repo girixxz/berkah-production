@@ -1009,6 +1009,18 @@
                                 </div>
                             </div>
 
+                            {{-- Birth Date --}}
+                            <div>
+                                <p class="text-xs text-gray-500 font-medium">Birth Date</p>
+                                <p class="text-sm text-gray-700">
+                                    @if ($customer->birth_date)
+                                        {{ \Carbon\Carbon::parse($customer->birth_date)->format('d M Y') }}
+                                    @else
+                                        -
+                                    @endif
+                                </p>
+                            </div>
+
                             {{-- Location --}}
                             <div>
                                 <p class="text-xs text-gray-500 font-medium">Location</p>

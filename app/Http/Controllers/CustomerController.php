@@ -152,6 +152,9 @@ class CustomerController extends Controller
             $validated = $request->validateWithBag('addCustomer', [
                 'customer_name' => 'required|string|max:100',
                 'phone' => 'required|string|max:20',
+                'birth_day' => 'nullable|integer|min:1|max:31',
+                'birth_month' => 'nullable|string|in:January,February,March,April,May,June,July,August,September,October,November,December',
+                'birth_year' => 'nullable|integer|min:1900|max:' . date('Y'),
                 'province_id' => 'required|string',
                 'city_id' => 'required|string',
                 'district_id' => 'required|string',
@@ -166,6 +169,20 @@ class CustomerController extends Controller
                 'village_id.required' => 'Village is required.',
                 'address.required' => 'Address is required.',
             ]);
+
+            // Combine birth_day, birth_month, birth_year into birth_date
+            if ($request->filled('birth_day') && $request->filled('birth_month') && $request->filled('birth_year')) {
+                $monthMap = [
+                    'January' => 1, 'February' => 2, 'March' => 3, 'April' => 4,
+                    'May' => 5, 'June' => 6, 'July' => 7, 'August' => 8,
+                    'September' => 9, 'October' => 10, 'November' => 11, 'December' => 12
+                ];
+                $monthNum = $monthMap[$validated['birth_month']];
+                $validated['birth_date'] = sprintf('%04d-%02d-%02d', $validated['birth_year'], $monthNum, $validated['birth_day']);
+            }
+
+            // Remove temporary fields
+            unset($validated['birth_day'], $validated['birth_month'], $validated['birth_year']);
 
             $customer = Customer::create($validated);
 
@@ -197,6 +214,9 @@ class CustomerController extends Controller
             $validated = $request->validateWithBag('editCustomer', [
                 'customer_name' => 'required|string|max:100',
                 'phone' => 'required|string|max:20',
+                'birth_day' => 'nullable|integer|min:1|max:31',
+                'birth_month' => 'nullable|string|in:January,February,March,April,May,June,July,August,September,October,November,December',
+                'birth_year' => 'nullable|integer|min:1900|max:' . date('Y'),
                 'province_id' => 'required|string',
                 'city_id' => 'required|string',
                 'district_id' => 'required|string',
@@ -211,6 +231,23 @@ class CustomerController extends Controller
                 'village_id.required' => 'Village is required.',
                 'address.required' => 'Address is required.',
             ]);
+
+            // Combine birth_day, birth_month, birth_year into birth_date
+            if ($request->filled('birth_day') && $request->filled('birth_month') && $request->filled('birth_year')) {
+                $monthMap = [
+                    'January' => 1, 'February' => 2, 'March' => 3, 'April' => 4,
+                    'May' => 5, 'June' => 6, 'July' => 7, 'August' => 8,
+                    'September' => 9, 'October' => 10, 'November' => 11, 'December' => 12
+                ];
+                $monthNum = $monthMap[$validated['birth_month']];
+                $validated['birth_date'] = sprintf('%04d-%02d-%02d', $validated['birth_year'], $monthNum, $validated['birth_day']);
+            } else {
+                // If any field is empty, set birth_date to null
+                $validated['birth_date'] = null;
+            }
+
+            // Remove temporary fields
+            unset($validated['birth_day'], $validated['birth_month'], $validated['birth_year']);
 
             $customer->update($validated);
 

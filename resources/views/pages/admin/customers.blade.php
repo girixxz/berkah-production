@@ -21,9 +21,12 @@
     
         // For Add Customer
         addCustomerForm: {
-            customer_name: '',
-            phone: '',
-            address: ''
+            customer_name: '{{ old('customer_name') }}',
+            phone: '{{ old('phone') }}',
+            birth_day: '{{ old('birth_day') }}',
+            birth_month: '{{ old('birth_month') }}',
+            birth_year: '{{ old('birth_year') }}',
+            address: '{{ old('address') }}'
         },
         addCustomerErrors: {},
         addProvince: '{{ old('province_id') }}',
@@ -42,6 +45,9 @@
         editCities: [],
         editDistricts: [],
         editVillages: [],
+        editBirthDay: '',
+        editBirthMonth: '',
+        editBirthYear: '',
     
         // Client-side validation for Add Customer
         validateAddCustomer() {
@@ -268,6 +274,25 @@
         },
     
         async loadEditLocationData() {
+            // Reset birth date fields first
+            this.editBirthDay = '';
+            this.editBirthMonth = '';
+            this.editBirthYear = '';
+            
+            // Split birth_date into day, month, year if exists
+            if (this.editCustomer.birth_date) {
+                const birthParts = this.editCustomer.birth_date.split('-');
+                if (birthParts.length === 3) {
+                    this.editBirthYear = parseInt(birthParts[0]);
+                    const monthNames = [
+                        'January', 'February', 'March', 'April', 'May', 'June',
+                        'July', 'August', 'September', 'October', 'November', 'December'
+                    ];
+                    this.editBirthMonth = monthNames[parseInt(birthParts[1]) - 1];
+                    this.editBirthDay = parseInt(birthParts[2]);
+                }
+            }
+            
             if (this.editCustomer.province_id) {
                 this.editProvince = this.editCustomer.province_id;
                 await this.fetchCities(this.editCustomer.province_id, 'edit');
@@ -775,6 +800,111 @@
                                 @enderror
                             </div>
 
+                            {{-- Birth Date (Day, Month, Year) --}}
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Birth Date</label>
+                                <div class="grid grid-cols-3 gap-3">
+                                    {{-- Day Select --}}
+                                    <div x-data="{
+                                        open: false,
+                                        days: Array.from({length: 31}, (_, i) => i + 1)
+                                    }" class="relative w-full">
+                                        <button type="button" @click="open = !open"
+                                            class="w-full flex justify-between items-center rounded-md border border-gray-200 px-3 py-2 text-sm text-gray-700 bg-white focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors">
+                                            <span x-text="addCustomerForm.birth_day || 'Day'"
+                                                :class="!addCustomerForm.birth_day ? 'text-gray-400' : 'text-gray-900'"></span>
+                                            <svg class="w-4 h-4 text-gray-400 transition-transform" :class="open && 'rotate-180'" fill="none"
+                                                stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                                            </svg>
+                                        </button>
+                                        <input type="hidden" name="birth_day" x-model="addCustomerForm.birth_day">
+                                        <div x-show="open" @click.away="open = false" x-cloak x-transition
+                                            class="absolute z-20 mt-1 w-full bg-white border border-gray-200 rounded-md shadow-lg">
+                                            <ul class="max-h-60 overflow-y-auto py-1">
+                                                <template x-for="day in days" :key="day">
+                                                    <li @click="addCustomerForm.birth_day = day; open = false"
+                                                        class="px-4 py-2 cursor-pointer text-sm hover:bg-primary/5 transition-colors"
+                                                        :class="{ 'bg-primary/10 font-medium text-primary': addCustomerForm.birth_day == day }">
+                                                        <span x-text="day"></span>
+                                                    </li>
+                                                </template>
+                                            </ul>
+                                        </div>
+                                    </div>
+
+                                    {{-- Month Select --}}
+                                    <div x-data="{
+                                        open: false,
+                                        months: [
+                                            'January', 'February', 'March', 'April', 'May', 'June',
+                                            'July', 'August', 'September', 'October', 'November', 'December'
+                                        ]
+                                    }" class="relative w-full">
+                                        <button type="button" @click="open = !open"
+                                            class="w-full flex justify-between items-center rounded-md border border-gray-200 px-3 py-2 text-sm text-gray-700 bg-white focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors">
+                                            <span x-text="addCustomerForm.birth_month || 'Month'"
+                                                :class="!addCustomerForm.birth_month ? 'text-gray-400' : 'text-gray-900'"></span>
+                                            <svg class="w-4 h-4 text-gray-400 transition-transform" :class="open && 'rotate-180'" fill="none"
+                                                stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                                            </svg>
+                                        </button>
+                                        <input type="hidden" name="birth_month" x-model="addCustomerForm.birth_month">
+                                        <div x-show="open" @click.away="open = false" x-cloak x-transition
+                                            class="absolute z-20 mt-1 w-full bg-white border border-gray-200 rounded-md shadow-lg">
+                                            <ul class="max-h-60 overflow-y-auto py-1">
+                                                <template x-for="month in months" :key="month">
+                                                    <li @click="addCustomerForm.birth_month = month; open = false"
+                                                        class="px-4 py-2 cursor-pointer text-sm hover:bg-primary/5 transition-colors"
+                                                        :class="{ 'bg-primary/10 font-medium text-primary': addCustomerForm.birth_month === month }">
+                                                        <span x-text="month"></span>
+                                                    </li>
+                                                </template>
+                                            </ul>
+                                        </div>
+                                    </div>
+
+                                    {{-- Year Select --}}
+                                    <div x-data="{
+                                        open: false,
+                                        years: Array.from({length: {{ date('Y') }} - 1900 + 1}, (_, i) => {{ date('Y') }} - i)
+                                    }" class="relative w-full">
+                                        <button type="button" @click="open = !open"
+                                            class="w-full flex justify-between items-center rounded-md border border-gray-200 px-3 py-2 text-sm text-gray-700 bg-white focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors">
+                                            <span x-text="addCustomerForm.birth_year || 'Year'"
+                                                :class="!addCustomerForm.birth_year ? 'text-gray-400' : 'text-gray-900'"></span>
+                                            <svg class="w-4 h-4 text-gray-400 transition-transform" :class="open && 'rotate-180'" fill="none"
+                                                stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                                            </svg>
+                                        </button>
+                                        <input type="hidden" name="birth_year" x-model="addCustomerForm.birth_year">
+                                        <div x-show="open" @click.away="open = false" x-cloak x-transition
+                                            class="absolute z-20 mt-1 w-full bg-white border border-gray-200 rounded-md shadow-lg">
+                                            <ul class="max-h-60 overflow-y-auto py-1">
+                                                <template x-for="year in years" :key="year">
+                                                    <li @click="addCustomerForm.birth_year = year; open = false"
+                                                        class="px-4 py-2 cursor-pointer text-sm hover:bg-primary/5 transition-colors"
+                                                        :class="{ 'bg-primary/10 font-medium text-primary': addCustomerForm.birth_year == year }">
+                                                        <span x-text="year"></span>
+                                                    </li>
+                                                </template>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </div>
+                                @error('birth_day', 'addCustomer')
+                                    <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                                @enderror
+                                @error('birth_month', 'addCustomer')
+                                    <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                                @enderror
+                                @error('birth_year', 'addCustomer')
+                                    <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                                @enderror
+                            </div>
+
                             {{-- Province --}}
                             <div x-data="{
                                     open: false,
@@ -1068,6 +1198,111 @@
                                             'phone'),
                                     ]) />
                                 @error('phone', 'editCustomer')
+                                    <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                                @enderror
+                            </div>
+
+                            {{-- Birth Date (Day, Month, Year) --}}
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Birth Date</label>
+                                <div class="grid grid-cols-3 gap-3">
+                                    {{-- Day Select --}}
+                                    <div x-data="{
+                                        open: false,
+                                        days: Array.from({length: 31}, (_, i) => i + 1)
+                                    }" class="relative w-full">
+                                        <button type="button" @click="open = !open"
+                                            class="w-full flex justify-between items-center rounded-md border border-gray-200 px-3 py-2 text-sm text-gray-700 bg-white focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors">
+                                            <span x-text="editBirthDay || 'Day'"
+                                                :class="!editBirthDay ? 'text-gray-400' : 'text-gray-900'"></span>
+                                            <svg class="w-4 h-4 text-gray-400 transition-transform" :class="open && 'rotate-180'" fill="none"
+                                                stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                                            </svg>
+                                        </button>
+                                        <input type="hidden" name="birth_day" x-model="editBirthDay">
+                                        <div x-show="open" @click.away="open = false" x-cloak x-transition
+                                            class="absolute z-20 mt-1 w-full bg-white border border-gray-200 rounded-md shadow-lg">
+                                            <ul class="max-h-60 overflow-y-auto py-1">
+                                                <template x-for="day in days" :key="day">
+                                                    <li @click="editBirthDay = day; open = false"
+                                                        class="px-4 py-2 cursor-pointer text-sm hover:bg-primary/5 transition-colors"
+                                                        :class="{ 'bg-primary/10 font-medium text-primary': editBirthDay == day }">
+                                                        <span x-text="day"></span>
+                                                    </li>
+                                                </template>
+                                            </ul>
+                                        </div>
+                                    </div>
+
+                                    {{-- Month Select --}}
+                                    <div x-data="{
+                                        open: false,
+                                        months: [
+                                            'January', 'February', 'March', 'April', 'May', 'June',
+                                            'July', 'August', 'September', 'October', 'November', 'December'
+                                        ]
+                                    }" class="relative w-full">
+                                        <button type="button" @click="open = !open"
+                                            class="w-full flex justify-between items-center rounded-md border border-gray-200 px-3 py-2 text-sm text-gray-700 bg-white focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors">
+                                            <span x-text="editBirthMonth || 'Month'"
+                                                :class="!editBirthMonth ? 'text-gray-400' : 'text-gray-900'"></span>
+                                            <svg class="w-4 h-4 text-gray-400 transition-transform" :class="open && 'rotate-180'" fill="none"
+                                                stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                                            </svg>
+                                        </button>
+                                        <input type="hidden" name="birth_month" x-model="editBirthMonth">
+                                        <div x-show="open" @click.away="open = false" x-cloak x-transition
+                                            class="absolute z-20 mt-1 w-full bg-white border border-gray-200 rounded-md shadow-lg">
+                                            <ul class="max-h-60 overflow-y-auto py-1">
+                                                <template x-for="month in months" :key="month">
+                                                    <li @click="editBirthMonth = month; open = false"
+                                                        class="px-4 py-2 cursor-pointer text-sm hover:bg-primary/5 transition-colors"
+                                                        :class="{ 'bg-primary/10 font-medium text-primary': editBirthMonth === month }">
+                                                        <span x-text="month"></span>
+                                                    </li>
+                                                </template>
+                                            </ul>
+                                        </div>
+                                    </div>
+
+                                    {{-- Year Select --}}
+                                    <div x-data="{
+                                        open: false,
+                                        years: Array.from({length: {{ date('Y') }} - 1900 + 1}, (_, i) => {{ date('Y') }} - i)
+                                    }" class="relative w-full">
+                                        <button type="button" @click="open = !open"
+                                            class="w-full flex justify-between items-center rounded-md border border-gray-200 px-3 py-2 text-sm text-gray-700 bg-white focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors">
+                                            <span x-text="editBirthYear || 'Year'"
+                                                :class="!editBirthYear ? 'text-gray-400' : 'text-gray-900'"></span>
+                                            <svg class="w-4 h-4 text-gray-400 transition-transform" :class="open && 'rotate-180'" fill="none"
+                                                stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                                            </svg>
+                                        </button>
+                                        <input type="hidden" name="birth_year" x-model="editBirthYear">
+                                        <div x-show="open" @click.away="open = false" x-cloak x-transition
+                                            class="absolute z-20 mt-1 w-full bg-white border border-gray-200 rounded-md shadow-lg">
+                                            <ul class="max-h-60 overflow-y-auto py-1">
+                                                <template x-for="year in years" :key="year">
+                                                    <li @click="editBirthYear = year; open = false"
+                                                        class="px-4 py-2 cursor-pointer text-sm hover:bg-primary/5 transition-colors"
+                                                        :class="{ 'bg-primary/10 font-medium text-primary': editBirthYear == year }">
+                                                        <span x-text="year"></span>
+                                                    </li>
+                                                </template>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </div>
+                                @error('birth_day', 'editCustomer')
+                                    <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                                @enderror
+                                @error('birth_month', 'editCustomer')
+                                    <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                                @enderror
+                                @error('birth_year', 'editCustomer')
                                     <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                                 @enderror
                             </div>

@@ -11,11 +11,16 @@ class Customer extends Model
     protected $fillable = [
         'customer_name',
         'phone',
+        'birth_date',
         'province_id',
         'city_id',
         'district_id',
         'village_id',
         'address',
+    ];
+
+    protected $casts = [
+        'birth_date' => 'date',
     ];
 
     /**
