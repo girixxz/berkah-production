@@ -134,12 +134,16 @@
                 this.editEmployee.birth_year = '';
             }
             
-            // Split work_date into work_month and work_year
+            // Split work_date into work_day, work_month, work_year (format: YYYY-MM-DD)
             if (employee.work_date) {
-                const parts = employee.work_date.split(' ');
-                this.editEmployee.work_month = parts[0] || '';
-                this.editEmployee.work_year = parts[1] || '';
+                const workParts = employee.work_date.split('-');
+                this.editEmployee.work_year = workParts[0] || '';
+                const workMonthNum = parseInt(workParts[1]);
+                const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+                this.editEmployee.work_month = months[workMonthNum - 1] || '';
+                this.editEmployee.work_day = parseInt(workParts[2]) || '';
             } else {
+                this.editEmployee.work_day = '';
                 this.editEmployee.work_month = '';
                 this.editEmployee.work_year = '';
             }
@@ -178,9 +182,11 @@
                                 <th class="py-2 px-4 text-left rounded-l-md w-16">No</th>
                                 <th class="py-2 px-4 text-left w-40">Fullname</th>
                                 <th class="py-2 px-4 text-left w-32">Birth Date</th>
-                                <th class="py-2 px-4 text-left w-32">Work Date</th>
+                                <th class="py-2 px-4 text-left w-24">Gender</th>
                                 <th class="py-2 px-4 text-left w-24">Dress Size</th>
                                 <th class="py-2 px-4 text-left w-36">Salary System</th>
+                                <th class="py-2 px-4 text-left w-32">Work Date</th>
+                                <th class="py-2 px-4 text-left w-36">Work Duration</th>
                                 <th class="py-2 px-4 text-left w-64">Address</th>
                                 <th class="py-2 px-4 text-right rounded-r-md w-20">Action</th>
                             </tr>
@@ -207,7 +213,7 @@
                                             -
                                         @endif
                                     </td>
-                                    <td class="py-2 px-4">{{ $employee->work_date ?? '-' }}</td>
+                                    <td class="py-2 px-4">{{ $employee->gender ?? '-' }}</td>
                                     <td class="py-2 px-4">{{ $employee->dress_size ?? '-' }}</td>
                                     <td class="py-2 px-4">
                                         @if($employee->salary_system && $employee->salary_cycle)
@@ -215,6 +221,30 @@
                                         @else
                                             {{ $employee->salary_system ?? '-' }}
                                         @endif
+                                    </td>
+                                    <td class="py-2 px-4">
+                                        @if($employee->work_date)
+                                            {{ \Carbon\Carbon::parse($employee->work_date)->format('d M Y') }}
+                                        @else
+                                            -
+                                        @endif
+                                    </td>
+                                    <td class="py-2 px-4">
+                                        @php
+                                            if ($employee->work_date) {
+                                                try {
+                                                    $workDate = \Carbon\Carbon::parse($employee->work_date);
+                                                    $now = \Carbon\Carbon::now();
+                                                    $diffInMonths = (int) $workDate->diffInMonths($now);
+                                                    $diffInDays = (int) $workDate->copy()->addMonths($diffInMonths)->diffInDays($now);
+                                                    echo $diffInMonths . ' Month ' . $diffInDays . ' Day';
+                                                } catch (\Exception $e) {
+                                                    echo '-';
+                                                }
+                                            } else {
+                                                echo '-';
+                                            }
+                                        @endphp
                                     </td>
                                     <td class="py-2 px-4 max-w-64">
                                         <div class="truncate" title="{{ $employee->address ?? '-' }}">
@@ -312,7 +342,7 @@
                                 </tr>
                             @empty
                                 <tr x-show="searchEmployee.trim() === ''">
-                                    <td colspan="8"
+                                    <td colspan="10"
                                         class="py-3 px-4 text-center text-red-500 border-t border-gray-200">
                                         No Employees found.
                                     </td>
@@ -333,7 +363,7 @@
                                             -
                                         @endif
                                     </td>
-                                    <td class="py-2 px-4">{{ $employee->work_date ?? '-' }}</td>
+                                    <td class="py-2 px-4">{{ $employee->gender ?? '-' }}</td>
                                     <td class="py-2 px-4">{{ $employee->dress_size ?? '-' }}</td>
                                     <td class="py-2 px-4">
                                         @if($employee->salary_system && $employee->salary_cycle)
@@ -341,6 +371,30 @@
                                         @else
                                             {{ $employee->salary_system ?? '-' }}
                                         @endif
+                                    </td>
+                                    <td class="py-2 px-4">
+                                        @if($employee->work_date)
+                                            {{ \Carbon\Carbon::parse($employee->work_date)->format('d M Y') }}
+                                        @else
+                                            -
+                                        @endif
+                                    </td>
+                                    <td class="py-2 px-4">
+                                        @php
+                                            if ($employee->work_date) {
+                                                try {
+                                                    $workDate = \Carbon\Carbon::parse($employee->work_date);
+                                                    $now = \Carbon\Carbon::now();
+                                                    $diffInMonths = (int) $workDate->diffInMonths($now);
+                                                    $diffInDays = (int) $workDate->copy()->addMonths($diffInMonths)->diffInDays($now);
+                                                    echo $diffInMonths . ' Month ' . $diffInDays . ' Day';
+                                                } catch (\Exception $e) {
+                                                    echo '-';
+                                                }
+                                            } else {
+                                                echo '-';
+                                            }
+                                        @endphp
                                     </td>
                                     <td class="py-2 px-4 max-w-64">
                                         <div class="truncate" title="{{ $employee->address ?? '-' }}">
@@ -434,7 +488,7 @@
                             @endforeach
 
                             <tr x-show="searchEmployee.trim() !== '' && !hasResults">
-                                <td colspan="8" class="py-3 px-4 text-center text-red-500 border-t border-gray-200">
+                                <td colspan="10" class="py-3 px-4 text-center text-red-500 border-t border-gray-200">
                                     No results found for "<span x-text="searchEmployee"></span>"
                                 </td>
                             </tr>
@@ -624,10 +678,83 @@
                         @enderror
                     </div>
 
-                    {{-- Work Date (Month & Year) --}}
+                    {{-- Gender --}}
+                    <div class="relative">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Gender</label>
+                        <div x-data="{
+                            open: false,
+                            genders: ['Male', 'Female']
+                        }" class="relative w-full">
+                            <button type="button" @click="open = !open"
+                                class="w-full flex justify-between items-center rounded-md border border-gray-200 px-3 py-2 text-sm text-gray-700 bg-white focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors">
+                                <span x-text="editEmployee.gender || '-- Select --'"
+                                    :class="!editEmployee.gender ? 'text-gray-400' : 'text-gray-900'"></span>
+                                <svg class="w-4 h-4 text-gray-400 transition-transform" :class="open && 'rotate-180'" fill="none"
+                                    stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                                </svg>
+                            </button>
+                            <input type="hidden" name="gender" x-model="editEmployee.gender">
+                            <div x-show="open" @click.away="open = false" x-cloak x-transition:enter="transition ease-out duration-100"
+                                x-transition:enter-start="opacity-0 scale-95" x-transition:enter-end="opacity-100 scale-100"
+                                x-transition:leave="transition ease-in duration-75" x-transition:leave-start="opacity-100 scale-100"
+                                x-transition:leave-end="opacity-0 scale-95"
+                                class="absolute z-20 mt-1 w-full bg-white border border-gray-200 rounded-md shadow-lg">
+                                <ul class="max-h-60 overflow-y-auto py-1">
+                                    <template x-for="gender in genders" :key="gender">
+                                        <li @click="editEmployee.gender = gender; open = false"
+                                            class="px-4 py-2 cursor-pointer text-sm hover:bg-primary/5 transition-colors"
+                                            :class="{ 'bg-primary/10 font-medium text-primary': editEmployee.gender === gender }">
+                                            <span x-text="gender"></span>
+                                        </li>
+                                    </template>
+                                </ul>
+                            </div>
+                        </div>
+                        @error('gender', 'editEmployee')
+                            <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                        @enderror
+                    </div>
+
+                    {{-- Work Date (Day, Month & Year) --}}
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1">Work Date <span class="text-red-500">*</span></label>
-                        <div class="grid grid-cols-2 gap-3">
+                        <div class="grid grid-cols-3 gap-3">
+                            {{-- Day Select --}}
+                            <div x-data="{
+                                open: false,
+                                days: Array.from({length: 31}, (_, i) => i + 1)
+                            }" class="relative w-full">
+                                <button type="button" @click="open = !open"
+                                    :class="editEmployeeErrors.work_day ? 'border-red-500' : 'border-gray-200'"
+                                    class="w-full flex justify-between items-center rounded-md border px-3 py-2 text-sm text-gray-700 bg-white focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors">
+                                    <span x-text="editEmployee.work_day || 'Day'"
+                                        :class="!editEmployee.work_day ? 'text-gray-400' : 'text-gray-900'"></span>
+                                    <svg class="w-4 h-4 text-gray-400 transition-transform" :class="open && 'rotate-180'" fill="none"
+                                        stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                                    </svg>
+                                </button>
+                                <input type="hidden" name="work_day" x-model="editEmployee.work_day">
+                                <div x-show="open" @click.away="open = false" x-cloak x-transition:enter="transition ease-out duration-100"
+                                    x-transition:enter-start="opacity-0 scale-95" x-transition:enter-end="opacity-100 scale-100"
+                                    x-transition:leave="transition ease-in duration-75" x-transition:leave-start="opacity-100 scale-100"
+                                    x-transition:leave-end="opacity-0 scale-95"
+                                    class="absolute z-20 mt-1 w-full bg-white border border-gray-200 rounded-md shadow-lg">
+                                    <ul class="max-h-60 overflow-y-auto py-1">
+                                        <template x-for="day in days" :key="day">
+                                            <li @click="editEmployee.work_day = day; open = false"
+                                                class="px-4 py-2 cursor-pointer text-sm hover:bg-primary/5 transition-colors"
+                                                :class="{ 'bg-primary/10 font-medium text-primary': editEmployee.work_day == day }">
+                                                <span x-text="day"></span>
+                                            </li>
+                                        </template>
+                                    </ul>
+                                </div>
+                                <p x-show="editEmployeeErrors.work_day" x-text="editEmployeeErrors.work_day"
+                                    class="mt-1 text-sm text-red-600"></p>
+                            </div>
+
                             {{-- Month Select --}}
                             <div x-data="{
                                 open: false,
@@ -703,6 +830,9 @@
                                     class="mt-1 text-sm text-red-600"></p>
                             </div>
                         </div>
+                        @error('work_day', 'editEmployee')
+                            <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                        @enderror
                         @error('work_month', 'editEmployee')
                             <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                         @enderror
