@@ -12,7 +12,7 @@
         searchQuery: '{{ request('search') }}',
         startDate: '{{ $startDate ? $startDate->format('Y-m-d') : '' }}',
         endDate: '{{ $endDate ? $endDate->format('Y-m-d') : '' }}',
-        dateRange: '{{ $dateRange ?? 'this_month' }}',
+        dateRange: '{{ $dateRange ?? '' }}',
         showDateFilter: false,
         showDateCustomRange: false,
         datePreset: '',
@@ -38,41 +38,20 @@
             return false;
         },
         getDateLabel() {
-            if (this.dateRange === 'last_month') return 'Last Month';
-            if (this.dateRange === 'last_7_days') return 'Last 7 Days';
-            if (this.dateRange === 'yesterday') return 'Yesterday';
-            if (this.dateRange === 'today') return 'Today';
+            if (this.dateRange === 'default') return 'Default';
             if (this.dateRange === 'this_month') return 'This Month';
+            if (this.dateRange === 'last_month') return 'Last Month';
             if (this.dateRange === 'custom' && this.startDate && this.endDate) return 'Custom Date';
             return 'Date';
         },
         applyDatePreset(preset) {
             const today = new Date();
-            if (preset === 'last-month') {
-                const lastMonth = new Date(today.getFullYear(), today.getMonth() - 1, 1);
-                const lastMonthEnd = new Date(today.getFullYear(), today.getMonth(), 0);
-                this.startDate = lastMonth.toISOString().split('T')[0];
-                this.endDate = lastMonthEnd.toISOString().split('T')[0];
-                this.dateRange = 'last_month';
-                this.applyFilter();
-            } else if (preset === '1-week-ago') {
-                const oneWeekAgo = new Date(today);
-                oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
-                this.startDate = oneWeekAgo.toISOString().split('T')[0];
+            if (preset === 'default') {
+                const fortyFiveDaysAgo = new Date(today);
+                fortyFiveDaysAgo.setDate(fortyFiveDaysAgo.getDate() - 45);
+                this.startDate = fortyFiveDaysAgo.toISOString().split('T')[0];
                 this.endDate = today.toISOString().split('T')[0];
-                this.dateRange = 'last_7_days';
-                this.applyFilter();
-            } else if (preset === 'yesterday') {
-                const yesterday = new Date(today);
-                yesterday.setDate(yesterday.getDate() - 1);
-                this.startDate = yesterday.toISOString().split('T')[0];
-                this.endDate = yesterday.toISOString().split('T')[0];
-                this.dateRange = 'yesterday';
-                this.applyFilter();
-            } else if (preset === 'today') {
-                this.startDate = today.toISOString().split('T')[0];
-                this.endDate = today.toISOString().split('T')[0];
-                this.dateRange = 'today';
+                this.dateRange = 'default';
                 this.applyFilter();
             } else if (preset === 'this-month') {
                 const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
@@ -80,6 +59,13 @@
                 this.startDate = firstDay.toISOString().split('T')[0];
                 this.endDate = lastDay.toISOString().split('T')[0];
                 this.dateRange = 'this_month';
+                this.applyFilter();
+            } else if (preset === 'last-month') {
+                const lastMonth = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+                const lastMonthEnd = new Date(today.getFullYear(), today.getMonth(), 0);
+                this.startDate = lastMonth.toISOString().split('T')[0];
+                this.endDate = lastMonthEnd.toISOString().split('T')[0];
+                this.dateRange = 'last_month';
                 this.applyFilter();
             } else if (preset === 'custom') {
                 this.showDateCustomRange = true;
@@ -96,6 +82,10 @@
             if (this.dateRange) params.set('date_range', this.dateRange);
             if (this.startDate) params.set('start_date', this.startDate);
             if (this.endDate) params.set('end_date', this.endDate);
+            
+            // Include per_page parameter
+            const perPageValue = this.getPerPageValue();
+            if (perPageValue) params.set('per_page', perPageValue);
             
             const url = '{{ route('highlights') }}?' + params.toString();
             
@@ -127,6 +117,10 @@
                 console.error('Error:', error);
                 NProgress.done();
             });
+        },
+        getPerPageValue() {
+            const urlParams = new URLSearchParams(window.location.search);
+            return urlParams.get('per_page') || '25';
         }
     }" class="space-y-6">
 
@@ -232,6 +226,97 @@
                                 </div>
                             </div>
 
+                            {{-- Show Per Page Dropdown --}}
+                            <div x-data="{
+                                open: false,
+                                perPage: {{ request('per_page', 25) }},
+                                options: [
+                                    { value: 5, label: '5' },
+                                    { value: 10, label: '10' },
+                                    { value: 15, label: '15' },
+                                    { value: 20, label: '20' },
+                                    { value: 25, label: '25' },
+                                    { value: 50, label: '50' },
+                                    { value: 100, label: '100' }
+                                ],
+                                get selected() {
+                                    return this.options.find(o => o.value === this.perPage) || this.options[4];
+                                },
+                                selectOption(option) {
+                                    this.perPage = option.value;
+                                    this.open = false;
+                                    this.applyPerPageFilter();
+                                },
+                                applyPerPageFilter() {
+                                    // Build URL with all existing params + per_page
+                                    const params = new URLSearchParams(window.location.search);
+                                    params.set('per_page', this.perPage);
+                                    params.delete('page'); // Reset to page 1
+                                    
+                                    const url = '{{ route('highlights') }}?' + params.toString();
+                                    
+                                    // Update URL without reload
+                                    window.history.pushState({}, '', url);
+                                    
+                                    // Fetch content via AJAX with loading bar
+                                    NProgress.start();
+                                    
+                                    fetch(url, {
+                                        headers: {
+                                            'X-Requested-With': 'XMLHttpRequest'
+                                        }
+                                    })
+                                    .then(response => response.text())
+                                    .then(html => {
+                                        const parser = new DOMParser();
+                                        const doc = parser.parseFromString(html, 'text/html');
+                                        const newSection = doc.getElementById('highlights-section');
+                                        
+                                        if (newSection) {
+                                            document.getElementById('highlights-section').innerHTML = newSection.innerHTML;
+                                            setupPagination('highlights-pagination-container', 'highlights-section');
+                                        }
+                                        
+                                        NProgress.done();
+                                    })
+                                    .catch(error => {
+                                        console.error('Error:', error);
+                                        NProgress.done();
+                                    });
+                                }
+                            }" class="relative flex-shrink-0">
+                                {{-- Trigger Button --}}
+                                <button type="button" @click="open = !open"
+                                    class="w-15 flex justify-between items-center rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 bg-white
+                                        focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors">
+                                    <span x-text="selected.label"></span>
+                                    <svg class="w-3 h-3 text-gray-400 transition-transform" :class="open && 'rotate-180'" fill="none"
+                                        stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                                    </svg>
+                                </button>
+
+                                {{-- Dropdown --}}
+                                <div x-show="open" @click.away="open = false" x-cloak 
+                                    x-transition:enter="transition ease-out duration-100"
+                                    x-transition:enter-start="opacity-0 scale-95" 
+                                    x-transition:enter-end="opacity-100 scale-100"
+                                    x-transition:leave="transition ease-in duration-75" 
+                                    x-transition:leave-start="opacity-100 scale-100"
+                                    x-transition:leave-end="opacity-0 scale-95"
+                                    class="absolute z-20 mt-1 w-18 bg-white border border-gray-200 rounded-md shadow-lg">
+                                    <ul class="max-h-60 overflow-y-auto py-1">
+                                        <template x-for="option in options" :key="option.value">
+                                            <li @click="selectOption(option)"
+                                                class="px-4 py-2 cursor-pointer text-sm hover:bg-primary/5 transition-colors"
+                                                :class="{ 'bg-primary/10 font-medium text-primary': perPage === option.value }">
+                                                <span x-text="option.label"></span>
+                                            </li>
+                                        </template>
+                                    </ul>
+                                </div>
+                            </div>
+
                             {{-- Date Filter - Icon only di mobile, with text di desktop --}}
                             <div class="relative flex-shrink-0">
                                 <button type="button" @click="showDateFilter = !showDateFilter"
@@ -253,35 +338,23 @@
 
                                     {{-- Main Preset Options --}}
                                     <div x-show="!showDateCustomRange" class="p-2">
-                                        <button @click="applyDatePreset('last-month')" type="button"
-                                            :class="dateRange === 'last_month' ? 'bg-primary/10 text-primary font-medium' :
+                                        <button @click="applyDatePreset('default')" type="button"
+                                            :class="dateRange === 'default' ? 'bg-primary/10 text-primary font-medium' :
                                                 'text-gray-700 hover:bg-gray-50'"
                                             class="w-full text-left px-4 py-2.5 text-sm rounded-md transition-colors">
-                                            Last Month
-                                        </button>
-                                        <button @click="applyDatePreset('1-week-ago')" type="button"
-                                            :class="dateRange === 'last_7_days' ? 'bg-primary/10 text-primary font-medium' :
-                                                'text-gray-700 hover:bg-gray-50'"
-                                            class="w-full text-left px-4 py-2.5 text-sm rounded-md transition-colors">
-                                            Last 7 Days
-                                        </button>
-                                        <button @click="applyDatePreset('yesterday')" type="button"
-                                            :class="dateRange === 'yesterday' ? 'bg-primary/10 text-primary font-medium' :
-                                                'text-gray-700 hover:bg-gray-50'"
-                                            class="w-full text-left px-4 py-2.5 text-sm rounded-md transition-colors">
-                                            Yesterday
-                                        </button>
-                                        <button @click="applyDatePreset('today')" type="button"
-                                            :class="dateRange === 'today' ? 'bg-primary/10 text-primary font-medium' :
-                                                'text-gray-700 hover:bg-gray-50'"
-                                            class="w-full text-left px-4 py-2.5 text-sm rounded-md transition-colors">
-                                            Today
+                                            Default
                                         </button>
                                         <button @click="applyDatePreset('this-month')" type="button"
                                             :class="dateRange === 'this_month' ? 'bg-primary/10 text-primary font-medium' :
                                                 'text-gray-700 hover:bg-gray-50'"
                                             class="w-full text-left px-4 py-2.5 text-sm rounded-md transition-colors">
                                             This Month
+                                        </button>
+                                        <button @click="applyDatePreset('last-month')" type="button"
+                                            :class="dateRange === 'last_month' ? 'bg-primary/10 text-primary font-medium' :
+                                                'text-gray-700 hover:bg-gray-50'"
+                                            class="w-full text-left px-4 py-2.5 text-sm rounded-md transition-colors">
+                                            Last Month
                                         </button>
                                         <div class="border-t border-gray-200 my-2"></div>
                                         <button @click="applyDatePreset('custom')" type="button"
@@ -502,12 +575,174 @@
                                     </td>
                                 </tr>
                             @empty
-                                <tr x-show="!searchQuery">
+                                <tr x-show="searchQuery.trim() === ''">
                                     <td colspan="5" class="py-8 text-center text-gray-500">
                                         No orders found
                                     </td>
                                 </tr>
                             @endforelse
+                            
+                            {{-- Search Results from All Orders --}}
+                            @foreach ($allOrders as $order)
+                                @php
+                                    $startDate = $order->wip_date ?? $order->order_date;
+                                    $deadline = $order->deadline;
+                                    $now = now();
+                                    
+                                    $totalDuration = round($startDate->diffInDays($deadline));
+                                    $daysRemaining = round($now->diffInDays($deadline, false));
+                                    
+                                    // Calculate progress based on completed stages
+                                    $totalStages = $order->orderStages->count();
+                                    $completedStages = $order->orderStages->where('status', 'done')->count();
+                                    $percentage = $totalStages > 0 ? round(($completedStages / $totalStages) * 100) : 0;
+                                    
+                                    $totalDesigns = $order->designVariants->count();
+                                @endphp
+                                <tr class="border-t border-gray-200 hover:bg-gray-50" x-data="{ showImageModal: false }"
+                                    x-show="searchQuery.trim() !== '' && (
+                                        '{{ strtolower($order->invoice->invoice_no ?? '') }}'.includes(searchQuery.toLowerCase()) ||
+                                        '{{ strtolower($order->customer->customer_name ?? '') }}'.includes(searchQuery.toLowerCase()) ||
+                                        '{{ strtolower($order->productCategory->product_name ?? '') }}'.includes(searchQuery.toLowerCase())
+                                    )"
+                                    data-invoice="{{ $order->invoice->invoice_no ?? '' }}"
+                                    data-customer="{{ $order->customer->customer_name ?? '' }}"
+                                    data-product="{{ $order->productCategory->product_name ?? '' }}">
+                                    {{-- Mockup Column --}}
+                                    <td class="py-2 px-2 text-left">
+                                        <div @click="showImageModal = true" 
+                                             class="inline-block w-40 h-25 bg-gray-100 rounded-lg overflow-hidden border border-gray-200 cursor-pointer hover:opacity-80 transition-opacity">
+                                            @if ($order->img_url)
+                                                <img src="{{ route('orders.serve-image', $order) }}" alt="Order Image" 
+                                                     class="w-full h-full object-cover">
+                                            @else
+                                                <div class="w-full h-full flex items-center justify-center">
+                                                    <svg class="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                                    </svg>
+                                                </div>
+                                            @endif
+                                        </div>
+                                    </td>
+
+                                    {{-- Orders Column - Info Only --}}
+                                    <td class="py-2 px-2">
+                                        <div class="space-y-0.5">
+                                            <div>
+                                                <span class="inline-block w-16 text-xs text-gray-500">CUSTOMER</span>
+                                                <span class="text-xs text-gray-500">:</span>
+                                                <span class="ml-1 text-sm font-bold text-gray-900">
+                                                    {{ $order->customer->customer_name ?? '-' }}
+                                                    @if (isset($order->priority) && strtolower($order->priority) === 'high')
+                                                        <span class="text-xs font-semibold text-red-600 italic">(HIGH)</span>
+                                                    @endif
+                                                </span>
+                                            </div>
+                                            
+                                            <div>
+                                                <span class="inline-block w-16 text-xs text-gray-500">PRODUCT</span>
+                                                <span class="text-xs text-gray-500">:</span>
+                                                <span class="ml-1 text-sm font-semibold text-gray-900">{{ $order->productCategory->product_name ?? '-' }}</span>
+                                            </div>
+                                            
+                                            <div>
+                                                <span class="inline-block w-16 text-xs text-gray-500">INVOICE</span>
+                                                <span class="text-xs text-gray-500">:</span>
+                                                <span class="ml-1 text-sm text-gray-700">{{ $order->invoice->invoice_no ?? 'N/A' }}</span>
+                                            </div>
+                                            
+                                            <div>
+                                                <span class="inline-block w-16 text-xs text-gray-500">MATERIAL</span>
+                                                <span class="text-xs text-gray-500">:</span>
+                                                <span class="ml-1 text-sm text-gray-700">{{ $order->materialCategory->material_name ?? '-' }} {{ $order->materialTexture->texture_name ?? '' }}</span>
+                                            </div>
+                                            
+                                            <div>
+                                                <span class="inline-block w-16 text-xs text-gray-500">QTY</span>
+                                                <span class="text-xs text-gray-500">:</span>
+                                                <span class="ml-1 text-sm font-semibold text-gray-900">{{ number_format($order->total_qty) }} pcs</span>
+                                            </div>
+                                        </div>
+
+                                        {{-- Image Modal --}}
+                                        @if ($order->img_url)
+                                            <div x-show="showImageModal" 
+                                                 x-cloak
+                                                 @click="showImageModal = false"
+                                                 class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+                                                <div @click.stop class="relative max-w-4xl max-h-[90vh]">
+                                                    <button @click="showImageModal = false" 
+                                                            class="absolute -top-10 right-0 text-white hover:text-gray-300">
+                                                        <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                                                        </svg>
+                                                    </button>
+                                                    <img src="{{ route('orders.serve-image', $order) }}" 
+                                                         alt="Order Image Full" 
+                                                         class="max-w-full max-h-[90vh] object-contain rounded-lg shadow-2xl">
+                                                </div>
+                                            </div>
+                                        @endif
+                                    </td>
+
+                                    {{-- Total Design Column --}}
+                                    <td class="py-2 px-2 text-center">
+                                        <div class="inline-flex items-center justify-center w-9 h-9 bg-gray-100 rounded-full">
+                                            <span class="text-sm font-bold text-gray-600">{{ $totalDesigns }}</span>
+                                        </div>
+                                        <p class="text-xs text-gray-500 mt-0.5">Design</p>
+                                    </td>
+
+                                    {{-- Info Progress Column --}}
+                                    <td class="py-2 px-2">
+                                        <div class="space-y-1">
+                                            {{-- Days Left Info - Above Progress Bar in One Line --}}
+                                            <div class="flex items-center justify-between text-xs">
+                                                <span class="text-gray-500">{{ $startDate->format('d M') }}</span>
+                                                @if ($daysRemaining > 0)
+                                                    <span class="text-orange-600 font-medium">{{ $daysRemaining }} days left</span>
+                                                @elseif ($daysRemaining === 0)
+                                                    <span class="text-orange-600 font-medium">Due today</span>
+                                                @else
+                                                    <span class="text-red-600 font-medium">{{ abs($daysRemaining) }} days overdue</span>
+                                                @endif
+                                                <span class="text-gray-500">{{ $deadline->format('d M') }}</span>
+                                            </div>
+
+                                            {{-- Progress Bar --}}
+                                            <div class="flex items-center gap-2">
+                                                <div class="flex-1 bg-gray-200 rounded-full h-2 overflow-hidden">
+                                                    <div class="bg-primary h-full rounded-full transition-all duration-300"
+                                                        style="width: {{ $percentage }}%"></div>
+                                                </div>
+                                                <span class="text-xs font-medium text-gray-600 min-w-[30px] text-right">{{ $percentage }}%</span>
+                                            </div>
+
+                                            {{-- Total Duration --}}
+                                            <div class="text-center text-xs text-gray-500">
+                                                / {{ $totalDuration }} days total
+                                            </div>
+                                        </div>
+                                    </td>
+
+                                    {{-- Status Column --}}
+                                    <td class="py-2 px-2 text-center">
+                                        @if ($order->production_status === 'wip')
+                                            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-semibold">
+                                                WIP
+                                            </span>
+                                        @else
+                                            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 bg-green-100 text-green-700 rounded-full text-xs font-semibold">
+                                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                        d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                                </svg>
+                                                Finished
+                                            </span>
+                                        @endif
+                                    </td>
+                                </tr>
+                            @endforeach
                             
                             {{-- No Search Results Message --}}
                             <tr x-show="searchQuery && !hasVisibleRows" x-cloak>
@@ -669,10 +904,158 @@
                             @endif
                         </div>
                     @empty
-                        <div x-show="!searchQuery" class="text-center py-8 text-gray-500">
+                        <div x-show="searchQuery.trim() === ''" class="text-center py-8 text-gray-500">
                             No orders found
                         </div>
                     @endforelse
+                    
+                    {{-- Search Results from All Orders for Mobile --}}
+                    @foreach ($allOrders as $order)
+                        @php
+                            $startDate = $order->wip_date ?? $order->order_date;
+                            $deadline = $order->deadline;
+                            $now = now();
+                            
+                            $totalDuration = round($startDate->diffInDays($deadline));
+                            $daysRemaining = round($now->diffInDays($deadline, false));
+                            
+                            // Calculate progress based on completed stages
+                            $totalStages = $order->orderStages->count();
+                            $completedStages = $order->orderStages->where('status', 'done')->count();
+                            $percentage = $totalStages > 0 ? round(($completedStages / $totalStages) * 100) : 0;
+                            
+                            $totalDesigns = $order->designVariants->count();
+                        @endphp
+                        
+                        <div x-data="{ showImageModal: false }" class="bg-white border border-gray-200 rounded-lg p-4 shadow-sm"
+                             x-show="searchQuery.trim() !== '' && (
+                                 '{{ strtolower($order->invoice->invoice_no ?? '') }}'.includes(searchQuery.toLowerCase()) ||
+                                 '{{ strtolower($order->customer->customer_name ?? '') }}'.includes(searchQuery.toLowerCase()) ||
+                                 '{{ strtolower($order->productCategory->product_name ?? '') }}'.includes(searchQuery.toLowerCase())
+                             )"
+                             data-invoice="{{ $order->invoice->invoice_no ?? '' }}"
+                             data-customer="{{ $order->customer->customer_name ?? '' }}"
+                             data-product="{{ $order->productCategory->product_name ?? '' }}">
+                            {{-- Header: Customer Name & Status --}}
+                            <div class="flex items-start justify-between mb-3">
+                                <div class="flex-1">
+                                    <h3 class="font-bold text-base text-gray-900">
+                                        {{ $order->customer->customer_name ?? '-' }}
+                                        @if (isset($order->priority) && strtolower($order->priority) === 'high')
+                                            <span class="text-xs font-semibold text-red-600 italic">(HIGH)</span>
+                                        @endif
+                                    </h3>
+                                    <p class="text-xs text-gray-500 mt-0.5">{{ $order->invoice->invoice_no ?? 'N/A' }}</p>
+                                </div>
+                                <div class="flex flex-col items-end gap-1">
+                                    @if ($order->production_status === 'wip')
+                                        <span class="inline-flex items-center px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full text-xs font-semibold">
+                                            WIP
+                                        </span>
+                                    @else
+                                        <span class="inline-flex items-center gap-1 px-2 py-0.5 bg-green-100 text-green-700 rounded-full text-xs font-semibold">
+                                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                    d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                            </svg>
+                                            Finished
+                                        </span>
+                                    @endif
+                                </div>
+                            </div>
+
+                            {{-- Content: Image & Info --}}
+                            <div class="flex gap-3 mb-3">
+                                {{-- Mockup Image --}}
+                                <div @click="showImageModal = true" 
+                                     class="flex-shrink-0 w-24 h-24 bg-gray-100 rounded-lg overflow-hidden border border-gray-200 cursor-pointer hover:opacity-80 transition-opacity">
+                                    @if ($order->img_url)
+                                        <img src="{{ route('orders.serve-image', $order) }}" alt="Order Image" 
+                                             class="w-full h-full object-cover">
+                                    @else
+                                        <div class="w-full h-full flex items-center justify-center">
+                                            <svg class="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                            </svg>
+                                        </div>
+                                    @endif
+                                </div>
+
+                                {{-- Order Info --}}
+                                <div class="flex-1 space-y-1 text-sm">
+                                    <div class="flex">
+                                        <span class="text-gray-500 w-20 flex-shrink-0">Product</span>
+                                        <span class="text-gray-500">:</span>
+                                        <span class="ml-2 font-semibold text-gray-900">{{ $order->productCategory->product_name ?? '-' }}</span>
+                                    </div>
+                                    <div class="flex">
+                                        <span class="text-gray-500 w-20 flex-shrink-0">Material</span>
+                                        <span class="text-gray-500">:</span>
+                                        <span class="ml-2 text-gray-700">{{ $order->materialCategory->material_name ?? '-' }}</span>
+                                    </div>
+                                    <div class="flex">
+                                        <span class="text-gray-500 w-20 flex-shrink-0">QTY</span>
+                                        <span class="text-gray-500">:</span>
+                                        <span class="ml-2 font-semibold text-gray-900">{{ number_format($order->total_qty) }} pcs</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {{-- Progress Bar --}}
+                            <div class="mb-2">
+                                <div class="flex items-center justify-between mb-1">
+                                    <span class="text-xs text-gray-600">Progress</span>
+                                    <span class="text-xs font-semibold text-gray-900">{{ $percentage }}%</span>
+                                </div>
+                                <div class="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
+                                    <div class="bg-primary h-full rounded-full transition-all duration-300"
+                                        style="width: {{ $percentage }}%"></div>
+                                </div>
+                            </div>
+
+                            {{-- Footer: Design Count & Timeline --}}
+                            <div class="flex items-center justify-between pt-2 border-t border-gray-100 text-xs">
+                                <div class="flex items-center gap-3">
+                                    <div class="flex items-center gap-1">
+                                        <div class="w-6 h-6 bg-gray-100 rounded-full flex items-center justify-center">
+                                            <span class="text-xs font-bold text-gray-600">{{ $totalDesigns }}</span>
+                                        </div>
+                                        <span class="text-gray-500">Design</span>
+                                    </div>
+                                </div>
+                                <div class="text-right">
+                                    @if ($daysRemaining > 0)
+                                        <div class="text-orange-600 font-medium">{{ $daysRemaining }} days left</div>
+                                    @elseif ($daysRemaining === 0)
+                                        <div class="text-orange-600 font-medium">Due today</div>
+                                    @else
+                                        <div class="text-red-600 font-medium">{{ abs($daysRemaining) }} days overdue</div>
+                                    @endif
+                                    <div class="text-gray-500">{{ $deadline->format('d M Y') }}</div>
+                                </div>
+                            </div>
+
+                            {{-- Image Modal --}}
+                            @if ($order->img_url)
+                                <div x-show="showImageModal" 
+                                     x-cloak
+                                     @click="showImageModal = false"
+                                     class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+                                    <div @click.stop class="relative max-w-4xl max-h-[90vh]">
+                                        <button @click="showImageModal = false" 
+                                                class="absolute -top-10 right-0 text-white hover:text-gray-300">
+                                            <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                                            </svg>
+                                        </button>
+                                        <img src="{{ route('orders.serve-image', $order) }}" 
+                                             alt="Order Image Full"
+                                             class="max-w-full max-h-[90vh] object-contain rounded-lg shadow-2xl">
+                                    </div>
+                                </div>
+                            @endif
+                        </div>
+                    @endforeach
                     
                     {{-- No Search Results Message for Mobile --}}
                     <div x-show="searchQuery && !hasVisibleRows" x-cloak class="text-center py-8">
