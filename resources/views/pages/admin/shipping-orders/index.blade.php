@@ -52,41 +52,27 @@
             }
         },
         getDateLabel() {
+            if (this.dateRange === 'default') return 'Default';
             if (this.dateRange === 'last_month') return 'Last Month';
-            if (this.dateRange === 'last_7_days') return 'Last 7 Days';
-            if (this.dateRange === 'yesterday') return 'Yesterday';
-            if (this.dateRange === 'today') return 'Today';
             if (this.dateRange === 'this_month') return 'This Month';
             if (this.dateRange === 'custom' && this.startDate && this.endDate) return 'Custom Date';
             return 'Date';
         },
         applyDatePreset(preset) {
             const today = new Date();
-            if (preset === 'last-month') {
+            if (preset === 'default') {
+                const fortyFiveDaysAgo = new Date(today);
+                fortyFiveDaysAgo.setDate(fortyFiveDaysAgo.getDate() - 45);
+                this.startDate = fortyFiveDaysAgo.toISOString().split('T')[0];
+                this.endDate = today.toISOString().split('T')[0];
+                this.dateRange = 'default';
+                this.applyFilter();
+            } else if (preset === 'last-month') {
                 const lastMonth = new Date(today.getFullYear(), today.getMonth() - 1, 1);
                 const lastMonthEnd = new Date(today.getFullYear(), today.getMonth(), 0);
                 this.startDate = lastMonth.toISOString().split('T')[0];
                 this.endDate = lastMonthEnd.toISOString().split('T')[0];
                 this.dateRange = 'last_month';
-                this.applyFilter();
-            } else if (preset === '1-week-ago') {
-                const oneWeekAgo = new Date(today);
-                oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
-                this.startDate = oneWeekAgo.toISOString().split('T')[0];
-                this.endDate = today.toISOString().split('T')[0];
-                this.dateRange = 'last_7_days';
-                this.applyFilter();
-            } else if (preset === 'yesterday') {
-                const yesterday = new Date(today);
-                yesterday.setDate(yesterday.getDate() - 1);
-                this.startDate = yesterday.toISOString().split('T')[0];
-                this.endDate = yesterday.toISOString().split('T')[0];
-                this.dateRange = 'yesterday';
-                this.applyFilter();
-            } else if (preset === 'today') {
-                this.startDate = today.toISOString().split('T')[0];
-                this.endDate = today.toISOString().split('T')[0];
-                this.dateRange = 'today';
                 this.applyFilter();
             } else if (preset === 'this-month') {
                 const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
@@ -170,7 +156,7 @@
         },
         getPerPageValue() {
             const urlParams = new URLSearchParams(window.location.search);
-            return urlParams.get('per_page') || '15';
+            return urlParams.get('per_page') || '25';
         }
     }" class="space-y-6">
 
@@ -280,16 +266,18 @@
                             {{-- Show Per Page Dropdown --}}
                             <div x-data="{
                                 open: false,
-                                perPage: {{ request('per_page', 15) }},
+                                perPage: {{ request('per_page', 25) }},
                                 options: [
                                     { value: 5, label: '5' },
                                     { value: 10, label: '10' },
                                     { value: 15, label: '15' },
                                     { value: 20, label: '20' },
-                                    { value: 25, label: '25' }
+                                    { value: 25, label: '25' },
+                                    { value: 50, label: '50' },
+                                    { value: 100, label: '100' }
                                 ],
                                 get selected() {
-                                    return this.options.find(o => o.value === this.perPage) || this.options[2];
+                                    return this.options.find(o => o.value === this.perPage) || this.options[4];
                                 },
                                 selectOption(option) {
                                     this.perPage = option.value;
@@ -336,7 +324,7 @@
                             }" class="relative flex-shrink-0">
                                 {{-- Trigger Button --}}
                                 <button type="button" @click="open = !open"
-                                    class="w-14 flex justify-between items-center rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 bg-white
+                                    class="w-15 flex justify-between items-center rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 bg-white
                                         focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors">
                                     <span x-text="selected.label"></span>
                                     <svg class="w-3 h-3 text-gray-400 transition-transform" :class="open && 'rotate-180'" fill="none"
@@ -346,14 +334,14 @@
                                 </button>
 
                                 {{-- Dropdown --}}
-                                <div x-show="open" @click.away="open = false" x-cloak 
+                                <div x-show="open" @click.away="open = false" @scroll.window="open = false" x-cloak 
                                     x-transition:enter="transition ease-out duration-100"
                                     x-transition:enter-start="opacity-0 scale-95" 
                                     x-transition:enter-end="opacity-100 scale-100"
                                     x-transition:leave="transition ease-in duration-75" 
                                     x-transition:leave-start="opacity-100 scale-100"
                                     x-transition:leave-end="opacity-0 scale-95"
-                                    class="absolute z-20 mt-1 w-14 bg-white border border-gray-200 rounded-md shadow-lg">
+                                    class="absolute z-20 mt-1 w-18 bg-white border border-gray-200 rounded-md shadow-lg">
                                     <ul class="max-h-60 overflow-y-auto py-1">
                                         <template x-for="option in options" :key="option.value">
                                             <li @click="selectOption(option)"
@@ -387,35 +375,23 @@
 
                                     {{-- Main Preset Options --}}
                                     <div x-show="!showDateCustomRange" class="p-2">
-                                        <button @click="applyDatePreset('last-month')" type="button"
-                                            :class="dateRange === 'last_month' ? 'bg-primary/10 text-primary font-medium' :
+                                        <button @click="applyDatePreset('default')" type="button"
+                                            :class="dateRange === 'default' ? 'bg-primary/10 text-primary font-medium' :
                                                 'text-gray-700 hover:bg-gray-50'"
                                             class="w-full text-left px-4 py-2.5 text-sm rounded-md transition-colors">
-                                            Last Month
-                                        </button>
-                                        <button @click="applyDatePreset('1-week-ago')" type="button"
-                                            :class="dateRange === 'last_7_days' ? 'bg-primary/10 text-primary font-medium' :
-                                                'text-gray-700 hover:bg-gray-50'"
-                                            class="w-full text-left px-4 py-2.5 text-sm rounded-md transition-colors">
-                                            Last 7 Days
-                                        </button>
-                                        <button @click="applyDatePreset('yesterday')" type="button"
-                                            :class="dateRange === 'yesterday' ? 'bg-primary/10 text-primary font-medium' :
-                                                'text-gray-700 hover:bg-gray-50'"
-                                            class="w-full text-left px-4 py-2.5 text-sm rounded-md transition-colors">
-                                            Yesterday
-                                        </button>
-                                        <button @click="applyDatePreset('today')" type="button"
-                                            :class="dateRange === 'today' ? 'bg-primary/10 text-primary font-medium' :
-                                                'text-gray-700 hover:bg-gray-50'"
-                                            class="w-full text-left px-4 py-2.5 text-sm rounded-md transition-colors">
-                                            Today
+                                            Default
                                         </button>
                                         <button @click="applyDatePreset('this-month')" type="button"
                                             :class="dateRange === 'this_month' ? 'bg-primary/10 text-primary font-medium' :
                                                 'text-gray-700 hover:bg-gray-50'"
                                             class="w-full text-left px-4 py-2.5 text-sm rounded-md transition-colors">
                                             This Month
+                                        </button>
+                                        <button @click="applyDatePreset('last-month')" type="button"
+                                            :class="dateRange === 'last_month' ? 'bg-primary/10 text-primary font-medium' :
+                                                'text-gray-700 hover:bg-gray-50'"
+                                            class="w-full text-left px-4 py-2.5 text-sm rounded-md transition-colors">
+                                            Last Month
                                         </button>
                                         <div class="border-t border-gray-200 my-2"></div>
                                         <button @click="applyDatePreset('custom')" type="button"
@@ -561,7 +537,7 @@
                                             </button>
 
                                             {{-- Dropdown with Design Variants --}}
-                                            <div x-show="open" @click.away="open = false" x-cloak
+                                            <div x-show="open" @click.away="open = false" @scroll.window="open = false" x-cloak
                                                 :style="dropdownStyle"
                                                 class="bg-white border border-gray-200 rounded-lg shadow-xl z-50 p-4">
                                                 <h4 class="text-sm font-semibold text-gray-700 mb-3">Design Variants:</h4>
@@ -673,7 +649,7 @@
                                                 </button>
 
                                                 {{-- Dropdown Menu with Fixed Position --}}
-                                                <div x-show="open" @click.away="open = false" x-cloak x-ref="dropdown"
+                                                <div x-show="open" @click.away="open = false" @scroll.window="open = false" x-cloak x-ref="dropdown"
                                                     :style="dropdownStyle"
                                                     class="bg-white border border-gray-200 rounded-md shadow-lg z-50 py-1">
                                                     {{-- View Detail --}}
@@ -784,7 +760,7 @@
                                             </button>
 
                                             {{-- Dropdown with Design Variants --}}
-                                            <div x-show="open" @click.away="open = false" x-cloak
+                                            <div x-show="open" @click.away="open = false" @scroll.window="open = false" x-cloak
                                                 :style="dropdownStyle"
                                                 class="bg-white border border-gray-200 rounded-lg shadow-xl z-50 p-4">
                                                 <h4 class="text-sm font-semibold text-gray-700 mb-3">Design Variants:</h4>
@@ -896,7 +872,7 @@
                                                 </button>
 
                                                 {{-- Dropdown Menu with Fixed Position --}}
-                                                <div x-show="open" @click.away="open = false" x-cloak x-ref="dropdown"
+                                                <div x-show="open" @click.away="open = false" @scroll.window="open = false" x-cloak x-ref="dropdown"
                                                     :style="dropdownStyle"
                                                     class="bg-white border border-gray-200 rounded-md shadow-lg z-50 py-1">
                                                     {{-- View Detail --}}
