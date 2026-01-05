@@ -178,10 +178,10 @@ class OrderController extends Controller
         $startDate = $request->input('start_date');
         $endDate = $request->input('end_date');
         $dateRange = $request->input('date_range');
-        $perPage = $request->input('per_page', 15); // Default 15
+        $perPage = $request->input('per_page', 25); // Default 25
 
         // Validate per_page value
-        $perPage = in_array($perPage, [5, 10, 15, 20, 25]) ? $perPage : 15;
+        $perPage = in_array($perPage, [5, 10, 15, 20, 25, 50, 100]) ? $perPage : 25;
 
         $query = Order::with([
             'customer',

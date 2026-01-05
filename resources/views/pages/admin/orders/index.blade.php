@@ -184,7 +184,7 @@
         getPerPageValue() {
             // Get per_page value from URL or default
             const urlParams = new URLSearchParams(window.location.search);
-            return urlParams.get('per_page') || '15';
+            return urlParams.get('per_page') || '25';
         }
     }" class="space-y-6">
 
@@ -391,16 +391,18 @@
                             {{-- Show Per Page Dropdown --}}
                             <div x-data="{
                                 open: false,
-                                perPage: {{ request('per_page', 15) }},
+                                perPage: {{ request('per_page', 25) }},
                                 options: [
                                     { value: 5, label: '5' },
                                     { value: 10, label: '10' },
                                     { value: 15, label: '15' },
                                     { value: 20, label: '20' },
-                                    { value: 25, label: '25' }
+                                    { value: 25, label: '25' },
+                                    { value: 50, label: '50' },
+                                    { value: 100, label: '100' }
                                 ],
                                 get selected() {
-                                    return this.options.find(o => o.value === this.perPage) || this.options[2];
+                                    return this.options.find(o => o.value === this.perPage) || this.options[4];
                                 },
                                 selectOption(option) {
                                     this.perPage = option.value;
@@ -447,7 +449,7 @@
                             }" class="relative flex-shrink-0">
                                 {{-- Trigger Button --}}
                                 <button type="button" @click="open = !open"
-                                    class="w-14 flex justify-between items-center rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 bg-white
+                                    class="w-15 flex justify-between items-center rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 bg-white
                                         focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors">
                                     <span x-text="selected.label"></span>
                                     <svg class="w-3 h-3 text-gray-400 transition-transform" :class="open && 'rotate-180'" fill="none"
@@ -464,7 +466,7 @@
                                     x-transition:leave="transition ease-in duration-75" 
                                     x-transition:leave-start="opacity-100 scale-100"
                                     x-transition:leave-end="opacity-0 scale-95"
-                                    class="absolute z-20 mt-1 w-14 bg-white border border-gray-200 rounded-md shadow-lg">
+                                    class="absolute z-20 mt-1 w-18 bg-white border border-gray-200 rounded-md shadow-lg">
                                     <ul class="max-h-60 overflow-y-auto py-1">
                                         <template x-for="option in options" :key="option.value">
                                             <li @click="selectOption(option)"
