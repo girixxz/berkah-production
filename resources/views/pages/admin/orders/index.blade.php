@@ -696,11 +696,19 @@
                                                     };
                                                 }
                                             }
-                                        }" x-init="$watch('open', value => {
+                                        }" @scroll.window="open = false" x-init="$watch('open', value => {
                                             if (value) {
                                                 const closeOnScroll = () => { open = false; };
-                                                window.addEventListener('scroll', closeOnScroll, { once: true });
-                                                window.addEventListener('resize', closeOnScroll, { once: true });
+                                                const scrollableContainer = document.querySelector('.overflow-x-auto');
+                                                if (scrollableContainer) {
+                                                    scrollableContainer.addEventListener('scroll', closeOnScroll, { once: true, passive: true });
+                                                }
+                                                const mainContent = document.querySelector('main');
+                                                if (mainContent) {
+                                                    mainContent.addEventListener('scroll', closeOnScroll, { once: true, passive: true });
+                                                }
+                                                window.addEventListener('scroll', closeOnScroll, { once: true, passive: true });
+                                                window.addEventListener('resize', closeOnScroll, { once: true, passive: true });
                                             }
                                         })" class="relative inline-block">
                                             {{-- Product Badge (Clickable) --}}
@@ -1014,11 +1022,19 @@
                                                     };
                                                 }
                                             }
-                                        }" x-init="$watch('open', value => {
+                                        }" @scroll.window="open = false" x-init="$watch('open', value => {
                                             if (value) {
                                                 const closeOnScroll = () => { open = false; };
-                                                window.addEventListener('scroll', closeOnScroll, { once: true });
-                                                window.addEventListener('resize', closeOnScroll, { once: true });
+                                                const scrollableContainer = document.querySelector('.overflow-x-auto');
+                                                if (scrollableContainer) {
+                                                    scrollableContainer.addEventListener('scroll', closeOnScroll, { once: true, passive: true });
+                                                }
+                                                const mainContent = document.querySelector('main');
+                                                if (mainContent) {
+                                                    mainContent.addEventListener('scroll', closeOnScroll, { once: true, passive: true });
+                                                }
+                                                window.addEventListener('scroll', closeOnScroll, { once: true, passive: true });
+                                                window.addEventListener('resize', closeOnScroll, { once: true, passive: true });
                                             }
                                         })" class="relative inline-block">
                                             {{-- Product Badge (Clickable) --}}
@@ -1343,11 +1359,19 @@
                                                     };
                                                 }
                                             }
-                                        }" x-init="$watch('open', value => {
+                                        }" @scroll.window="open = false" x-init="$watch('open', value => {
                                             if (value) {
                                                 const closeOnScroll = () => { open = false; };
-                                                window.addEventListener('scroll', closeOnScroll, { once: true });
-                                                window.addEventListener('resize', closeOnScroll, { once: true });
+                                                const scrollableContainer = document.querySelector('.overflow-x-auto');
+                                                if (scrollableContainer) {
+                                                    scrollableContainer.addEventListener('scroll', closeOnScroll, { once: true, passive: true });
+                                                }
+                                                const mainContent = document.querySelector('main');
+                                                if (mainContent) {
+                                                    mainContent.addEventListener('scroll', closeOnScroll, { once: true, passive: true });
+                                                }
+                                                window.addEventListener('scroll', closeOnScroll, { once: true, passive: true });
+                                                window.addEventListener('resize', closeOnScroll, { once: true, passive: true });
                                             }
                                         })" class="relative inline-block">
                                             {{-- Product Badge (Clickable) --}}
@@ -1422,6 +1446,41 @@
                                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
                                                     View Detail
                                                 </a>
+                                                @if ($order->production_status !== 'finished' && $order->production_status !== 'cancelled')
+                                                    <a href="{{ route('admin.orders.edit', $order->id) }}" class="px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2">
+                                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+                                                        Edit
+                                                    </a>
+                                                @endif
+                                                @if ($order->invoice && $order->invoice->amount_due > 0 && $order->production_status !== 'cancelled')
+                                                    @php
+                                                        $pendingPayments = $order->invoice->payments()->where('status', 'pending')->get();
+                                                        $pendingCount = $pendingPayments->count();
+                                                        $pendingAmount = $pendingPayments->sum('amount');
+                                                    @endphp
+                                                    <button type="button" @click="selectedOrderForPayment = {{ json_encode(['id' => $order->id, 'invoice_no' => $order->invoice->invoice_no ?? 'N/A', 'invoice_id' => $order->invoice->id ?? null, 'remaining_due' => $order->invoice->amount_due ?? 0, 'pending_transaction' => $pendingCount, 'pending_amount' => $pendingAmount]) }}; showAddPaymentModal = true; paymentErrors = {}; open = false" class="w-full text-left px-4 py-2 text-sm text-blue-600 hover:bg-blue-50 flex items-center gap-2">
+                                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
+                                                        Add Payment
+                                                    </button>
+                                                @endif
+                                                @if ($order->production_status === 'finished' && $order->shipping_status === 'pending')
+                                                    @php
+                                                        $hasRemainingDue = $order->invoice && $order->invoice->amount_due > 0;
+                                                    @endphp
+                                                    <button type="button" @if (!$hasRemainingDue) @click="showMoveToShippingConfirm = {{ $order->id }}; open = false" @else disabled title="Complete payment first (Remaining: Rp {{ number_format($order->invoice->amount_due, 0, ',', '.') }})" @endif class="w-full text-left px-4 py-2 text-sm flex items-center gap-2 {{ $hasRemainingDue ? 'text-gray-400 cursor-not-allowed' : 'text-green-600 hover:bg-green-50' }}">
+                                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" /></svg>
+                                                        Move to Shippings
+                                                        @if ($hasRemainingDue)
+                                                            <svg class="w-4 h-4 ml-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
+                                                        @endif
+                                                    </button>
+                                                @endif
+                                                @if ($order->production_status !== 'cancelled' && $order->production_status !== 'finished')
+                                                    <button type="button" @click="showCancelConfirm = {{ $order->id }}; open = false" class="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2">
+                                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                                                        Cancel Order
+                                                    </button>
+                                                @endif
                                             </div>
                                         </div>
                                     </td>
@@ -1480,11 +1539,19 @@
                                                     };
                                                 }
                                             }
-                                        }" x-init="$watch('open', value => {
+                                        }" @scroll.window="open = false" x-init="$watch('open', value => {
                                             if (value) {
                                                 const closeOnScroll = () => { open = false; };
-                                                window.addEventListener('scroll', closeOnScroll, { once: true });
-                                                window.addEventListener('resize', closeOnScroll, { once: true });
+                                                const scrollableContainer = document.querySelector('.overflow-x-auto');
+                                                if (scrollableContainer) {
+                                                    scrollableContainer.addEventListener('scroll', closeOnScroll, { once: true, passive: true });
+                                                }
+                                                const mainContent = document.querySelector('main');
+                                                if (mainContent) {
+                                                    mainContent.addEventListener('scroll', closeOnScroll, { once: true, passive: true });
+                                                }
+                                                window.addEventListener('scroll', closeOnScroll, { once: true, passive: true });
+                                                window.addEventListener('resize', closeOnScroll, { once: true, passive: true });
                                             }
                                         })" class="relative inline-block">
                                             {{-- Product Badge (Clickable) --}}
@@ -1560,6 +1627,35 @@
                                                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
                                                         Edit
                                                     </a>
+                                                @endif
+                                                @if ($order->invoice && $order->invoice->amount_due > 0 && $order->production_status !== 'cancelled')
+                                                    @php
+                                                        $pendingPayments = $order->invoice->payments()->where('status', 'pending')->get();
+                                                        $pendingCount = $pendingPayments->count();
+                                                        $pendingAmount = $pendingPayments->sum('amount');
+                                                    @endphp
+                                                    <button type="button" @click="selectedOrderForPayment = {{ json_encode(['id' => $order->id, 'invoice_no' => $order->invoice->invoice_no ?? 'N/A', 'invoice_id' => $order->invoice->id ?? null, 'remaining_due' => $order->invoice->amount_due ?? 0, 'pending_transaction' => $pendingCount, 'pending_amount' => $pendingAmount]) }}; showAddPaymentModal = true; paymentErrors = {}; open = false" class="w-full text-left px-4 py-2 text-sm text-blue-600 hover:bg-blue-50 flex items-center gap-2">
+                                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
+                                                        Add Payment
+                                                    </button>
+                                                @endif
+                                                @if ($order->production_status === 'finished' && $order->shipping_status === 'pending')
+                                                    @php
+                                                        $hasRemainingDue = $order->invoice && $order->invoice->amount_due > 0;
+                                                    @endphp
+                                                    <button type="button" @if (!$hasRemainingDue) @click="showMoveToShippingConfirm = {{ $order->id }}; open = false" @else disabled title="Complete payment first (Remaining: Rp {{ number_format($order->invoice->amount_due, 0, ',', '.') }})" @endif class="w-full text-left px-4 py-2 text-sm flex items-center gap-2 {{ $hasRemainingDue ? 'text-gray-400 cursor-not-allowed' : 'text-green-600 hover:bg-green-50' }}">
+                                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" /></svg>
+                                                        Move to Shippings
+                                                        @if ($hasRemainingDue)
+                                                            <svg class="w-4 h-4 ml-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
+                                                        @endif
+                                                    </button>
+                                                @endif
+                                                @if ($order->production_status !== 'cancelled' && $order->production_status !== 'finished')
+                                                    <button type="button" @click="showCancelConfirm = {{ $order->id }}; open = false" class="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2">
+                                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                                                        Cancel Order
+                                                    </button>
                                                 @endif
                                             </div>
                                         </div>
