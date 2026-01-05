@@ -18,8 +18,8 @@ class PaymentHistoryController extends Controller
         $dateRange = $request->input('date_range');
         
         // Per page validation
-        $perPage = $request->input('per_page', 15);
-        $perPage = in_array($perPage, [5, 10, 15, 20, 25]) ? $perPage : 15;
+        $perPage = $request->input('per_page', 25);
+        $perPage = in_array($perPage, [5, 10, 15, 20, 25, 50, 100]) ? $perPage : 25;
 
         $query = Payment::with(['invoice.order.customer', 'invoice.order.productCategory']);
 
@@ -42,41 +42,28 @@ class PaymentHistoryController extends Controller
             });
         }
 
+        // Set default to 45 days if no date parameters at all
+        if (!$dateRange && !$startDate && !$endDate) {
+            $dateRange = 'default';
+        }
+
         // Apply date range filter
         if ($dateRange) {
             $today = now();
             switch ($dateRange) {
-                case 'last_month':
-                    $startDate = $today->copy()->subMonth()->startOfMonth()->format('Y-m-d');
-                    $endDate = $today->copy()->subMonth()->endOfMonth()->format('Y-m-d');
-                    break;
-                case 'last_7_days':
-                    $startDate = $today->copy()->subDays(7)->format('Y-m-d');
-                    $endDate = $today->format('Y-m-d');
-                    break;
-                case 'yesterday':
-                    $startDate = $endDate = $today->copy()->subDay()->format('Y-m-d');
-                    break;
-                case 'today':
-                    $startDate = $endDate = $today->format('Y-m-d');
+                case 'default':
+                    $startDate = $today->copy()->subDays(45)->format('Y-m-d');
+                    $endDate = $today->copy()->format('Y-m-d');
                     break;
                 case 'this_month':
                     $startDate = $today->copy()->startOfMonth()->format('Y-m-d');
                     $endDate = $today->copy()->endOfMonth()->format('Y-m-d');
                     break;
+                case 'last_month':
+                    $startDate = $today->copy()->subMonth()->startOfMonth()->format('Y-m-d');
+                    $endDate = $today->copy()->subMonth()->endOfMonth()->format('Y-m-d');
+                    break;
             }
-        }
-
-        // Set default to this month if no date parameters at all
-        if (!$dateRange && !$startDate && !$endDate) {
-            $role = Auth::user()->role;
-            $routeName = $role === 'owner' ? 'owner.payment-history' : 'admin.payment-history';
-            
-            return redirect()->route($routeName, [
-                'filter' => $filter,
-                'search' => $search,
-                'date_range' => 'this_month',
-            ]);
         }
 
         if ($startDate && $endDate) {
