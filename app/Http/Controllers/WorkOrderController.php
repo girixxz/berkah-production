@@ -170,8 +170,8 @@ class WorkOrderController extends Controller
         $dateRange = $request->input('date_range');
         
         // Per page validation
-        $perPage = $request->input('per_page', 15);
-        $perPage = in_array($perPage, [5, 10, 15, 20, 25]) ? $perPage : 15;
+        $perPage = $request->input('per_page', 25);
+        $perPage = in_array($perPage, [5, 10, 15, 20, 25, 50, 100]) ? $perPage : 25;
 
         // Query orders that are in WIP status or higher (including finished)
         $query = Order::with([
@@ -204,40 +204,28 @@ class WorkOrderController extends Controller
             });
         }
 
-        // Apply date range filter - default to this month
+        // Apply date range filter - default to 45 days
+        if (!$dateRange && !$startDate && !$endDate) {
+            $dateRange = 'default';
+        }
+        
         if ($dateRange) {
             $today = now();
             switch ($dateRange) {
+                case 'default':
+                    // Default: Last 45 days - dari 45 hari lalu sampai hari ini
+                    $startDate = $today->copy()->subDays(45)->format('Y-m-d');
+                    $endDate = $today->copy()->format('Y-m-d');
+                    break;
                 case 'last_month':
                     $startDate = $today->copy()->subMonth()->startOfMonth()->format('Y-m-d');
                     $endDate = $today->copy()->subMonth()->endOfMonth()->format('Y-m-d');
-                    break;
-                case 'last_7_days':
-                    $startDate = $today->copy()->subDays(7)->format('Y-m-d');
-                    $endDate = $today->copy()->format('Y-m-d');
-                    break;
-                case 'yesterday':
-                    $startDate = $today->copy()->subDay()->format('Y-m-d');
-                    $endDate = $today->copy()->subDay()->format('Y-m-d');
-                    break;
-                case 'today':
-                    $startDate = $today->copy()->format('Y-m-d');
-                    $endDate = $today->copy()->format('Y-m-d');
                     break;
                 case 'this_month':
                     $startDate = $today->copy()->startOfMonth()->format('Y-m-d');
                     $endDate = $today->copy()->endOfMonth()->format('Y-m-d');
                     break;
             }
-        }
-
-        // Set default to this month if no date parameters
-        if (!$dateRange && !$startDate && !$endDate) {
-            return redirect()->route('admin.work-orders.index', [
-                'filter' => $filter,
-                'search' => $search,
-                'date_range' => 'this_month',
-            ]);
         }
 
         if ($startDate) {
