@@ -228,28 +228,17 @@ class OrderController extends Controller
         }
 
         // Apply date range filter
-        // Default to this month if no date filter is applied
+        // Default to last 30 days if no date filter is applied
+        if (!$dateRange && !$startDate && !$endDate) {
+            $dateRange = 'default';
+        }
+        
         if ($dateRange) {
             $today = now();
             switch ($dateRange) {
-                case 'last_month':
-                    // Bulan kemarin - dari tanggal 1 sampai akhir bulan kemarin
-                    $startDate = $today->copy()->subMonth()->startOfMonth()->format('Y-m-d');
-                    $endDate = $today->copy()->subMonth()->endOfMonth()->format('Y-m-d');
-                    break;
-                case 'last_7_days':
-                    // 1 minggu yang lalu - dari 7 hari lalu sampai hari ini
-                    $startDate = $today->copy()->subDays(7)->format('Y-m-d');
-                    $endDate = $today->copy()->format('Y-m-d');
-                    break;
-                case 'yesterday':
-                    // Kemarin saja
-                    $startDate = $today->copy()->subDay()->format('Y-m-d');
-                    $endDate = $today->copy()->subDay()->format('Y-m-d');
-                    break;
-                case 'today':
-                    // Hari ini saja
-                    $startDate = $today->copy()->format('Y-m-d');
+                case 'default':
+                    // Default: Last 45 days - dari 45 hari lalu sampai hari ini
+                    $startDate = $today->copy()->subDays(45)->format('Y-m-d');
                     $endDate = $today->copy()->format('Y-m-d');
                     break;
                 case 'this_month':
@@ -257,26 +246,12 @@ class OrderController extends Controller
                     $startDate = $today->copy()->startOfMonth()->format('Y-m-d');
                     $endDate = $today->copy()->endOfMonth()->format('Y-m-d');
                     break;
+                case 'last_month':
+                    // Bulan kemarin - dari tanggal 1 sampai akhir bulan kemarin
+                    $startDate = $today->copy()->subMonth()->startOfMonth()->format('Y-m-d');
+                    $endDate = $today->copy()->subMonth()->endOfMonth()->format('Y-m-d');
+                    break;
             }
-        }
-        
-        // Set default to this month if no date parameters at all
-        if (!$dateRange && !$startDate && !$endDate) {
-            // Redirect dengan parameter this_month agar terlihat di URL
-            // Preserve session flash message if exists
-            $redirect = redirect()->route('admin.orders.index', [
-                'filter' => $filter,
-                'search' => $search,
-                'date_range' => 'this_month',
-            ]);
-            
-            // Re-flash session message if it exists (so it survives the redirect)
-            if (session()->has('message')) {
-                $redirect->with('message', session('message'))
-                        ->with('alert-type', session('alert-type', 'success'));
-            }
-            
-            return $redirect;
         }
 
         if ($startDate) {
@@ -286,24 +261,26 @@ class OrderController extends Controller
             $query->whereDate('order_date', '<=', $endDate);
         }
 
-        // Sort by wip_date (DESC) if filter is 'wip', finished_date if 'finished', cancelled_date if 'cancelled', otherwise by created_at
+        // Sort by respective date fields based on filter
         if ($filter === 'wip') {
             $orders = $query->orderBy('wip_date', 'desc')
-                ->orderBy('created_at', 'desc')
+                ->orderBy('id', 'desc')
                 ->paginate($perPage)
                 ->appends($request->except('page'));
         } elseif ($filter === 'finished') {
             $orders = $query->orderBy('finished_date', 'desc')
-                ->orderBy('created_at', 'desc')
+                ->orderBy('id', 'desc')
                 ->paginate($perPage)
                 ->appends($request->except('page'));
         } elseif ($filter === 'cancelled') {
             $orders = $query->orderBy('cancelled_date', 'desc')
-                ->orderBy('created_at', 'desc')
+                ->orderBy('id', 'desc')
                 ->paginate($perPage)
                 ->appends($request->except('page'));
         } else {
-            $orders = $query->orderBy('created_at', 'desc')
+            // All, Pending - sort by order_date (Orderan Masuk), then by ID for consistency
+            $orders = $query->orderBy('order_date', 'desc')
+                ->orderBy('id', 'desc')
                 ->paginate($perPage)
                 ->appends($request->except('page'));
         }
@@ -345,18 +322,20 @@ class OrderController extends Controller
         // Sort same as paginated orders
         if ($filter === 'wip') {
             $allOrders = $allOrdersQuery->orderBy('wip_date', 'desc')
-                ->orderBy('created_at', 'desc')
+                ->orderBy('id', 'desc')
                 ->get();
         } elseif ($filter === 'finished') {
             $allOrders = $allOrdersQuery->orderBy('finished_date', 'desc')
-                ->orderBy('created_at', 'desc')
+                ->orderBy('id', 'desc')
                 ->get();
         } elseif ($filter === 'cancelled') {
             $allOrders = $allOrdersQuery->orderBy('cancelled_date', 'desc')
-                ->orderBy('created_at', 'desc')
+                ->orderBy('id', 'desc')
                 ->get();
         } else {
-            $allOrders = $allOrdersQuery->orderBy('created_at', 'desc')
+            // All, Pending - sort by order_date (Orderan Masuk), then by ID for consistency
+            $allOrders = $allOrdersQuery->orderBy('order_date', 'desc')
+                ->orderBy('id', 'desc')
                 ->get();
         }
 
@@ -634,7 +613,7 @@ class OrderController extends Controller
             // Clear cache after order created
             Cache::forget('order_statistics');
 
-            return redirect()->route('admin.orders.index', ['date_range' => 'this_month'])
+            return redirect()->route('admin.orders.index', ['date_range' => 'default'])
                 ->with('message', 'Order and invoice created successfully.')
                 ->with('alert-type', 'success');
 
@@ -929,7 +908,7 @@ class OrderController extends Controller
             // Clear cache after order updated
             Cache::forget('order_statistics');
 
-            return redirect()->route('admin.orders.index', ['date_range' => 'this_month'])
+            return redirect()->route('admin.orders.index', ['date_range' => 'default'])
                 ->with('message', 'Order updated successfully.')
                 ->with('alert-type', 'success');
 
@@ -959,7 +938,7 @@ class OrderController extends Controller
             'cancelled_date' => now()
         ]);
 
-        return redirect()->route('admin.orders.index', ['date_range' => 'this_month'])
+        return redirect()->route('admin.orders.index', ['date_range' => 'default'])
             ->with('message', 'Order cancelled successfully.')
             ->with('alert-type', 'success');
     }
@@ -1010,7 +989,7 @@ class OrderController extends Controller
         // Clear cache after order deleted
         Cache::forget('order_statistics');
 
-        return redirect()->route('admin.orders.index', ['date_range' => 'this_month'])
+        return redirect()->route('admin.orders.index', ['date_range' => 'default'])
             ->with('message', 'Order deleted successfully.')
             ->with('alert-type', 'success');
     }
