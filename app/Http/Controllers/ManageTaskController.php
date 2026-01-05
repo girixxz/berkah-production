@@ -85,11 +85,16 @@ class ManageTaskController extends Controller
             }
         }
 
-        if ($startDate) {
-            $query->whereDate('order_date', '>=', $startDate);
-        }
-        if ($endDate) {
-            $query->whereDate('order_date', '<=', $endDate);
+        // Apply date filter based on status
+        if ($startDate && $endDate) {
+            if ($filter === 'finished') {
+                $query->whereDate('finished_date', '>=', $startDate)
+                      ->whereDate('finished_date', '<=', $endDate);
+            } else {
+                // For default & wip - use wip_date
+                $query->whereDate('wip_date', '>=', $startDate)
+                      ->whereDate('wip_date', '<=', $endDate);
+            }
         }
 
         // Sort by wip_date for default & wip filter, finished_date for finished filter
@@ -139,12 +144,16 @@ class ManageTaskController extends Controller
             });
         }
 
-        // Apply same date range filter
-        if ($startDate) {
-            $allOrdersQuery->whereDate('order_date', '>=', $startDate);
-        }
-        if ($endDate) {
-            $allOrdersQuery->whereDate('order_date', '<=', $endDate);
+        // Apply same date filter based on status
+        if ($startDate && $endDate) {
+            if ($filter === 'finished') {
+                $allOrdersQuery->whereDate('finished_date', '>=', $startDate)
+                               ->whereDate('finished_date', '<=', $endDate);
+            } else {
+                // For default & wip - use wip_date
+                $allOrdersQuery->whereDate('wip_date', '>=', $startDate)
+                               ->whereDate('wip_date', '<=', $endDate);
+            }
         }
 
         // Apply same sorting
