@@ -334,7 +334,7 @@
                                 </button>
 
                                 {{-- Dropdown --}}
-                                <div x-show="open" @click.away="open = false" @scroll.window="open = false" x-cloak 
+                                <div x-show="open" @click.away="open = false" x-cloak 
                                     x-transition:enter="transition ease-out duration-100"
                                     x-transition:enter-start="opacity-0 scale-95" 
                                     x-transition:enter-end="opacity-100 scale-100"
@@ -519,11 +519,19 @@
                                                     };
                                                 }
                                             }
-                                        }" x-init="$watch('open', value => {
+                                        }" @scroll.window="open = false" x-init="$watch('open', value => {
                                             if (value) {
                                                 const closeOnScroll = () => { open = false; };
-                                                window.addEventListener('scroll', closeOnScroll, { once: true });
-                                                window.addEventListener('resize', closeOnScroll, { once: true });
+                                                const scrollableContainer = document.querySelector('.overflow-x-auto');
+                                                if (scrollableContainer) {
+                                                    scrollableContainer.addEventListener('scroll', closeOnScroll, { once: true, passive: true });
+                                                }
+                                                const mainContent = document.querySelector('main');
+                                                if (mainContent) {
+                                                    mainContent.addEventListener('scroll', closeOnScroll, { once: true, passive: true });
+                                                }
+                                                window.addEventListener('scroll', closeOnScroll, { once: true, passive: true });
+                                                window.addEventListener('resize', closeOnScroll, { once: true, passive: true });
                                             }
                                         })" class="relative inline-block">
                                             {{-- Product Badge (Clickable) --}}
@@ -537,7 +545,7 @@
                                             </button>
 
                                             {{-- Dropdown with Design Variants --}}
-                                            <div x-show="open" @click.away="open = false" @scroll.window="open = false" x-cloak
+                                            <div x-show="open" @click.away="open = false" x-cloak
                                                 :style="dropdownStyle"
                                                 class="bg-white border border-gray-200 rounded-lg shadow-xl z-50 p-4">
                                                 <h4 class="text-sm font-semibold text-gray-700 mb-3">Design Variants:</h4>
@@ -649,7 +657,7 @@
                                                 </button>
 
                                                 {{-- Dropdown Menu with Fixed Position --}}
-                                                <div x-show="open" @click.away="open = false" @scroll.window="open = false" x-cloak x-ref="dropdown"
+                                                <div x-show="open" @click.away="open = false" x-cloak x-ref="dropdown"
                                                     :style="dropdownStyle"
                                                     class="bg-white border border-gray-200 rounded-md shadow-lg z-50 py-1">
                                                     {{-- View Detail --}}
@@ -742,11 +750,19 @@
                                                     };
                                                 }
                                             }
-                                        }" x-init="$watch('open', value => {
+                                        }" @scroll.window="open = false" x-init="$watch('open', value => {
                                             if (value) {
                                                 const closeOnScroll = () => { open = false; };
-                                                window.addEventListener('scroll', closeOnScroll, { once: true });
-                                                window.addEventListener('resize', closeOnScroll, { once: true });
+                                                const scrollableContainer = document.querySelector('.overflow-x-auto');
+                                                if (scrollableContainer) {
+                                                    scrollableContainer.addEventListener('scroll', closeOnScroll, { once: true, passive: true });
+                                                }
+                                                const mainContent = document.querySelector('main');
+                                                if (mainContent) {
+                                                    mainContent.addEventListener('scroll', closeOnScroll, { once: true, passive: true });
+                                                }
+                                                window.addEventListener('scroll', closeOnScroll, { once: true, passive: true });
+                                                window.addEventListener('resize', closeOnScroll, { once: true, passive: true });
                                             }
                                         })" class="relative inline-block">
                                             {{-- Product Badge (Clickable) --}}
@@ -760,7 +776,7 @@
                                             </button>
 
                                             {{-- Dropdown with Design Variants --}}
-                                            <div x-show="open" @click.away="open = false" @scroll.window="open = false" x-cloak
+                                            <div x-show="open" @click.away="open = false" x-cloak
                                                 :style="dropdownStyle"
                                                 class="bg-white border border-gray-200 rounded-lg shadow-xl z-50 p-4">
                                                 <h4 class="text-sm font-semibold text-gray-700 mb-3">Design Variants:</h4>
@@ -872,7 +888,7 @@
                                                 </button>
 
                                                 {{-- Dropdown Menu with Fixed Position --}}
-                                                <div x-show="open" @click.away="open = false" @scroll.window="open = false" x-cloak x-ref="dropdown"
+                                                <div x-show="open" @click.away="open = false" x-cloak x-ref="dropdown"
                                                     :style="dropdownStyle"
                                                     class="bg-white border border-gray-200 rounded-md shadow-lg z-50 py-1">
                                                     {{-- View Detail --}}
