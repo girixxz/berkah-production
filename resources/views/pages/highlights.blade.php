@@ -502,10 +502,10 @@
                                         @if ($order->img_url)
                                             <div x-show="showImageModal" 
                                                  x-cloak
-                                                 @click="showImageModal = false"
+                                                 @click.stop="showImageModal = false"
                                                  class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
                                                 <div @click.stop class="relative max-w-4xl max-h-[90vh]">
-                                                    <button @click="showImageModal = false" 
+                                                    <button @click.stop="showImageModal = false" 
                                                             class="absolute -top-10 right-0 text-white hover:text-gray-300">
                                                         <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
@@ -672,10 +672,10 @@
                                         @if ($order->img_url)
                                             <div x-show="showImageModal" 
                                                  x-cloak
-                                                 @click="showImageModal = false"
+                                                 @click.stop="showImageModal = false"
                                                  class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
                                                 <div @click.stop class="relative max-w-4xl max-h-[90vh]">
-                                                    <button @click="showImageModal = false" 
+                                                    <button @click.stop="showImageModal = false" 
                                                             class="absolute -top-10 right-0 text-white hover:text-gray-300">
                                                         <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
@@ -893,10 +893,10 @@
                             @if ($order->img_url)
                                 <div x-show="showImageModal" 
                                      x-cloak
-                                     @click="showImageModal = false"
+                                     @click.stop="showImageModal = false"
                                      class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
                                     <div @click.stop class="relative max-w-4xl max-h-[90vh]">
-                                        <button @click="showImageModal = false" 
+                                        <button @click.stop="showImageModal = false" 
                                                 class="absolute -top-10 right-0 text-white hover:text-gray-300">
                                             <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
@@ -1047,10 +1047,10 @@
                             @if ($order->img_url)
                                 <div x-show="showImageModal" 
                                      x-cloak
-                                     @click="showImageModal = false"
+                                     @click.stop="showImageModal = false"
                                      class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
                                     <div @click.stop class="relative max-w-4xl max-h-[90vh]">
-                                        <button @click="showImageModal = false" 
+                                        <button @click.stop="showImageModal = false" 
                                                 class="absolute -top-10 right-0 text-white hover:text-gray-300">
                                             <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
