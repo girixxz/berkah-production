@@ -254,11 +254,22 @@ class OrderController extends Controller
             }
         }
 
-        if ($startDate) {
-            $query->whereDate('order_date', '>=', $startDate);
-        }
-        if ($endDate) {
-            $query->whereDate('order_date', '<=', $endDate);
+        // Apply date filter based on status
+        if ($startDate && $endDate) {
+            if ($filter === 'wip') {
+                $query->whereDate('wip_date', '>=', $startDate)
+                      ->whereDate('wip_date', '<=', $endDate);
+            } elseif ($filter === 'finished') {
+                $query->whereDate('finished_date', '>=', $startDate)
+                      ->whereDate('finished_date', '<=', $endDate);
+            } elseif ($filter === 'cancelled') {
+                $query->whereDate('cancelled_date', '>=', $startDate)
+                      ->whereDate('cancelled_date', '<=', $endDate);
+            } else {
+                // For all, pending, dp - use order_date
+                $query->whereDate('order_date', '>=', $startDate)
+                      ->whereDate('order_date', '<=', $endDate);
+            }
         }
 
         // Sort by respective date fields based on filter
@@ -311,12 +322,22 @@ class OrderController extends Controller
             $allOrdersQuery->where('production_status', 'cancelled');
         }
 
-        // Apply same date filter to allOrders
-        if ($startDate) {
-            $allOrdersQuery->whereDate('order_date', '>=', $startDate);
-        }
-        if ($endDate) {
-            $allOrdersQuery->whereDate('order_date', '<=', $endDate);
+        // Apply same date filter to allOrders based on status
+        if ($startDate && $endDate) {
+            if ($filter === 'wip') {
+                $allOrdersQuery->whereDate('wip_date', '>=', $startDate)
+                               ->whereDate('wip_date', '<=', $endDate);
+            } elseif ($filter === 'finished') {
+                $allOrdersQuery->whereDate('finished_date', '>=', $startDate)
+                               ->whereDate('finished_date', '<=', $endDate);
+            } elseif ($filter === 'cancelled') {
+                $allOrdersQuery->whereDate('cancelled_date', '>=', $startDate)
+                               ->whereDate('cancelled_date', '<=', $endDate);
+            } else {
+                // For all, pending, dp - use order_date
+                $allOrdersQuery->whereDate('order_date', '>=', $startDate)
+                               ->whereDate('order_date', '<=', $endDate);
+            }
         }
 
         // Sort same as paginated orders
@@ -342,12 +363,22 @@ class OrderController extends Controller
         // Calculate statistics based on the same filters (no cache, real-time)
         $statsQuery = Order::query();
         
-        // Apply same date filter to stats
-        if ($startDate) {
-            $statsQuery->whereDate('order_date', '>=', $startDate);
-        }
-        if ($endDate) {
-            $statsQuery->whereDate('order_date', '<=', $endDate);
+        // Apply same date filter to stats based on status
+        if ($startDate && $endDate) {
+            if ($filter === 'wip') {
+                $statsQuery->whereDate('wip_date', '>=', $startDate)
+                           ->whereDate('wip_date', '<=', $endDate);
+            } elseif ($filter === 'finished') {
+                $statsQuery->whereDate('finished_date', '>=', $startDate)
+                           ->whereDate('finished_date', '<=', $endDate);
+            } elseif ($filter === 'cancelled') {
+                $statsQuery->whereDate('cancelled_date', '>=', $startDate)
+                           ->whereDate('cancelled_date', '<=', $endDate);
+            } else {
+                // For all, pending, dp - use order_date
+                $statsQuery->whereDate('order_date', '>=', $startDate)
+                           ->whereDate('order_date', '<=', $endDate);
+            }
         }
 
         $stats = [
