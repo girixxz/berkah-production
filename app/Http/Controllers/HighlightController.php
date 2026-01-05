@@ -85,8 +85,14 @@ class HighlightController extends Controller
             }
         }
         
+        // Apply date filter based on status
         if ($startDate && $endDate) {
-            $query->whereBetween('order_date', [$startDate, $endDate]);
+            if ($filter === 'finished') {
+                $query->whereBetween('finished_date', [$startDate, $endDate]);
+            } else {
+                // For all & wip - use wip_date
+                $query->whereBetween('wip_date', [$startDate, $endDate]);
+            }
         }
 
         // Apply sorting based on filter with id DESC for consistency
@@ -120,9 +126,14 @@ class HighlightController extends Controller
             $allOrdersQuery->where('production_status', 'finished');
         }
 
-        // Apply same date filter to allOrders
+        // Apply same date filter to allOrders based on status
         if ($startDate && $endDate) {
-            $allOrdersQuery->whereBetween('order_date', [$startDate, $endDate]);
+            if ($filter === 'finished') {
+                $allOrdersQuery->whereBetween('finished_date', [$startDate, $endDate]);
+            } else {
+                // For all & wip - use wip_date
+                $allOrdersQuery->whereBetween('wip_date', [$startDate, $endDate]);
+            }
         }
 
         // Apply same sorting to allOrders
