@@ -419,7 +419,7 @@
                             </tr>
                         </thead>
                         <tbody class="">
-                            @forelse ($orders as $order)
+                                @forelse ($orders as $order)
                                 @php
                                     $startDate = $order->wip_date ?? $order->order_date;
                                     $deadline = $order->deadline;
@@ -435,14 +435,16 @@
                                     
                                     $totalDesigns = $order->designVariants->count();
                                 @endphp
-                                <tr class="border-t border-gray-200 hover:bg-gray-50" x-data="{ showImageModal: false }"
+                                <tr class="border-t border-gray-200 hover:bg-gray-50 cursor-pointer" 
+                                    x-data="{ showImageModal: false }"
+                                    @click="window.location.href = '{{ in_array(auth()->user()->role, ['owner', 'admin']) ? route('admin.orders.show', $order->id) : route('karyawan.task.work-order', $order->id) }}'"
                                     x-show="matchesSearch($el)"
                                     data-invoice="{{ $order->invoice->invoice_no ?? '' }}"
                                     data-customer="{{ $order->customer->customer_name ?? '' }}"
                                     data-product="{{ $order->productCategory->product_name ?? '' }}">
                                     {{-- Mockup Column --}}
                                     <td class="py-2 px-2 text-left">
-                                        <div @click="showImageModal = true" 
+                                        <div @click.stop="showImageModal = true" 
                                              class="inline-block w-40 h-25 bg-gray-100 rounded-lg overflow-hidden border border-gray-200 cursor-pointer hover:opacity-80 transition-opacity">
                                             @if ($order->img_url)
                                                 <img src="{{ route('orders.serve-image', $order) }}" alt="Order Image" 
@@ -599,7 +601,9 @@
                                     
                                     $totalDesigns = $order->designVariants->count();
                                 @endphp
-                                <tr class="border-t border-gray-200 hover:bg-gray-50" x-data="{ showImageModal: false }"
+                                <tr class="border-t border-gray-200 hover:bg-gray-50 cursor-pointer" 
+                                    x-data="{ showImageModal: false }"
+                                    @click="window.location.href = '{{ in_array(auth()->user()->role, ['owner', 'admin']) ? route('admin.orders.show', $order->id) : route('karyawan.task.work-order', $order->id) }}'"
                                     x-show="searchQuery.trim() !== '' && (
                                         '{{ strtolower($order->invoice->invoice_no ?? '') }}'.includes(searchQuery.toLowerCase()) ||
                                         '{{ strtolower($order->customer->customer_name ?? '') }}'.includes(searchQuery.toLowerCase()) ||
@@ -610,7 +614,7 @@
                                     data-product="{{ $order->productCategory->product_name ?? '' }}">
                                     {{-- Mockup Column --}}
                                     <td class="py-2 px-2 text-left">
-                                        <div @click="showImageModal = true" 
+                                        <div @click.stop="showImageModal = true" 
                                              class="inline-block w-40 h-25 bg-gray-100 rounded-lg overflow-hidden border border-gray-200 cursor-pointer hover:opacity-80 transition-opacity">
                                             @if ($order->img_url)
                                                 <img src="{{ route('orders.serve-image', $order) }}" alt="Order Image" 
@@ -779,7 +783,9 @@
                             $totalDesigns = $order->designVariants->count();
                         @endphp
                         
-                        <div x-data="{ showImageModal: false }" class="bg-white border border-gray-200 rounded-lg p-4 shadow-sm"
+                        <div x-data="{ showImageModal: false }" 
+                             class="bg-white border border-gray-200 rounded-lg p-4 shadow-sm cursor-pointer hover:shadow-md transition-shadow"
+                             @click="window.location.href = '{{ in_array(auth()->user()->role, ['owner', 'admin']) ? route('admin.orders.show', $order->id) : route('karyawan.task.work-order', $order->id) }}'"
                              x-show="matchesSearch($el)"
                              data-invoice="{{ $order->invoice->invoice_no ?? '' }}"
                              data-customer="{{ $order->customer->customer_name ?? '' }}"
@@ -815,7 +821,7 @@
                             {{-- Content: Image & Info --}}
                             <div class="flex gap-3 mb-3">
                                 {{-- Mockup Image --}}
-                                <div @click="showImageModal = true" 
+                                <div @click.stop="showImageModal = true" 
                                      class="flex-shrink-0 w-24 h-24 bg-gray-100 rounded-lg overflow-hidden border border-gray-200 cursor-pointer hover:opacity-80 transition-opacity">
                                     @if ($order->img_url)
                                         <img src="{{ route('orders.serve-image', $order) }}" alt="Order Image" 
@@ -927,7 +933,9 @@
                             $totalDesigns = $order->designVariants->count();
                         @endphp
                         
-                        <div x-data="{ showImageModal: false }" class="bg-white border border-gray-200 rounded-lg p-4 shadow-sm"
+                        <div x-data="{ showImageModal: false }" 
+                             class="bg-white border border-gray-200 rounded-lg p-4 shadow-sm cursor-pointer hover:shadow-md transition-shadow"
+                             @click="window.location.href = '{{ in_array(auth()->user()->role, ['owner', 'admin']) ? route('admin.orders.show', $order->id) : route('karyawan.task.work-order', $order->id) }}'"
                              x-show="searchQuery.trim() !== '' && (
                                  '{{ strtolower($order->invoice->invoice_no ?? '') }}'.includes(searchQuery.toLowerCase()) ||
                                  '{{ strtolower($order->customer->customer_name ?? '') }}'.includes(searchQuery.toLowerCase()) ||
@@ -967,7 +975,7 @@
                             {{-- Content: Image & Info --}}
                             <div class="flex gap-3 mb-3">
                                 {{-- Mockup Image --}}
-                                <div @click="showImageModal = true" 
+                                <div @click.stop="showImageModal = true" 
                                      class="flex-shrink-0 w-24 h-24 bg-gray-100 rounded-lg overflow-hidden border border-gray-200 cursor-pointer hover:opacity-80 transition-opacity">
                                     @if ($order->img_url)
                                         <img src="{{ route('orders.serve-image', $order) }}" alt="Order Image" 
