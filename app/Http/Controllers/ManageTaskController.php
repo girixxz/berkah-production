@@ -23,8 +23,8 @@ class ManageTaskController extends Controller
         $dateRange = $request->input('date_range');
         
         // Per page validation
-        $perPage = $request->input('per_page', 15);
-        $perPage = in_array($perPage, [5, 10, 15, 20, 25]) ? $perPage : 15;
+        $perPage = $request->input('per_page', 25);
+        $perPage = in_array($perPage, [5, 10, 15, 20, 25, 50, 100]) ? $perPage : 25;
 
         // Admin can also edit tasks now
         $isViewOnly = false;
@@ -61,49 +61,28 @@ class ManageTaskController extends Controller
             });
         }
 
+        // Set default to 45 days if no date parameters at all
+        if (!$dateRange && !$startDate && !$endDate) {
+            $dateRange = 'default';
+        }
+
         // Apply date range filter
-        // Default to this month if no date filter is applied
         if ($dateRange) {
             $today = now();
             switch ($dateRange) {
-                case 'last_month':
-                    $startDate = $today->copy()->subMonth()->startOfMonth()->format('Y-m-d');
-                    $endDate = $today->copy()->subMonth()->endOfMonth()->format('Y-m-d');
-                    break;
-                case 'last_7_days':
-                    $startDate = $today->copy()->subDays(7)->format('Y-m-d');
-                    $endDate = $today->copy()->format('Y-m-d');
-                    break;
-                case 'yesterday':
-                    $startDate = $today->copy()->subDay()->format('Y-m-d');
-                    $endDate = $today->copy()->subDay()->format('Y-m-d');
-                    break;
-                case 'today':
-                    $startDate = $today->copy()->format('Y-m-d');
+                case 'default':
+                    $startDate = $today->copy()->subDays(45)->format('Y-m-d');
                     $endDate = $today->copy()->format('Y-m-d');
                     break;
                 case 'this_month':
                     $startDate = $today->copy()->startOfMonth()->format('Y-m-d');
                     $endDate = $today->copy()->endOfMonth()->format('Y-m-d');
                     break;
+                case 'last_month':
+                    $startDate = $today->copy()->subMonth()->startOfMonth()->format('Y-m-d');
+                    $endDate = $today->copy()->subMonth()->endOfMonth()->format('Y-m-d');
+                    break;
             }
-        }
-        
-        // Set default to this month if no date parameters at all
-        if (!$dateRange && !$startDate && !$endDate) {
-            $routeName = $isViewOnly ? 'admin.manage-task' : 'pm.manage-task';
-            $redirect = redirect()->route($routeName, [
-                'filter' => $filter,
-                'search' => $search,
-                'date_range' => 'this_month',
-            ]);
-            
-            if (session()->has('message')) {
-                $redirect->with('message', session('message'))
-                        ->with('alert-type', session('alert-type', 'success'));
-            }
-            
-            return $redirect;
         }
 
         if ($startDate) {
@@ -119,14 +98,14 @@ class ManageTaskController extends Controller
             // For finished orders, sort by finished_date (newest first)
             $orders = $query
                 ->orderBy('finished_date', 'desc')
-                ->orderBy('created_at', 'desc')
+                ->orderBy('id', 'desc')
                 ->paginate($perPage)
                 ->appends($request->except('page'));
         } else {
             // For default & wip, sort by wip_date (newest first)
             $orders = $query
                 ->orderBy('wip_date', 'desc')
-                ->orderBy('created_at', 'desc')
+                ->orderBy('id', 'desc')
                 ->paginate($perPage)
                 ->appends($request->except('page'));
         }
@@ -172,12 +151,12 @@ class ManageTaskController extends Controller
         if ($filter === 'finished') {
             $allOrders = $allOrdersQuery
                 ->orderBy('finished_date', 'desc')
-                ->orderBy('created_at', 'desc')
+                ->orderBy('id', 'desc')
                 ->get();
         } else {
             $allOrders = $allOrdersQuery
                 ->orderBy('wip_date', 'desc')
-                ->orderBy('created_at', 'desc')
+                ->orderBy('id', 'desc')
                 ->get();
         }
 

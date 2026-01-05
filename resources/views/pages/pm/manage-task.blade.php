@@ -204,41 +204,20 @@
                 });
         },
         getDateLabel() {
-            if (this.dateRange === 'last_month') return 'Last Month';
-            if (this.dateRange === 'last_7_days') return 'Last 7 Days';
-            if (this.dateRange === 'yesterday') return 'Yesterday';
-            if (this.dateRange === 'today') return 'Today';
+            if (this.dateRange === 'default') return 'Default';
             if (this.dateRange === 'this_month') return 'This Month';
+            if (this.dateRange === 'last_month') return 'Last Month';
             if (this.dateRange === 'custom' && this.startDate && this.endDate) return 'Custom Date';
             return 'Date';
         },
         applyDatePreset(preset) {
             const today = new Date();
-            if (preset === 'last-month') {
-                const lastMonth = new Date(today.getFullYear(), today.getMonth() - 1, 1);
-                const lastMonthEnd = new Date(today.getFullYear(), today.getMonth(), 0);
-                this.startDate = lastMonth.toISOString().split('T')[0];
-                this.endDate = lastMonthEnd.toISOString().split('T')[0];
-                this.dateRange = 'last_month';
-                this.applyFilter();
-            } else if (preset === '1-week-ago') {
-                const oneWeekAgo = new Date(today);
-                oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
-                this.startDate = oneWeekAgo.toISOString().split('T')[0];
+            if (preset === 'default') {
+                const fortyFiveDaysAgo = new Date(today);
+                fortyFiveDaysAgo.setDate(fortyFiveDaysAgo.getDate() - 45);
+                this.startDate = fortyFiveDaysAgo.toISOString().split('T')[0];
                 this.endDate = today.toISOString().split('T')[0];
-                this.dateRange = 'last_7_days';
-                this.applyFilter();
-            } else if (preset === 'yesterday') {
-                const yesterday = new Date(today);
-                yesterday.setDate(yesterday.getDate() - 1);
-                this.startDate = yesterday.toISOString().split('T')[0];
-                this.endDate = yesterday.toISOString().split('T')[0];
-                this.dateRange = 'yesterday';
-                this.applyFilter();
-            } else if (preset === 'today') {
-                this.startDate = today.toISOString().split('T')[0];
-                this.endDate = today.toISOString().split('T')[0];
-                this.dateRange = 'today';
+                this.dateRange = 'default';
                 this.applyFilter();
             } else if (preset === 'this-month') {
                 const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
@@ -246,6 +225,13 @@
                 this.startDate = firstDay.toISOString().split('T')[0];
                 this.endDate = lastDay.toISOString().split('T')[0];
                 this.dateRange = 'this_month';
+                this.applyFilter();
+            } else if (preset === 'last-month') {
+                const lastMonth = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+                const lastMonthEnd = new Date(today.getFullYear(), today.getMonth(), 0);
+                this.startDate = lastMonth.toISOString().split('T')[0];
+                this.endDate = lastMonthEnd.toISOString().split('T')[0];
+                this.dateRange = 'last_month';
                 this.applyFilter();
             } else if (preset === 'custom') {
                 this.showDateCustomRange = true;
@@ -322,7 +308,7 @@
         },
         getPerPageValue() {
             const urlParams = new URLSearchParams(window.location.search);
-            return urlParams.get('per_page') || '15';
+            return urlParams.get('per_page') || '25';
         }
     }" class="space-y-6">
 
@@ -442,16 +428,18 @@
                     {{-- Show Per Page Dropdown --}}
                     <div x-data="{
                         open: false,
-                        perPage: {{ request('per_page', 15) }},
+                        perPage: {{ request('per_page', 25) }},
                         options: [
                             { value: 5, label: '5' },
                             { value: 10, label: '10' },
                             { value: 15, label: '15' },
                             { value: 20, label: '20' },
-                            { value: 25, label: '25' }
+                            { value: 25, label: '25' },
+                            { value: 50, label: '50' },
+                            { value: 100, label: '100' }
                         ],
                         get selected() {
-                            return this.options.find(o => o.value === this.perPage) || this.options[2];
+                            return this.options.find(o => o.value === this.perPage) || this.options[4];
                         },
                         selectOption(option) {
                             this.perPage = option.value;
@@ -548,35 +536,23 @@
 
                             {{-- Main Preset Options --}}
                             <div x-show="!showDateCustomRange" class="p-2">
-                                <button @click="applyDatePreset('last-month')" type="button"
-                                    :class="dateRange === 'last_month' ? 'bg-primary/10 text-primary font-medium' :
+                                <button @click="applyDatePreset('default')" type="button"
+                                    :class="dateRange === 'default' ? 'bg-primary/10 text-primary font-medium' :
                                         'text-gray-700 hover:bg-gray-50'"
                                     class="w-full text-left px-4 py-2.5 text-sm rounded-md transition-colors">
-                                    Last Month
-                                </button>
-                                <button @click="applyDatePreset('1-week-ago')" type="button"
-                                    :class="dateRange === 'last_7_days' ? 'bg-primary/10 text-primary font-medium' :
-                                        'text-gray-700 hover:bg-gray-50'"
-                                    class="w-full text-left px-4 py-2.5 text-sm rounded-md transition-colors">
-                                    Last 7 Days
-                                </button>
-                                <button @click="applyDatePreset('yesterday')" type="button"
-                                    :class="dateRange === 'yesterday' ? 'bg-primary/10 text-primary font-medium' :
-                                        'text-gray-700 hover:bg-gray-50'"
-                                    class="w-full text-left px-4 py-2.5 text-sm rounded-md transition-colors">
-                                    Yesterday
-                                </button>
-                                <button @click="applyDatePreset('today')" type="button"
-                                    :class="dateRange === 'today' ? 'bg-primary/10 text-primary font-medium' :
-                                        'text-gray-700 hover:bg-gray-50'"
-                                    class="w-full text-left px-4 py-2.5 text-sm rounded-md transition-colors">
-                                    Today
+                                    Default
                                 </button>
                                 <button @click="applyDatePreset('this-month')" type="button"
                                     :class="dateRange === 'this_month' ? 'bg-primary/10 text-primary font-medium' :
                                         'text-gray-700 hover:bg-gray-50'"
                                     class="w-full text-left px-4 py-2.5 text-sm rounded-md transition-colors">
                                     This Month
+                                </button>
+                                <button @click="applyDatePreset('last-month')" type="button"
+                                    :class="dateRange === 'last_month' ? 'bg-primary/10 text-primary font-medium' :
+                                        'text-gray-700 hover:bg-gray-50'"
+                                    class="w-full text-left px-4 py-2.5 text-sm rounded-md transition-colors">
+                                    Last Month
                                 </button>
                                 <div class="border-t border-gray-200 my-2"></div>
                                 <button @click="applyDatePreset('custom')" type="button"
