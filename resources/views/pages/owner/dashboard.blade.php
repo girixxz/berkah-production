@@ -14,41 +14,20 @@
         showDateFilter: false,
         showDateCustomRange: false,
         getDateLabel() {
-            if (this.dateRange === 'last_month') return 'Last Month';
-            if (this.dateRange === 'last_7_days') return 'Last 7 Days';
-            if (this.dateRange === 'yesterday') return 'Yesterday';
-            if (this.dateRange === 'today') return 'Today';
+            if (this.dateRange === 'default') return 'Default (45 Days)';
             if (this.dateRange === 'this_month') return 'This Month';
+            if (this.dateRange === 'last_month') return 'Last Month';
             if (this.dateRange === 'custom' && this.startDate && this.endDate) return 'Custom Date';
             return 'Date';
         },
         applyDatePreset(preset) {
             const today = new Date();
-            if (preset === 'last-month') {
-                const lastMonth = new Date(today.getFullYear(), today.getMonth() - 1, 1);
-                const lastMonthEnd = new Date(today.getFullYear(), today.getMonth(), 0);
-                this.startDate = lastMonth.toISOString().split('T')[0];
-                this.endDate = lastMonthEnd.toISOString().split('T')[0];
-                this.dateRange = 'last_month';
-                this.applyFilter();
-            } else if (preset === '1-week-ago') {
-                const oneWeekAgo = new Date(today);
-                oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
-                this.startDate = oneWeekAgo.toISOString().split('T')[0];
+            if (preset === 'default') {
+                const fortyFiveDaysAgo = new Date(today);
+                fortyFiveDaysAgo.setDate(fortyFiveDaysAgo.getDate() - 45);
+                this.startDate = fortyFiveDaysAgo.toISOString().split('T')[0];
                 this.endDate = today.toISOString().split('T')[0];
-                this.dateRange = 'last_7_days';
-                this.applyFilter();
-            } else if (preset === 'yesterday') {
-                const yesterday = new Date(today);
-                yesterday.setDate(yesterday.getDate() - 1);
-                this.startDate = yesterday.toISOString().split('T')[0];
-                this.endDate = yesterday.toISOString().split('T')[0];
-                this.dateRange = 'yesterday';
-                this.applyFilter();
-            } else if (preset === 'today') {
-                this.startDate = today.toISOString().split('T')[0];
-                this.endDate = today.toISOString().split('T')[0];
-                this.dateRange = 'today';
+                this.dateRange = 'default';
                 this.applyFilter();
             } else if (preset === 'this-month') {
                 const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
@@ -56,6 +35,13 @@
                 this.startDate = firstDay.toISOString().split('T')[0];
                 this.endDate = lastDay.toISOString().split('T')[0];
                 this.dateRange = 'this_month';
+                this.applyFilter();
+            } else if (preset === 'last-month') {
+                const lastMonth = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+                const lastMonthEnd = new Date(today.getFullYear(), today.getMonth(), 0);
+                this.startDate = lastMonth.toISOString().split('T')[0];
+                this.endDate = lastMonthEnd.toISOString().split('T')[0];
+                this.dateRange = 'last_month';
                 this.applyFilter();
             } else if (preset === 'custom') {
                 this.showDateCustomRange = true;
@@ -125,30 +111,20 @@
 
                     {{-- Main Preset Options --}}
                     <div x-show="!showDateCustomRange" class="p-2">
-                        <button @click="applyDatePreset('last-month')" type="button"
-                            :class="dateRange === 'last_month' ? 'bg-primary/10 text-primary font-medium' : 'text-gray-700 hover:bg-gray-50'"
+                        <button @click="applyDatePreset('default')" type="button"
+                            :class="dateRange === 'default' ? 'bg-primary/10 text-primary font-medium' : 'text-gray-700 hover:bg-gray-50'"
                             class="w-full text-left px-4 py-2.5 text-sm rounded-md transition-colors">
-                            Last Month
-                        </button>
-                        <button @click="applyDatePreset('1-week-ago')" type="button"
-                            :class="dateRange === 'last_7_days' ? 'bg-primary/10 text-primary font-medium' : 'text-gray-700 hover:bg-gray-50'"
-                            class="w-full text-left px-4 py-2.5 text-sm rounded-md transition-colors">
-                            Last 7 Days
-                        </button>
-                        <button @click="applyDatePreset('yesterday')" type="button"
-                            :class="dateRange === 'yesterday' ? 'bg-primary/10 text-primary font-medium' : 'text-gray-700 hover:bg-gray-50'"
-                            class="w-full text-left px-4 py-2.5 text-sm rounded-md transition-colors">
-                            Yesterday
-                        </button>
-                        <button @click="applyDatePreset('today')" type="button"
-                            :class="dateRange === 'today' ? 'bg-primary/10 text-primary font-medium' : 'text-gray-700 hover:bg-gray-50'"
-                            class="w-full text-left px-4 py-2.5 text-sm rounded-md transition-colors">
-                            Today
+                            Default (45 Days - Now)
                         </button>
                         <button @click="applyDatePreset('this-month')" type="button"
                             :class="dateRange === 'this_month' ? 'bg-primary/10 text-primary font-medium' : 'text-gray-700 hover:bg-gray-50'"
                             class="w-full text-left px-4 py-2.5 text-sm rounded-md transition-colors">
                             This Month
+                        </button>
+                        <button @click="applyDatePreset('last-month')" type="button"
+                            :class="dateRange === 'last_month' ? 'bg-primary/10 text-primary font-medium' : 'text-gray-700 hover:bg-gray-50'"
+                            class="w-full text-left px-4 py-2.5 text-sm rounded-md transition-colors">
+                            Last Month
                         </button>
                         <div class="border-t border-gray-200 my-2"></div>
                         <button @click="applyDatePreset('custom')" type="button"

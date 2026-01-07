@@ -18,38 +18,31 @@ class DashboardController extends Controller
         $endDate = $request->input('end_date');
         $dateRange = $request->input('date_range');
 
+        // Set default to default (45 days) if no date parameters
+        if (!$dateRange && !$startDate && !$endDate) {
+            $dateRange = 'default';
+        }
+
         // Apply date range filter
         if ($dateRange) {
             $today = now();
             switch ($dateRange) {
-                case 'last_month':
-                    $startDate = $today->copy()->subMonth()->startOfMonth()->format('Y-m-d');
-                    $endDate = $today->copy()->subMonth()->endOfMonth()->format('Y-m-d');
-                    break;
-                case 'last_7_days':
-                    $startDate = $today->copy()->subDays(7)->format('Y-m-d');
-                    $endDate = $today->copy()->format('Y-m-d');
-                    break;
-                case 'yesterday':
-                    $startDate = $today->copy()->subDay()->format('Y-m-d');
-                    $endDate = $today->copy()->subDay()->format('Y-m-d');
-                    break;
-                case 'today':
-                    $startDate = $today->copy()->format('Y-m-d');
+                case 'default':
+                    // Default: Last 45 days - dari 45 hari lalu sampai hari ini
+                    $startDate = $today->copy()->subDays(45)->format('Y-m-d');
                     $endDate = $today->copy()->format('Y-m-d');
                     break;
                 case 'this_month':
+                    // Bulan ini - dari tanggal 1 sampai akhir bulan ini
                     $startDate = $today->copy()->startOfMonth()->format('Y-m-d');
                     $endDate = $today->copy()->endOfMonth()->format('Y-m-d');
                     break;
+                case 'last_month':
+                    // Bulan kemarin - dari tanggal 1 sampai akhir bulan kemarin
+                    $startDate = $today->copy()->subMonth()->startOfMonth()->format('Y-m-d');
+                    $endDate = $today->copy()->subMonth()->endOfMonth()->format('Y-m-d');
+                    break;
             }
-        }
-
-        // Set default to this month if no date parameters
-        if (!$dateRange && !$startDate && !$endDate) {
-            return redirect()->route('owner.dashboard', [
-                'date_range' => 'this_month',
-            ]);
         }
 
         // Calculate statistics
