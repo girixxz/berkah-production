@@ -437,7 +437,7 @@
                                 @endphp
                                 <tr class="border-t border-gray-200 hover:bg-gray-50 cursor-pointer" 
                                     x-data="{ showImageModal: false }"
-                                    @click="window.location.href = '{{ in_array(auth()->user()->role, ['owner', 'admin']) ? route('admin.orders.show', $order->id) : route('karyawan.task.work-order', $order->id) }}'"
+                                    @click="window.location.href = '{{ route('karyawan.task.work-order', $order->id) }}'"
                                     x-show="matchesSearch($el)"
                                     data-invoice="{{ $order->invoice->invoice_no ?? '' }}"
                                     data-customer="{{ $order->customer->customer_name ?? '' }}"
@@ -603,7 +603,7 @@
                                 @endphp
                                 <tr class="border-t border-gray-200 hover:bg-gray-50 cursor-pointer" 
                                     x-data="{ showImageModal: false }"
-                                    @click="window.location.href = '{{ in_array(auth()->user()->role, ['owner', 'admin']) ? route('admin.orders.show', $order->id) : route('karyawan.task.work-order', $order->id) }}'"
+                                    @click="window.location.href = '{{ route('karyawan.task.work-order', $order->id) }}'"
                                     x-show="searchQuery.trim() !== '' && (
                                         '{{ strtolower($order->invoice->invoice_no ?? '') }}'.includes(searchQuery.toLowerCase()) ||
                                         '{{ strtolower($order->customer->customer_name ?? '') }}'.includes(searchQuery.toLowerCase()) ||
@@ -785,7 +785,7 @@
                         
                         <div x-data="{ showImageModal: false }" 
                              class="bg-white border border-gray-200 rounded-lg p-4 shadow-sm cursor-pointer hover:shadow-md transition-shadow"
-                             @click="window.location.href = '{{ in_array(auth()->user()->role, ['owner', 'admin']) ? route('admin.orders.show', $order->id) : route('karyawan.task.work-order', $order->id) }}'"
+                             @click="window.location.href = '{{ route('karyawan.task.work-order', $order->id) }}'"
                              x-show="matchesSearch($el)"
                              data-invoice="{{ $order->invoice->invoice_no ?? '' }}"
                              data-customer="{{ $order->customer->customer_name ?? '' }}"
@@ -935,7 +935,7 @@
                         
                         <div x-data="{ showImageModal: false }" 
                              class="bg-white border border-gray-200 rounded-lg p-4 shadow-sm cursor-pointer hover:shadow-md transition-shadow"
-                             @click="window.location.href = '{{ in_array(auth()->user()->role, ['owner', 'admin']) ? route('admin.orders.show', $order->id) : route('karyawan.task.work-order', $order->id) }}'"
+                             @click="window.location.href = '{{ route('karyawan.task.work-order', $order->id) }}'"
                              x-show="searchQuery.trim() !== '' && (
                                  '{{ strtolower($order->invoice->invoice_no ?? '') }}'.includes(searchQuery.toLowerCase()) ||
                                  '{{ strtolower($order->customer->customer_name ?? '') }}'.includes(searchQuery.toLowerCase()) ||
