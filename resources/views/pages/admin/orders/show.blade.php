@@ -790,13 +790,13 @@
 
                         // Get unique sleeve and size IDs from order items
                         $usedSleeveIds = $designOrderItems
-                            ->pluck('material_sleeve_id')
+                            ->pluck('sleeve.id')
                             ->unique()
                             ->filter()
                             ->values()
                             ->toArray();
                         $usedSizeIds = $designOrderItems
-                            ->pluck('material_size_id')
+                            ->pluck('size.id')
                             ->unique()
                             ->filter()
                             ->values()
@@ -819,7 +819,6 @@
 
                         // Fill sleeves to minimum 4 - combine used + remaining BUT maintain global sort_order
                         if (count($usedSleeves) < 4) {
-                            // Get sleeves that are NOT used
                             $remainingSleeves = array_diff($allSleeves, $usedSleeves);
                             $neededCount = 4 - count($usedSleeves);
                             // Combine used + needed remaining
