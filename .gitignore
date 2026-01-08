@@ -24,5 +24,6 @@ Homestead.yaml
 Thumbs.db
 DEPLOYMENT-GUIDE.md
 VPS-UPDATE-GUIDE.md
+DEPLOYMENT-NO-DOMAIN.md
 database.sql
 /scripts
