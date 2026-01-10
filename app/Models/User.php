@@ -16,19 +16,24 @@ class User extends Authenticatable
      * @var array<int, string>
      */
     protected $fillable = [
-        'fullname',
         'username',
-        'phone_number',
         'password',
         'role',
-        'address',
-        'birth_date',
-        'gender',
-        'work_date',
-        'dress_size',
-        'salary_system',
-        'salary_cycle',
+        'status',
     ];
+
+    /**
+     * Relationships
+     */
+    public function profile()
+    {
+        return $this->hasOne(UserProfile::class);
+    }
+
+    public function employeeSalary()
+    {
+        return $this->hasOne(EmployeeSalary::class);
+    }
 
     /**
      * The attributes that should be hidden for serialization.
