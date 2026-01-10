@@ -6,7 +6,7 @@
         'owner' => 'owner.dashboard',
         'admin' => 'admin.dashboard',
         'pm' => 'pm.dashboard',
-        'karyawan' => 'karyawan.dashboard',
+        'employee' => 'employee.dashboard',
         default => 'login',
     };
 @endphp
@@ -188,27 +188,27 @@
             </div>
         @endif
 
-        {{-- ================= KARYAWAN MENU (for Admin, PM, and Karyawan) ================= --}}
-        @if (in_array($role, ['owner', 'admin', 'pm', 'karyawan']))
+        {{-- ================= EMPLOYEE MENU (for Admin, PM, and Employee) ================= --}}
+        @if (in_array($role, ['owner', 'admin', 'pm', 'employee']))
             <div class="mb-4">
                 @if (in_array($role, ['owner', 'admin', 'pm']))
-                    <p class="px-4 text-xs font-semibold text-gray-dark uppercase mb-2">KARYAWAN</p>
-                @elseif ($role === 'karyawan')
+                    <p class="px-4 text-xs font-semibold text-gray-dark uppercase mb-2">EMPLOYEE</p>
+                @elseif ($role === 'employee')
                     <p class="px-4 text-xs font-semibold text-gray-dark uppercase mb-2">MENU</p>
                 @endif
 
                 <ul class="space-y-2">
-                    @if ($role === 'karyawan')
+                    @if ($role === 'employee')
                         <!-- Dashboard -->
                         <li>
-                            <x-sidebar-menu.main-menu href="{{ route('karyawan.dashboard') }}" :pattern="'karyawan.dashboard'">
+                            <x-sidebar-menu.main-menu href="{{ route('employee.dashboard') }}" :pattern="'employee.dashboard'">
                                 <x-icons.dashboard class="text-current" />
                                 <span class="ml-2">Dashboard</span>
                             </x-sidebar-menu.main-menu>
                         </li>
                     @endif
                     <li>
-                        <x-sidebar-menu.main-menu href="{{ route('karyawan.task') }}" :pattern="['karyawan.task', 'karyawan.task.work-order']">
+                        <x-sidebar-menu.main-menu href="{{ route('employee.task') }}" :pattern="['employee.task', 'employee.task.work-order']">
                             <x-icons.task class="text-current" />
                             <span class="ml-2">Task</span>
                         </x-sidebar-menu.main-menu>

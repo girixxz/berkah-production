@@ -102,7 +102,7 @@ Access: `http://localhost:8000`
 | **Owner** | Full access semua fitur |
 | **Admin** | Manage orders, work orders, customers |
 | **PM (Project Manager)** | View & update work orders |
-| **Karyawan** | View work orders assigned |
+| **Employee** | View work orders assigned |
 
 ## 📱 Responsive Design
 

@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Controllers\Karyawan;
+namespace App\Http\Controllers\Employee;
 
 use App\Http\Controllers\Controller;
 use App\Models\ProductionStage;
@@ -59,7 +59,7 @@ class TaskController extends Controller
             ];
         });
 
-        return view('pages.karyawan.task', compact('stagesWithOrders'));
+        return view('pages.employee.task', compact('stagesWithOrders'));
     }
 
     /**
@@ -157,7 +157,7 @@ class TaskController extends Controller
             $designVariants[$designName][$sleeveId]['items'][] = $item;
         }
 
-        return view('pages.karyawan.view-work-order', [
+        return view('pages.employee.view-work-order', [
             'order' => $order,
             'designVariants' => $designVariants
         ]);

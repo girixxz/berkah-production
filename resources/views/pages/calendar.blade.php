@@ -264,7 +264,7 @@
                 {{-- Left: Back to Task & Monthly/Weekly Buttons --}}
                 <div class="flex items-center justify-between lg:justify-start gap-2">
                     {{-- Back to Task Button --}}
-                    <a href="{{ route('karyawan.task') }}" 
+                    <a href="{{ route('employee.task') }}" 
                         class="text-white flex items-center gap-2 px-4 py-2 bg-red-500 hover:bg-red-400 rounded-lg text-sm font-medium transition-colors">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
@@ -423,7 +423,7 @@
                                                             $separatorClass = 'text-gray-600';
                                                         }
                                                     @endphp
-                                                    <a href="{{ route('karyawan.task.work-order', ['order' => $orderStage->order->id]) }}" target="_blank"
+                                                    <a href="{{ route('employee.task.work-order', ['order' => $orderStage->order->id]) }}" target="_blank"
                                                         class="block px-1.5 py-0.5 rounded border {{ $bgClass }} {{ $borderClass }} text-[9px] font-medium cursor-pointer hover:opacity-80 transition-opacity">
                                                         <div class="flex items-center justify-between gap-1">
                                                             <div class="flex items-center gap-1 {{ $textClass }} flex-1 min-w-0">
@@ -515,7 +515,7 @@
                                                         $separatorClass = 'text-gray-600';
                                                     }
                                                 @endphp
-                                                <a href="{{ route('karyawan.task.work-order', ['order' => $orderStage->order->id]) }}" target="_blank"
+                                                <a href="{{ route('employee.task.work-order', ['order' => $orderStage->order->id]) }}" target="_blank"
                                                     class="block px-1.5 py-0.5 rounded border {{ $bgClass }} {{ $borderClass }} text-[9px] font-medium cursor-pointer hover:opacity-80 transition-opacity {{ $taskIndex >= 2 ? 'hidden md:block' : '' }}">
                                                     <div class="flex items-center justify-between gap-1">
                                                         <div class="flex items-center gap-1 {{ $textClass }} flex-1 min-w-0">
@@ -636,7 +636,7 @@
                     <div class="p-5 max-h-[60vh] overflow-y-auto">
                         <div class="space-y-3">
                             <template x-for="(task, index) in modalTasks" :key="index">
-                                <a :href="`{{ route('karyawan.task.work-order', ['order' => '__ORDER_ID__']) }}`.replace('__ORDER_ID__', task.order_id)"  target="_blank"
+                                <a :href="`{{ route('employee.task.work-order', ['order' => '__ORDER_ID__']) }}`.replace('__ORDER_ID__', task.order_id)"  target="_blank"
                                     class="block px-4 py-3 rounded-lg border hover:opacity-80 transition-opacity cursor-pointer"
                                     :style="task.production_status !== 'finished' && task.status !== 'done' && task.priority !== 'high' ? 'background-color: #eddfad; border-color: #d4c973;' : ''"
                                     :class="{

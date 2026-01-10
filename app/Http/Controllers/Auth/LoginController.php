@@ -34,8 +34,8 @@ class LoginController extends Controller
                     return redirect()->intended(route('admin.dashboard'));
                 case 'pm':
                     return redirect()->intended(route('pm.dashboard'));
-                case 'karyawan':
-                    return redirect()->intended(route('karyawan.dashboard'));
+                case 'employee':
+                    return redirect()->intended(route('employee.dashboard'));
                 default:
                     Auth::logout();
                     return back()->withErrors([

@@ -6,7 +6,7 @@
     @php
         $role = auth()->user()?->role;
         if ($role === 'owner') {
-            $root = 'Karyawan';
+            $root = 'Employee';
         } elseif ($role === 'admin') {
             $root = 'Admin';
         } elseif ($role === 'pm') {
@@ -15,7 +15,7 @@
             $root = 'Menu';
         }
     @endphp
-    <x-nav-locate :items="[$root, 'Task Karyawan']" />
+    <x-nav-locate :items="[$root, 'Task Employee']" />
 
     {{-- Root Alpine State --}}
     <div x-data="{
@@ -42,7 +42,7 @@
             this.isSubmitting = true;
     
             try {
-                const response = await fetch('{{ route('karyawan.task.mark-done') }}', {
+                const response = await fetch('{{ route('employee.task.mark-done') }}', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -125,7 +125,7 @@
                                     @endphp
                                     <div class="flex items-center gap-2 w-full">
                                         {{-- Clickable Bubble --}}
-                                        <a href="{{ route('karyawan.task.work-order', ['order' => $orderStage->order->id]) }}"
+                                        <a href="{{ route('employee.task.work-order', ['order' => $orderStage->order->id]) }}"
                                             class="flex-1 min-w-0 px-3 py-2 rounded-lg border {{ $bgClass }} {{ $borderClass }} text-xs font-medium hover:opacity-80 transition-opacity">
                                             <div class="flex items-center gap-2 min-w-0 {{ $textClass }}">
                                                 <span class="font-semibold truncate">
@@ -238,7 +238,7 @@
                             <template x-for="(order, index) in modalOrders" :key="index">
                                 <div class="flex items-center gap-2 w-full">
                                     {{-- Clickable Bubble --}}
-                                    <a :href="`{{ route('karyawan.task.work-order', ['order' => '__ORDER_ID__']) }}`.replace('__ORDER_ID__', order.order_id)"
+                                    <a :href="`{{ route('employee.task.work-order', ['order' => '__ORDER_ID__']) }}`.replace('__ORDER_ID__', order.order_id)"
                                         class="flex-1 min-w-0 px-3 py-2 rounded-lg border hover:opacity-80 transition-opacity"
                                         :style="order.priority !== 'high' ? 'background-color: #eddfad; border-color: #d4c973;' : ''"
                                         :class="{

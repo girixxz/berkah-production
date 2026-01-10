@@ -6,7 +6,7 @@
     @php
         $role = auth()->user()?->role;
         if ($role === 'owner') {
-            $root = 'Karyawan';
+            $root = 'Employee';
         } elseif ($role === 'admin') {
             $root = 'Admin';
         } elseif ($role === 'pm') {
@@ -16,7 +16,7 @@
         }
     @endphp
 
-    <x-nav-locate :items="[$root, 'Task Karyawan', 'View Work Order']" />
+    <x-nav-locate :items="[$root, 'Task Employee', 'View Work Order']" />
 
     {{-- Alpine Root State --}}
     <div x-data="{

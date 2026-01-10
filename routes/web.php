@@ -45,8 +45,8 @@ Route::get('/login', function () {
                 return redirect()->route('admin.dashboard');
             case 'pm':
                 return redirect()->route('pm.dashboard');
-            case 'karyawan':
-                return redirect()->route('karyawan.dashboard');
+            case 'employee':
+                return redirect()->route('employee.dashboard');
         }
     }
     return app(LoginController::class)->showLoginForm();
@@ -189,16 +189,16 @@ Route::middleware(['auth'])->group(function () {
         Route::post('manage-task/update-stage-status', [ManageTaskController::class, 'updateStageStatus'])->name('manage-task.update-stage-status');
     });
 
-    /* ---------- KARYAWAN ---------- */
-    Route::prefix('karyawan')->name('karyawan.')->middleware('role:karyawan,admin,pm')->group(function () {
-        Route::get('dashboard', fn() => view('pages.karyawan.dashboard'))->name('dashboard');
-        Route::get('task', [App\Http\Controllers\Karyawan\TaskController::class, 'index'])->name('task');
-        Route::post('task/mark-done', [App\Http\Controllers\Karyawan\TaskController::class, 'markAsDone'])->name('task.mark-done');
-        Route::get('task/work-order/{order}', [App\Http\Controllers\Karyawan\TaskController::class, 'viewWorkOrder'])->name('task.work-order');
+    /* ---------- EMPLOYEE ---------- */
+    Route::prefix('employee')->name('employee.')->middleware('role:employee,admin,pm')->group(function () {
+        Route::get('dashboard', fn() => view('pages.employee.dashboard'))->name('dashboard');
+        Route::get('task', [App\Http\Controllers\Employee\TaskController::class, 'index'])->name('task');
+        Route::post('task/mark-done', [App\Http\Controllers\Employee\TaskController::class, 'markAsDone'])->name('task.mark-done');
+        Route::get('task/work-order/{order}', [App\Http\Controllers\Employee\TaskController::class, 'viewWorkOrder'])->name('task.work-order');
     });
 
     /* ---------- SHARED IMAGE ROUTES (ALL AUTHENTICATED USERS) ---------- */
-    // These routes are accessible by all authenticated users (owner, admin, pm, karyawan)
+    // These routes are accessible by all authenticated users (owner, admin, pm, employee)
     // Controllers will handle authorization internally
     
     // Work Order PDF Download (ALL ROLES)
@@ -218,7 +218,7 @@ Route::middleware(['auth'])->group(function () {
     Route::get('work-orders/sewing/{sewing}/image', [\App\Http\Controllers\WorkOrderController::class, 'serveSewingImage'])->name('work-orders.serve-sewing-image');
     Route::get('work-orders/packing/{packing}/image', [\App\Http\Controllers\WorkOrderController::class, 'servePackingImage'])->name('work-orders.serve-packing-image');
     
-    // Customer Location API (used by karyawan view work order)
+    // Customer Location API (used by employee view work order)
     Route::get('customers/{customer}/location', [OrderController::class, 'getCustomerLocation'])->name('customers.location');
 
     /* ---------- ALL ROLE ---------- */
