@@ -131,7 +131,6 @@
                                 <th class="py-2 px-4 text-left rounded-l-md">No</th>
                                 <th class="py-2 px-4 text-left">User</th>
                                 <th class="py-2 px-4 text-left">Username</th>
-                                <th class="py-2 px-4 text-left">Phone</th>
                                 <th class="py-2 px-4 text-left">Role</th>
                                 <th class="py-2 px-4 text-left">Status</th>
                                 <th class="py-2 px-4 text-right rounded-r-md">Action</th>
@@ -166,7 +165,6 @@
                                         </div>
                                     </td>
                                     <td class="py-2 px-4">{{ $user->username }}</td>
-                                    <td class="py-2 px-4">{{ $user->profile?->phone_number ?? '-' }}</td>
                                     <td class="py-2 px-4">
                                         <span
                                             class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium
@@ -273,7 +271,7 @@
                                 </tr>
                             @empty
                                 <tr x-show="searchUser.trim() === ''">
-                                    <td colspan="7" class="py-3 px-4 text-center text-red-500 border-t border-gray-200">
+                                    <td colspan="6" class="py-3 px-4 text-center text-red-500 border-t border-gray-200">
                                         No Users found.
                                     </td>
                                 </tr>
@@ -298,7 +296,6 @@
                                         </div>
                                     </td>
                                     <td class="py-2 px-4">{{ $user->username }}</td>
-                                    <td class="py-2 px-4">{{ $user->profile?->phone_number ?? '-' }}</td>
                                     <td class="py-2 px-4">
                                         <span
                                             class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium
@@ -402,7 +399,7 @@
 
                             {{-- No Results Found for Search --}}
                             <tr x-show="searchUser.trim() !== '' && !hasResults">
-                                <td colspan="7" class="py-16 text-center border-t border-gray-200">
+                                <td colspan="6" class="py-16 text-center border-t border-gray-200">
                                     <div class="flex flex-col items-center justify-center space-y-3">
                                         <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16 text-gray-400" fill="none"
                                             viewBox="0 0 24 24" stroke="currentColor">
