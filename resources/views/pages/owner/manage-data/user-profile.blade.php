@@ -1,12 +1,25 @@
 @extends('layouts.app')
-@section('title', 'Manage Employees')
+@section('title', 'User Profile')
 @section('content')
-    <x-nav-locate :items="['Menu', 'Manage Data', 'Employees']" />
+    <x-nav-locate :items="['Menu', 'Manage Data', 'User Profile']" />
 
     {{-- Root Alpine State --}}
     <div x-data="{
         openModal: '{{ session('openModal') }}',
-        editEmployee: {},
+        editEmployee: {
+            profile: {
+                fullname: '',
+                phone_number: '',
+                gender: '',
+                birth_date: '',
+                work_date: '',
+                dress_size: '',
+                address: ''
+            },
+            employee_salary: {
+                salary_system_id: null
+            }
+        },
         viewEmployee: {},
         searchEmployee: '',
         editEmployeeErrors: {},
@@ -18,10 +31,10 @@
             console.log('Validating employee:', this.editEmployee);
     
             // Full Name - Required
-            if (!this.editEmployee.fullname || this.editEmployee.fullname.trim() === '') {
+            if (!this.editEmployee.profile?.fullname || this.editEmployee.profile.fullname.trim() === '') {
                 this.editEmployeeErrors.fullname = 'Full Name is required';
                 isValid = false;
-            } else if (this.editEmployee.fullname.length > 255) {
+            } else if (this.editEmployee.profile.fullname.length > 255) {
                 this.editEmployeeErrors.fullname = 'Full Name must not exceed 255 characters';
                 isValid = false;
             }
@@ -48,13 +61,23 @@
                 isValid = false;
             }
     
-            // Work Date Month - Required
+// Gender - Required
+            if (!this.editEmployee.profile?.gender || this.editEmployee.profile.gender.trim() === '') {
+                this.editEmployeeErrors.gender = 'Gender is required';
+                isValid = false;
+            }
+
+            // Work Date - Required (Day, Month, Year)
+            if (!this.editEmployee.work_day) {
+                this.editEmployeeErrors.work_day = 'Work Day is required';
+                isValid = false;
+            }
+            
             if (!this.editEmployee.work_month) {
                 this.editEmployeeErrors.work_month = 'Work Month is required';
                 isValid = false;
             }
             
-            // Work Date Year - Required
             if (!this.editEmployee.work_year) {
                 this.editEmployeeErrors.work_year = 'Work Year is required';
                 isValid = false;
@@ -62,34 +85,28 @@
                 this.editEmployeeErrors.work_year = 'Year must be between 1900 and 2100';
                 isValid = false;
             }
-    
+
             // Dress Size - Required
-            if (!this.editEmployee.dress_size) {
+            if (!this.editEmployee.profile?.dress_size || this.editEmployee.profile.dress_size.trim() === '') {
                 this.editEmployeeErrors.dress_size = 'Dress Size is required';
                 isValid = false;
             }
-    
+
             // Salary System - Required
-            if (!this.editEmployee.salary_system || this.editEmployee.salary_system.trim() === '') {
-                this.editEmployeeErrors.salary_system = 'Salary System is required';
+            // We check from the selected value in the child component
+            // Since it's handled by x-data, we need to check if hidden input has value
+            // For now, we'll validate if employee_salary exists
+            if (!this.editEmployee.employee_salary?.salary_system_id) {
+                this.editEmployeeErrors.salary_system_id = 'Salary System is required';
                 isValid = false;
             }
-            
-            // Salary Cycle - Required
-            if (!this.editEmployee.salary_cycle) {
-                this.editEmployeeErrors.salary_cycle = 'Salary Cycle is required';
-                isValid = false;
-            } else {
-                const cycle = parseInt(this.editEmployee.salary_cycle);
-                if (isNaN(cycle) || cycle < 1 || cycle > 31) {
-                    this.editEmployeeErrors.salary_cycle = 'Cycle must be between 1 and 31';
-                    isValid = false;
-                }
-            }
-    
+
             // Address - Required
-            if (!this.editEmployee.address || this.editEmployee.address.trim() === '') {
+            if (!this.editEmployee.profile?.address || this.editEmployee.profile.address.trim() === '') {
                 this.editEmployeeErrors.address = 'Address is required';
+                isValid = false;
+            } else if (this.editEmployee.profile.address.length > 500) {
+                this.editEmployeeErrors.address = 'Address must not exceed 500 characters';
                 isValid = false;
             }
             
@@ -118,11 +135,27 @@
         },
         
         setEditEmployee(employee) {
-            this.editEmployee = employee;
+            // Deep clone and ensure structure
+            this.editEmployee = {
+                ...employee,
+                profile: {
+                    fullname: employee.profile?.fullname || '',
+                    phone_number: employee.profile?.phone_number || '',
+                    gender: employee.profile?.gender || '',
+                    birth_date: employee.profile?.birth_date || '',
+                    work_date: employee.profile?.work_date || '',
+                    dress_size: employee.profile?.dress_size || '',
+                    address: employee.profile?.address || ''
+                },
+                employee_salary: {
+                    salary_system_id: employee.employee_salary?.salary_system_id || null
+                }
+            };
             
             // Split birth_date into birth_day, birth_month, birth_year (format: YYYY-MM-DD)
-            if (employee.birth_date) {
-                const birthParts = employee.birth_date.split('-');
+            const birthDate = employee.profile?.birth_date;
+            if (birthDate) {
+                const birthParts = birthDate.split('-');
                 this.editEmployee.birth_year = birthParts[0] || '';
                 const monthNum = parseInt(birthParts[1]);
                 const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
@@ -135,8 +168,9 @@
             }
             
             // Split work_date into work_day, work_month, work_year (format: YYYY-MM-DD)
-            if (employee.work_date) {
-                const workParts = employee.work_date.split('-');
+            const workDate = employee.profile?.work_date;
+            if (workDate) {
+                const workParts = workDate.split('-');
                 this.editEmployee.work_year = workParts[0] || '';
                 const workMonthNum = parseInt(workParts[1]);
                 const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
@@ -150,12 +184,24 @@
         },
 
         setViewEmployee(employee) {
-            this.viewEmployee = employee;
+            // Extract and flatten data for view
+            this.viewEmployee = {
+                username: employee.username || '-',
+                fullname: employee.profile?.fullname || '-',
+                phone_number: employee.profile?.phone_number || '-',
+                gender: employee.profile?.gender || '-',
+                birth_date: employee.profile?.birth_date || '-',
+                work_date: employee.profile?.work_date || '-',
+                dress_size: employee.profile?.dress_size || '-',
+                address: employee.profile?.address || '-',
+                salary_system_raw: employee.employee_salary?.salary_system?.type_name || '-',
+                role: employee.role || '-'
+            };
         }
     }">
 
         {{-- ===================== EMPLOYEES ===================== --}}
-        <section id="employees-section" class="bg-white border border-gray-200 rounded-lg p-5">
+        <section id="user-profile-section" class="bg-white border border-gray-200 rounded-lg p-5">
             {{-- Header --}}
             <div class="flex flex-col gap-3 md:flex-row md:items-center">
                 <h2 class="text-xl font-semibold text-gray-900">Employees</h2>
@@ -181,13 +227,13 @@
                             <tr>
                                 <th class="py-2 px-4 text-left rounded-l-md w-16">No</th>
                                 <th class="py-2 px-4 text-left w-40">Fullname</th>
-                                <th class="py-2 px-4 text-left w-32">Birth Date</th>
+                                <th class="py-2 px-4 text-left w-32">Phone</th>
                                 <th class="py-2 px-4 text-left w-24">Gender</th>
+                                <th class="py-2 px-4 text-left w-32">Birth Date</th>
                                 <th class="py-2 px-4 text-left w-24">Dress Size</th>
-                                <th class="py-2 px-4 text-left w-36">Salary System</th>
                                 <th class="py-2 px-4 text-left w-32">Work Date</th>
-                                <th class="py-2 px-4 text-left w-36">Work Duration</th>
-                                <th class="py-2 px-4 text-left w-64">Address</th>
+                                <th class="py-2 px-4 text-left w-32">Salary System</th>
+                                <th class="py-2 px-4 text-left w-48">Address</th>
                                 <th class="py-2 px-4 text-right rounded-r-md w-20">Action</th>
                             </tr>
                         </thead>
@@ -205,50 +251,39 @@
                                     <td class="py-2 px-4">
                                         {{ ($employees->currentPage() - 1) * $employees->perPage() + $loop->iteration }}
                                     </td>
-                                    <td class="py-2 px-4">{{ $employee->fullname }}</td>
+                                    <td class="py-2 px-4">{{ $employee->profile?->fullname ?? '-' }}</td>
+                                    <td class="py-2 px-4">{{ $employee->profile?->phone_number ?? '-' }}</td>
+                                    <td class="py-2 px-4">{{ $employee->profile?->gender ? ucfirst($employee->profile->gender) : '-' }}</td>
                                     <td class="py-2 px-4">
-                                        @if($employee->birth_date)
-                                            {{ \Carbon\Carbon::parse($employee->birth_date)->format('d M Y') }}
+                                        @if($employee->profile?->birth_date)
+                                            {{ \Carbon\Carbon::parse($employee->profile->birth_date)->format('d M Y') }}
                                         @else
                                             -
                                         @endif
                                     </td>
-                                    <td class="py-2 px-4">{{ $employee->gender ?? '-' }}</td>
-                                    <td class="py-2 px-4">{{ $employee->dress_size ?? '-' }}</td>
+                                    <td class="py-2 px-4">{{ $employee->profile?->dress_size ?? '-' }}</td>
                                     <td class="py-2 px-4">
-                                        @if($employee->salary_system && $employee->salary_cycle)
-                                            {{ $employee->salary_system }} ({{ $employee->salary_cycle }}x)
-                                        @else
-                                            {{ $employee->salary_system ?? '-' }}
-                                        @endif
-                                    </td>
-                                    <td class="py-2 px-4">
-                                        @if($employee->work_date)
-                                            {{ \Carbon\Carbon::parse($employee->work_date)->format('d M Y') }}
+                                        @if($employee->profile?->work_date)
+                                            {{ \Carbon\Carbon::parse($employee->profile->work_date)->format('d M Y') }}
                                         @else
                                             -
                                         @endif
                                     </td>
                                     <td class="py-2 px-4">
                                         @php
-                                            if ($employee->work_date) {
-                                                try {
-                                                    $workDate = \Carbon\Carbon::parse($employee->work_date);
-                                                    $now = \Carbon\Carbon::now();
-                                                    $diffInMonths = (int) $workDate->diffInMonths($now);
-                                                    $diffInDays = (int) $workDate->copy()->addMonths($diffInMonths)->diffInDays($now);
-                                                    echo $diffInMonths . ' Month ' . $diffInDays . ' Day';
-                                                } catch (\Exception $e) {
-                                                    echo '-';
-                                                }
-                                            } else {
-                                                echo '-';
+                                            $salaryText = $employee->employeeSalary?->salarySystem?->type_name ?? '-';
+                                            if ($salaryText !== '-' && preg_match('/_([0-9]+)x$/', $salaryText, $matches)) {
+                                                $baseName = preg_replace('/_([0-9]+)x$/', '', $salaryText);
+                                                $salaryText = ucfirst($baseName) . ' (' . $matches[1] . 'x)';
+                                            } elseif ($salaryText !== '-') {
+                                                $salaryText = ucfirst($salaryText);
                                             }
                                         @endphp
+                                        {{ $salaryText }}
                                     </td>
-                                    <td class="py-2 px-4 max-w-64">
-                                        <div class="truncate" title="{{ $employee->address ?? '-' }}">
-                                            {{ $employee->address ?? '-' }}
+                                    <td class="py-2 px-4 max-w-48">
+                                        <div class="truncate text-xs" title="{{ $employee->profile?->address ?? '-' }}">
+                                            {{ $employee->profile?->address ?? '-' }}
                                         </div>
                                     </td>
 
@@ -352,53 +387,42 @@
                             @foreach ($allEmployees as $employee)
                                 <tr class="border-t border-gray-200"
                                     x-show="searchEmployee.trim() !== '' && 
-                                        {{ Js::from(strtolower($employee->fullname . ' ' . ($employee->address ?? ''))) }}
+                                        {{ Js::from(strtolower(($employee->profile?->fullname ?? '') . ' ' . ($employee->profile?->address ?? ''))) }}
                                         .includes(searchEmployee.toLowerCase())">
                                     <td class="py-2 px-4">{{ $loop->iteration }}</td>
-                                    <td class="py-2 px-4">{{ $employee->fullname }}</td>
+                                    <td class="py-2 px-4">{{ $employee->profile?->fullname ?? '-' }}</td>
+                                    <td class="py-2 px-4">{{ $employee->profile?->phone_number ?? '-' }}</td>
+                                    <td class="py-2 px-4">{{ $employee->profile?->gender ? ucfirst($employee->profile->gender) : '-' }}</td>
                                     <td class="py-2 px-4">
-                                        @if($employee->birth_date)
-                                            {{ \Carbon\Carbon::parse($employee->birth_date)->format('d M Y') }}
+                                        @if($employee->profile?->birth_date)
+                                            {{ \Carbon\Carbon::parse($employee->profile->birth_date)->format('d M Y') }}
                                         @else
                                             -
                                         @endif
                                     </td>
-                                    <td class="py-2 px-4">{{ $employee->gender ?? '-' }}</td>
-                                    <td class="py-2 px-4">{{ $employee->dress_size ?? '-' }}</td>
+                                    <td class="py-2 px-4">{{ $employee->profile?->dress_size ?? '-' }}</td>
                                     <td class="py-2 px-4">
-                                        @if($employee->salary_system && $employee->salary_cycle)
-                                            {{ $employee->salary_system }} ({{ $employee->salary_cycle }}x)
-                                        @else
-                                            {{ $employee->salary_system ?? '-' }}
-                                        @endif
-                                    </td>
-                                    <td class="py-2 px-4">
-                                        @if($employee->work_date)
-                                            {{ \Carbon\Carbon::parse($employee->work_date)->format('d M Y') }}
+                                        @if($employee->profile?->work_date)
+                                            {{ \Carbon\Carbon::parse($employee->profile->work_date)->format('d M Y') }}
                                         @else
                                             -
                                         @endif
                                     </td>
                                     <td class="py-2 px-4">
                                         @php
-                                            if ($employee->work_date) {
-                                                try {
-                                                    $workDate = \Carbon\Carbon::parse($employee->work_date);
-                                                    $now = \Carbon\Carbon::now();
-                                                    $diffInMonths = (int) $workDate->diffInMonths($now);
-                                                    $diffInDays = (int) $workDate->copy()->addMonths($diffInMonths)->diffInDays($now);
-                                                    echo $diffInMonths . ' Month ' . $diffInDays . ' Day';
-                                                } catch (\Exception $e) {
-                                                    echo '-';
-                                                }
-                                            } else {
-                                                echo '-';
+                                            $salaryText = $employee->employeeSalary?->salarySystem?->type_name ?? '-';
+                                            if ($salaryText !== '-' && preg_match('/_([0-9]+)x$/', $salaryText, $matches)) {
+                                                $baseName = preg_replace('/_([0-9]+)x$/', '', $salaryText);
+                                                $salaryText = ucfirst($baseName) . ' (' . $matches[1] . 'x)';
+                                            } elseif ($salaryText !== '-') {
+                                                $salaryText = ucfirst($salaryText);
                                             }
                                         @endphp
+                                        {{ $salaryText }}
                                     </td>
-                                    <td class="py-2 px-4 max-w-64">
-                                        <div class="truncate" title="{{ $employee->address ?? '-' }}">
-                                            {{ $employee->address ?? '-' }}
+                                    <td class="py-2 px-4 max-w-48">
+                                        <div class="truncate text-xs" title="{{ $employee->profile?->address ?? '-' }}">
+                                            {{ $employee->profile?->address ?? '-' }}
                                         </div>
                                     </td>
 
@@ -521,7 +545,7 @@
 
                 {{-- Scrollable Content --}}
                 <div class="overflow-y-auto overflow-x-hidden flex-1 px-6 py-4">
-                <form id="editEmployeeForm" :action="`{{ route('owner.manage-data.employees.index') }}/${editEmployee.id}`" method="POST"
+                <form id="editEmployeeForm" :action="`{{ route('owner.manage-data.user-profile.index') }}/${editEmployee.id}`" method="POST"
                     @submit.prevent="
                         if (validateEditEmployee()) {
                             $el.submit();
@@ -533,14 +557,14 @@
 
                     {{-- Fullname --}}
                     <div class="relative">
-                        <label class="block text-sm font-medium text-gray-700">Full Name <span class="text-red-500">*</span></label>
-                        <input type="text" name="fullname" x-model="editEmployee.fullname" 
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Full Name <span class="text-red-500">*</span></label>
+                        <input type="text" name="fullname" x-model="editEmployee.profile.fullname" 
                             @blur="validateEditEmployee()"
                             :class="editEmployeeErrors.fullname || {{ $errors->editEmployee->has('fullname') ? 'true' : 'false' }} ? 
                                 'border-red-500 focus:border-red-500 focus:ring-red-200' : 
                                 'border-gray-200 focus:border-primary focus:ring-primary/20'"
                             required maxlength="255"
-                            class="mt-1 w-full rounded-md px-4 py-2 text-sm pr-10 border focus:outline-none focus:ring-2 text-gray-700">
+                            class="w-full rounded-md px-4 py-2 text-sm pr-10 border focus:outline-none focus:ring-2 text-gray-700">
                         
                         @if ($errors->editEmployee->has('fullname'))
                             <span class="absolute right-3 top-[42px] -translate-y-1/2 text-red-500 pointer-events-none">
@@ -553,6 +577,62 @@
                         @error('fullname', 'editEmployee')
                             <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                         @enderror
+                    </div>
+
+                    {{-- Phone Number & Gender --}}
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {{-- Phone Number --}}
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Phone Number</label>
+                            <input type="tel" name="phone_number" x-model="editEmployee.profile.phone_number" 
+                                maxlength="100" pattern="[0-9+\-\s()]+" placeholder="e.g., 081234567890"
+                                class="w-full rounded-md border border-gray-200 px-4 py-2 text-sm text-gray-700 
+                                    focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20">
+                        </div>
+
+                        {{-- Gender --}}
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Gender <span class="text-red-500">*</span></label>
+                            <div x-data="{
+                                open: false,
+                                genders: [
+                                    { value: 'male', name: 'Male' },
+                                    { value: 'female', name: 'Female' }
+                                ]
+                            }" class="relative w-full">
+                                <button type="button" @click="open = !open"
+                                    :class="editEmployeeErrors.gender ? 'border-red-500' : 'border-gray-200'"
+                                    class="w-full flex justify-between items-center rounded-md border px-3 py-2 text-sm text-gray-700 bg-white focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors">
+                                    <span x-text="genders.find(g => g.value === editEmployee.profile?.gender)?.name || 'Select Gender'"
+                                        :class="!editEmployee.profile?.gender ? 'text-gray-400' : 'text-gray-900'"></span>
+                                    <svg class="w-4 h-4 text-gray-400 transition-transform" :class="open && 'rotate-180'" fill="none"
+                                        stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                                    </svg>
+                                </button>
+                                <input type="hidden" name="gender" x-model="editEmployee.profile.gender">
+                                <div x-show="open" @click.away="open = false" x-cloak x-transition:enter="transition ease-out duration-100"
+                                    x-transition:enter-start="opacity-0 scale-95" x-transition:enter-end="opacity-100 scale-100"
+                                    x-transition:leave="transition ease-in duration-75" x-transition:leave-start="opacity-100 scale-100"
+                                    x-transition:leave-end="opacity-0 scale-95"
+                                    class="absolute z-20 mt-1 w-full bg-white border border-gray-200 rounded-md shadow-lg">
+                                    <ul class="max-h-60 overflow-y-auto py-1">
+                                        <template x-for="gender in genders" :key="gender.value">
+                                            <li @click="editEmployee.profile.gender = gender.value; open = false"
+                                                class="px-4 py-2 cursor-pointer text-sm hover:bg-primary/5 transition-colors"
+                                                :class="{ 'bg-primary/10 font-medium text-primary': editEmployee.profile?.gender === gender.value }">
+                                                <span x-text="gender.name"></span>
+                                            </li>
+                                        </template>
+                                    </ul>
+                                </div>
+                                <p x-show="editEmployeeErrors.gender" x-text="editEmployeeErrors.gender"
+                                    class="mt-1 text-sm text-red-600"></p>
+                            </div>
+                            @error('gender', 'editEmployee')
+                                <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                            @enderror
+                        </div>
                     </div>
 
                     {{-- Birth Date (Day, Month, Year) --}}
@@ -678,44 +758,6 @@
                         @enderror
                     </div>
 
-                    {{-- Gender --}}
-                    <div class="relative">
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Gender</label>
-                        <div x-data="{
-                            open: false,
-                            genders: ['Male', 'Female']
-                        }" class="relative w-full">
-                            <button type="button" @click="open = !open"
-                                class="w-full flex justify-between items-center rounded-md border border-gray-200 px-3 py-2 text-sm text-gray-700 bg-white focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors">
-                                <span x-text="editEmployee.gender || '-- Select --'"
-                                    :class="!editEmployee.gender ? 'text-gray-400' : 'text-gray-900'"></span>
-                                <svg class="w-4 h-4 text-gray-400 transition-transform" :class="open && 'rotate-180'" fill="none"
-                                    stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-                                </svg>
-                            </button>
-                            <input type="hidden" name="gender" x-model="editEmployee.gender">
-                            <div x-show="open" @click.away="open = false" x-cloak x-transition:enter="transition ease-out duration-100"
-                                x-transition:enter-start="opacity-0 scale-95" x-transition:enter-end="opacity-100 scale-100"
-                                x-transition:leave="transition ease-in duration-75" x-transition:leave-start="opacity-100 scale-100"
-                                x-transition:leave-end="opacity-0 scale-95"
-                                class="absolute z-20 mt-1 w-full bg-white border border-gray-200 rounded-md shadow-lg">
-                                <ul class="max-h-60 overflow-y-auto py-1">
-                                    <template x-for="gender in genders" :key="gender">
-                                        <li @click="editEmployee.gender = gender; open = false"
-                                            class="px-4 py-2 cursor-pointer text-sm hover:bg-primary/5 transition-colors"
-                                            :class="{ 'bg-primary/10 font-medium text-primary': editEmployee.gender === gender }">
-                                            <span x-text="gender"></span>
-                                        </li>
-                                    </template>
-                                </ul>
-                            </div>
-                        </div>
-                        @error('gender', 'editEmployee')
-                            <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                        @enderror
-                    </div>
-
                     {{-- Work Date (Day, Month & Year) --}}
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1">Work Date <span class="text-red-500">*</span></label>
@@ -766,7 +808,7 @@
                                 <button type="button" @click="open = !open"
                                     :class="editEmployeeErrors.work_month ? 'border-red-500' : 'border-gray-200'"
                                     class="w-full flex justify-between items-center rounded-md border px-3 py-2 text-sm text-gray-700 bg-white focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors">
-                                    <span x-text="editEmployee.work_month || '-- Select --'"
+                                    <span x-text="editEmployee.work_month || 'Month'"
                                         :class="!editEmployee.work_month ? 'text-gray-400' : 'text-gray-900'"></span>
                                     <svg class="w-4 h-4 text-gray-400 transition-transform" :class="open && 'rotate-180'" fill="none"
                                         stroke="currentColor" viewBox="0 0 24 24">
@@ -803,7 +845,7 @@
                                 <button type="button" @click="open = !open"
                                     :class="editEmployeeErrors.work_year ? 'border-red-500' : 'border-gray-200'"
                                     class="w-full flex justify-between items-center rounded-md border px-3 py-2 text-sm text-gray-700 bg-white focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors">
-                                    <span x-text="editEmployee.work_year || '-- Select --'"
+                                    <span x-text="editEmployee.work_year || 'Year'"
                                         :class="!editEmployee.work_year ? 'text-gray-400' : 'text-gray-900'"></span>
                                     <svg class="w-4 h-4 text-gray-400 transition-transform" :class="open && 'rotate-180'" fill="none"
                                         stroke="currentColor" viewBox="0 0 24 24">
@@ -851,14 +893,14 @@
                             <button type="button" @click="open = !open"
                                 :class="editEmployeeErrors.dress_size ? 'border-red-500' : 'border-gray-200'"
                                 class="w-full flex justify-between items-center rounded-md border px-3 py-2 text-sm text-gray-700 bg-white focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors">
-                                <span x-text="editEmployee.dress_size || '-- Select --'"
-                                    :class="!editEmployee.dress_size ? 'text-gray-400' : 'text-gray-900'"></span>
+                                <span x-text="editEmployee.profile?.dress_size || 'Select Size'"
+                                    :class="!editEmployee.profile?.dress_size ? 'text-gray-400' : 'text-gray-900'"></span>
                                 <svg class="w-4 h-4 text-gray-400 transition-transform" :class="open && 'rotate-180'" fill="none"
                                     stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
                                 </svg>
                             </button>
-                            <input type="hidden" name="dress_size" x-model="editEmployee.dress_size">
+                            <input type="hidden" name="dress_size" x-model="editEmployee.profile.dress_size">
                             <div x-show="open" @click.away="open = false" x-cloak x-transition:enter="transition ease-out duration-100"
                                 x-transition:enter-start="opacity-0 scale-95" x-transition:enter-end="opacity-100 scale-100"
                                 x-transition:leave="transition ease-in duration-75" x-transition:leave-start="opacity-100 scale-100"
@@ -866,63 +908,107 @@
                                 class="absolute z-20 mt-1 w-full bg-white border border-gray-200 rounded-md shadow-lg">
                                 <ul class="max-h-60 overflow-y-auto py-1">
                                     <template x-for="size in sizes" :key="size">
-                                        <li @click="editEmployee.dress_size = size; open = false"
+                                        <li @click="editEmployee.profile.dress_size = size; open = false"
                                             class="px-4 py-2 cursor-pointer text-sm hover:bg-primary/5 transition-colors"
-                                            :class="{ 'bg-primary/10 font-medium text-primary': editEmployee.dress_size === size }">
+                                            :class="{ 'bg-primary/10 font-medium text-primary': editEmployee.profile?.dress_size === size }">
                                             <span x-text="size"></span>
                                         </li>
                                     </template>
                                 </ul>
                             </div>
+                            <p x-show="editEmployeeErrors.dress_size" x-text="editEmployeeErrors.dress_size"
+                                class="mt-1 text-sm text-red-600"></p>
                         </div>
-                        
-                        <p x-show="editEmployeeErrors.dress_size" x-text="editEmployeeErrors.dress_size"
-                            class="mt-1 text-sm text-red-600"></p>
                         @error('dress_size', 'editEmployee')
                             <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                         @enderror
                     </div>
 
-                    {{-- Salary System (System & Cycle) --}}
-                    <div>
+                    {{-- Salary System --}}
+                    <div class="relative">
                         <label class="block text-sm font-medium text-gray-700 mb-1">Salary System <span class="text-red-500">*</span></label>
-                        <div class="grid grid-cols-2 gap-3">
-                            <div class="relative">
-                                <input type="text" name="salary_system" x-model="editEmployee.salary_system" 
-                                    @blur="validateEditEmployee()"
-                                    :class="editEmployeeErrors.salary_system ? 'border-red-500' : 'border-gray-200'"
-                                    placeholder="Daily, Monthly, etc"
-                                    class="w-full rounded-md px-4 py-2 text-sm border focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 text-gray-700">
-                                <p x-show="editEmployeeErrors.salary_system" x-text="editEmployeeErrors.salary_system"
-                                    class="mt-1 text-sm text-red-600"></p>
-                                @error('salary_system', 'editEmployee')
-                                    <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                                @enderror
+                        <div x-data="{
+                            open: false,
+                            salarySystems: {{ Js::from($salarySystems ?? []) }},
+                            selected: null,
+                            
+                            formatSalaryName(typeName) {
+                                if (!typeName) return '';
+                                const match = typeName.match(/(.+)_(\d+)x$/);
+                                if (match) {
+                                    const baseName = match[1].charAt(0).toUpperCase() + match[1].slice(1);
+                                    return baseName + ' (' + match[2] + 'x)';
+                                }
+                                return typeName.charAt(0).toUpperCase() + typeName.slice(1);
+                            },
+                            
+                            init() {
+                                // Watch entire editEmployee object to reset properly
+                                this.$watch('editEmployee', (newValue) => {
+                                    if (newValue?.employee_salary?.salary_system_id) {
+                                        this.selected = this.salarySystems.find(s => s.id === newValue.employee_salary.salary_system_id);
+                                    } else {
+                                        this.selected = null;
+                                    }
+                                });
+                                // Initial load
+                                if (editEmployee?.employee_salary?.salary_system_id) {
+                                    this.selected = this.salarySystems.find(s => s.id === editEmployee.employee_salary.salary_system_id);
+                                }
+                            },
+                            
+                            select(system) {
+                                this.selected = system;
+                                // Update editEmployee for validation
+                                if (!editEmployee.employee_salary) {
+                                    editEmployee.employee_salary = {};
+                                }
+                                editEmployee.employee_salary.salary_system_id = system.id;
+                                this.open = false;
+                            }
+                        }" class="relative w-full">
+                            <button type="button" @click="open = !open"
+                                :class="editEmployeeErrors.salary_system_id ? 'border-red-500' : 'border-gray-200'"
+                                class="w-full flex justify-between items-center rounded-md border px-3 py-2 text-sm text-gray-700 bg-white focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors">
+                                <span x-text="selected ? formatSalaryName(selected.type_name) : 'Select Salary System'"
+                                    :class="!selected ? 'text-gray-400' : 'text-gray-900'"></span>
+                                <svg class="w-4 h-4 text-gray-400 transition-transform" :class="open && 'rotate-180'" fill="none"
+                                    stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                                </svg>
+                            </button>
+                            <input type="hidden" name="salary_system_id" :value="selected?.id || ''">
+                            <div x-show="open" @click.away="open = false" x-cloak 
+                                x-transition:enter="transition ease-out duration-100"
+                                x-transition:enter-start="opacity-0 scale-95" x-transition:enter-end="opacity-100 scale-100"
+                                x-transition:leave="transition ease-in duration-75" x-transition:leave-start="opacity-100 scale-100"
+                                x-transition:leave-end="opacity-0 scale-95"
+                                class="absolute z-20 mt-1 w-full bg-white border border-gray-200 rounded-md shadow-lg">
+                                <ul class="max-h-60 overflow-y-auto py-1">
+                                    <template x-for="system in salarySystems" :key="system.id">
+                                        <li @click="select(system)"
+                                            class="px-4 py-2 cursor-pointer text-sm hover:bg-primary/5 transition-colors"
+                                            :class="{ 'bg-primary/10 font-medium text-primary': selected && selected.id === system.id }">
+                                            <span x-text="formatSalaryName(system.type_name)"></span>
+                                        </li>
+                                    </template>
+                                </ul>
                             </div>
-                            <div class="relative">
-                                <input type="number" name="salary_cycle" x-model="editEmployee.salary_cycle" 
-                                    @blur="validateEditEmployee()"
-                                    :class="editEmployeeErrors.salary_cycle ? 'border-red-500' : 'border-gray-200'"
-                                    placeholder="1x, 2x, etc" min="1" max="31"
-                                    class="w-full rounded-md px-4 py-2 text-sm border focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 text-gray-700">
-                                <p x-show="editEmployeeErrors.salary_cycle" x-text="editEmployeeErrors.salary_cycle"
-                                    class="mt-1 text-sm text-red-600"></p>
-                                @error('salary_cycle', 'editEmployee')
-                                    <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                                @enderror
-                            </div>
+                            <p x-show="editEmployeeErrors.salary_system_id" x-text="editEmployeeErrors.salary_system_id"
+                                class="mt-1 text-sm text-red-600"></p>
                         </div>
+                        @error('salary_system_id', 'editEmployee')
+                            <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                        @enderror
                     </div>
 
                     {{-- Address --}}
                     <div class="relative">
-                        <label class="block text-sm font-medium text-gray-700">Address <span class="text-red-500">*</span></label>
-                        <textarea name="address" x-model="editEmployee.address" rows="3"
-                            @blur="validateEditEmployee()"
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Address <span class="text-red-500">*</span></label>
+                        <textarea name="address" x-model="editEmployee.profile.address" rows="3"
                             :class="editEmployeeErrors.address ? 'border-red-500' : 'border-gray-200'"
-                            class="mt-1 w-full rounded-md px-4 py-2 text-sm border focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 text-gray-700"
+                            class="w-full rounded-md px-4 py-2 text-xs border focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 text-gray-700"
                             placeholder="Enter full address..."></textarea>
-                        
                         <p x-show="editEmployeeErrors.address" x-text="editEmployeeErrors.address"
                             class="mt-1 text-sm text-red-600"></p>
                         @error('address', 'editEmployee')
@@ -953,83 +1039,79 @@
                 </div>
 
                 {{-- Scrollable Content --}}
-                <div class="overflow-y-auto overflow-x-hidden flex-1 px-6 py-4">
+                <div class="overflow-y-auto overflow-x-hidden flex-1 px-6 py-4" x-data="{
+                    formatSalaryName(typeName) {
+                        if (!typeName || typeName === '-') return '-';
+                        const match = typeName.match(/(.+)_(\d+)x$/);
+                        if (match) {
+                            const baseName = match[1].charAt(0).toUpperCase() + match[1].slice(1);
+                            return baseName + ' (' + match[2] + 'x)';
+                        }
+                        return typeName.charAt(0).toUpperCase() + typeName.slice(1);
+                    },
+                    formatDate(dateStr) {
+                        if (!dateStr || dateStr === '-') return '-';
+                        const date = new Date(dateStr);
+                        return date.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+                    }
+                }">
                     <div class="space-y-4 max-w-full">
+                    {{-- Username --}}
+                    <div class="border-b border-gray-100 pb-3">
+                        <label class="block text-xs font-medium text-gray-500 mb-1">Username</label>
+                        <p class="text-sm text-gray-900" x-text="viewEmployee.username"></p>
+                    </div>
+
                     {{-- Full Name --}}
                     <div class="border-b border-gray-100 pb-3">
                         <label class="block text-xs font-medium text-gray-500 mb-1">Full Name</label>
-                        <p class="text-sm font-medium text-gray-900 break-words" x-text="viewEmployee.fullname || '-'"></p>
+                        <p class="text-sm font-medium text-gray-900 break-words" x-text="viewEmployee.fullname"></p>
                     </div>
 
                     {{-- Phone Number --}}
                     <div class="border-b border-gray-100 pb-3">
                         <label class="block text-xs font-medium text-gray-500 mb-1">Phone Number</label>
-                        <p class="text-sm text-gray-900 break-words" x-text="viewEmployee.phone_number || '-'"></p>
+                        <p class="text-sm text-gray-900 break-words" x-text="viewEmployee.phone_number"></p>
                     </div>
 
-                    {{-- Role --}}
+                    {{-- Gender --}}
                     <div class="border-b border-gray-100 pb-3">
-                        <label class="block text-xs font-medium text-gray-500 mb-1">Role</label>
+                        <label class="block text-xs font-medium text-gray-500 mb-1">Gender</label>
                         <p class="text-sm text-gray-900">
-                            <span x-show="viewEmployee.role === 'owner'" class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
-                                Owner
-                            </span>
-                            <span x-show="viewEmployee.role === 'admin'" class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                                Admin
-                            </span>
-                            <span x-show="viewEmployee.role === 'pm'" class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                                Project Manager
-                            </span>
-                            <span x-show="viewEmployee.role === 'karyawan'" class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-                                Karyawan
-                            </span>
+                            <span x-text="viewEmployee.gender !== '-' ? viewEmployee.gender.charAt(0).toUpperCase() + viewEmployee.gender.slice(1) : '-'"></span>
                         </p>
                     </div>
 
                     {{-- Birth Date --}}
                     <div class="border-b border-gray-100 pb-3">
                         <label class="block text-xs font-medium text-gray-500 mb-1">Birth Date</label>
-                        <p class="text-sm text-gray-900">
-                            <template x-if="viewEmployee.birth_date">
-                                <span x-text="new Date(viewEmployee.birth_date).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })"></span>
-                            </template>
-                            <template x-if="!viewEmployee.birth_date">
-                                <span>-</span>
-                            </template>
-                        </p>
-                    </div>
-
-                    {{-- Work Date --}}
-                    <div class="border-b border-gray-100 pb-3">
-                        <label class="block text-xs font-medium text-gray-500 mb-1">Work Date</label>
-                        <p class="text-sm text-gray-900 break-words" x-text="viewEmployee.work_date || '-'"></p>
+                        <p class="text-sm text-gray-900" x-text="formatDate(viewEmployee.birth_date)"></p>
                     </div>
 
                     {{-- Dress Size --}}
                     <div class="border-b border-gray-100 pb-3">
                         <label class="block text-xs font-medium text-gray-500 mb-1">Dress Size</label>
-                        <p class="text-sm text-gray-900" x-text="viewEmployee.dress_size || '-'"></p>
+                        <p class="text-sm text-gray-900" x-text="viewEmployee.dress_size"></p>
+                    </div>
+
+                    {{-- Work Date --}}
+                    <div class="border-b border-gray-100 pb-3">
+                        <label class="block text-xs font-medium text-gray-500 mb-1">Work Date</label>
+                        <p class="text-sm text-gray-900" x-text="formatDate(viewEmployee.work_date)"></p>
                     </div>
 
                     {{-- Salary System --}}
                     <div class="border-b border-gray-100 pb-3">
                         <label class="block text-xs font-medium text-gray-500 mb-1">Salary System</label>
-                        <p class="text-sm text-gray-900">
-                            <template x-if="viewEmployee.salary_system && viewEmployee.salary_cycle">
-                                <span x-text="`${viewEmployee.salary_system} (${viewEmployee.salary_cycle}x)`"></span>
-                            </template>
-                            <template x-if="!viewEmployee.salary_system || !viewEmployee.salary_cycle">
-                                <span x-text="viewEmployee.salary_system || '-'"></span>
-                            </template>
-                        </p>
+                        <p class="text-sm text-gray-900" x-text="formatSalaryName(viewEmployee.salary_system_raw)"></p>
                     </div>
 
                     {{-- Address with Copy Icon --}}
                     <div class="border-b border-gray-100 pb-3">
                         <label class="block text-xs font-medium text-gray-500 mb-1">Address</label>
                         <div class="flex items-start gap-2 max-w-full">
-                            <p class="text-sm text-gray-900 flex-1 break-all min-w-0" x-text="viewEmployee.address || '-'"></p>
-                            <template x-if="viewEmployee.address">
+                            <p class="text-xs text-gray-900 flex-1 break-all min-w-0" x-text="viewEmployee.address"></p>
+                            <template x-if="viewEmployee.address !== '-'">
                                 <button 
                                     type="button"
                                     :data-text="viewEmployee.address"
@@ -1085,8 +1167,8 @@
                     const parser = new DOMParser();
                     const doc = parser.parseFromString(html, 'text/html');
                     
-                    const newSection = doc.querySelector('#employees-section');
-                    const currentSection = document.querySelector('#employees-section');
+                    const newSection = doc.querySelector('#user-profile-section');
+                    const currentSection = document.querySelector('#user-profile-section');
                     
                     if (newSection && currentSection) {
                         currentSection.innerHTML = newSection.innerHTML;
