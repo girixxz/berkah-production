@@ -80,15 +80,15 @@
                                 </x-sidebar-menu.sub-menu>
                             </li>
                             <li>
-                                <x-sidebar-menu.sub-menu href="{{ route('owner.manage-data.sales.index') }}"
-                                    :pattern="['owner.manage-data.sales.*', 'owner/manage-data/sales/*']">
-                                    Sales Data
-                                </x-sidebar-menu.sub-menu>
-                            </li>
-                            <li>
                                 <x-sidebar-menu.sub-menu href="{{ route('owner.manage-data.employees.index') }}"
                                     :pattern="['owner.manage-data.employees.*', 'owner/manage-data/employees/*']">
                                     Employees
+                                </x-sidebar-menu.sub-menu>
+                            </li>
+                            <li>
+                                <x-sidebar-menu.sub-menu href="{{ route('owner.manage-data.sales.index') }}"
+                                    :pattern="['owner.manage-data.sales.*', 'owner/manage-data/sales/*']">
+                                    Sales Data
                                 </x-sidebar-menu.sub-menu>
                             </li>
                         </ul>
