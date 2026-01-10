@@ -15,6 +15,7 @@
             fullname: '',
             username: '',
             phone_number: '',
+            gender: '',
             role: '',
             password: '',
             password_confirmation: ''
@@ -36,13 +37,9 @@
                 this.addUserErrors.username = 'Username must not exceed 255 characters';
             }
     
-            if (this.addUserForm.phone_number && this.addUserForm.phone_number.length > 100) {
-                this.addUserErrors.phone_number = 'Phone must not exceed 100 characters';
-            }
-    
             if (!this.addUserForm.role) {
                 this.addUserErrors.role = 'Role is required';
-            } else if (!['owner', 'admin', 'pm', 'karyawan'].includes(this.addUserForm.role)) {
+            } else if (!['owner', 'admin', 'finance', 'pm', 'employee'].includes(this.addUserForm.role)) {
                 this.addUserErrors.role = 'Please select a valid role';
             }
     
@@ -89,6 +86,7 @@
                         fullname: '',
                         username: '',
                         phone_number: '',
+                        gender: '',
                         role: '',
                         password: '',
                         password_confirmation: ''
@@ -135,6 +133,7 @@
                                 <th class="py-2 px-4 text-left">Username</th>
                                 <th class="py-2 px-4 text-left">Phone</th>
                                 <th class="py-2 px-4 text-left">Role</th>
+                                <th class="py-2 px-4 text-left">Status</th>
                                 <th class="py-2 px-4 text-right rounded-r-md">Action</th>
                             </tr>
                         </thead>
@@ -143,7 +142,7 @@
                                 const search = searchUser.trim().toLowerCase();
                                 if (search === '') return true;
                                 @foreach ($allUsers as $u)
-                                    if ('{{ strtolower($u->fullname . ' ' . $u->username . ' ' . ($u->phone_number ?? '') . ' ' . $u->role) }}'.includes(search)) return true;
+                                    if ('{{ strtolower(($u->profile?->fullname ?? 'No Name') . ' ' . $u->username . ' ' . ($u->profile?->phone_number ?? '') . ' ' . $u->role) }}'.includes(search)) return true;
                                 @endforeach
                                 return false;
                             }
@@ -159,22 +158,31 @@
                                                     ? $user->img_url
                                                     : 'https://i.pravatar.cc/40?u=' .
                                                         urlencode($user->id ?? $user->username);
+                                                $fullname = $user->profile ? $user->profile->fullname : 'No Name';
                                             @endphp
-                                            <img src="{{ $avatarUrl }}" alt="{{ $user->fullname }}"
+                                            <img src="{{ $avatarUrl }}" alt="{{ $fullname }}"
                                                 class="w-8 h-8 rounded-full object-cover border" />
-                                            <span>{{ $user->fullname }}</span>
+                                            <span>{{ $fullname }}</span>
                                         </div>
                                     </td>
                                     <td class="py-2 px-4">{{ $user->username }}</td>
-                                    <td class="py-2 px-4">{{ $user->phone_number ?? '-' }}</td>
+                                    <td class="py-2 px-4">{{ $user->profile?->phone_number ?? '-' }}</td>
                                     <td class="py-2 px-4">
                                         <span
                                             class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium
                                             {{ $user->role === 'owner' ? 'bg-purple-100 text-purple-800' : '' }}
                                             {{ $user->role === 'admin' ? 'bg-blue-100 text-blue-800' : '' }}
+                                            {{ $user->role === 'finance' ? 'bg-green-100 text-green-800' : '' }}
                                             {{ $user->role === 'pm' ? 'bg-primary-light text-primary-dark' : '' }}
-                                            {{ $user->role === 'karyawan' ? 'bg-gray-100 text-gray-800' : '' }}">
+                                            {{ $user->role === 'employee' ? 'bg-gray-100 text-gray-800' : '' }}">
                                             {{ ucfirst($user->role) }}
+                                        </span>
+                                    </td>
+                                    <td class="py-2 px-4">
+                                        <span
+                                            class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium
+                                            {{ $user->status === 'active' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800' }}">
+                                            {{ ucfirst($user->status) }}
                                         </span>
                                     </td>
                                     <td class="py-2 px-4 text-right">
@@ -234,7 +242,7 @@
                                                 <div class="py-1">
                                                     {{-- Edit --}}
                                                     <button
-                                                        @click="editUser = {{ $user->toJson() }}; openModal = 'editUser'; open = false"
+                                                        @click="editUser = {{ json_encode(['id' => $user->id, 'username' => $user->username, 'role' => $user->role, 'status' => $user->status, 'status' => $user->status, 'fullname' => $user->profile?->fullname, 'phone_number' => $user->profile?->phone_number, 'gender' => $user->profile?->gender]) }}; openModal = 'editUser'; open = false"
                                                         class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2">
                                                         <svg class="w-4 h-4" fill="none" stroke="currentColor"
                                                             viewBox="0 0 24 24">
@@ -265,7 +273,7 @@
                                 </tr>
                             @empty
                                 <tr x-show="searchUser.trim() === ''">
-                                    <td colspan="6" class="py-3 px-4 text-center text-red-500 border-t border-gray-200">
+                                    <td colspan="7" class="py-3 px-4 text-center text-red-500 border-t border-gray-200">
                                         No Users found.
                                     </td>
                                 </tr>
@@ -273,7 +281,7 @@
 
                             {{-- ALL Users for Search --}}
                             @foreach ($allUsers as $user)
-                                <tr x-show="searchUser.trim() !== '' && '{{ strtolower($user->fullname . ' ' . $user->username . ' ' . ($user->phone_number ?? '') . ' ' . $user->role) }}'.includes(searchUser.trim().toLowerCase())">
+                                <tr x-show="searchUser.trim() !== '' && '{{ strtolower(($user->profile?->fullname ?? 'No Name') . ' ' . $user->username . ' ' . ($user->profile?->phone_number ?? '') . ' ' . $user->role) }}'.includes(searchUser.trim().toLowerCase())">
                                     <td class="py-2 px-4">{{ $loop->iteration }}</td>
                                     <td class="py-2 px-4">
                                         <div class="flex items-center gap-3">
@@ -282,22 +290,31 @@
                                                     ? $user->img_url
                                                     : 'https://i.pravatar.cc/40?u=' .
                                                         urlencode($user->id ?? $user->username);
+                                                $fullname = $user->profile ? $user->profile->fullname : 'No Name';
                                             @endphp
-                                            <img src="{{ $avatarUrl }}" alt="{{ $user->fullname }}"
+                                            <img src="{{ $avatarUrl }}" alt="{{ $fullname }}"
                                                 class="w-8 h-8 rounded-full object-cover border" />
-                                            <span>{{ $user->fullname }}</span>
+                                            <span>{{ $fullname }}</span>
                                         </div>
                                     </td>
                                     <td class="py-2 px-4">{{ $user->username }}</td>
-                                    <td class="py-2 px-4">{{ $user->phone_number ?? '-' }}</td>
+                                    <td class="py-2 px-4">{{ $user->profile?->phone_number ?? '-' }}</td>
                                     <td class="py-2 px-4">
                                         <span
                                             class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium
                                             {{ $user->role === 'owner' ? 'bg-purple-100 text-purple-800' : '' }}
                                             {{ $user->role === 'admin' ? 'bg-blue-100 text-blue-800' : '' }}
+                                            {{ $user->role === 'finance' ? 'bg-green-100 text-green-800' : '' }}
                                             {{ $user->role === 'pm' ? 'bg-primary-light text-primary-dark' : '' }}
-                                            {{ $user->role === 'karyawan' ? 'bg-gray-100 text-gray-800' : '' }}">
+                                            {{ $user->role === 'employee' ? 'bg-gray-100 text-gray-800' : '' }}">
                                             {{ ucfirst($user->role) }}
+                                        </span>
+                                    </td>
+                                    <td class="py-2 px-4">
+                                        <span
+                                            class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium
+                                            {{ $user->status === 'active' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800' }}">
+                                            {{ ucfirst($user->status) }}
                                         </span>
                                     </td>
                                     <td class="py-2 px-4 text-right">
@@ -353,7 +370,7 @@
                                                 class="rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-[9999]">
                                                 <div class="py-1">
                                                     <button
-                                                        @click="editUser = {{ $user->toJson() }}; openModal = 'editUser'; open = false"
+                                                        @click="editUser = {{ json_encode(['id' => $user->id, 'username' => $user->username, 'role' => $user->role, 'fullname' => $user->profile?->fullname, 'phone_number' => $user->profile?->phone_number, 'gender' => $user->profile?->gender]) }}; openModal = 'editUser'; open = false"
                                                         class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2">
                                                         <svg class="w-4 h-4" fill="none" stroke="currentColor"
                                                             viewBox="0 0 24 24">
@@ -385,7 +402,7 @@
 
                             {{-- No Results Found for Search --}}
                             <tr x-show="searchUser.trim() !== '' && !hasResults">
-                                <td colspan="6" class="py-16 text-center border-t border-gray-200">
+                                <td colspan="7" class="py-16 text-center border-t border-gray-200">
                                     <div class="flex flex-col items-center justify-center space-y-3">
                                         <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16 text-gray-400" fill="none"
                                             viewBox="0 0 24 24" stroke="currentColor">
@@ -470,16 +487,6 @@
                             <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                         @enderror
                     </div>
-                    {{-- Phone --}}
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700">Phone (optional)</label>
-                        <input type="tel" name="phone_number" x-model="addUserForm.phone_number"
-                            @blur="validateAddUser()" placeholder="e.g., 081234567890"
-                            :class="addUserErrors.phone_number ? 'border-red-500' : 'border-gray-200'"
-                            class="mt-1 w-full rounded-md border px-4 py-2 text-sm text-gray-500 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20" />
-                        <p x-show="addUserErrors.phone_number" x-text="addUserErrors.phone_number"
-                            class="mt-1 text-sm text-red-600"></p>
-                    </div>
                     <div>
                         <label class="block text-sm font-medium text-gray-700">Roles <span
                                 class="text-red-500">*</span></label>
@@ -488,8 +495,9 @@
                             options: [
                                 { value: 'owner', name: 'Owner' },
                                 { value: 'admin', name: 'Admin' },
+                                { value: 'finance', name: 'Finance' },
                                 { value: 'pm', name: 'Project Manager' },
-                                { value: 'karyawan', name: 'Karyawan' }
+                                { value: 'employee', name: 'Employee' }
                             ],
                             selected: null,
                             selectedValue: '{{ old('role') }}',
@@ -641,14 +649,8 @@
                             <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                         @enderror
                     </div>
-                    {{-- Phone --}}
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700">Phone</label>
-                        <input type="tel" name="phone_number" x-model="editUser.phone_number" maxlength="100"
-                            pattern="[0-9+\-\s()]+" placeholder="e.g., 081234567890"
-                            class="mt-1 w-full rounded-md border border-gray-200 px-4 py-2 text-sm 
-                           text-gray-700 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20">
-                    </div>
+                    {{-- Role & Status Row --}}
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {{-- Role --}}
                     <div>
                         <label class="block text-sm font-medium text-gray-700">Role <span
@@ -658,8 +660,9 @@
                             options: [
                                 { value: 'owner', name: 'Owner' },
                                 { value: 'admin', name: 'Admin' },
+                                { value: 'finance', name: 'Finance' },
                                 { value: 'pm', name: 'Project Manager' },
-                                { value: 'karyawan', name: 'Karyawan' }
+                                { value: 'employee', name: 'Employee' }
                             ],
                             selected: null,
                             selectedValue: '',
@@ -731,6 +734,85 @@
                                 </ul>
                             </div>
                         </div>
+                    </div>
+                    {{-- Status --}}
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Status <span
+                                class="text-red-500">*</span></label>
+                        <div x-data="{
+                            open: false,
+                            options: [
+                                { value: 'active', name: 'Active' },
+                                { value: 'inactive', name: 'Inactive' }
+                            ],
+                            selected: null,
+                            selectedValue: '',
+                            
+                            loadStatus() {
+                                if (editUser && editUser.status) {
+                                    this.selectedValue = editUser.status;
+                                    this.selected = this.options.find(o => o.value === editUser.status) || null;
+                                }
+                            },
+                            
+                            init() {
+                                this.$nextTick(() => {
+                                    this.loadStatus();
+                                });
+                                
+                                this.$watch('editUser.status', () => {
+                                    this.loadStatus();
+                                });
+                                
+                                this.$watch('selectedValue', value => {
+                                    if (value && editUser) {
+                                        editUser.status = value;
+                                    }
+                                });
+                            },
+                            
+                            select(option) {
+                                this.selected = option;
+                                this.selectedValue = option.value;
+                                this.open = false;
+                                if (editUser) {
+                                    editUser.status = option.value;
+                                }
+                            }
+                        }" class="relative w-full">
+                            {{-- Trigger --}}
+                            <button type="button" @click="open = !open"
+                                class="mt-1 w-full flex justify-between items-center rounded-md border border-gray-200 px-4 py-2 text-sm bg-white
+                                       focus:outline-none focus:ring-2 focus:border-primary focus:ring-primary/20 transition-colors">
+                                <span x-text="selected ? selected.name : 'Select Status'"
+                                    :class="!selected ? 'text-gray-400' : 'text-gray-700'"></span>
+                                <svg class="w-4 h-4 text-gray-400 transition-transform" :class="open && 'rotate-180'" fill="none"
+                                    stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                                </svg>
+                            </button>
+
+                            {{-- Hidden input --}}
+                            <input type="hidden" name="status" x-model="selectedValue">
+
+                            {{-- Dropdown --}}
+                            <div x-show="open" @click.away="open = false" x-cloak x-transition:enter="transition ease-out duration-100"
+                                x-transition:enter-start="opacity-0 scale-95" x-transition:enter-end="opacity-100 scale-100"
+                                x-transition:leave="transition ease-in duration-75" x-transition:leave-start="opacity-100 scale-100"
+                                x-transition:leave-end="opacity-0 scale-95"
+                                class="absolute z-20 mt-1 w-full bg-white border border-gray-200 rounded-md shadow-lg">
+                                <ul class="max-h-60 overflow-y-auto py-1">
+                                    <template x-for="option in options" :key="option.value">
+                                        <li @click="select(option)"
+                                            class="px-4 py-2 cursor-pointer text-sm text-gray-700 hover:bg-primary/5 transition-colors"
+                                            :class="{ 'bg-primary/10 font-medium text-primary': selected && selected.value === option.value }">
+                                            <span x-text="option.name"></span>
+                                        </li>
+                                    </template>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
                     </div>
                     {{-- Password --}}
                     <div>

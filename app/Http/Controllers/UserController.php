@@ -5,69 +5,140 @@ namespace App\Http\Controllers;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Validation\Rules\Password;
 
 class UserController extends Controller
 {
+    /**
+     * Display a listing of users
+     */
+    public function index(Request $request)
+    {
+        $users = User::with('profile')->orderBy('created_at', 'desc')->paginate(10);
+        $allUsers = User::with('profile')->orderBy('created_at', 'desc')->get();
+
+        // Handle AJAX request for pagination
+        if ($request->ajax()) {
+            return view('pages.owner.manage-data.users', compact('users', 'allUsers'));
+        }
+
+        return view('pages.owner.manage-data.users', compact('users', 'allUsers'));
+    }
+
+    /**
+     * Store a newly created user
+     */
     public function store(Request $request)
     {
-        try {
-            $validated = $request->validateWithBag('addUser', [
-                'fullname' => 'required|max:255',
-                'username' => 'required|max:255|unique:users,username',
-                'phone_number' => 'nullable|max:100',
-                'role' => 'required|in:owner,admin,pm,karyawan',
-                'password' => 'required|min:6|confirmed',
-            ]);
+        $validated = $request->validate([
+            'fullname' => 'required|string|max:100',
+            'username' => 'required|string|max:255|unique:users,username',
+            'phone_number' => 'nullable|string|max:100',
+            'gender' => 'nullable|in:male,female',
+            'role' => 'required|in:owner,admin,finance,pm,employee',
+            'password' => ['required', 'confirmed', Password::min(6)],
+        ], [], [
+            'fullname' => 'Fullname',
+            'username' => 'Username',
+            'phone_number' => 'Phone',
+            'gender' => 'Gender',
+            'role' => 'Role',
+            'password' => 'Password',
+        ]);
 
-            User::create($validated);
+        // Create user
+        $user = User::create([
+            'username' => $validated['username'],
+            'password' => Hash::make($validated['password']),
+            'role' => $validated['role'],
+            'status' => 'active',
+        ]);
 
-            // Success - jangan flash openModal, biar modal tertutup
-            return redirect(route('owner.manage-data.users-sales.index') . '#users')
-                ->with('message', 'User added successfully.')
-                ->with('alert-type', 'success');
-        } catch (\Illuminate\Validation\ValidationException $e) {
-            // Error - flash openModal biar modal tetap terbuka
-            session()->flash('openModal', 'addUser');
-            throw $e;
-        }
+        // Create user profile
+        $user->profile()->create([
+            'fullname' => $validated['fullname'],
+            'phone_number' => $validated['phone_number'] ?? null,
+            'gender' => $validated['gender'] ?? null,
+        ]);
+
+        return redirect()->route('owner.manage-data.users.index')
+            ->with('scrollToSection', 'users-section')
+            ->with('message', 'User created successfully')
+            ->with('alert-type', 'success');
     }
 
+    /**
+     * Update the specified user
+     */
     public function update(Request $request, User $user)
     {
-        try {
-            $validated = $request->validateWithBag('editUser', [
-                'fullname' => 'required|max:255',
-                'username' => 'required|max:255|unique:users,username,' . $user->id,
-                'phone_number' => 'nullable|max:100',
-                'role' => 'required|in:owner,admin,pm,karyawan',
-                'password' => 'nullable|min:6|confirmed',
-            ]);
+        $validated = $request->validate([
+            'fullname' => 'required|string|max:100',
+            'username' => 'required|string|max:255|unique:users,username,' . $user->id,
+            'phone_number' => 'nullable|string|max:100',
+            'gender' => 'nullable|in:male,female',
+            'role' => 'required|in:owner,admin,finance,pm,employee',
+            'status' => 'required|in:active,inactive',
+            'password' => ['nullable', 'confirmed', Password::min(6)],
+        ], [], [
+            'fullname' => 'Fullname',
+            'username' => 'Username',
+            'phone_number' => 'Phone',
+            'gender' => 'Gender',
+            'role' => 'Role',
+            'status' => 'Status',
+            'password' => 'Password',
+        ]);
 
-            // Filter null values kecuali password kosong
-            $updateData = array_filter($validated, function ($value, $key) {
-                return $key !== 'password' || !empty($value);
-            }, ARRAY_FILTER_USE_BOTH);
+        // Update user
+        $userData = [
+            'username' => $validated['username'],
+            'role' => $validated['role'],
+            'status' => $validated['status'],
+        ];
 
-            $user->update($updateData);
-
-            // Success - jangan flash openModal, biar modal tertutup
-            return redirect(route('owner.manage-data.users-sales.index') . '#users')
-                ->with('message', 'User updated successfully.')
-                ->with('alert-type', 'success');
-        } catch (\Illuminate\Validation\ValidationException $e) {
-            // Error - flash openModal dan userId biar modal tetap terbuka
-            session()->flash('openModal', 'editUser');
-            session()->flash('editUserId', $user->id);
-            throw $e;
+        // Only update password if provided
+        if (!empty($validated['password'])) {
+            $userData['password'] = Hash::make($validated['password']);
         }
+
+        $user->update($userData);
+
+        // Update or create user profile
+        $user->profile()->updateOrCreate(
+            ['user_id' => $user->id],
+            [
+                'fullname' => $validated['fullname'],
+                'phone_number' => $validated['phone_number'] ?? null,
+                'gender' => $validated['gender'] ?? null,
+            ]
+        );
+
+        return redirect()->route('owner.manage-data.users.index')
+            ->with('scrollToSection', 'users-section')
+            ->with('message', 'User updated successfully')
+            ->with('alert-type', 'success');
     }
 
+    /**
+     * Remove the specified user
+     */
     public function destroy(User $user)
     {
+        // Prevent deleting own account
+        if ($user->id === auth()->id()) {
+            return redirect()->route('owner.manage-data.users.index')
+                ->with('scrollToSection', 'users-section')
+                ->with('message', 'You cannot delete your own account')
+                ->with('alert-type', 'warning');
+        }
+
         $user->delete();
 
-        return redirect(route('owner.manage-data.users-sales.index') . '#users')
-            ->with('message', 'User deleted successfully.')
+        return redirect()->route('owner.manage-data.users.index')
+            ->with('scrollToSection', 'users-section')
+            ->with('message', 'User deleted successfully')
             ->with('alert-type', 'success');
     }
 }
