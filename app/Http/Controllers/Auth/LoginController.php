@@ -32,6 +32,8 @@ class LoginController extends Controller
                     return redirect()->intended(route('owner.dashboard'));
                 case 'admin':
                     return redirect()->intended(route('admin.dashboard'));
+                case 'finance':
+                    return redirect()->intended(route('finance.dashboard'));
                 case 'pm':
                     return redirect()->intended(route('pm.dashboard'));
                 case 'employee':

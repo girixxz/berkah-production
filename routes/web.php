@@ -43,6 +43,8 @@ Route::get('/login', function () {
                 return redirect()->route('owner.dashboard');
             case 'admin':
                 return redirect()->route('admin.dashboard');
+            case 'finance':
+                return redirect()->route('finance.dashboard');
             case 'pm':
                 return redirect()->route('pm.dashboard');
             case 'employee':
@@ -62,9 +64,6 @@ Route::middleware(['auth'])->group(function () {
     Route::prefix('owner')->name('owner.')->middleware('role:owner')->group(function () {
         // Dashboard
         Route::get('dashboard', [\App\Http\Controllers\Owner\DashboardController::class, 'index'])->name('dashboard');
-
-        // Revenue
-        Route::get('revenue', fn() => view('pages.owner.revenue'))->name('revenue');
 
         // Payment History - Owner can see and approve/reject
         Route::get('payment-history', [\App\Http\Controllers\PaymentHistoryController::class, 'index'])->name('payment-history');
@@ -177,6 +176,24 @@ Route::middleware(['auth'])->group(function () {
         Route::get('customers/api/cities/{provinceId}', [CustomerController::class, 'getCities'])->name('customers.api.cities');
         Route::get('customers/api/districts/{cityId}', [CustomerController::class, 'getDistricts'])->name('customers.api.districts');
         Route::get('customers/api/villages/{districtId}', [CustomerController::class, 'getVillages'])->name('customers.api.villages');
+    });
+
+    /* ---------- FINANCE ---------- */
+    Route::prefix('finance')->name('finance.')->middleware('role:finance,owner')->group(function () {
+        // Dashboard
+        Route::get('dashboard', fn() => view('pages.finance.dashboard'))->name('dashboard');
+
+        // Report Routes
+        Route::prefix('report')->name('report.')->group(function () {
+            Route::get('order-list', fn() => view('pages.finance.report.order-list'))->name('order-list');
+            Route::get('material', fn() => view('pages.finance.report.material'))->name('material');
+            Route::get('support-partner', fn() => view('pages.finance.report.support-partner'))->name('support-partner');
+            Route::get('operational', fn() => view('pages.finance.report.operational'))->name('operational');
+            Route::get('salary', fn() => view('pages.finance.report.salary'))->name('salary');
+        });
+
+        // Internal Transfer
+        Route::get('internal-transfer', fn() => view('pages.finance.internal-transfer'))->name('internal-transfer');
     });
 
     /* ---------- PROJECT MANAGER ---------- */

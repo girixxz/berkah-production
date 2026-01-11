@@ -15,6 +15,7 @@ class UserSeeder extends Seeder
         // REAL USERS
         $users = [
             ['fullname' => 'STGRMFG', 'username' => 'stgrmfg', 'password' => 'berkahmanfaat123#', 'role' => 'owner'],
+            ['fullname' => 'Finance Team', 'username' => 'stgr.finance', 'password' => 'finance123', 'role' => 'finance'],
             ['fullname' => 'FERRY ARDIYANTO', 'username' => 'stgr.ferry', 'password' => '2015176', 'role' => 'employee'],
             ['fullname' => 'YUSLAN RIMBANI', 'username' => 'stgr.yuslan', 'password' => '2015028', 'role' => 'employee'],
             ['fullname' => 'JOKO WISNU SAPUTRO', 'username' => 'stgr.wisnu', 'password' => '2019059', 'role' => 'employee'],

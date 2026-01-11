@@ -5,6 +5,7 @@
     $dashboardRouteName = match ($role) {
         'owner' => 'owner.dashboard',
         'admin' => 'admin.dashboard',
+        'finance' => 'finance.dashboard',
         'pm' => 'pm.dashboard',
         'employee' => 'employee.dashboard',
         default => 'login',
@@ -151,6 +152,87 @@
                         </x-sidebar-menu.main-menu>
                     </li>
 
+                </ul>
+            </div>
+        @endif
+
+        {{-- ================= FINANCE MENU ================= --}}
+        @if (in_array($role, ['owner', 'finance']))
+            <div class="mb-4">
+                @if ($role === 'owner')
+                    <p class="px-4 text-xs font-semibold text-gray-dark uppercase mb-2">FINANCE</p>
+                @elseif ($role === 'finance')
+                    <p class="px-4 text-xs font-semibold text-gray-dark uppercase mb-2">MENU</p>
+                @endif
+
+                <ul class="space-y-2">
+                    @if ($role === 'finance')
+                        <!-- Dashboard -->
+                        <li>
+                            <x-sidebar-menu.main-menu href="{{ route('finance.dashboard') }}" :pattern="'finance.dashboard'">
+                                <x-icons.dashboard class="text-current" />
+                                <span class="ml-2">Dashboard</span>
+                            </x-sidebar-menu.main-menu>
+                        </li>
+                    @endif
+
+                    <!-- Report -->
+                    <li x-data="{
+                        open: @js(request()->routeIs('finance.report.*') || request()->is('finance/report/*'))
+                    }">
+                        <button type="button" @click="open = !open"
+                            class="flex items-center justify-between w-full pl-6 pr-4 py-3 hover:bg-gray-light focus:outline-none cursor-pointer">
+                            <span class="flex items-center">
+                                <x-icons.manage-data />
+                                <span class="ml-2">Report</span>
+                            </span>
+                            <x-icons.right-arrow class="text-font-base transition-transform duration-200"
+                                x-bind:class="open ? 'rotate-90' : ''" />
+                        </button>
+
+                        <ul class="mt-1 space-y-2 font-normal" x-show="open" x-transition x-cloak>
+                            <li>
+                                <x-sidebar-menu.sub-menu href="{{ route('finance.report.order-list') }}"
+                                    :pattern="['finance.report.order-list', 'finance/report/order-list']">
+                                    Order List
+                                </x-sidebar-menu.sub-menu>
+                            </li>
+                            <li>
+                                <x-sidebar-menu.sub-menu href="{{ route('finance.report.material') }}"
+                                    :pattern="['finance.report.material', 'finance/report/material']">
+                                    Material
+                                </x-sidebar-menu.sub-menu>
+                            </li>
+                            <li>
+                                <x-sidebar-menu.sub-menu href="{{ route('finance.report.support-partner') }}"
+                                    :pattern="['finance.report.support-partner', 'finance/report/support-partner']">
+                                    Support Partner
+                                </x-sidebar-menu.sub-menu>
+                            </li>
+                            <li>
+                                <x-sidebar-menu.sub-menu href="{{ route('finance.report.operational') }}"
+                                    :pattern="['finance.report.operational', 'finance/report/operational']">
+                                    Operational
+                                </x-sidebar-menu.sub-menu>
+                            </li>
+                            <li>
+                                <x-sidebar-menu.sub-menu href="{{ route('finance.report.salary') }}"
+                                    :pattern="['finance.report.salary', 'finance/report/salary']">
+                                    Salary
+                                </x-sidebar-menu.sub-menu>
+                            </li>
+                        </ul>
+                    </li>
+
+                    <!-- Internal Transfer -->
+                    <li>
+                        <x-sidebar-menu.main-menu href="{{ route('finance.internal-transfer') }}" :pattern="'finance.internal-transfer'">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+                            </svg>
+                            <span class="ml-2">Internal Transfer</span>
+                        </x-sidebar-menu.main-menu>
+                    </li>
                 </ul>
             </div>
         @endif
