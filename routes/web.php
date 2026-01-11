@@ -104,6 +104,13 @@ Route::middleware(['auth'])->group(function () {
                 Route::resource('stickers', StickerController::class)->except(['index', 'create', 'show', 'edit']);
             });
 
+            // Finance Data Management
+            Route::prefix('finance')->name('finance.')->group(function () {
+                Route::get('/', [\App\Http\Controllers\Main\ManageFinanceDataController::class, 'index'])->name('index');
+                Route::resource('material-suppliers', \App\Http\Controllers\MaterialSupplierController::class)->except(['index', 'create', 'show', 'edit']);
+                Route::resource('support-partners', \App\Http\Controllers\SupportPartnerController::class)->except(['index', 'create', 'show', 'edit']);
+            });
+
             // Users Management
             Route::prefix('users')->name('users.')->group(function () {
                 Route::get('/', [UserController::class, 'index'])->name('index');

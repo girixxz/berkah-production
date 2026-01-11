@@ -35,7 +35,7 @@
 
                     <!-- Manage Data -->
                     <li x-data="{
-                        open: @js(request()->routeIs('owner.manage-data.products.*') || request()->is('owner/manage-data/products/*') || request()->routeIs('owner.manage-data.work-orders.*') || request()->is('owner/manage-data/work-orders/*') || request()->routeIs('owner.manage-data.users.*') || request()->is('owner/manage-data/users/*') || request()->routeIs('owner.manage-data.sales.*') || request()->is('owner/manage-data/sales/*') || request()->routeIs('owner.manage-data.user-profile.*') || request()->is('owner/manage-data/user-profile/*'))
+                        open: @js(request()->routeIs('owner.manage-data.products.*') || request()->is('owner/manage-data/products/*') || request()->routeIs('owner.manage-data.work-orders.*') || request()->is('owner/manage-data/work-orders/*') || request()->routeIs('owner.manage-data.finance.*') || request()->is('owner/manage-data/finance/*') || request()->routeIs('owner.manage-data.users.*') || request()->is('owner/manage-data/users/*') || request()->routeIs('owner.manage-data.sales.*') || request()->is('owner/manage-data/sales/*') || request()->routeIs('owner.manage-data.user-profile.*') || request()->is('owner/manage-data/user-profile/*'))
                     }">
                         <button type="button" @click="open = !open"
                             class="flex items-center justify-between w-full pl-6 pr-4 py-3 hover:bg-gray-light focus:outline-none cursor-pointer">
@@ -46,6 +46,8 @@
                                         request()->is('owner/manage-data/products.*') ||
                                         request()->routeIs('owner.manage-data.work-orders.*') ||
                                         request()->is('owner/manage-data/work-orders.*') ||
+                                        request()->routeIs('owner.manage-data.finance.*') ||
+                                        request()->is('owner/manage-data/finance/*') ||
                                         request()->routeIs('owner.manage-data.users.*') ||
                                         request()->is('owner/manage-data/users/*') ||
                                         request()->routeIs('owner.manage-data.sales.*') ||
@@ -74,6 +76,14 @@
                                     Master WO
                                 </x-sidebar-menu.sub-menu>
                             </li>
+
+                            <li>
+                                <x-sidebar-menu.sub-menu href="{{ route('owner.manage-data.finance.index') }}"
+                                    :pattern="['owner.manage-data.finance.*', 'owner/manage-data/finance/*']">
+                                    Finance
+                                </x-sidebar-menu.sub-menu>
+                            </li>
+
                             <li>
                                 <x-sidebar-menu.sub-menu href="{{ route('owner.manage-data.users.index') }}"
                                     :pattern="['owner.manage-data.users.*', 'owner/manage-data/users/*']">
