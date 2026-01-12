@@ -147,6 +147,24 @@ Route::middleware(['auth'])->group(function () {
         // Dashboard
         Route::get('dashboard', fn() => view('pages.admin.dashboard'))->name('dashboard');
 
+        // Work Orders (Admin only)
+        Route::get('work-orders', [\App\Http\Controllers\WorkOrderController::class, 'index'])->name('work-orders.index');
+        Route::get('work-orders/{order}/manage', [\App\Http\Controllers\WorkOrderController::class, 'manage'])->name('work-orders.manage');
+        Route::post('work-orders', [\App\Http\Controllers\WorkOrderController::class, 'store'])
+            ->middleware('throttle:10,1')
+            ->name('work-orders.store');
+        Route::put('work-orders/{workOrder}', [\App\Http\Controllers\WorkOrderController::class, 'update'])
+            ->middleware('throttle:10,1')
+            ->name('work-orders.update');
+        Route::get('work-orders/{order}/finalize', [\App\Http\Controllers\WorkOrderController::class, 'finalize'])->name('work-orders.finalize');
+
+        // Customers (Admin only)
+        Route::get('customers/{customer}', [CustomerController::class, 'show'])->name('customers.show');
+        Route::resource('customers', CustomerController::class)->except(['show']);
+    });
+
+    // Admin routes accessible by both admin and finance roles
+    Route::prefix('admin')->name('admin.')->middleware('role:admin,finance')->group(function () {
         // Orders
         Route::resource('orders', OrderController::class);
         Route::patch('orders/{order}/cancel', [OrderController::class, 'cancel'])->name('orders.cancel');
@@ -161,22 +179,8 @@ Route::middleware(['auth'])->group(function () {
         // Shipping Orders
         Route::get('shipping-orders', [\App\Http\Controllers\ShippingOrderController::class, 'index'])->name('shipping-orders');
         
-        // Work Orders
-        Route::get('work-orders', [\App\Http\Controllers\WorkOrderController::class, 'index'])->name('work-orders.index');
-        Route::get('work-orders/{order}/manage', [\App\Http\Controllers\WorkOrderController::class, 'manage'])->name('work-orders.manage');
-        Route::post('work-orders', [\App\Http\Controllers\WorkOrderController::class, 'store'])
-            ->middleware('throttle:10,1')
-            ->name('work-orders.store');
-        Route::put('work-orders/{workOrder}', [\App\Http\Controllers\WorkOrderController::class, 'update'])
-            ->middleware('throttle:10,1')
-            ->name('work-orders.update');
-        Route::get('work-orders/{order}/finalize', [\App\Http\Controllers\WorkOrderController::class, 'finalize'])->name('work-orders.finalize');
-        
+        // Payment History
         Route::get('payment-history', [\App\Http\Controllers\PaymentHistoryController::class, 'index'])->name('payment-history');
-
-        // Customers
-        Route::get('customers/{customer}', [CustomerController::class, 'show'])->name('customers.show');
-        Route::resource('customers', CustomerController::class)->except(['show']);
         
         // API for cascading dropdowns
         Route::get('customers/api/provinces', [CustomerController::class, 'getProvinces'])->name('customers.api.provinces');
@@ -204,7 +208,7 @@ Route::middleware(['auth'])->group(function () {
     });
 
     /* ---------- PROJECT MANAGER ---------- */
-    Route::prefix('pm')->name('pm.')->middleware('role:pm,admin,owner')->group(function () {
+    Route::prefix('pm')->name('pm.')->middleware('role:pm,admin,owner,finance')->group(function () {
         Route::get('dashboard', fn() => view('pages.pm.dashboard'))->name('dashboard');
         
         // Manage Task
@@ -214,7 +218,7 @@ Route::middleware(['auth'])->group(function () {
     });
 
     /* ---------- EMPLOYEE ---------- */
-    Route::prefix('employee')->name('employee.')->middleware('role:employee,admin,pm')->group(function () {
+    Route::prefix('employee')->name('employee.')->middleware('role:employee,admin,pm,finance')->group(function () {
         Route::get('dashboard', fn() => view('pages.employee.dashboard'))->name('dashboard');
         Route::get('task', [App\Http\Controllers\Employee\TaskController::class, 'index'])->name('task');
         Route::post('task/mark-done', [App\Http\Controllers\Employee\TaskController::class, 'markAsDone'])->name('task.mark-done');

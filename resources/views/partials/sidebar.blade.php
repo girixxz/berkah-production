@@ -245,6 +245,67 @@
                     </li>
                 </ul>
             </div>
+
+            {{-- Admin Section for Finance Role --}}
+            @if ($role === 'finance')
+                <div class="mb-4">
+                    <p class="px-4 text-xs font-semibold text-gray-dark uppercase mb-2">ADMIN</p>
+
+                    <ul class="space-y-2">
+                        <!-- Orders -->
+                        <li>
+                            <x-sidebar-menu.main-menu href="{{ route('admin.orders.index') }}" :pattern="'admin.orders.*'">
+                                <x-icons.orders class="text-current" />
+                                <span class="ml-2">Orders</span>
+                            </x-sidebar-menu.main-menu>
+                        </li>
+                        <!-- Shipping Orders -->
+                        <li>
+                            <x-sidebar-menu.main-menu href="{{ route('admin.shipping-orders') }}" :pattern="'admin.shipping-orders'">
+                                <x-icons.delivery-orders class="text-current" />
+                                <span class="ml-2">Shipping Orders</span>
+                            </x-sidebar-menu.main-menu>
+                        </li>
+                        <!-- Payment History -->
+                        <li>
+                            <x-sidebar-menu.main-menu href="{{ route('admin.payment-history') }}" :pattern="'admin.payment-history'">
+                                <x-icons.payment-history class="text-current" />
+                                <span class="ml-2">Payment History</span>
+                            </x-sidebar-menu.main-menu>
+                        </li>
+                    </ul>
+                </div>
+
+                {{-- PM Section for Finance Role --}}
+                <div class="mb-4">
+                    <p class="px-4 text-xs font-semibold text-gray-dark uppercase mb-2">PRODUCT MANAGER</p>
+
+                    <ul class="space-y-2">
+                        <li>
+                            <x-sidebar-menu.main-menu
+                                href="{{ route('pm.manage-task') }}"
+                                pattern="pm.manage-task">
+                                <x-icons.manage-task class="text-current" />
+                                <span class="ml-2">Task Manager</span>
+                            </x-sidebar-menu.main-menu>
+                        </li>
+                    </ul>
+                </div>
+
+                {{-- Employee Section for Finance Role --}}
+                <div class="mb-4">
+                    <p class="px-4 text-xs font-semibold text-gray-dark uppercase mb-2">EMPLOYEE</p>
+
+                    <ul class="space-y-2">
+                        <li>
+                            <x-sidebar-menu.main-menu href="{{ route('employee.task') }}" :pattern="['employee.task', 'employee.task.work-order']">
+                                <x-icons.task class="text-current" />
+                                <span class="ml-2">Task</span>
+                            </x-sidebar-menu.main-menu>
+                        </li>
+                    </ul>
+                </div>
+            @endif
         @endif
 
         {{-- ================= PM MENU ================= --}}
