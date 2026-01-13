@@ -22,6 +22,10 @@ class SupportPartnerController extends Controller
                 'partner_name.unique' => 'This partner name already exists.',
             ]);
 
+            // Auto-generate sort_order: max + 1
+            $maxSortOrder = SupportPartner::max('sort_order') ?? 0;
+            $validated['sort_order'] = $maxSortOrder + 1;
+
             SupportPartner::create($validated);
 
             return back()
@@ -43,15 +47,44 @@ class SupportPartnerController extends Controller
     public function update(Request $request, SupportPartner $supportPartner)
     {
         try {
+            // Get total count
+            $totalPartners = SupportPartner::count();
+            
             $validated = $request->validateWithBag('editPartner', [
                 'partner_name' => 'required|string|max:100|unique:support_partners,partner_name,' . $supportPartner->id,
                 'notes' => 'nullable|string',
+                'sort_order' => 'required|integer|min:1|max:' . $totalPartners,
             ], [
                 'partner_name.required' => 'Partner name is required.',
                 'partner_name.max' => 'Partner name must not exceed 100 characters.',
                 'partner_name.unique' => 'This partner name already exists.',
+                'sort_order.required' => 'Sort order is required.',
+                'sort_order.integer' => 'Sort order must be an integer.',
+                'sort_order.min' => 'Sort order must be at least 1.',
+                'sort_order.max' => 'Sort order cannot exceed total partners (' . $totalPartners . ').',
             ]);
 
+            $oldSortOrder = $supportPartner->sort_order;
+            $newSortOrder = $validated['sort_order'];
+
+            // Handle sort order adjustment
+            if ($oldSortOrder !== $newSortOrder) {
+                if ($newSortOrder < $oldSortOrder) {
+                    // Moving UP
+                    SupportPartner::where('id', '!=', $supportPartner->id)
+                        ->where('sort_order', '>=', $newSortOrder)
+                        ->where('sort_order', '<', $oldSortOrder)
+                        ->increment('sort_order');
+                } else {
+                    // Moving DOWN
+                    SupportPartner::where('id', '!=', $supportPartner->id)
+                        ->where('sort_order', '>', $oldSortOrder)
+                        ->where('sort_order', '<=', $newSortOrder)
+                        ->decrement('sort_order');
+                }
+            }
+
+            // Update the partner
             $supportPartner->update($validated);
 
             return back()

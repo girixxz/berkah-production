@@ -21,15 +21,15 @@ class ManageFinanceDataController extends Controller
         $perPagePartner = $request->input('per_page_partner', 5);
         $perPagePartner = in_array($perPagePartner, [5, 10, 15, 20, 25]) ? $perPagePartner : 5;
 
-        $materialSuppliers = MaterialSupplier::orderBy('supplier_name')
+        $materialSuppliers = MaterialSupplier::orderBy('sort_order')
             ->paginate($perPageSupplier, ['*'], 'suppliers_page');
         
-        $supportPartners = SupportPartner::orderBy('partner_name')
+        $supportPartners = SupportPartner::orderBy('sort_order')
             ->paginate($perPagePartner, ['*'], 'partners_page');
 
         // Get all data for search functionality
-        $allMaterialSuppliers = MaterialSupplier::orderBy('supplier_name')->get();
-        $allSupportPartners = SupportPartner::orderBy('partner_name')->get();
+        $allMaterialSuppliers = MaterialSupplier::orderBy('sort_order')->get();
+        $allSupportPartners = SupportPartner::orderBy('sort_order')->get();
 
         return view('pages.owner.manage-data.finance', compact(
             'materialSuppliers',

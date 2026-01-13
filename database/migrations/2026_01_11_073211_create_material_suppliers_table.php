@@ -15,6 +15,7 @@ return new class extends Migration
             $table->id();
             $table->string('supplier_name', 100)->unique();
             $table->text('notes')->nullable();
+            $table->integer('sort_order');
             $table->timestamps();
         });
     }

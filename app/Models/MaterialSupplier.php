@@ -9,5 +9,6 @@ class MaterialSupplier extends Model
     protected $fillable = [
         'supplier_name',
         'notes',
+        'sort_order',
     ];
 }

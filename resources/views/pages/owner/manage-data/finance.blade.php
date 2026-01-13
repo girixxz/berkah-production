@@ -849,6 +849,16 @@
                             class="mt-1 w-full rounded-md px-4 py-2 text-sm border border-gray-200 focus:border-primary focus:ring-primary/20 focus:outline-none focus:ring-2 text-gray-700"></textarea>
                     </div>
 
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Sort Order <span class="text-red-500">*</span></label>
+                        <input type="number" name="sort_order" x-model.number="editSupplier.sort_order" min="1"
+                            class="mt-1 w-full rounded-md px-4 py-2 text-sm border {{ $errors->editSupplier->has('sort_order') ? 'border-red-500 focus:border-red-500 focus:ring-red-200' : 'border-gray-200 focus:border-primary focus:ring-primary/20' }} focus:outline-none focus:ring-2 text-gray-700">
+
+                        @error('sort_order', 'editSupplier')
+                            <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                        @enderror
+                    </div>
+
                     <div class="flex justify-end gap-3 pt-4">
                         <button type="button" @click="openModal=null"
                             class="px-4 py-2 rounded-md bg-gray-100 hover:bg-gray-200 text-gray-700 cursor-pointer">Cancel</button>
@@ -938,6 +948,16 @@
                         <label class="block text-sm font-medium text-gray-700">Notes</label>
                         <textarea name="notes" x-model="editPartner.notes" rows="3"
                             class="mt-1 w-full rounded-md px-4 py-2 text-sm border border-gray-200 focus:border-primary focus:ring-primary/20 focus:outline-none focus:ring-2 text-gray-700"></textarea>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Sort Order <span class="text-red-500">*</span></label>
+                        <input type="number" name="sort_order" x-model.number="editPartner.sort_order" min="1"
+                            class="mt-1 w-full rounded-md px-4 py-2 text-sm border {{ $errors->editPartner->has('sort_order') ? 'border-red-500 focus:border-red-500 focus:ring-red-200' : 'border-gray-200 focus:border-primary focus:ring-primary/20' }} focus:outline-none focus:ring-2 text-gray-700">
+
+                        @error('sort_order', 'editPartner')
+                            <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                        @enderror
                     </div>
 
                     <div class="flex justify-end gap-3 pt-4">

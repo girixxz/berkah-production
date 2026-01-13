@@ -9,5 +9,6 @@ class SupportPartner extends Model
     protected $fillable = [
         'partner_name',
         'notes',
+        'sort_order',
     ];
 }
