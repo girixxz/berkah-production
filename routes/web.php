@@ -31,6 +31,7 @@ use App\Http\Controllers\SalesController;
 use App\Http\Controllers\OrderController;
 use App\Http\Controllers\ManageTaskController;
 use App\Http\Controllers\CalendarController;
+use App\Http\Controllers\Finance;
 
 /* ================= DEFAULT INDEX / LOGIN ================= */
 
@@ -208,7 +209,12 @@ Route::middleware(['auth'])->group(function () {
         Route::get('internal-transfer', fn() => view('pages.finance.internal-transfer'))->name('internal-transfer');
         
         // Loan Capital
-        Route::get('loan-capital', fn() => view('pages.finance.loan-capital'))->name('loan-capital');
+        Route::get('loan-capital', [Finance\LoanCapitalController::class, 'index'])->name('loan-capital');
+        Route::get('loan-capital/next-code', [Finance\LoanCapitalController::class, 'getNextLoanCode'])->name('loan-capital.next-code');
+        Route::post('loan-capital', [Finance\LoanCapitalController::class, 'store'])->name('loan-capital.store');
+        Route::put('loan-capital/{loanCapital}', [Finance\LoanCapitalController::class, 'update'])->name('loan-capital.update');
+        Route::post('loan-capital/{loanCapital}/repayment', [Finance\LoanCapitalController::class, 'storeRepayment'])->name('loan-capital.repayment');
+        Route::get('loan-capital/{loan}/image', [Finance\LoanCapitalController::class, 'serveImage'])->name('loan-capital.serve-image');
     });
 
     /* ---------- PROJECT MANAGER ---------- */
