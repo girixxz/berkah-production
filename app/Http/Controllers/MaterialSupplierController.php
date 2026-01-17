@@ -106,7 +106,13 @@ class MaterialSupplierController extends Controller
      */
     public function destroy(MaterialSupplier $materialSupplier)
     {
+        $sortOrder = $materialSupplier->sort_order;
+        
         $materialSupplier->delete();
+
+        // Decrement sort_order for items after deleted one
+        MaterialSupplier::where('sort_order', '>', $sortOrder)
+            ->decrement('sort_order');
 
         return back()
             ->with('message', 'Material supplier deleted successfully.')

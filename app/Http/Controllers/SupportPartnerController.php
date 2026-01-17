@@ -106,7 +106,13 @@ class SupportPartnerController extends Controller
      */
     public function destroy(SupportPartner $supportPartner)
     {
+        $sortOrder = $supportPartner->sort_order;
+        
         $supportPartner->delete();
+
+        // Decrement sort_order for items after deleted one
+        SupportPartner::where('sort_order', '>', $sortOrder)
+            ->decrement('sort_order');
 
         return back()
             ->with('message', 'Support partner deleted successfully.')

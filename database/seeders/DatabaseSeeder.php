@@ -27,6 +27,7 @@ class DatabaseSeeder extends Seeder
             ProductionStageSeeder::class,
             MaterialSupplierSeeder::class,
             SupportPartnerSeeder::class,
+            FixCostListSeeder::class,
             WorkOrderDataSeeder::class,
             CustomerSeeder::class,
             // OrderSeeder::class,

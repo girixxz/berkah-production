@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Main;
 use App\Http\Controllers\Controller;
 use App\Models\MaterialSupplier;
 use App\Models\SupportPartner;
+use App\Models\FixCostList;
 use Illuminate\Http\Request;
 
 class ManageFinanceDataController extends Controller
@@ -21,21 +22,30 @@ class ManageFinanceDataController extends Controller
         $perPagePartner = $request->input('per_page_partner', 5);
         $perPagePartner = in_array($perPagePartner, [5, 10, 15, 20, 25]) ? $perPagePartner : 5;
 
+        $perPageFixCost = $request->input('per_page_fix_cost', 10);
+        $perPageFixCost = in_array($perPageFixCost, [5, 10, 15, 20, 25]) ? $perPageFixCost : 10;
+
         $materialSuppliers = MaterialSupplier::orderBy('sort_order')
             ->paginate($perPageSupplier, ['*'], 'suppliers_page');
         
         $supportPartners = SupportPartner::orderBy('sort_order')
             ->paginate($perPagePartner, ['*'], 'partners_page');
 
+        $fixCostLists = FixCostList::orderBy('sort_order')
+            ->paginate($perPageFixCost, ['*'], 'fix_costs_page');
+
         // Get all data for search functionality
         $allMaterialSuppliers = MaterialSupplier::orderBy('sort_order')->get();
         $allSupportPartners = SupportPartner::orderBy('sort_order')->get();
+        $allFixCostLists = FixCostList::orderBy('sort_order')->get();
 
         return view('pages.owner.manage-data.finance', compact(
             'materialSuppliers',
             'supportPartners',
+            'fixCostLists',
             'allMaterialSuppliers',
-            'allSupportPartners'
+            'allSupportPartners',
+            'allFixCostLists'
         ));
     }
 }
