@@ -239,6 +239,33 @@ class LoanCapitalController extends Controller
         ]);
     }
 
+    public function serveRepaymentImage($repaymentId)
+    {
+        // Check if user is authenticated
+        if (!auth()->check()) {
+            abort(403, 'Unauthorized');
+        }
+
+        $repayment = \App\Models\LoanRepayment::findOrFail($repaymentId);
+
+        // Check if file exists
+        if (!$repayment->proof_img || !Storage::disk('local')->exists($repayment->proof_img)) {
+            abort(404, 'Image not found');
+        }
+
+        // Get file path
+        $path = Storage::disk('local')->path($repayment->proof_img);
+        
+        // Get mime type from file extension
+        $mimeType = Storage::disk('local')->mimeType($repayment->proof_img) ?: 'application/octet-stream';
+
+        // Return file response
+        return response()->file($path, [
+            'Content-Type' => $mimeType,
+            'Cache-Control' => 'public, max-age=31536000',
+        ]);
+    }
+
     /**
      * Update the specified loan capital.
      */
@@ -409,8 +436,7 @@ class LoanCapitalController extends Controller
             if ($request->hasFile('proof_image')) {
                 $image = $request->file('proof_image');
                 $imageName = 'repayment_' . time() . '_' . uniqid() . '.' . $image->getClientOriginalExtension();
-                $image->storeAs('loan-repayments', $imageName, 'public');
-                $imagePath = $imageName;
+                $imagePath = $image->storeAs('loan_repayments', $imageName, 'local');
             }
 
             // Create loan repayment record
@@ -465,5 +491,67 @@ class LoanCapitalController extends Controller
                 'message' => 'Failed to record repayment: ' . $e->getMessage()
             ], 500);
         }
+    }
+
+    public function repaymentHistory(Request $request)
+    {
+        // Get month and year from request
+        $month = $request->input('month', now()->month);
+        $year = $request->input('year', now()->year);
+        
+        // Parse to Carbon
+        $currentDate = Carbon::create($year, $month, 1);
+        
+        // Get payment method filter
+        $paymentMethodFilter = $request->input('payment_method', 'all');
+        
+        // Get per_page
+        $perPage = $request->input('per_page', 10);
+        $perPage = in_array($perPage, [10, 25, 50, 100]) ? $perPage : 10;
+        
+        // Get search query
+        $search = $request->input('search');
+        
+        // Build query for repayments
+        $query = \App\Models\LoanRepayment::with('loanCapital')
+            ->whereYear('paid_date', $year)
+            ->whereMonth('paid_date', $month);
+        
+        // Apply payment method filter
+        if ($paymentMethodFilter !== 'all') {
+            $query->where('payment_method', $paymentMethodFilter);
+        }
+        
+        // Apply search filter
+        if ($search) {
+            $query->where(function($q) use ($search) {
+                $q->whereHas('loanCapital', function($subQ) use ($search) {
+                    $subQ->where('loan_code', 'like', '%' . $search . '%');
+                })
+                ->orWhere('notes', 'like', '%' . $search . '%');
+            });
+        }
+        
+        // Get paginated repayments
+        $repayments = $query->orderBy('paid_date', 'desc')
+            ->orderBy('id', 'desc')
+            ->paginate($perPage);
+        
+        // Handle AJAX requests
+        if ($request->ajax()) {
+            return view('pages.finance.loan-capital.repayment-history', compact(
+                'repayments',
+                'currentDate',
+                'paymentMethodFilter',
+                'perPage'
+            ))->render();
+        }
+        
+        return view('pages.finance.loan-capital.repayment-history', compact(
+            'repayments',
+            'currentDate',
+            'paymentMethodFilter',
+            'perPage'
+        ));
     }
 }

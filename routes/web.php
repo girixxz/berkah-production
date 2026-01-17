@@ -211,10 +211,12 @@ Route::middleware(['auth'])->group(function () {
         // Loan Capital
         Route::get('loan-capital', [Finance\LoanCapitalController::class, 'index'])->name('loan-capital');
         Route::get('loan-capital/next-code', [Finance\LoanCapitalController::class, 'getNextLoanCode'])->name('loan-capital.next-code');
+        Route::get('loan-capital/repayment-history', [Finance\LoanCapitalController::class, 'repaymentHistory'])->name('loan-capital.repayment-history');
         Route::post('loan-capital', [Finance\LoanCapitalController::class, 'store'])->name('loan-capital.store');
         Route::put('loan-capital/{loanCapital}', [Finance\LoanCapitalController::class, 'update'])->name('loan-capital.update');
         Route::post('loan-capital/{loanCapital}/repayment', [Finance\LoanCapitalController::class, 'storeRepayment'])->name('loan-capital.repayment');
         Route::get('loan-capital/{loan}/image', [Finance\LoanCapitalController::class, 'serveImage'])->name('loan-capital.serve-image');
+        Route::get('loan-capital/repayment/{repayment}/image', [Finance\LoanCapitalController::class, 'serveRepaymentImage'])->name('loan-capital.serve-repayment-image');
     });
 
     /* ---------- PROJECT MANAGER ---------- */
