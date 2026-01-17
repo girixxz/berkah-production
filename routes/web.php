@@ -206,6 +206,9 @@ Route::middleware(['auth'])->group(function () {
 
         // Internal Transfer
         Route::get('internal-transfer', fn() => view('pages.finance.internal-transfer'))->name('internal-transfer');
+        
+        // Loan Capital
+        Route::get('loan-capital', fn() => view('pages.finance.loan-capital'))->name('loan-capital');
     });
 
     /* ---------- PROJECT MANAGER ---------- */

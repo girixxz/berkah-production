@@ -31,6 +31,8 @@ class Order extends Model
         'wip_date',
         'finished_date',
         'cancelled_date',
+        'report_status',
+        'report_date',
         'img_url',
     ];
 
@@ -41,6 +43,7 @@ class Order extends Model
         'finished_date' => 'datetime',
         'cancelled_date' => 'datetime',
         'shipping_date' => 'datetime',
+        'report_date' => 'date',
         'subtotal' => 'decimal:2',
         'discount' => 'decimal:2',
         'grand_total' => 'decimal:2',
