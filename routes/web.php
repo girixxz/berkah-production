@@ -206,7 +206,9 @@ Route::middleware(['auth'])->group(function () {
         });
 
         // Internal Transfer
-        Route::get('internal-transfer', fn() => view('pages.finance.internal-transfer'))->name('internal-transfer');
+        Route::get('internal-transfer', [Finance\InternalTransferController::class, 'index'])->name('internal-transfer');
+        Route::post('internal-transfer', [Finance\InternalTransferController::class, 'store'])->name('internal-transfer.store');
+        Route::get('internal-transfer/{transfer}/image', [Finance\InternalTransferController::class, 'serveImage'])->name('internal-transfer.serve-image');
         
         // Loan Capital
         Route::get('loan-capital', [Finance\LoanCapitalController::class, 'index'])->name('loan-capital');
