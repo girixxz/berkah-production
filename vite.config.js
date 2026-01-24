@@ -8,6 +8,7 @@ export default defineConfig({
         laravel({
             input: ["resources/css/app.css", "resources/js/app.js"],
             refresh: true,
+            detectTls: 'berkah-production.test', // Auto-detect certificate dari Herd
         }),
     ],
     
@@ -29,7 +30,7 @@ export default defineConfig({
         port: 5173,
         strictPort: false,
         hmr: {
-            host: "localhost",
+            host: "berkah-production.test",
         },
     },
 });

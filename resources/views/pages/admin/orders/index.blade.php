@@ -27,6 +27,13 @@
         paymentAmount: '',
         paymentErrors: {},
         isSubmittingPayment: false,
+        showMoveToReportModal: false,
+        selectedOrderForReport: null,
+        reportMonth: '',
+        reportYear: '',
+        reportProductType: '',
+        reportErrors: {},
+        isSubmittingReport: false,
         matchesSearch(row) {
             if (!this.searchQuery || this.searchQuery.trim() === '') return true;
             const query = this.searchQuery.toLowerCase();
@@ -68,6 +75,17 @@
                     sessionStorage.removeItem('toast_type');
                 }, 300);
             }
+            
+            // Check for Move to Report validation errors
+            @if($errors->has('month') || $errors->has('year') || $errors->has('product_type'))
+                this.reportErrors = {
+                    month: @json($errors->get('month')),
+                    year: @json($errors->get('year')),
+                    product_type: @json($errors->get('product_type'))
+                };
+                // Optionally auto-open modal if there are errors
+                // this.showMoveToReportModal = true;
+            @endif
         },
         resetPaymentForm() {
             this.paymentAmount = '';
@@ -77,6 +95,48 @@
             setTimeout(() => {
                 document.getElementById('addPaymentForm')?.reset();
             }, 100);
+        },
+        resetReportForm() {
+            this.reportMonth = '';
+            this.reportYear = '';
+            this.reportProductType = '';
+            this.reportErrors = {};
+            this.selectedOrderForReport = null;
+            this.isSubmittingReport = false;
+            setTimeout(() => {
+                document.getElementById('moveToReportForm')?.reset();
+            }, 100);
+        },
+        getDaysInMonth(month, year) {
+            return new Date(year, month, 0).getDate();
+        },
+        validateReportForm() {
+            this.reportErrors = {};
+            let isValid = true;
+            
+            if (!this.reportMonth || this.reportMonth === '') {
+                this.reportErrors.month = ['The month field is required.'];
+                isValid = false;
+            }
+            
+            if (!this.reportYear || this.reportYear === '') {
+                this.reportErrors.year = ['The year field is required.'];
+                isValid = false;
+            }
+            
+            if (!this.reportProductType || this.reportProductType === '') {
+                this.reportErrors.product_type = ['The product type field is required.'];
+                isValid = false;
+            }
+            
+            return isValid;
+        },
+        submitReportForm() {
+            if (!this.validateReportForm()) {
+                return false;
+            }
+            this.isSubmittingReport = true;
+            document.getElementById('moveToReportForm').submit();
         },
         getDateLabel() {
             if (this.dateRange === 'default') return 'Default';
@@ -568,14 +628,17 @@
                         </div>
 
                         {{-- Create Order Button - Desktop (xl): Same row, Mobile: Separate row --}}
-                        <a href="{{ route('admin.orders.create') }}"
-                            class="w-full xl:w-auto px-4 py-2 rounded-md bg-primary text-white hover:bg-primary-dark text-sm font-medium flex items-center justify-center gap-2 flex-shrink-0">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="M12 4v16m8-8H4" />
-                            </svg>
-                            Create Order
-                        </a>
+                        {{-- Hidden for Finance role --}}
+                        @if($role !== 'finance')
+                            <a href="{{ route('admin.orders.create') }}"
+                                class="w-full xl:w-auto px-4 py-2 rounded-md bg-primary text-white hover:bg-primary-dark text-sm font-medium flex items-center justify-center gap-2 flex-shrink-0">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M12 4v16m8-8H4" />
+                                </svg>
+                                Create Order
+                            </a>
+                        @endif
                     </div>
                 </div>
 
@@ -778,9 +841,16 @@
                                                 $statusClasses[$order->production_status] ??
                                                 'bg-gray-100 text-gray-800';
                                         @endphp
-                                        <span class="px-2 py-1 rounded-full text-xs font-medium {{ $statusClass }}">
-                                            {{ strtoupper($order->production_status) }}
-                                        </span>
+                                        <div class="flex items-center gap-2 flex-wrap">
+                                            <span class="px-2 py-1 rounded-full text-xs font-medium {{ $statusClass }}">
+                                                {{ strtoupper($order->production_status) }}
+                                            </span>
+                                            @if($order->report_status === 'reported')
+                                                <span class="px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+                                                    REPORTED
+                                                </span>
+                                            @endif
+                                        </div>
                                     </td>
 
                                     {{-- Finished Date --}}
@@ -1116,9 +1186,16 @@
                                                 $statusClasses[$order->production_status] ??
                                                 'bg-gray-100 text-gray-800';
                                         @endphp
-                                        <span class="px-2 py-1 rounded-full text-xs font-medium {{ $statusClass }}">
-                                            {{ strtoupper($order->production_status) }}
-                                        </span>
+                                        <div class="flex items-center gap-2 flex-wrap">
+                                            <span class="px-2 py-1 rounded-full text-xs font-medium {{ $statusClass }}">
+                                                {{ strtoupper($order->production_status) }}
+                                            </span>
+                                            @if($order->report_status === 'reported')
+                                                <span class="px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+                                                    REPORTED
+                                                </span>
+                                            @endif
+                                        </div>
                                     </td>
 
                                     {{-- Action --}}
@@ -1191,6 +1268,21 @@
                                                         View Detail
                                                     </a>
 
+                                                    {{-- Move to Report (Finance & Owner only, WIP or Finished, hide if reported) --}}
+                                                    @if (in_array($role, ['finance', 'owner']) && in_array($order->production_status, ['wip', 'finished']) && $order->report_status !== 'reported')
+                                                        <button type="button"
+                                                            @click="selectedOrderForReport = {{ json_encode(['id' => $order->id, 'invoice_no' => $order->invoice->invoice_no ?? 'N/A', 'product_category' => $order->productCategory->product_name ?? '']) }}; showMoveToReportModal = true; reportErrors = {}; open = false"
+                                                            class="w-full text-left px-4 py-2 text-sm text-purple-600 hover:bg-purple-50 flex items-center gap-2">
+                                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                                            </svg>
+                                                            Move to Report
+                                                        </button>
+                                                    @endif
+
+                                                    {{-- Actions below only for Admin & Owner --}}
+                                                    @if($role !== 'finance')
                                                     {{-- Edit (Hidden for finished/cancelled) --}}
                                                     @if ($order->production_status !== 'finished' && $order->production_status !== 'cancelled')
                                                         <a href="{{ route('admin.orders.edit', $order->id) }}"
@@ -1262,6 +1354,7 @@
                                                             </svg>
                                                             Cancel Order
                                                         </button>
+                                                    @endif
                                                     @endif
                                                 </div>
                                             </div>
@@ -2227,6 +2320,270 @@
                             </path>
                         </svg>
                         <span x-text="isSubmittingPayment ? 'Processing...' : 'Add Payment'"></span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        {{-- ================= MOVE TO REPORT MODAL ================= --}}
+        <div x-show="showMoveToReportModal" x-cloak
+            class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs px-4 py-6">
+            <div @click.away="showMoveToReportModal = false; resetReportForm()"
+                class="bg-white rounded-lg shadow-xl max-w-md w-full max-h-[90vh] flex flex-col">
+                {{-- Header --}}
+                <div class="flex items-center justify-between px-6 py-4 border-b border-gray-200 flex-shrink-0">
+                    <h3 class="text-lg font-semibold text-gray-800">Move to Report</h3>
+                    <button type="button" @click="showMoveToReportModal = false; resetReportForm()"
+                        class="text-gray-400 hover:text-gray-600">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
+
+                {{-- Body - Scrollable --}}
+                <div class="overflow-y-auto flex-1 px-6 py-4">
+                    {{-- Order Info --}}
+                    <div class="bg-gray-50 rounded-md p-4 mb-4" x-show="selectedOrderForReport">
+                        <div class="flex justify-between items-center mb-2">
+                            <span class="text-sm text-gray-500">Invoice No</span>
+                            <span class="text-sm font-semibold text-gray-800"
+                                x-text="selectedOrderForReport?.invoice_no"></span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-sm text-gray-500">Product</span>
+                            <span class="text-sm text-gray-700"
+                                x-text="selectedOrderForReport?.product_category"></span>
+                        </div>
+                    </div>
+
+                    <form id="moveToReportForm"
+                        :action="'/admin/orders/' + (selectedOrderForReport?.id || '') + '/move-to-report'"
+                        method="POST"
+                        class="space-y-4">
+                        @csrf
+                        @method('PATCH')
+
+                        {{-- Period (Month & Year) --}}
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Period <span
+                                    class="text-red-500">*</span></label>
+                            <div class="grid grid-cols-2 gap-3">
+                                {{-- Month Select --}}
+                                <div>
+                                    <div x-data="{
+                                        open: false,
+                                        options: [
+                                            { value: '1', name: 'January' },
+                                            { value: '2', name: 'February' },
+                                            { value: '3', name: 'March' },
+                                            { value: '4', name: 'April' },
+                                            { value: '5', name: 'May' },
+                                            { value: '6', name: 'June' },
+                                            { value: '7', name: 'July' },
+                                            { value: '8', name: 'August' },
+                                            { value: '9', name: 'September' },
+                                            { value: '10', name: 'October' },
+                                            { value: '11', name: 'November' },
+                                            { value: '12', name: 'December' }
+                                        ],
+                                        selected: null,
+                                        selectedValue: '',
+                                        
+                                        select(option) {
+                                            this.selected = option;
+                                            this.selectedValue = option.value;
+                                            reportMonth = option.value;
+                                            this.open = false;
+                                            if (reportErrors.month) {
+                                                delete reportErrors.month;
+                                            }
+                                        }
+                                    }" class="relative w-full">
+                                        {{-- Trigger --}}
+                                        <button type="button" @click="open = !open"
+                                            :class="reportErrors.month ? 'border-red-500 focus:border-red-500 focus:ring-red-200' : 'border-gray-200 focus:border-primary focus:ring-primary/20'"
+                                            class="w-full flex justify-between items-center rounded-md border px-4 py-2 text-sm bg-white
+                                                   focus:outline-none focus:ring-2 transition-colors">
+                                            <span x-text="selected ? selected.name : 'Select Month'"
+                                                :class="!selected ? 'text-gray-400' : 'text-gray-700'"></span>
+                                            <svg class="w-4 h-4 text-gray-400 transition-transform" :class="open && 'rotate-180'" fill="none"
+                                                stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                                            </svg>
+                                        </button>
+
+                                        {{-- Hidden input --}}
+                                        <input type="hidden" name="month" x-model="selectedValue">
+
+                                        {{-- Dropdown --}}
+                                        <div x-show="open" @click.away="open = false" x-cloak x-transition:enter="transition ease-out duration-100"
+                                            x-transition:enter-start="opacity-0 scale-95" x-transition:enter-end="opacity-100 scale-100"
+                                            x-transition:leave="transition ease-in duration-75" x-transition:leave-start="opacity-100 scale-100"
+                                            x-transition:leave-end="opacity-0 scale-95"
+                                            class="absolute z-20 mt-1 w-full bg-white border border-gray-200 rounded-md shadow-lg">
+                                            <ul class="max-h-60 overflow-y-auto py-1">
+                                                <template x-for="option in options" :key="option.value">
+                                                    <li @click="select(option)"
+                                                        class="px-4 py-2 cursor-pointer text-sm text-gray-700 hover:bg-primary/5 transition-colors"
+                                                        :class="{ 'bg-primary/10 font-medium text-primary': selected && selected.value === option.value }">
+                                                        <span x-text="option.name"></span>
+                                                    </li>
+                                                </template>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                    <p x-show="reportErrors.month" x-cloak x-text="reportErrors.month?.[0]"
+                                        class="mt-1 text-sm text-red-600"></p>
+                                </div>
+
+                                {{-- Year Select --}}
+                                <div>
+                                    <div x-data="{
+                                        open: false,
+                                        options: [
+                                            { value: '2024', name: '2024' },
+                                            { value: '2025', name: '2025' },
+                                            { value: '2026', name: '2026' },
+                                            { value: '2027', name: '2027' },
+                                            { value: '2028', name: '2028' }
+                                        ],
+                                        selected: null,
+                                        selectedValue: '',
+                                        
+                                        select(option) {
+                                            this.selected = option;
+                                            this.selectedValue = option.value;
+                                            reportYear = option.value;
+                                            this.open = false;
+                                            if (reportErrors.year) {
+                                                delete reportErrors.year;
+                                            }
+                                        }
+                                    }" class="relative w-full">
+                                        {{-- Trigger --}}
+                                        <button type="button" @click="open = !open"
+                                            :class="reportErrors.year ? 'border-red-500 focus:border-red-500 focus:ring-red-200' : 'border-gray-200 focus:border-primary focus:ring-primary/20'"
+                                            class="w-full flex justify-between items-center rounded-md border px-4 py-2 text-sm bg-white
+                                                   focus:outline-none focus:ring-2 transition-colors">
+                                            <span x-text="selected ? selected.name : 'Select Year'"
+                                                :class="!selected ? 'text-gray-400' : 'text-gray-700'"></span>
+                                            <svg class="w-4 h-4 text-gray-400 transition-transform" :class="open && 'rotate-180'" fill="none"
+                                                stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                                            </svg>
+                                        </button>
+
+                                        {{-- Hidden input --}}
+                                        <input type="hidden" name="year" x-model="selectedValue">
+
+                                        {{-- Dropdown --}}
+                                        <div x-show="open" @click.away="open = false" x-cloak x-transition:enter="transition ease-out duration-100"
+                                            x-transition:enter-start="opacity-0 scale-95" x-transition:enter-end="opacity-100 scale-100"
+                                            x-transition:leave="transition ease-in duration-75" x-transition:leave-start="opacity-100 scale-100"
+                                            x-transition:leave-end="opacity-0 scale-95"
+                                            class="absolute z-20 mt-1 w-full bg-white border border-gray-200 rounded-md shadow-lg">
+                                            <ul class="max-h-60 overflow-y-auto py-1">
+                                                <template x-for="option in options" :key="option.value">
+                                                    <li @click="select(option)"
+                                                        class="px-4 py-2 cursor-pointer text-sm text-gray-700 hover:bg-primary/5 transition-colors"
+                                                        :class="{ 'bg-primary/10 font-medium text-primary': selected && selected.value === option.value }">
+                                                        <span x-text="option.name"></span>
+                                                    </li>
+                                                </template>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                    <p x-show="reportErrors.year" x-cloak x-text="reportErrors.year?.[0]"
+                                        class="mt-1 text-sm text-red-600"></p>
+                                </div>
+                            </div>
+                        </div>
+
+                        {{-- Product Type --}}
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Product Type <span
+                                    class="text-red-500">*</span></label>
+                            <div x-data="{
+                                open: false,
+                                options: [
+                                    { value: 't-shirt', name: 'T-Shirt' },
+                                    { value: 'makloon', name: 'Makloon' },
+                                    { value: 'hoodie_polo_jersey', name: 'Hoodie / Polo / Jersey' },
+                                    { value: 'pants', name: 'Pants' }
+                                ],
+                                selected: null,
+                                selectedValue: '',
+                                
+                                select(option) {
+                                    this.selected = option;
+                                    this.selectedValue = option.value;
+                                    reportProductType = option.value;
+                                    this.open = false;
+                                    if (reportErrors.product_type) {
+                                        delete reportErrors.product_type;
+                                    }
+                                }
+                            }" class="relative w-full">
+                                {{-- Trigger --}}
+                                <button type="button" @click="open = !open"
+                                    :class="reportErrors.product_type ? 'border-red-500 focus:border-red-500 focus:ring-red-200' : 'border-gray-200 focus:border-primary focus:ring-primary/20'"
+                                    class="w-full flex justify-between items-center rounded-md border px-4 py-2 text-sm bg-white
+                                           focus:outline-none focus:ring-2 transition-colors">
+                                    <span x-text="selected ? selected.name : 'Select Product Type'"
+                                        :class="!selected ? 'text-gray-400' : 'text-gray-700'"></span>
+                                    <svg class="w-4 h-4 text-gray-400 transition-transform" :class="open && 'rotate-180'" fill="none"
+                                        stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                                    </svg>
+                                </button>
+
+                                {{-- Hidden input --}}
+                                <input type="hidden" name="product_type" x-model="selectedValue">
+
+                                {{-- Dropdown --}}
+                                <div x-show="open" @click.away="open = false" x-cloak x-transition:enter="transition ease-out duration-100"
+                                    x-transition:enter-start="opacity-0 scale-95" x-transition:enter-end="opacity-100 scale-100"
+                                    x-transition:leave="transition ease-in duration-75" x-transition:leave-start="opacity-100 scale-100"
+                                    x-transition:leave-end="opacity-0 scale-95"
+                                    class="absolute z-20 mt-1 w-full bg-white border border-gray-200 rounded-md shadow-lg">
+                                    <ul class="max-h-60 overflow-y-auto py-1">
+                                        <template x-for="option in options" :key="option.value">
+                                            <li @click="select(option)"
+                                                class="px-4 py-2 cursor-pointer text-sm text-gray-700 hover:bg-primary/5 transition-colors"
+                                                :class="{ 'bg-primary/10 font-medium text-primary': selected && selected.value === option.value }">
+                                                <span x-text="option.name"></span>
+                                            </li>
+                                        </template>
+                                    </ul>
+                                </div>
+                            </div>
+                            <p x-show="reportErrors.product_type" x-cloak x-text="reportErrors.product_type?.[0]"
+                                class="mt-1 text-sm text-red-600"></p>
+                        </div>
+                    </form>
+                </div>
+
+                {{-- Footer --}}
+                <div class="flex justify-end gap-3 px-6 py-4 border-t border-gray-200 flex-shrink-0">
+                    <button type="button" @click="showMoveToReportModal = false; resetReportForm()"
+                        :disabled="isSubmittingReport"
+                        class="px-4 py-2 rounded-md bg-gray-100 hover:bg-gray-200 text-gray-700 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed">
+                        Cancel
+                    </button>
+                    <button type="button" @click="submitReportForm()" :disabled="isSubmittingReport"
+                        class="px-4 py-2 rounded-md bg-purple-600 text-white hover:bg-purple-700 cursor-pointer disabled:opacity-70 disabled:cursor-not-allowed flex items-center gap-2">
+                        {{-- Loading Spinner --}}
+                        <svg x-show="isSubmittingReport" x-cloak class="animate-spin h-4 w-4 text-white"
+                            xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10"
+                                stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor"
+                                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
+                            </path>
+                        </svg>
+                        <span x-text="isSubmittingReport ? 'Processing...' : 'Move to Report'"></span>
                     </button>
                 </div>
             </div>

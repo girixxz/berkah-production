@@ -39,4 +39,12 @@ class Invoice extends Model
     {
         return $this->hasMany(Payment::class, 'invoice_id');
     }
+
+    /**
+     * Get all order reports for this invoice
+     */
+    public function orderReports(): HasMany
+    {
+        return $this->hasMany(OrderReport::class, 'invoice_id');
+    }
 }

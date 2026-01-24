@@ -146,6 +146,14 @@ class Order extends Model
     }
 
     /**
+     * Get all order reports for this order
+     */
+    public function orderReports(): HasMany
+    {
+        return $this->hasMany(OrderReport::class, 'order_id');
+    }
+
+    /**
      * Check if all order stages are completed and auto-update production status
      * Returns true if status was changed, false otherwise
      */

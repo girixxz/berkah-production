@@ -15,6 +15,7 @@ use App\Models\DesignVariant;
 use App\Models\OrderItem;
 use App\Models\ExtraService;
 use App\Models\Invoice;
+use App\Models\OrderReport;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Cache;
@@ -1008,6 +1009,93 @@ class OrderController extends Controller
         return redirect()->back()
             ->with('message', 'Order moved to shipping successfully.')
             ->with('alert-type', 'success');
+    }
+
+    /**
+     * Move order to report
+     * Create order report record and update order status
+     */
+    public function moveToReport(Request $request, Order $order)
+    {
+        // Validate request
+        $request->validate([
+            'month' => 'required|integer|min:1|max:12',
+            'year' => 'required|integer|min:2020|max:2050',
+            'product_type' => 'required|in:t-shirt,makloon,hoodie_polo_jersey,pants',
+        ]);
+
+        // Check if order status is WIP or Finished
+        if (!in_array($order->production_status, ['wip', 'finished'])) {
+            return redirect()->back()
+                ->with('message', 'Only WIP or Finished orders can be moved to report.')
+                ->with('alert-type', 'warning');
+        }
+
+        // Check if order already reported
+        if ($order->report_status === 'reported') {
+            return redirect()->back()
+                ->with('message', 'Order has already been reported.')
+                ->with('alert-type', 'warning');
+        }
+
+        // Calculate period start and end based on month and year
+        $month = (int) $request->month;
+        $year = (int) $request->year;
+        
+        $periodStart = \Carbon\Carbon::create($year, $month, 1)->startOfDay();
+        $periodEnd = \Carbon\Carbon::create($year, $month, 1)->endOfMonth()->endOfDay();
+
+        try {
+            DB::beginTransaction();
+
+            // Create order report record
+            $order->orderReports()->create([
+                'period_start' => $periodStart,
+                'period_end' => $periodEnd,
+                'order_id' => $order->id,
+                'invoice_id' => $order->invoice->id,
+                'product_type' => $request->product_type,
+                'lock_status' => 'draft',
+                'note' => null,
+            ]);
+
+            // Update order report status and date
+            $order->update([
+                'report_status' => 'reported',
+                'report_date' => now(),
+            ]);
+
+            DB::commit();
+
+            return redirect()->back()
+                ->with('message', 'Order moved to report successfully.')
+                ->with('alert-type', 'success');
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Move to report failed: ' . $e->getMessage());
+
+            return redirect()->back()
+                ->with('message', 'Failed to move order to report. Please try again.')
+                ->with('alert-type', 'error');
+        }
+    }
+
+    /**
+     * Determine product type based on product category
+     */
+    private function determineProductType(Order $order): string
+    {
+        $productName = strtolower($order->productCategory->product_name ?? '');
+
+        if (str_contains($productName, 'kaos') || str_contains($productName, 't-shirt') || str_contains($productName, 'tshirt')) {
+            return 't-shirt';
+        } elseif (str_contains($productName, 'hoodie') || str_contains($productName, 'polo') || str_contains($productName, 'jersey')) {
+            return 'hoodie_polo_jersey';
+        } elseif (str_contains($productName, 'celana') || str_contains($productName, 'pants')) {
+            return 'pants';
+        } else {
+            return 'makloon'; // default
+        }
     }
 
     /**
