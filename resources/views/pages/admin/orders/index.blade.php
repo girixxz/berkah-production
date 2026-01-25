@@ -1883,21 +1883,30 @@
 
         {{-- ================= ADD PAYMENT MODAL ================= --}}
         <div x-show="showAddPaymentModal" x-cloak
-            class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs px-4 py-6">
-            <div @click.away="showAddPaymentModal = false; resetPaymentForm()"
-                class="bg-white rounded-xl shadow-lg w-full max-w-3xl"
-                style="height: min(calc(100vh - 6rem), 700px); min-height: 0; display: flex; flex-direction: column;">
-                {{-- Fixed Header --}}
-                <div class="flex items-center justify-between px-6 py-4 border-b border-gray-200 flex-shrink-0">
-                    <h3 class="text-lg font-semibold text-gray-900">Add Payment</h3>
-                    <button @click="showAddPaymentModal = false; resetPaymentForm()"
-                        class="text-gray-400 hover:text-gray-600 cursor-pointer">
-                        ✕
-                    </button>
-                </div>
+            class="fixed inset-0 z-50">
 
-                {{-- Scrollable Content --}}
-                <div class="overflow-y-auto flex-1 px-6 py-4">
+            {{-- Background Overlay --}}
+            <div x-show="showAddPaymentModal" @click="showAddPaymentModal = false; resetPaymentForm()"
+                class="fixed inset-0 bg-black/50 bg-opacity-50 backdrop-blur-xs transition-opacity"></div>
+            
+            {{-- Modal Container --}}
+            <div class="fixed inset-0 flex items-center justify-center p-4 overflow-y-auto">
+                <div @click.away="showAddPaymentModal = false; resetPaymentForm()"
+                    class="relative bg-white rounded-lg shadow-xl w-full max-w-3xl my-8 z-10">
+                    {{-- Header --}}
+                    <div class="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+                        <h3 class="text-lg font-semibold text-gray-800">Add Payment</h3>
+                        <button type="button" @click="showAddPaymentModal = false; resetPaymentForm()"
+                            class="text-gray-400 hover:text-gray-600">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                        </button>
+                    </div>
+
+                    {{-- Body --}}
+                    <div class="px-6 py-4 max-h-[calc(90vh-180px)] overflow-y-auto">
                     {{-- Form --}}
                     <form id="addPaymentForm"
                         @submit.prevent="
@@ -1988,9 +1997,9 @@
                         ">
                         <input type="hidden" name="invoice_id" :value="selectedOrderForPayment?.invoice_id">
 
-                        <div class="space-y-4">
+                        <div class="space-y-3">
                             {{-- Invoice Info --}}
-                            <div class="bg-gray-50 border border-gray-200 rounded-md p-3 space-y-3">
+                            <div class="bg-gray-50 border border-gray-200 rounded-md p-2.5 space-y-2.5">
                                 {{-- Row 1: Invoice No & Remaining Due --}}
                                 <div class="flex items-start justify-between gap-4">
                                     <div class="flex-1">
@@ -2235,16 +2244,15 @@
                                         'border-gray-200 bg-white p-2': imagePreview,
                                         'p-6': !imagePreview
                                     }"
-                                    class="border-2 border-dashed rounded-lg text-center cursor-pointer transition-all hover:border-primary"
-                                    :style="imagePreview ? 'min-height: 200px;' : ''">
+                                    class="border-2 border-dashed rounded-lg text-center cursor-pointer transition-all hover:border-primary">
                                     <input type="file" x-ref="fileInput" name="image" accept="image/jpeg,image/png,image/jpg"
                                         @change="handleFileChange($event)"
                                         class="hidden">
                                     
                                     {{-- Image Preview (Full Container) --}}
-                                    <div x-show="imagePreview" x-cloak class="relative w-full h-full flex items-center justify-center">
+                                    <div x-show="imagePreview" x-cloak class="relative w-full min-h-[150px] flex items-center justify-center">
                                         <img :src="imagePreview" alt="Preview"
-                                            class="w-full h-auto max-h-80 object-contain rounded-lg">
+                                            class="w-full h-auto max-h-48 object-contain rounded-lg">
                                         <button type="button" @click.stop="imagePreview = null; fileName = ''; $refs.fileInput.value = ''"
                                             class="absolute top-2 right-2 bg-red-500 text-white rounded-full p-2 hover:bg-red-600 shadow-lg transition-colors">
                                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -2288,7 +2296,7 @@
                             {{-- Notes --}}
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-1">Notes</label>
-                                <textarea name="notes" rows="3"
+                                <textarea name="notes" rows="2"
                                     :class="paymentErrors.notes ?
                                         'border-red-500 focus:border-red-500 focus:ring-red-200' :
                                         'border-gray-200 focus:border-primary focus:ring-primary/20'"
@@ -2301,15 +2309,15 @@
                     </form>
                 </div>
 
-                {{-- Fixed Footer --}}
-                <div class="flex justify-end gap-3 px-6 py-4 border-t border-gray-200 flex-shrink-0">
+                {{-- Footer --}}
+                <div class="flex justify-end gap-3 px-6 py-4 border-t border-gray-200">
                     <button type="button" @click="showAddPaymentModal = false; resetPaymentForm()"
                         :disabled="isSubmittingPayment"
-                        class="px-4 py-2 rounded-md bg-gray-100 hover:bg-gray-200 text-gray-700 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed">
+                        class="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
                         Cancel
                     </button>
                     <button type="submit" form="addPaymentForm" :disabled="isSubmittingPayment"
-                        class="px-4 py-2 rounded-md bg-primary text-white hover:bg-primary-dark cursor-pointer disabled:opacity-70 disabled:cursor-not-allowed flex items-center gap-2">
+                        class="px-4 py-2 bg-primary text-white rounded-md text-sm font-medium hover:bg-primary-dark transition-colors disabled:opacity-70 disabled:cursor-not-allowed flex items-center gap-2">
                         {{-- Loading Spinner --}}
                         <svg x-show="isSubmittingPayment" x-cloak class="animate-spin h-4 w-4 text-white"
                             xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -2324,6 +2332,7 @@
                 </div>
             </div>
         </div>
+    </div>
 
         {{-- ================= MOVE TO REPORT MODAL ================= --}}
         <div x-show="showMoveToReportModal" x-cloak
@@ -2399,10 +2408,26 @@
                                             if (reportErrors.month) {
                                                 delete reportErrors.month;
                                             }
+                                        },
+                                        
+                                        updateDropdownPosition() {
+                                            this.$nextTick(() => {
+                                                const trigger = this.$refs.trigger;
+                                                const dropdown = this.$refs.dropdown;
+                                                if (trigger && dropdown) {
+                                                    const rect = trigger.getBoundingClientRect();
+                                                    dropdown.style.top = (rect.bottom + 4) + 'px';
+                                                    dropdown.style.left = rect.left + 'px';
+                                                    dropdown.style.width = rect.width + 'px';
+                                                }
+                                            });
                                         }
-                                    }" class="relative w-full">
+                                    }" class="relative w-full"
+                                    @click.away="open = false">
                                         {{-- Trigger --}}
-                                        <button type="button" @click="open = !open"
+                                        <button type="button" 
+                                            @click="open = !open; if (open) updateDropdownPosition()"
+                                            x-ref="trigger"
                                             :class="reportErrors.month ? 'border-red-500 focus:border-red-500 focus:ring-red-200' : 'border-gray-200 focus:border-primary focus:ring-primary/20'"
                                             class="w-full flex justify-between items-center rounded-md border px-4 py-2 text-sm bg-white
                                                    focus:outline-none focus:ring-2 transition-colors">
@@ -2417,12 +2442,17 @@
                                         {{-- Hidden input --}}
                                         <input type="hidden" name="month" x-model="selectedValue">
 
-                                        {{-- Dropdown --}}
-                                        <div x-show="open" @click.away="open = false" x-cloak x-transition:enter="transition ease-out duration-100"
-                                            x-transition:enter-start="opacity-0 scale-95" x-transition:enter-end="opacity-100 scale-100"
-                                            x-transition:leave="transition ease-in duration-75" x-transition:leave-start="opacity-100 scale-100"
+                                        {{-- Dropdown (Fixed positioning to escape modal overflow) --}}
+                                        <div x-show="open" 
+                                            x-cloak 
+                                            x-ref="dropdown"
+                                            x-transition:enter="transition ease-out duration-100"
+                                            x-transition:enter-start="opacity-0 scale-95" 
+                                            x-transition:enter-end="opacity-100 scale-100"
+                                            x-transition:leave="transition ease-in duration-75" 
+                                            x-transition:leave-start="opacity-100 scale-100"
                                             x-transition:leave-end="opacity-0 scale-95"
-                                            class="absolute z-20 mt-1 w-full bg-white border border-gray-200 rounded-md shadow-lg">
+                                            class="fixed z-[9999] bg-white border border-gray-200 rounded-md shadow-lg">
                                             <ul class="max-h-60 overflow-y-auto py-1">
                                                 <template x-for="option in options" :key="option.value">
                                                     <li @click="select(option)"
@@ -2460,10 +2490,26 @@
                                             if (reportErrors.year) {
                                                 delete reportErrors.year;
                                             }
+                                        },
+                                        
+                                        updateDropdownPosition() {
+                                            this.$nextTick(() => {
+                                                const trigger = this.$refs.trigger;
+                                                const dropdown = this.$refs.dropdown;
+                                                if (trigger && dropdown) {
+                                                    const rect = trigger.getBoundingClientRect();
+                                                    dropdown.style.top = (rect.bottom + 4) + 'px';
+                                                    dropdown.style.left = rect.left + 'px';
+                                                    dropdown.style.width = rect.width + 'px';
+                                                }
+                                            });
                                         }
-                                    }" class="relative w-full">
+                                    }" class="relative w-full"
+                                    @click.away="open = false">
                                         {{-- Trigger --}}
-                                        <button type="button" @click="open = !open"
+                                        <button type="button" 
+                                            @click="open = !open; if (open) updateDropdownPosition()"
+                                            x-ref="trigger"
                                             :class="reportErrors.year ? 'border-red-500 focus:border-red-500 focus:ring-red-200' : 'border-gray-200 focus:border-primary focus:ring-primary/20'"
                                             class="w-full flex justify-between items-center rounded-md border px-4 py-2 text-sm bg-white
                                                    focus:outline-none focus:ring-2 transition-colors">
@@ -2478,12 +2524,17 @@
                                         {{-- Hidden input --}}
                                         <input type="hidden" name="year" x-model="selectedValue">
 
-                                        {{-- Dropdown --}}
-                                        <div x-show="open" @click.away="open = false" x-cloak x-transition:enter="transition ease-out duration-100"
-                                            x-transition:enter-start="opacity-0 scale-95" x-transition:enter-end="opacity-100 scale-100"
-                                            x-transition:leave="transition ease-in duration-75" x-transition:leave-start="opacity-100 scale-100"
+                                        {{-- Dropdown (Fixed positioning to escape modal overflow) --}}
+                                        <div x-show="open" 
+                                            x-cloak 
+                                            x-ref="dropdown"
+                                            x-transition:enter="transition ease-out duration-100"
+                                            x-transition:enter-start="opacity-0 scale-95" 
+                                            x-transition:enter-end="opacity-100 scale-100"
+                                            x-transition:leave="transition ease-in duration-75" 
+                                            x-transition:leave-start="opacity-100 scale-100"
                                             x-transition:leave-end="opacity-0 scale-95"
-                                            class="absolute z-20 mt-1 w-full bg-white border border-gray-200 rounded-md shadow-lg">
+                                            class="fixed z-[9999] bg-white border border-gray-200 rounded-md shadow-lg">
                                             <ul class="max-h-60 overflow-y-auto py-1">
                                                 <template x-for="option in options" :key="option.value">
                                                     <li @click="select(option)"
@@ -2524,10 +2575,26 @@
                                     if (reportErrors.product_type) {
                                         delete reportErrors.product_type;
                                     }
+                                },
+                                
+                                updateDropdownPosition() {
+                                    this.$nextTick(() => {
+                                        const trigger = this.$refs.trigger;
+                                        const dropdown = this.$refs.dropdown;
+                                        if (trigger && dropdown) {
+                                            const rect = trigger.getBoundingClientRect();
+                                            dropdown.style.top = (rect.bottom + 4) + 'px';
+                                            dropdown.style.left = rect.left + 'px';
+                                            dropdown.style.width = rect.width + 'px';
+                                        }
+                                    });
                                 }
-                            }" class="relative w-full">
+                            }" class="relative w-full"
+                            @click.away="open = false">
                                 {{-- Trigger --}}
-                                <button type="button" @click="open = !open"
+                                <button type="button" 
+                                    @click="open = !open; if (open) updateDropdownPosition()"
+                                    x-ref="trigger"
                                     :class="reportErrors.product_type ? 'border-red-500 focus:border-red-500 focus:ring-red-200' : 'border-gray-200 focus:border-primary focus:ring-primary/20'"
                                     class="w-full flex justify-between items-center rounded-md border px-4 py-2 text-sm bg-white
                                            focus:outline-none focus:ring-2 transition-colors">
@@ -2542,12 +2609,17 @@
                                 {{-- Hidden input --}}
                                 <input type="hidden" name="product_type" x-model="selectedValue">
 
-                                {{-- Dropdown --}}
-                                <div x-show="open" @click.away="open = false" x-cloak x-transition:enter="transition ease-out duration-100"
-                                    x-transition:enter-start="opacity-0 scale-95" x-transition:enter-end="opacity-100 scale-100"
-                                    x-transition:leave="transition ease-in duration-75" x-transition:leave-start="opacity-100 scale-100"
+                                {{-- Dropdown (Fixed positioning to escape modal overflow) --}}
+                                <div x-show="open" 
+                                    x-cloak 
+                                    x-ref="dropdown"
+                                    x-transition:enter="transition ease-out duration-100"
+                                    x-transition:enter-start="opacity-0 scale-95" 
+                                    x-transition:enter-end="opacity-100 scale-100"
+                                    x-transition:leave="transition ease-in duration-75" 
+                                    x-transition:leave-start="opacity-100 scale-100"
                                     x-transition:leave-end="opacity-0 scale-95"
-                                    class="absolute z-20 mt-1 w-full bg-white border border-gray-200 rounded-md shadow-lg">
+                                    class="fixed z-[9999] bg-white border border-gray-200 rounded-md shadow-lg">
                                     <ul class="max-h-60 overflow-y-auto py-1">
                                         <template x-for="option in options" :key="option.value">
                                             <li @click="select(option)"

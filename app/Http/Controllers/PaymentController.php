@@ -497,6 +497,37 @@ class PaymentController extends Controller
                 }
             }
 
+            // Auto-update balance if order already reported
+            if ($order && $order->report_status === 'reported') {
+                // Get the latest order report for this order
+                $orderReport = $order->orderReports()
+                    ->orderBy('created_at', 'desc')
+                    ->first();
+
+                if ($orderReport) {
+                    // Find or create balance for the report period
+                    $balance = \App\Models\Balance::firstOrCreate(
+                        [
+                            'period_start' => $orderReport->period_start,
+                            'period_end' => $orderReport->period_end,
+                        ],
+                        [
+                            'total_balance' => 0,
+                            'transfer_balance' => 0,
+                            'cash_balance' => 0,
+                        ]
+                    );
+
+                    // Add the newly approved payment to balance
+                    if ($payment->payment_method === 'transfer') {
+                        $balance->increment('transfer_balance', $payment->amount);
+                    } else {
+                        $balance->increment('cash_balance', $payment->amount);
+                    }
+                    $balance->increment('total_balance', $payment->amount);
+                }
+            }
+
             DB::commit();
 
             return redirect()->back()

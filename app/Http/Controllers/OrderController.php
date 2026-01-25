@@ -1048,6 +1048,16 @@ class OrderController extends Controller
         try {
             DB::beginTransaction();
 
+            // Get all approved payments for this order
+            $payments = $order->invoice->payments()
+                ->where('status', 'approved')
+                ->get();
+
+            // Calculate total transfer and cash
+            $transferTotal = $payments->where('payment_method', 'transfer')->sum('amount');
+            $cashTotal = $payments->where('payment_method', 'cash')->sum('amount');
+            $totalAmount = $transferTotal + $cashTotal;
+
             // Create order report record
             $order->orderReports()->create([
                 'period_start' => $periodStart,
@@ -1065,10 +1075,28 @@ class OrderController extends Controller
                 'report_date' => now(),
             ]);
 
+            // Update or create balance for this period
+            $balance = \App\Models\Balance::firstOrCreate(
+                [
+                    'period_start' => $periodStart,
+                    'period_end' => $periodEnd,
+                ],
+                [
+                    'total_balance' => 0,
+                    'transfer_balance' => 0,
+                    'cash_balance' => 0,
+                ]
+            );
+
+            // Update balance amounts
+            $balance->increment('transfer_balance', $transferTotal);
+            $balance->increment('cash_balance', $cashTotal);
+            $balance->increment('total_balance', $totalAmount);
+
             DB::commit();
 
             return redirect()->back()
-                ->with('message', 'Order moved to report successfully.')
+                ->with('message', 'Order moved to report and balance updated successfully.')
                 ->with('alert-type', 'success');
         } catch (\Exception $e) {
             DB::rollBack();
