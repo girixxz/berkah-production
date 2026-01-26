@@ -16,6 +16,7 @@ use App\Models\OrderItem;
 use App\Models\ExtraService;
 use App\Models\Invoice;
 use App\Models\OrderReport;
+use App\Models\Balance;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Cache;
@@ -23,6 +24,7 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Http\UploadedFile;
 use Barryvdh\DomPDF\Facade\Pdf;
+use Carbon\Carbon;
 
 class OrderController extends Controller
 {
@@ -1038,12 +1040,12 @@ class OrderController extends Controller
                 ->with('alert-type', 'warning');
         }
 
-        // Calculate period start and end based on month and year
+        // Calculate period start and end based on month and year (same format as Internal Transfer)
         $month = (int) $request->month;
         $year = (int) $request->year;
         
-        $periodStart = \Carbon\Carbon::create($year, $month, 1)->startOfDay();
-        $periodEnd = \Carbon\Carbon::create($year, $month, 1)->endOfMonth()->endOfDay();
+        $periodStart = Carbon::create($year, $month, 1);
+        $periodEnd = Carbon::create($year, $month, 1)->endOfMonth();
 
         try {
             DB::beginTransaction();
@@ -1075,18 +1077,21 @@ class OrderController extends Controller
                 'report_date' => now(),
             ]);
 
-            // Update or create balance for this period
-            $balance = \App\Models\Balance::firstOrCreate(
-                [
+            // Find or create balance for this period (match by year and month like Internal Transfer)
+            $balance = Balance::whereYear('period_start', $year)
+                ->whereMonth('period_start', $month)
+                ->first();
+
+            if (!$balance) {
+                // Create new balance if doesn't exist
+                $balance = Balance::create([
                     'period_start' => $periodStart,
                     'period_end' => $periodEnd,
-                ],
-                [
                     'total_balance' => 0,
                     'transfer_balance' => 0,
                     'cash_balance' => 0,
-                ]
-            );
+                ]);
+            }
 
             // Update balance amounts
             $balance->increment('transfer_balance', $transferTotal);

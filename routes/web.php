@@ -13,6 +13,7 @@ use App\Http\Controllers\MaterialSizeController;
 use App\Http\Controllers\ServiceController;
 
 use App\Http\Controllers\Main\ManageWorkOrderDataController;
+use App\Http\Controllers\OrderReportController;
 use App\Http\Controllers\CuttingPatternController;
 use App\Http\Controllers\ChainClothController;
 use App\Http\Controllers\RibSizeController;
@@ -182,6 +183,11 @@ Route::middleware(['auth'])->group(function () {
         // Shipping Orders
         Route::get('shipping-orders', [\App\Http\Controllers\ShippingOrderController::class, 'index'])->name('shipping-orders');
         
+        // Report Orders
+        Route::get('report-orders', [OrderReportController::class, 'index'])->name('report-orders.index');
+        Route::patch('report-orders/{orderReport}/toggle-lock', [OrderReportController::class, 'toggleLock'])->name('report-orders.toggle-lock');
+        Route::delete('report-orders/{orderReport}', [OrderReportController::class, 'destroy'])->name('report-orders.destroy');
+        
         // Payment History
         Route::get('payment-history', [\App\Http\Controllers\PaymentHistoryController::class, 'index'])->name('payment-history');
         
@@ -199,7 +205,9 @@ Route::middleware(['auth'])->group(function () {
 
         // Report Routes
         Route::prefix('report')->name('report.')->group(function () {
-            Route::get('order-list', fn() => view('pages.finance.report.order-list'))->name('order-list');
+            Route::get('order-list', [OrderReportController::class, 'index'])->name('order-list');
+            Route::patch('order-list/{orderReport}/toggle-lock', [OrderReportController::class, 'toggleLock'])->name('order-list.toggle-lock');
+            Route::delete('order-list/{orderReport}', [OrderReportController::class, 'destroy'])->name('order-list.destroy');
             Route::get('material', fn() => view('pages.finance.report.material'))->name('material');
             Route::get('support-partner', fn() => view('pages.finance.report.support-partner'))->name('support-partner');
             Route::get('operational', fn() => view('pages.finance.report.operational'))->name('operational');
