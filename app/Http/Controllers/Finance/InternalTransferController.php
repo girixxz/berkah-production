@@ -23,17 +23,6 @@ class InternalTransferController extends Controller
             ->whereMonth('period_start', $month)
             ->first();
 
-        if (!$balance) {
-            // Create balance if doesn't exist for the period
-            $balance = Balance::create([
-                'period_start' => Carbon::create($year, $month, 1),
-                'period_end' => Carbon::create($year, $month, 1)->endOfMonth(),
-                'total_balance' => 0,
-                'transfer_balance' => 0,
-                'cash_balance' => 0,
-            ]);
-        }
-
         // Get transfer type filter
         $transferType = $request->input('transfer_type', 'all');
 

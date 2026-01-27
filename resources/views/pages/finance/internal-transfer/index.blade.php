@@ -583,8 +583,89 @@
         </div>
 
         {{-- Add Transfer Modal --}}
-    <div x-show="showAddTransferModal"
+    <div x-show="showAddTransferModal" x-cloak
         @keydown.escape.window="showAddTransferModal = false; stopTransferWebcam()"
+        x-data="{
+            balanceMonth: null,
+            balanceYear: null,
+            balanceId: null,
+            balanceTransfer: 0,
+            balanceCash: 0,
+            balanceMonthDropdownOpen: false,
+            balanceYearDropdownOpen: false,
+            balanceMonthOptions: [
+                { value: 1, name: 'January' },
+                { value: 2, name: 'February' },
+                { value: 3, name: 'March' },
+                { value: 4, name: 'April' },
+                { value: 5, name: 'May' },
+                { value: 6, name: 'June' },
+                { value: 7, name: 'July' },
+                { value: 8, name: 'August' },
+                { value: 9, name: 'September' },
+                { value: 10, name: 'October' },
+                { value: 11, name: 'November' },
+                { value: 12, name: 'December' }
+            ],
+            balanceYearOptions: [],
+            init() {
+                // Generate year options (2026 onwards)
+                const currentYear = 2026;
+                for (let i = 0; i < 10; i++) {
+                    this.balanceYearOptions.push({ value: currentYear + i, name: (currentYear + i).toString() });
+                }
+            },
+            get selectedMonthName() {
+                const month = this.balanceMonthOptions.find(m => m.value === this.balanceMonth);
+                return month ? month.name : null;
+            },
+            get hasBalancePeriod() {
+                return this.balanceMonth !== null && this.balanceYear !== null;
+            },
+            async selectMonth(month) {
+                this.balanceMonth = month;
+                this.balanceMonthDropdownOpen = false;
+                if (this.balanceYear) {
+                    await this.fetchBalanceData();
+                }
+            },
+            async selectYear(year) {
+                this.balanceYear = year;
+                this.balanceYearDropdownOpen = false;
+                if (this.balanceMonth) {
+                    await this.fetchBalanceData();
+                }
+            },
+            async fetchBalanceData() {
+                if (!this.balanceMonth || !this.balanceYear) return;
+                
+                try {
+                    const response = await fetch(`/finance/balance/find-by-period?month=${this.balanceMonth}&year=${this.balanceYear}`, {
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest',
+                            'Accept': 'application/json'
+                        }
+                    });
+                    const data = await response.json();
+                    
+                    if (data.success && data.balance) {
+                        this.balanceId = data.balance.id;
+                        this.balanceTransfer = data.balance.transfer_balance;
+                        this.balanceCash = data.balance.cash_balance;
+                    } else {
+                        // Balance not found - set to 0, no error
+                        this.balanceId = null;
+                        this.balanceTransfer = 0;
+                        this.balanceCash = 0;
+                    }
+                } catch (error) {
+                    console.error('Error fetching balance:', error);
+                    this.balanceId = null;
+                    this.balanceTransfer = 0;
+                    this.balanceCash = 0;
+                }
+            }
+        }"
         x-init="
             $watch('showAddTransferModal', value => {
                 if (value) {
@@ -595,6 +676,13 @@
                     transferErrors = {};
                     imagePreview = null;
                     fileName = '';
+                    
+                    // Reset balance period
+                    balanceMonth = null;
+                    balanceYear = null;
+                    balanceId = null;
+                    balanceTransfer = 0;
+                    balanceCash = 0;
                 }
             })
         "
@@ -620,21 +708,16 @@
 
                 {{-- Modal Body --}}
                 <div class="flex-1 overflow-y-auto px-6 py-6">
-                    {{-- Balance Cards --}}
-                    <div class="grid grid-cols-2 gap-3 mb-4">
-                        <div class="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-3 border border-blue-200">
-                            <p class="text-xs text-blue-600 font-medium mb-1">Transfer Balance</p>
-                            <p class="text-lg font-bold text-blue-900">Rp {{ number_format($balance->transfer_balance, 0, ',', '.') }}</p>
-                        </div>
-                        <div class="bg-gradient-to-br from-green-50 to-green-100 rounded-xl p-3 border border-green-200">
-                            <p class="text-xs text-green-600 font-medium mb-1">Cash Balance</p>
-                            <p class="text-lg font-bold text-green-900">Rp {{ number_format($balance->cash_balance, 0, ',', '.') }}</p>
-                        </div>
-                    </div>
 
                     <form id="addTransferForm" x-ref="addTransferForm" @submit.prevent="
                         transferErrors = {};
                         let hasValidationError = false;
+
+                        // Validate balance period
+                        if (!balanceMonth || !balanceYear) {
+                            transferErrors.balance_period = ['Balance period is required'];
+                            hasValidationError = true;
+                        }
 
                         // Validate transfer type
                         if (!transferType) {
@@ -655,6 +738,8 @@
 
                         isSubmittingTransfer = true;
                         const formData = new FormData();
+                        formData.append('balance_month', balanceMonth);
+                        formData.append('balance_year', balanceYear);
                         formData.append('transfer_date', transferDate);
                         formData.append('transfer_type', transferType);
                         formData.append('amount', amountValue);
@@ -707,6 +792,95 @@
                         });
                     ">
                         <div class="space-y-4">
+                            {{-- Balance Period Selector (Always visible) --}}
+                            <div class="mb-6 p-4 bg-gradient-to-br from-primary/10 to-primary/20 rounded-xl border-2 border-primary/30">
+                                <label class="block text-sm font-semibold text-gray-900 mb-3">
+                                    Select Balance Period <span class="text-red-600">*</span>
+                                </label>
+                                <div class="grid grid-cols-2 gap-3">
+                                    {{-- Month Selector --}}
+                                    <div class="relative">
+                                        <button type="button" @click="balanceMonthDropdownOpen = !balanceMonthDropdownOpen"
+                                            class="w-full flex justify-between items-center rounded-lg border-2 border-primary/40 bg-white px-4 py-2.5 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary transition-all hover:border-primary">
+                                            <span x-text="selectedMonthName || 'Select Month'"
+                                                :class="!selectedMonthName ? 'text-gray-400' : 'text-gray-900'"></span>
+                                            <svg class="w-4 h-4 text-primary transition-transform" :class="balanceMonthDropdownOpen && 'rotate-180'" fill="none"
+                                                stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                                            </svg>
+                                        </button>
+                                        <div x-show="balanceMonthDropdownOpen" @click.away="balanceMonthDropdownOpen = false" x-cloak
+                                            x-transition:enter="transition ease-out duration-100"
+                                            x-transition:enter-start="opacity-0 scale-95" x-transition:enter-end="opacity-100 scale-100"
+                                            x-transition:leave="transition ease-in duration-75" x-transition:leave-start="opacity-100 scale-100"
+                                            x-transition:leave-end="opacity-0 scale-95"
+                                            class="fixed z-[100] mt-1 w-[200px] bg-white border-2 border-primary/30 rounded-lg shadow-2xl">
+                                            <ul class="max-h-60 overflow-y-auto py-1">
+                                                <template x-for="month in balanceMonthOptions" :key="month.value">
+                                                    <li @click="selectMonth(month.value)"
+                                                        class="px-4 py-2 cursor-pointer text-sm text-gray-700 hover:bg-primary/10 transition-colors"
+                                                        :class="{ 'bg-primary/20 font-semibold text-primary': balanceMonth === month.value }">
+                                                        <span x-text="month.name"></span>
+                                                    </li>
+                                                </template>
+                                            </ul>
+                                        </div>
+                                    </div>
+
+                                    {{-- Year Selector --}}
+                                    <div class="relative">
+                                        <button type="button" @click="balanceYearDropdownOpen = !balanceYearDropdownOpen"
+                                            class="w-full flex justify-between items-center rounded-lg border-2 border-primary/40 bg-white px-4 py-2.5 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary transition-all hover:border-primary">
+                                            <span x-text="balanceYear || 'Select Year'"
+                                                :class="!balanceYear ? 'text-gray-400' : 'text-gray-900'"></span>
+                                            <svg class="w-4 h-4 text-primary transition-transform" :class="balanceYearDropdownOpen && 'rotate-180'" fill="none"
+                                                stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                                            </svg>
+                                        </button>
+                                        <div x-show="balanceYearDropdownOpen" @click.away="balanceYearDropdownOpen = false" x-cloak
+                                            x-transition:enter="transition ease-out duration-100"
+                                            x-transition:enter-start="opacity-0 scale-95" x-transition:enter-end="opacity-100 scale-100"
+                                            x-transition:leave="transition ease-in duration-75" x-transition:leave-start="opacity-100 scale-100"
+                                            x-transition:leave-end="opacity-0 scale-95"
+                                            class="fixed z-[100] mt-1 w-[200px] bg-white border-2 border-primary/30 rounded-lg shadow-2xl">
+                                            <ul class="max-h-60 overflow-y-auto py-1">
+                                                <template x-for="year in balanceYearOptions" :key="year.value">
+                                                    <li @click="selectYear(year.value)"
+                                                        class="px-4 py-2 cursor-pointer text-sm text-gray-700 hover:bg-primary/10 transition-colors"
+                                                        :class="{ 'bg-primary/20 font-semibold text-primary': balanceYear === year.value }">
+                                                        <span x-text="year.name"></span>
+                                                    </li>
+                                                </template>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </div>
+                                <p class="mt-2 text-xs text-primary font-medium" x-show="hasBalancePeriod">
+                                    <span class="font-semibold">Selected:</span> <span x-text="selectedMonthName + ' ' + balanceYear"></span>
+                                </p>
+                                <template x-if="transferErrors.balance_period">
+                                    <p class="mt-1 text-xs text-red-600" x-text="transferErrors.balance_period[0]"></p>
+                                </template>
+                            </div>
+
+                            {{-- Content shown only after Balance Period is selected --}}
+                            <div x-show="hasBalancePeriod" x-transition:enter="transition ease-out duration-200"
+                                x-transition:enter-start="opacity-0 transform scale-95"
+                                x-transition:enter-end="opacity-100 transform scale-100">
+                                
+                                {{-- Balance Cards --}}
+                                <div class="grid grid-cols-2 gap-3 mb-4">
+                                    <div class="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-3 border border-blue-200">
+                                        <p class="text-xs text-blue-600 font-medium mb-1">Transfer Balance</p>
+                                        <p class="text-base font-bold text-blue-900" x-text="'Rp ' + parseInt(balanceTransfer).toLocaleString('id-ID')"></p>
+                                    </div>
+                                    <div class="bg-gradient-to-br from-green-50 to-green-100 rounded-xl p-3 border border-green-200">
+                                        <p class="text-xs text-green-600 font-medium mb-1">Cash Balance</p>
+                                        <p class="text-base font-bold text-green-900" x-text="'Rp ' + parseInt(balanceCash).toLocaleString('id-ID')"></p>
+                                    </div>
+                                </div>
+
                             {{-- Transfer Date & Transfer Type (Row) --}}
                             <div class="grid grid-cols-2 gap-3">
                                 {{-- Transfer Date (Locked) --}}
@@ -860,6 +1034,9 @@
                                 </div>
                                 <input type="file" name="transfer_proof_image" accept="image/*" class="hidden">
                             </div>
+
+                            </div>
+                            {{-- End: Content shown only after Balance Period is selected --}}
                         </div>
 
                         {{-- Submit Button --}}
