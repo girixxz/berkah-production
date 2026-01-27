@@ -272,7 +272,7 @@
                     <thead class="bg-primary-light text-gray-600">
                         <tr>
                             <th class="py-3 px-4 text-left font-bold rounded-l-lg">Paid Date</th>
-                            <th class="py-3 px-4 text-left font-bold">No. Trx (Loan)</th>
+                            <th class="py-3 px-4 text-left font-bold">Balance Period</th>
                             <th class="py-3 px-4 text-left font-bold">Payment Method</th>
                             <th class="py-3 px-4 text-left font-bold">Amount</th>
                             <th class="py-3 px-4 text-left font-bold">Note</th>
@@ -286,7 +286,11 @@
                                     {{ $repayment->paid_date->format('d M Y') }}
                                 </td>
                                 <td class="py-3 px-4 whitespace-nowrap font-medium text-gray-900">
-                                    {{ $repayment->loanCapital->loan_code }}
+                                    @if($repayment->balance)
+                                        {{ $repayment->balance->period_start->format('F Y') }}
+                                    @else
+                                        <span class="text-gray-400">-</span>
+                                    @endif
                                 </td>
                                 <td class="py-3 px-4 whitespace-nowrap">
                                     <span class="inline-flex px-2 py-1 text-xs font-medium rounded-full 

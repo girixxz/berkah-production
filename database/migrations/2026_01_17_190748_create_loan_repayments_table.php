@@ -15,6 +15,7 @@ return new class extends Migration
         Schema::create('loan_repayments', function (Blueprint $table) {
             $table->id();
             $table->foreignId('loan_id')->constrained('loan_capitals')->onDelete('cascade');
+            $table->foreignId('balance_id')->constrained('balances')->onDelete('cascade');
             $table->date('paid_date');
             $table->decimal('amount', 12, 2);
             $table->enum('payment_method', ['cash', 'transfer']);

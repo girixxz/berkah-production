@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Balance extends Model
 {
@@ -21,4 +22,12 @@ class Balance extends Model
         'transfer_balance' => 'decimal:2',
         'cash_balance' => 'decimal:2',
     ];
+
+    /**
+     * Get all loan capitals for this balance period.
+     */
+    public function loanCapitals(): HasMany
+    {
+        return $this->hasMany(LoanCapital::class);
+    }
 }

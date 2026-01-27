@@ -201,7 +201,7 @@
             <div class="bg-white border border-gray-200 rounded-lg p-4">
                 <div class="flex items-center justify-between">
                     <div>
-                        <p class="text-sm text-gray-500">Outstanding</p>
+                        <p class="text-sm text-gray-500">Outstanding <span class="text-xs font-medium text-orange-600">(All Time)</span></p>
                         <p class="text-2xl font-bold text-gray-900 mt-1">Rp {{ number_format($outstanding, 0, ',', '.') }}</p>
                     </div>
                     <div class="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
@@ -360,8 +360,8 @@
                 <table class="w-full text-sm">
                     <thead class="bg-primary-light text-gray-600">
                         <tr>
-                            <th class="py-3 px-4 text-left font-bold rounded-l-lg">No. Trx</th>
-                            <th class="py-3 px-4 text-left font-bold">Date</th>
+                            <th class="py-3 px-4 text-left font-bold rounded-l-lg">Date</th>
+                            <th class="py-3 px-4 text-left font-bold">Balance Period</th>
                             <th class="py-3 px-4 text-left font-bold">Payment Method</th>
                             <th class="py-3 px-4 text-left font-bold">Amount</th>
                             <th class="py-3 px-4 text-left font-bold">Note</th>
@@ -374,18 +374,22 @@
                         get hasResults() {
                             if (!searchQuery || searchQuery.trim() === '') return true;
                             const search = searchQuery.toLowerCase();
-                            return {{ Js::from($allLoans->map(fn($l) => strtolower($l->loan_code . ' ' . ($l->notes ?? '')))) }}
+                            return {{ Js::from($allLoans->map(fn($l) => strtolower(($l->balance ? $l->balance->period_start->format('F Y') : '') . ' ' . ($l->notes ?? '')))) }}
                                 .some(text => text.includes(search));
                         }
                     }">
                         @forelse ($loans as $loan)
-                            <tr data-trx="{{ $loan->loan_code }}" data-note="{{ $loan->notes }}"
+                            <tr data-trx="{{ $loan->balance ? $loan->balance->period_start->format('F Y') : '' }}" data-note="{{ $loan->notes }}"
                                 x-show="searchQuery.trim() === ''">
-                                <td class="py-3 px-4 whitespace-nowrap font-medium text-gray-900">
-                                    {{ $loan->loan_code }}
-                                </td>
                                 <td class="py-3 px-4 whitespace-nowrap text-gray-500">
                                     {{ $loan->loan_date->format('d M Y') }}
+                                </td>
+                                <td class="py-3 px-4 whitespace-nowrap font-medium text-gray-900">
+                                    @if($loan->balance)
+                                        {{ $loan->balance->period_start->format('F Y') }}
+                                    @else
+                                        <span class="text-gray-400">-</span>
+                                    @endif
                                 </td>
                                 <td class="py-3 px-4 whitespace-nowrap">
                                     <span class="inline-flex px-2 py-1 text-xs font-medium rounded-full 
@@ -483,7 +487,7 @@
                                                     @click="
                                                         $dispatch('open-edit-modal', {
                                                             id: {{ $loan->id }},
-                                                            code: '{{ $loan->loan_code }}',
+                                                            balance_period: '{{ $loan->balance ? $loan->balance->period_start->format('F Y') : '-' }}',
                                                             date: '{{ $loan->loan_date->format('d M Y') }}',
                                                             method: '{{ $loan->payment_method }}',
                                                             amount: '{{ number_format($loan->amount, 0, ',', '.') }}',
@@ -503,7 +507,7 @@
                                                 {{-- Repayment (only if outstanding) --}}
                                                 @if ($loan->status === 'outstanding')
                                                     <button type="button"
-                                                        @click="$dispatch('open-repayment-modal', { id: {{ $loan->id }}, loan_code: '{{ $loan->loan_code }}', amount: {{ $loan->amount }}, remaining_amount: {{ $loan->remaining_amount }}, payment_method: '{{ $loan->payment_method }}' })"
+                                                        @click="$dispatch('open-repayment-modal', { id: {{ $loan->id }}, loan_balance_period: '{{ $loan->balance ? $loan->balance->period_start->format('F Y') : '-' }}', amount: {{ $loan->amount }}, remaining_amount: {{ $loan->remaining_amount }}, payment_method: '{{ $loan->payment_method }}' })"
                                                         class="w-full text-left px-4 py-2 text-sm text-green-600 hover:bg-green-50 flex items-center gap-2">
                                                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -636,7 +640,7 @@
                                                     @click="
                                                         $dispatch('open-edit-modal', {
                                                             id: {{ $loan->id }},
-                                                            code: '{{ $loan->loan_code }}',
+                                                            balance_period: '{{ $loan->balance ? $loan->balance->period_start->format('F Y') : '-' }}',
                                                             date: '{{ $loan->loan_date->format('d M Y') }}',
                                                             method: '{{ $loan->payment_method }}',
                                                             amount: '{{ number_format($loan->amount, 0, ',', '.') }}',
@@ -656,7 +660,7 @@
                                                 {{-- Repayment (only if outstanding) --}}
                                                 @if ($loan->status === 'outstanding')
                                                     <button type="button"
-                                                        @click="$dispatch('open-repayment-modal', { id: {{ $loan->id }}, loan_code: '{{ $loan->loan_code }}', amount: {{ $loan->amount }}, remaining_amount: {{ $loan->remaining_amount }}, payment_method: '{{ $loan->payment_method }}' })"
+                                                        @click="$dispatch('open-repayment-modal', { id: {{ $loan->id }}, loan_balance_period: '{{ $loan->balance ? $loan->balance->period_start->format('F Y') : '-' }}', amount: {{ $loan->amount }}, remaining_amount: {{ $loan->remaining_amount }}, payment_method: '{{ $loan->payment_method }}' })"
                                                         class="w-full text-left px-4 py-2 text-sm text-green-600 hover:bg-green-50 flex items-center gap-2">
                                                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -695,43 +699,139 @@
         </div>
 
         {{-- ================= ADD LOAN MODAL ================= --}}
-        <div x-show="showAddLoanModal" x-transition.opacity x-cloak
+        <div x-show="showAddLoanModal" x-cloak
+            x-data="{
+                balanceMonth: null,
+                balanceYear: null,
+                balanceId: null,
+                balanceTransfer: 0,
+                balanceCash: 0,
+                balanceMonthDropdownOpen: false,
+                balanceYearDropdownOpen: false,
+                balanceMonthOptions: [
+                    { value: 1, name: 'January' },
+                    { value: 2, name: 'February' },
+                    { value: 3, name: 'March' },
+                    { value: 4, name: 'April' },
+                    { value: 5, name: 'May' },
+                    { value: 6, name: 'June' },
+                    { value: 7, name: 'July' },
+                    { value: 8, name: 'August' },
+                    { value: 9, name: 'September' },
+                    { value: 10, name: 'October' },
+                    { value: 11, name: 'November' },
+                    { value: 12, name: 'December' }
+                ],
+                balanceYearOptions: [],
+                init() {
+                    // Generate year options (current year onwards)
+                    const currentYear = new Date().getFullYear();
+                    for (let i = 0; i < 10; i++) {
+                        this.balanceYearOptions.push({ value: currentYear + i, name: (currentYear + i).toString() });
+                    }
+                },
+                get selectedMonthName() {
+                    const month = this.balanceMonthOptions.find(m => m.value === this.balanceMonth);
+                    return month ? month.name : null;
+                },
+                get hasBalancePeriod() {
+                    return this.balanceMonth !== null && this.balanceYear !== null;
+                },
+                async selectMonth(month) {
+                    this.balanceMonth = month;
+                    this.balanceMonthDropdownOpen = false;
+                    if (this.balanceYear) {
+                        await this.fetchBalanceData();
+                    }
+                },
+                async selectYear(year) {
+                    this.balanceYear = year;
+                    this.balanceYearDropdownOpen = false;
+                    if (this.balanceMonth) {
+                        await this.fetchBalanceData();
+                    }
+                },
+                async fetchBalanceData() {
+                    if (!this.balanceMonth || !this.balanceYear) return;
+                    
+                    try {
+                        const response = await fetch(`/finance/balance/find-by-period?month=${this.balanceMonth}&year=${this.balanceYear}`, {
+                            headers: {
+                                'X-Requested-With': 'XMLHttpRequest',
+                                'Accept': 'application/json'
+                            }
+                        });
+                        const data = await response.json();
+                        
+                        if (data.success && data.balance) {
+                            this.balanceId = data.balance.id;
+                            this.balanceTransfer = data.balance.transfer_balance;
+                            this.balanceCash = data.balance.cash_balance;
+                        } else {
+                            // Balance not found - set to 0, no error
+                            this.balanceId = null;
+                            this.balanceTransfer = 0;
+                            this.balanceCash = 0;
+                        }
+                    } catch (error) {
+                        console.error('Error fetching balance:', error);
+                        this.balanceId = null;
+                        this.balanceTransfer = 0;
+                        this.balanceCash = 0;
+                    }
+                }
+            }"
             x-init="$watch('showAddLoanModal', value => {
                 if (value) {
-                    fetch('{{ route('finance.loan-capital.next-code') }}')
-                        .then(res => res.json())
-                        .then(data => {
-                            $refs.loanCode.value = data.loan_code;
-                            $refs.loanDate.value = data.current_date;
-                        });
+                    $refs.loanDate.value = new Date().toISOString().split('T')[0];
+                    
+                    // Reset balance period
+                    balanceMonth = null;
+                    balanceYear = null;
+                    balanceId = null;
+                    balanceTransfer = 0;
+                    balanceCash = 0;
                 }
             })"
-            class="fixed inset-0 z-50">
+            class="fixed inset-0 z-50 overflow-y-auto"
+            style="display: none;">
             
             {{-- Background Overlay --}}
-            <div x-show="showAddLoanModal" class="fixed inset-0 bg-black/50 bg-opacity-50 backdrop-blur-xs transition-opacity"></div>
+            <div class="fixed inset-0 bg-black/50 backdrop-blur-sm transition-opacity"></div>
             
             {{-- Modal Panel --}}
             <div class="fixed inset-0 flex items-center justify-center p-4">
                 <div @click.away="showAddLoanModal = false; loanAmount = ''; loanErrors = {};"
-                    class="relative bg-white rounded-xl shadow-lg w-full max-w-2xl"
-                    style="height: min(calc(100vh - 6rem), 800px); min-height: 0; display: flex; flex-direction: column;">
-                {{-- Fixed Header --}}
-                <div class="flex items-center justify-between px-6 py-4 border-b border-gray-200 flex-shrink-0">
+                    class="relative bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
+                
+                {{-- Modal Header --}}
+                <div class="flex items-center justify-between px-6 py-4 border-b border-gray-200">
                     <h3 class="text-lg font-semibold text-gray-900">Add Loan</h3>
-                    <button @click="showAddLoanModal = false; loanAmount = ''; loanErrors = {};"
+                    <button @click="showAddLoanModal = false; loanAmount = ''; loanErrors = {};" type="button"
                         class="text-gray-400 hover:text-gray-600 cursor-pointer text-2xl leading-none">
                         ✕
                     </button>
                 </div>
 
-                {{-- Scrollable Content --}}
-                <div class="overflow-y-auto flex-1 px-6 py-4">
+                {{-- Modal Body --}}
+                <div class="flex-1 overflow-y-auto px-6 py-6">
                     <form id="addLoanForm"
                         @submit.prevent="
                             loanErrors = {};
                             let hasValidationError = false;
                             const formData = new FormData($event.target);
+                            
+                            // Validate balance_month
+                            if (!formData.get('balance_month')) {
+                                loanErrors.balance_month = ['Month is required'];
+                                hasValidationError = true;
+                            }
+                            
+                            // Validate balance_year
+                            if (!formData.get('balance_year')) {
+                                loanErrors.balance_year = ['Year is required'];
+                                hasValidationError = true;
+                            }
                             
                             // Validate payment_method
                             if (!formData.get('payment_method')) {
@@ -804,26 +904,106 @@
                             });
                         ">
                         <div class="space-y-4">
-                            {{-- No. Trx & Date (Row on mobile) --}}
-                            <div class="grid grid-cols-2 gap-3">
-                                {{-- No. Trx (Locked) --}}
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700 mb-1">
-                                        No. Trx
-                                    </label>
-                                    <input type="text" x-ref="loanCode" readonly
-                                        class="w-full rounded-md px-4 py-2 text-sm border border-gray-200 bg-gray-50 text-gray-600 cursor-not-allowed pointer-events-none">
+                            {{-- Balance Period Selector (Always visible) --}}
+                            <div class="mb-6 p-4 bg-gradient-to-br from-primary/10 to-primary/20 rounded-xl border-2 border-primary/30">
+                                <label class="block text-sm font-semibold text-gray-900 mb-3">
+                                    Select Balance Period <span class="text-red-600">*</span>
+                                </label>
+                                <div class="grid grid-cols-2 gap-3">
+                                    {{-- Month Selector --}}
+                                    <div class="relative">
+                                        <button type="button" @click="balanceMonthDropdownOpen = !balanceMonthDropdownOpen"
+                                            class="w-full flex justify-between items-center rounded-lg border-2 border-primary/40 bg-white px-4 py-2.5 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary transition-all hover:border-primary">
+                                            <span x-text="selectedMonthName || 'Select Month'"
+                                                :class="!selectedMonthName ? 'text-gray-400' : 'text-gray-900'"></span>
+                                            <svg class="w-4 h-4 text-primary transition-transform" :class="balanceMonthDropdownOpen && 'rotate-180'" fill="none"
+                                                stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                                            </svg>
+                                        </button>
+                                        <div x-show="balanceMonthDropdownOpen" @click.away="balanceMonthDropdownOpen = false" x-cloak
+                                            x-transition:enter="transition ease-out duration-100"
+                                            x-transition:enter-start="opacity-0 scale-95" x-transition:enter-end="opacity-100 scale-100"
+                                            x-transition:leave="transition ease-in duration-75" x-transition:leave-start="opacity-100 scale-100"
+                                            x-transition:leave-end="opacity-0 scale-95"
+                                            class="fixed z-[100] mt-1 w-[200px] bg-white border-2 border-primary/30 rounded-lg shadow-2xl">
+                                            <ul class="max-h-60 overflow-y-auto py-1">
+                                                <template x-for="month in balanceMonthOptions" :key="month.value">
+                                                    <li @click="selectMonth(month.value)"
+                                                        class="px-4 py-2 cursor-pointer text-sm text-gray-700 hover:bg-primary/10 transition-colors"
+                                                        :class="{ 'bg-primary/20 font-semibold text-primary': balanceMonth === month.value }">
+                                                        <span x-text="month.name"></span>
+                                                    </li>
+                                                </template>
+                                            </ul>
+                                        </div>
+                                    </div>
+
+                                    {{-- Year Selector --}}
+                                    <div class="relative">
+                                        <button type="button" @click="balanceYearDropdownOpen = !balanceYearDropdownOpen"
+                                            class="w-full flex justify-between items-center rounded-lg border-2 border-primary/40 bg-white px-4 py-2.5 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary transition-all hover:border-primary">
+                                            <span x-text="balanceYear || 'Select Year'"
+                                                :class="!balanceYear ? 'text-gray-400' : 'text-gray-900'"></span>
+                                            <svg class="w-4 h-4 text-primary transition-transform" :class="balanceYearDropdownOpen && 'rotate-180'" fill="none"
+                                                stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                                            </svg>
+                                        </button>
+                                        <div x-show="balanceYearDropdownOpen" @click.away="balanceYearDropdownOpen = false" x-cloak
+                                            x-transition:enter="transition ease-out duration-100"
+                                            x-transition:enter-start="opacity-0 scale-95" x-transition:enter-end="opacity-100 scale-100"
+                                            x-transition:leave="transition ease-in duration-75" x-transition:leave-start="opacity-100 scale-100"
+                                            x-transition:leave-end="opacity-0 scale-95"
+                                            class="fixed z-[100] mt-1 w-[200px] bg-white border-2 border-primary/30 rounded-lg shadow-2xl">
+                                            <ul class="max-h-60 overflow-y-auto py-1">
+                                                <template x-for="year in balanceYearOptions" :key="year.value">
+                                                    <li @click="selectYear(year.value)"
+                                                        class="px-4 py-2 cursor-pointer text-sm text-gray-700 hover:bg-primary/10 transition-colors"
+                                                        :class="{ 'bg-primary/20 font-semibold text-primary': balanceYear === year.value }">
+                                                        <span x-text="year.name"></span>
+                                                    </li>
+                                                </template>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </div>
+                                <p class="mt-2 text-xs text-primary font-medium" x-show="hasBalancePeriod">
+                                    <span class="font-semibold">Selected:</span> <span x-text="selectedMonthName + ' ' + balanceYear"></span>
+                                </p>
+                            </div>
+
+                            {{-- Content shown only after Balance Period is selected --}}
+                            <div x-show="hasBalancePeriod" x-transition:enter="transition ease-out duration-200"
+                                x-transition:enter-start="opacity-0 transform scale-95"
+                                x-transition:enter-end="opacity-100 transform scale-100">
+                                
+                                {{-- 2 Cards: Transfer Balance, Cash Balance --}}
+                                <div class="grid grid-cols-2 gap-3 mb-4">
+                                    {{-- Transfer Balance --}}
+                                    <div class="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-3 border border-blue-200">
+                                        <p class="text-xs text-blue-600 font-medium mb-1">Transfer Balance</p>
+                                        <p class="text-base font-bold text-blue-900" x-text="'Rp ' + parseInt(balanceTransfer).toLocaleString('id-ID')"></p>
+                                    </div>
+                                    {{-- Cash Balance --}}
+                                    <div class="bg-gradient-to-br from-green-50 to-green-100 rounded-xl p-3 border border-green-200">
+                                        <p class="text-xs text-green-600 font-medium mb-1">Cash Balance</p>
+                                        <p class="text-base font-bold text-green-900" x-text="'Rp ' + parseInt(balanceCash).toLocaleString('id-ID')"></p>
+                                    </div>
                                 </div>
 
-                                {{-- Date (Locked) --}}
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700 mb-1">
-                                        Date
-                                    </label>
-                                    <input type="date" x-ref="loanDate" readonly
-                                        class="w-full rounded-md px-4 py-2 text-sm border border-gray-200 bg-gray-50 text-gray-600 cursor-not-allowed pointer-events-none">
-                                </div>
+                            {{-- Date (Auto-filled, readonly) --}}
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">
+                                    Loan Date
+                                </label>
+                                <input type="date" x-ref="loanDate" readonly
+                                    class="w-full rounded-md px-4 py-2 text-sm border border-gray-200 bg-gray-50 text-gray-600 cursor-not-allowed pointer-events-none">
                             </div>
+
+                            {{-- Hidden inputs for balance period --}}
+                            <input type="hidden" name="balance_month" x-model="balanceMonth">
+                            <input type="hidden" name="balance_year" x-model="balanceYear">
 
                             {{-- Payment Method & Amount (Row) --}}
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -1140,22 +1320,27 @@
                                 <p x-show="loanErrors.notes" x-cloak x-text="loanErrors.notes?.[0]"
                                     class="mt-1 text-sm text-red-600"></p>
                             </div>
+                            </div> {{-- END: Content shown only after Balance Period is selected --}}
                         </div>
                     </form>
                 </div>
 
-                {{-- Fixed Footer --}}
-                <div class="flex items-center justify-end gap-3 px-6 py-4 border-t border-gray-200 flex-shrink-0">
+                {{-- Modal Footer --}}
+                <div class="flex items-center justify-end gap-3 px-6 py-4 border-t border-gray-200 bg-gray-50">
                     <button type="button" @click="showAddLoanModal = false; loanAmount = ''; loanErrors = {};"
-                        class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 transition">
+                        class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
                         Cancel
                     </button>
                     <button type="submit" form="addLoanForm"
-                        :disabled="isSubmittingLoan"
-                        :class="isSubmittingLoan ? 'opacity-50 cursor-not-allowed' : 'hover:bg-primary-dark'"
-                        class="px-4 py-2 text-sm font-medium text-white bg-primary rounded-md transition">
-                        <span x-show="!isSubmittingLoan">Add Loan</span>
-                        <span x-show="isSubmittingLoan" x-cloak>Processing...</span>
+                        :disabled="isSubmittingLoan || !hasBalancePeriod"
+                        class="px-4 py-2 text-sm font-medium text-white bg-primary rounded-lg hover:bg-primary-dark disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2">
+                        <template x-if="isSubmittingLoan">
+                            <svg class="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                        </template>
+                        <span x-text="isSubmittingLoan ? 'Processing...' : 'Add Loan'"></span>
                     </button>
                 </div>
             </div>
@@ -1166,7 +1351,7 @@
     <div x-data="{
         showEditLoanModal: false,
         editLoanId: null,
-        editLoanCode: '',
+        editBalancePeriod: '',
         editLoanDate: '',
         editPaymentMethod: '',
         editLoanAmount: '',
@@ -1297,7 +1482,7 @@
     @open-edit-modal.window="
         showEditLoanModal = true;
         editLoanId = $event.detail.id;
-        editLoanCode = $event.detail.code;
+        editBalancePeriod = $event.detail.balance_period;
         editLoanDate = $event.detail.date;
         editPaymentMethod = $event.detail.method;
         editLoanAmount = $event.detail.amount;
@@ -1377,21 +1562,21 @@
                 " id="editLoanForm" class="space-y-4">
                     @csrf
 
-                    {{-- No Trx & Date (Row - Unclickable) --}}
+                    {{-- Balance Period & Date (Readonly) --}}
                     <div class="grid grid-cols-2 gap-3">
-                        {{-- No. Trx (Readonly) --}}
+                        {{-- Balance Period (Readonly) --}}
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">
-                                No. Trx
+                                Balance Period
                             </label>
-                            <input type="text" x-model="editLoanCode" readonly
+                            <input type="text" x-model="editBalancePeriod" readonly
                                 class="w-full rounded-md px-4 py-2 text-sm border border-gray-200 bg-gray-50 text-gray-600 cursor-not-allowed pointer-events-none">
                         </div>
 
                         {{-- Date (Readonly) --}}
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">
-                                Date
+                                Loan Date
                             </label>
                             <input type="text" x-model="editLoanDate" readonly
                                 class="w-full rounded-md px-4 py-2 text-sm border border-gray-200 bg-gray-50 text-gray-600 cursor-not-allowed pointer-events-none">
@@ -1637,6 +1822,80 @@
                 delete this.repaymentErrors.payment_method;
             }
         },
+        
+        // Balance Period Selection
+        repaymentSelectedBalanceId: null,
+        repaymentSelectedMonth: null,
+        repaymentSelectedYear: null,
+        repaymentBalanceTransfer: 0,
+        repaymentBalanceCash: 0,
+        repaymentMonthDropdownOpen: false,
+        repaymentYearDropdownOpen: false,
+        repaymentMonths: [
+            { value: 1, name: 'January' },
+            { value: 2, name: 'February' },
+            { value: 3, name: 'March' },
+            { value: 4, name: 'April' },
+            { value: 5, name: 'May' },
+            { value: 6, name: 'June' },
+            { value: 7, name: 'July' },
+            { value: 8, name: 'August' },
+            { value: 9, name: 'September' },
+            { value: 10, name: 'October' },
+            { value: 11, name: 'November' },
+            { value: 12, name: 'December' }
+        ],
+        repaymentYears: Array.from({ length: 10 }, (_, i) => new Date().getFullYear() + i),
+        get repaymentSelectedMonthName() {
+            const month = this.repaymentMonths.find(m => m.value === this.repaymentSelectedMonth);
+            return month ? month.name : null;
+        },
+        get repaymentHasBalancePeriod() {
+            return this.repaymentSelectedMonth !== null && this.repaymentSelectedYear !== null;
+        },
+        async selectRepaymentMonth(month) {
+            this.repaymentSelectedMonth = month;
+            this.repaymentMonthDropdownOpen = false;
+            if (this.repaymentSelectedYear) {
+                await this.fetchRepaymentBalanceId();
+            }
+        },
+        async selectRepaymentYear(year) {
+            this.repaymentSelectedYear = year;
+            this.repaymentYearDropdownOpen = false;
+            if (this.repaymentSelectedMonth) {
+                await this.fetchRepaymentBalanceId();
+            }
+        },
+        async fetchRepaymentBalanceId() {
+            if (!this.repaymentSelectedMonth || !this.repaymentSelectedYear) return;
+            
+            try {
+                const response = await fetch(`/finance/balance/find-by-period?month=${this.repaymentSelectedMonth}&year=${this.repaymentSelectedYear}`, {
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'Accept': 'application/json'
+                    }
+                });
+                const data = await response.json();
+                
+                if (data.success && data.balance) {
+                    this.repaymentSelectedBalanceId = data.balance.id;
+                    this.repaymentBalanceTransfer = data.balance.transfer_balance;
+                    this.repaymentBalanceCash = data.balance.cash_balance;
+                } else {
+                    // Balance not found - set to 0, no error message
+                    this.repaymentSelectedBalanceId = null;
+                    this.repaymentBalanceTransfer = 0;
+                    this.repaymentBalanceCash = 0;
+                }
+            } catch (error) {
+                console.error('Error fetching balance:', error);
+                this.repaymentSelectedBalanceId = null;
+                this.repaymentBalanceTransfer = 0;
+                this.repaymentBalanceCash = 0;
+            }
+        },
         async startRepaymentWebcam() {
             if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
                 alert('Webcam tidak didukung di browser ini. Gunakan browser modern seperti Chrome atau Firefox.');
@@ -1733,7 +1992,7 @@
     @open-repayment-modal.window="
         showRepaymentModal = true;
         repaymentLoanId = $event.detail.id;
-        repaymentLoanCode = $event.detail.loan_code;
+        repaymentLoanCode = $event.detail.loan_balance_period;
         repaymentLoanAmount = $event.detail.amount;
         repaymentRemainingAmount = $event.detail.remaining_amount;
         repaymentPaidDate = new Date().toISOString().split('T')[0];
@@ -1743,6 +2002,11 @@
         repaymentErrors = {};
         imagePreview = null;
         fileName = '';
+        repaymentSelectedBalanceId = null;
+        repaymentSelectedMonth = null;
+        repaymentSelectedYear = null;
+        repaymentBalanceTransfer = 0;
+        repaymentBalanceCash = 0;
     "
     x-show="showRepaymentModal"
     @keydown.escape.window="showRepaymentModal = false; stopRepaymentWebcam()"
@@ -1768,39 +2032,117 @@
 
                 {{-- Modal Body --}}
                 <div class="flex-1 overflow-y-auto px-6 py-6">
-                    {{-- Balance Cards --}}
-                    <div class="grid grid-cols-2 gap-3 mb-4">
-                        <div class="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-3 border border-blue-200">
-                            <p class="text-xs text-blue-600 font-medium mb-1">Transfer Balance</p>
-                            <p class="text-lg font-bold text-blue-900">Rp {{ number_format($balance ? $balance->transfer_balance : 0, 0, ',', '.') }}</p>
+                    {{-- Balance Period Selector (Always visible) --}}
+                    <div class="mb-6 p-4 bg-gradient-to-br from-primary/10 to-primary/20 rounded-xl border-2 border-primary/30">
+                        <label class="block text-sm font-semibold text-gray-900 mb-3">
+                            Select Balance Period <span class="text-red-600">*</span>
+                        </label>
+                        <div class="grid grid-cols-2 gap-3">
+                            {{-- Month Selector --}}
+                            <div class="relative">
+                                <button type="button" @click="repaymentMonthDropdownOpen = !repaymentMonthDropdownOpen"
+                                    class="w-full flex justify-between items-center rounded-lg border-2 border-primary/40 bg-white px-4 py-2.5 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary transition-all hover:border-primary">
+                                    <span x-text="repaymentSelectedMonthName || 'Select Month'"
+                                        :class="!repaymentSelectedMonthName ? 'text-gray-400' : 'text-gray-900'"></span>
+                                    <svg class="w-4 h-4 text-primary transition-transform" :class="repaymentMonthDropdownOpen && 'rotate-180'" fill="none"
+                                        stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                                    </svg>
+                                </button>
+                                <div x-show="repaymentMonthDropdownOpen" @click.away="repaymentMonthDropdownOpen = false" x-cloak
+                                    x-transition:enter="transition ease-out duration-100"
+                                    x-transition:enter-start="opacity-0 scale-95" x-transition:enter-end="opacity-100 scale-100"
+                                    x-transition:leave="transition ease-in duration-75" x-transition:leave-start="opacity-100 scale-100"
+                                    x-transition:leave-end="opacity-0 scale-95"
+                                    class="fixed z-[100] mt-1 w-[200px] bg-white border-2 border-primary/30 rounded-lg shadow-2xl"
+                                    style="left: auto; top: auto;">
+                                    <ul class="max-h-60 overflow-y-auto py-1">
+                                        <template x-for="month in repaymentMonths" :key="month.value">
+                                            <li @click="selectRepaymentMonth(month.value)"
+                                                class="px-4 py-2 cursor-pointer text-sm text-gray-700 hover:bg-primary/10 transition-colors"
+                                                :class="{ 'bg-primary/20 font-semibold text-primary': repaymentSelectedMonth === month.value }">
+                                                <span x-text="month.name"></span>
+                                            </li>
+                                        </template>
+                                    </ul>
+                                </div>
+                            </div>
+
+                            {{-- Year Selector --}}
+                            <div class="relative">
+                                <button type="button" @click="repaymentYearDropdownOpen = !repaymentYearDropdownOpen"
+                                    class="w-full flex justify-between items-center rounded-lg border-2 border-primary/40 bg-white px-4 py-2.5 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary transition-all hover:border-primary">
+                                    <span x-text="repaymentSelectedYear || 'Select Year'"
+                                        :class="!repaymentSelectedYear ? 'text-gray-400' : 'text-gray-900'"></span>
+                                    <svg class="w-4 h-4 text-primary transition-transform" :class="repaymentYearDropdownOpen && 'rotate-180'" fill="none"
+                                        stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                                    </svg>
+                                </button>
+                                <div x-show="repaymentYearDropdownOpen" @click.away="repaymentYearDropdownOpen = false" x-cloak
+                                    x-transition:enter="transition ease-out duration-100"
+                                    x-transition:enter-start="opacity-0 scale-95" x-transition:enter-end="opacity-100 scale-100"
+                                    x-transition:leave="transition ease-in duration-75" x-transition:leave-start="opacity-100 scale-100"
+                                    x-transition:leave-end="opacity-0 scale-95"
+                                    class="fixed z-[100] mt-1 w-[200px] bg-white border-2 border-primary/30 rounded-lg shadow-2xl"
+                                    style="left: auto; top: auto;">
+                                    <ul class="max-h-60 overflow-y-auto py-1">
+                                        <template x-for="year in repaymentYears" :key="year">
+                                            <li @click="selectRepaymentYear(year)"
+                                                class="px-4 py-2 cursor-pointer text-sm text-gray-700 hover:bg-primary/10 transition-colors"
+                                                :class="{ 'bg-primary/20 font-semibold text-primary': repaymentSelectedYear === year }">
+                                                <span x-text="year"></span>
+                                            </li>
+                                        </template>
+                                    </ul>
+                                </div>
+                            </div>
                         </div>
-                        <div class="bg-gradient-to-br from-green-50 to-green-100 rounded-xl p-3 border border-green-200">
-                            <p class="text-xs text-green-600 font-medium mb-1">Cash Balance</p>
-                            <p class="text-lg font-bold text-green-900">Rp {{ number_format($balance ? $balance->cash_balance : 0, 0, ',', '.') }}</p>
-                        </div>
+                        <p class="mt-2 text-xs text-primary font-medium" x-show="repaymentHasBalancePeriod">
+                            <span class="font-semibold">Selected:</span> <span x-text="repaymentSelectedMonthName + ' ' + repaymentSelectedYear"></span>
+                        </p>
                     </div>
 
-                    {{-- Loan Detail Card --}}
-                    <div class="bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl p-4 mb-4 border border-gray-200">
-                        <div class="grid grid-cols-2 gap-3">
-                            <div>
-                                <p class="text-xs text-gray-600 font-medium mb-1">No. Trx</p>
-                                <p class="font-bold text-gray-900" x-text="repaymentLoanCode"></p>
+                    {{-- Content shown only after Balance Period is selected --}}
+                    <div x-show="repaymentHasBalancePeriod" x-transition:enter="transition ease-out duration-200"
+                        x-transition:enter-start="opacity-0 transform scale-95"
+                        x-transition:enter-end="opacity-100 transform scale-100">
+                        
+                        {{-- 4 Cards: Transfer, Cash, Loan Amount, Remaining --}}
+                        <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
+                            {{-- Transfer Balance --}}
+                            <div class="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-3 border border-blue-200">
+                                <p class="text-xs text-blue-600 font-medium mb-1">Transfer Balance</p>
+                                <p class="text-base font-bold text-blue-900" x-text="'Rp ' + parseInt(repaymentBalanceTransfer).toLocaleString('id-ID')"></p>
                             </div>
-                            <div>
-                                <p class="text-xs text-gray-600 font-medium mb-1">Loan Amount</p>
-                                <p class="font-bold text-gray-900" x-text="'Rp ' + parseInt(repaymentLoanAmount).toLocaleString('id-ID')"></p>
+                            {{-- Cash Balance --}}
+                            <div class="bg-gradient-to-br from-green-50 to-green-100 rounded-xl p-3 border border-green-200">
+                                <p class="text-xs text-green-600 font-medium mb-1">Cash Balance</p>
+                                <p class="text-base font-bold text-green-900" x-text="'Rp ' + parseInt(repaymentBalanceCash).toLocaleString('id-ID')"></p>
                             </div>
-                            <div class="col-span-2">
-                                <p class="text-xs text-red-600 font-medium mb-1">Remaining Amount</p>
-                                <p class="text-xl font-bold text-red-600" x-text="'Rp ' + parseInt(repaymentRemainingAmount).toLocaleString('id-ID')"></p>
+                            {{-- Loan Amount --}}
+                            <div class="bg-gradient-to-br from-indigo-50 to-indigo-100 rounded-xl p-3 border border-indigo-200">
+                                <p class="text-xs text-indigo-600 font-medium mb-1">Loan Amount</p>
+                                <p class="text-base font-bold text-indigo-900" x-text="'Rp ' + parseInt(repaymentLoanAmount).toLocaleString('id-ID')"></p>
+                            </div>
+                            {{-- Remaining --}}
+                            <div class="bg-gradient-to-br from-orange-50 to-orange-100 rounded-xl p-3 border border-orange-200">
+                                <p class="text-xs text-orange-600 font-medium mb-1">Remaining</p>
+                                <p class="text-base font-bold text-orange-900" x-text="'Rp ' + parseInt(repaymentRemainingAmount).toLocaleString('id-ID')"></p>
                             </div>
                         </div>
-                    </div>
 
                     <form id="repaymentLoanForm" @submit.prevent="
                         repaymentErrors = {};
                         let hasValidationError = false;
+
+                        // Validate balance period
+                        if (!repaymentSelectedBalanceId) {
+                            window.dispatchEvent(new CustomEvent('show-toast', {
+                                detail: { message: 'Please select a valid balance period first', type: 'error' }
+                            }));
+                            return;
+                        }
 
                         // Validate payment method
                         if (!repaymentPaymentMethod) {
@@ -1824,6 +2166,7 @@
 
                         isSubmittingRepayment = true;
                         const formData = new FormData();
+                        formData.append('balance_id', repaymentSelectedBalanceId);
                         formData.append('paid_date', repaymentPaidDate);
                         formData.append('payment_method', repaymentPaymentMethod);
                         formData.append('amount', amountValue);
@@ -2027,6 +2370,7 @@
                             </div>
                         </div>
                     </form>
+                    </div>
                 </div>
 
                 {{-- Modal Footer --}}
@@ -2036,7 +2380,7 @@
                         Cancel
                     </button>
                     <button type="submit" form="repaymentLoanForm"
-                        :disabled="isSubmittingRepayment"
+                        :disabled="isSubmittingRepayment || !repaymentHasBalancePeriod"
                         class="px-4 py-2 text-sm font-medium text-white bg-primary rounded-lg hover:bg-primary-dark disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2">
                         <template x-if="isSubmittingRepayment">
                             <svg class="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">

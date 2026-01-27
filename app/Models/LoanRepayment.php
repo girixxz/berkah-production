@@ -9,6 +9,7 @@ class LoanRepayment extends Model
 {
     protected $fillable = [
         'loan_id',
+        'balance_id',
         'paid_date',
         'amount',
         'payment_method',
@@ -27,5 +28,13 @@ class LoanRepayment extends Model
     public function loanCapital(): BelongsTo
     {
         return $this->belongsTo(LoanCapital::class, 'loan_id');
+    }
+
+    /**
+     * Get the balance period for this repayment.
+     */
+    public function balance(): BelongsTo
+    {
+        return $this->belongsTo(Balance::class);
     }
 }

@@ -221,8 +221,8 @@ Route::middleware(['auth'])->group(function () {
         
         // Loan Capital
         Route::get('loan-capital', [Finance\LoanCapitalController::class, 'index'])->name('loan-capital');
-        Route::get('loan-capital/next-code', [Finance\LoanCapitalController::class, 'getNextLoanCode'])->name('loan-capital.next-code');
         Route::get('loan-capital/repayment-history', [Finance\LoanCapitalController::class, 'repaymentHistory'])->name('loan-capital.repayment-history');
+        Route::get('balance/find-by-period', [Finance\LoanCapitalController::class, 'findBalanceByPeriod'])->name('balance.find-by-period');
         Route::post('loan-capital', [Finance\LoanCapitalController::class, 'store'])->name('loan-capital.store');
         Route::put('loan-capital/{loanCapital}', [Finance\LoanCapitalController::class, 'update'])->name('loan-capital.update');
         Route::post('loan-capital/{loanCapital}/repayment', [Finance\LoanCapitalController::class, 'storeRepayment'])->name('loan-capital.repayment');

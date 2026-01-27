@@ -4,11 +4,12 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class LoanCapital extends Model
 {
     protected $fillable = [
-        'loan_code',
+        'balance_id',
         'loan_date',
         'amount',
         'remaining_amount',
@@ -23,6 +24,14 @@ class LoanCapital extends Model
         'amount' => 'decimal:2',
         'remaining_amount' => 'decimal:2',
     ];
+
+    /**
+     * Get the balance period for this loan.
+     */
+    public function balance(): BelongsTo
+    {
+        return $this->belongsTo(Balance::class);
+    }
 
     /**
      * Get the repayments for the loan.

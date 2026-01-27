@@ -28,8 +28,14 @@ class LoanCapitalController extends Controller
         $perPage = $request->input('per_page', 10);
         $perPage = in_array($perPage, [5, 10, 15, 20, 25, 50, 100]) ? $perPage : 10;
         
-        // Query loans for the current month
-        $query = LoanCapital::whereYear('loan_date', $year)
+        // Get balance for selected period
+        $balance = Balance::whereYear('period_start', $year)
+            ->whereMonth('period_start', $month)
+            ->first();
+        
+        // Query loans - FILTER BY LOAN_DATE (bukan balance_id)
+        $query = LoanCapital::with('balance')
+            ->whereYear('loan_date', $year)
             ->whereMonth('loan_date', $month);
         
         // Apply status filter
@@ -41,39 +47,28 @@ class LoanCapitalController extends Controller
         if ($request->has('search') && $request->search) {
             $search = $request->search;
             $query->where(function($q) use ($search) {
-                $q->where('loan_code', 'like', "%{$search}%")
-                  ->orWhere('notes', 'like', "%{$search}%");
+                $q->where('notes', 'like', "%{$search}%");
             });
         }
         
-        // Paginate
-        $loans = $query->orderBy('loan_date', 'desc')->paginate($perPage);
+        // Paginate - ORDER BY id DESC (terbaru di atas, berdasarkan urutan insert)
+        $loans = $query->orderBy('id', 'desc')->paginate($perPage);
         
-        // Get all loans for search (for current month)
-        $allLoans = LoanCapital::whereYear('loan_date', $year)
+        // Get all loans for search (by loan_date)
+        $allLoans = LoanCapital::with('balance')
+            ->whereYear('loan_date', $year)
             ->whereMonth('loan_date', $month)
-            ->orderBy('loan_date', 'desc')
+            ->orderBy('id', 'desc')
             ->get();
-        
-        // Get balance for current month
-        $balance = Balance::whereYear('period_start', $year)
-            ->whereMonth('period_start', $month)
-            ->first();
         
         $totalBalance = $balance ? $balance->total_balance : 0;
         
         // Calculate stats
-        $activeLoan = LoanCapital::where('status', 'outstanding')
-            ->whereYear('loan_date', $year)
-            ->whereMonth('loan_date', $month)
-            ->sum('amount');
-        
+        // Outstanding = ALL TIME (total keseluruhan yang belum lunas)
         $outstanding = LoanCapital::where('status', 'outstanding')
-            ->whereYear('loan_date', $year)
-            ->whereMonth('loan_date', $month)
             ->sum('remaining_amount');
         
-        // Calculate transfer and cash totals for current month
+        // Transfer & Cash Total = per bulan yang dipilih
         $transferTotal = LoanCapital::where('payment_method', 'transfer')
             ->whereYear('loan_date', $year)
             ->whereMonth('loan_date', $month)
@@ -90,7 +85,6 @@ class LoanCapitalController extends Controller
             'currentDate',
             'balance',
             'totalBalance',
-            'activeLoan',
             'outstanding',
             'transferTotal',
             'cashTotal',
@@ -99,17 +93,11 @@ class LoanCapitalController extends Controller
         ));
     }
 
-    public function getNextLoanCode()
-    {
-        return response()->json([
-            'loan_code' => $this->generateLoanCode(),
-            'current_date' => now()->format('Y-m-d')
-        ]);
-    }
-
     public function store(Request $request)
     {
         $request->validate([
+            'balance_month' => 'required|integer|min:1|max:12',
+            'balance_year' => 'required|integer|min:2020|max:2100',
             'payment_method' => 'required|in:transfer,cash',
             'amount' => 'required|numeric|min:1',
             'image' => 'required|image|mimes:jpeg,png,jpg|max:10240', // Max 10MB
@@ -119,39 +107,16 @@ class LoanCapitalController extends Controller
         try {
             DB::beginTransaction();
 
-            // Generate loan code
-            $loanCode = $this->generateLoanCode();
-
-            // Handle image upload (store privately)
-            $imagePath = null;
-            if ($request->hasFile('image')) {
-                $image = $request->file('image');
-                $imageName = time() . '_' . $image->getClientOriginalName();
-                $imagePath = $image->storeAs('loan_proofs', $imageName, 'local');
-            }
-
-            // Create loan capital
-            $loan = LoanCapital::create([
-                'loan_code' => $loanCode,
-                'loan_date' => now(),
-                'amount' => $request->amount,
-                'remaining_amount' => $request->amount,
-                'payment_method' => $request->payment_method,
-                'proof_img' => $imagePath,
-                'status' => 'outstanding',
-                'notes' => $request->notes,
-            ]);
-
-            // Update or create balance for current month
-            $balance = Balance::whereYear('period_start', now()->year)
-                ->whereMonth('period_start', now()->month)
+            // Find or create balance for selected period
+            $periodStart = Carbon::create($request->balance_year, $request->balance_month, 1)->startOfMonth();
+            $periodEnd = Carbon::create($request->balance_year, $request->balance_month, 1)->endOfMonth();
+            
+            $balance = Balance::whereYear('period_start', $request->balance_year)
+                ->whereMonth('period_start', $request->balance_month)
                 ->first();
 
             if (!$balance) {
                 // Create new balance record
-                $periodStart = now()->startOfMonth();
-                $periodEnd = now()->endOfMonth();
-                
                 $balance = Balance::create([
                     'period_start' => $periodStart,
                     'period_end' => $periodEnd,
@@ -172,6 +137,26 @@ class LoanCapitalController extends Controller
                 $balance->save();
             }
 
+            // Handle image upload (store privately)
+            $imagePath = null;
+            if ($request->hasFile('image')) {
+                $image = $request->file('image');
+                $imageName = time() . '_' . $image->getClientOriginalName();
+                $imagePath = $image->storeAs('loan_proofs', $imageName, 'local');
+            }
+
+            // Create loan capital
+            $loan = LoanCapital::create([
+                'balance_id' => $balance->id,
+                'loan_date' => now(),
+                'amount' => $request->amount,
+                'remaining_amount' => $request->amount,
+                'payment_method' => $request->payment_method,
+                'proof_img' => $imagePath,
+                'status' => 'outstanding',
+                'notes' => $request->notes,
+            ]);
+
             DB::commit();
 
             return response()->json([
@@ -187,31 +172,6 @@ class LoanCapitalController extends Controller
                 'message' => 'Failed to add loan capital: ' . $e->getMessage()
             ], 500);
         }
-    }
-
-    private function generateLoanCode()
-    {
-        $now = now();
-        $month = $now->format('m');
-        $year = $now->format('y');
-        
-        // Get the latest loan code for current month
-        $prefix = "LOAN-{$month}-{$year}-";
-        
-        $lastLoan = LoanCapital::where('loan_code', 'like', $prefix . '%')
-            ->orderBy('loan_code', 'desc')
-            ->first();
-        
-        if ($lastLoan) {
-            // Extract the number from the last loan code
-            $lastNumber = (int) substr($lastLoan->loan_code, -4);
-            $newNumber = $lastNumber + 1;
-        } else {
-            $newNumber = 1;
-        }
-        
-        // Format: LOAN-MM-YY-NNNN
-        return $prefix . str_pad($newNumber, 4, '0', STR_PAD_LEFT);
     }
 
     public function serveImage(LoanCapital $loan)
@@ -378,12 +338,15 @@ class LoanCapitalController extends Controller
         try {
             // Validate the request
             $validated = $request->validate([
+                'balance_id' => 'required|exists:balances,id',
                 'paid_date' => 'required|date',
                 'payment_method' => 'required|in:transfer,cash',
                 'amount' => 'required|numeric|min:1|max:' . $loanCapital->remaining_amount,
                 'notes' => 'nullable|string|max:500',
                 'proof_image' => 'nullable|image|mimes:jpeg,png,jpg|max:2048'
             ], [
+                'balance_id.required' => 'Balance period is required',
+                'balance_id.exists' => 'Invalid balance period selected',
                 'payment_method.required' => 'Payment method is required',
                 'payment_method.in' => 'Payment method must be transfer or cash',
                 'amount.required' => 'Amount is required',
@@ -395,20 +358,8 @@ class LoanCapitalController extends Controller
                 'proof_image.max' => 'Image size cannot exceed 2MB'
             ]);
 
-            // Get balance for the repayment month
-            $paidDate = Carbon::parse($validated['paid_date']);
-            $balance = Balance::whereYear('period_start', $paidDate->year)
-                ->whereMonth('period_start', $paidDate->month)
-                ->first();
-
-            if (!$balance) {
-                return response()->json([
-                    'success' => false,
-                    'errors' => [
-                        'amount' => ['Balance record not found for ' . $paidDate->format('F Y')]
-                    ]
-                ], 422);
-            }
+            // Get the selected balance period
+            $balance = Balance::findOrFail($validated['balance_id']);
 
             // Validate balance tidak boleh minus
             $currentBalance = $validated['payment_method'] === 'transfer' 
@@ -421,7 +372,7 @@ class LoanCapitalController extends Controller
                     'success' => false,
                     'errors' => [
                         'amount' => [
-                            'Insufficient ' . $methodName . ' balance! Available: Rp ' . 
+                            'Insufficient ' . $methodName . ' balance for period ' . $balance->period_start->format('F Y') . '! Available: Rp ' . 
                             number_format($currentBalance, 0, ',', '.') . 
                             ', Required: Rp ' . number_format($validated['amount'], 0, ',', '.')
                         ]
@@ -442,6 +393,7 @@ class LoanCapitalController extends Controller
             // Create loan repayment record
             \App\Models\LoanRepayment::create([
                 'loan_id' => $loanCapital->id,
+                'balance_id' => $validated['balance_id'],
                 'paid_date' => $validated['paid_date'],
                 'amount' => $validated['amount'],
                 'payment_method' => $validated['payment_method'],
@@ -513,7 +465,7 @@ class LoanCapitalController extends Controller
         $search = $request->input('search');
         
         // Build query for repayments
-        $query = \App\Models\LoanRepayment::with('loanCapital')
+        $query = \App\Models\LoanRepayment::with(['loanCapital', 'balance'])
             ->whereYear('paid_date', $year)
             ->whereMonth('paid_date', $month);
         
@@ -525,16 +477,15 @@ class LoanCapitalController extends Controller
         // Apply search filter
         if ($search) {
             $query->where(function($q) use ($search) {
-                $q->whereHas('loanCapital', function($subQ) use ($search) {
-                    $subQ->where('loan_code', 'like', '%' . $search . '%');
+                $q->whereHas('balance', function($subQ) use ($search) {
+                    $subQ->whereRaw('DATE_FORMAT(period_start, "%M %Y") LIKE ?', ['%' . $search . '%']);
                 })
                 ->orWhere('notes', 'like', '%' . $search . '%');
             });
         }
         
-        // Get paginated repayments
-        $repayments = $query->orderBy('paid_date', 'desc')
-            ->orderBy('id', 'desc')
+        // Get paginated repayments - SORT BY ID DESC (terbaru di atas)
+        $repayments = $query->orderBy('id', 'desc')
             ->paginate($perPage);
         
         // Handle AJAX requests
@@ -553,5 +504,40 @@ class LoanCapitalController extends Controller
             'paymentMethodFilter',
             'perPage'
         ));
+    }
+
+    public function findBalanceByPeriod(Request $request)
+    {
+        $month = $request->input('month');
+        $year = $request->input('year');
+        
+        if (!$month || !$year) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Month and year are required'
+            ], 400);
+        }
+        
+        $balance = Balance::whereYear('period_start', $year)
+            ->whereMonth('period_start', $month)
+            ->first();
+        
+        if (!$balance) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Balance period not found'
+            ], 404);
+        }
+        
+        return response()->json([
+            'success' => true,
+            'balance' => [
+                'id' => $balance->id,
+                'period_start' => $balance->period_start->format('F Y'),
+                'transfer_balance' => $balance->transfer_balance,
+                'cash_balance' => $balance->cash_balance,
+                'total_balance' => $balance->total_balance
+            ]
+        ]);
     }
 }
