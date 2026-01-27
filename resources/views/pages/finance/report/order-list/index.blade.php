@@ -263,37 +263,38 @@
 
         {{-- Tables Section --}}
         <div id="tables-section">
-        {{-- T-SHIRT TABLE --}}
-        @include('pages.finance.report.partials.product-table', [
-            'productType' => 't-shirt',
-            'title' => 'T-Shirt Orders',
-            'reports' => $reportsByType['t-shirt'],
-            'searchKey' => 'searchTShirt'
-        ])
+            {{-- T-SHIRT TABLE --}}
+            @include('pages.finance.report.order-list.partials.product-table', [
+                'productType' => 't-shirt',
+                'title' => 'T-Shirt Orders',
+                'reports' => $reportsByType['t-shirt'],
+                'searchKey' => 'searchTShirt'
+            ])
 
-        {{-- MAKLOON TABLE --}}
-        @include('pages.finance.report.partials.product-table', [
-            'productType' => 'makloon',
-            'title' => 'Makloon Orders',
-            'reports' => $reportsByType['makloon'],
-            'searchKey' => 'searchMakloon'
-        ])
+            {{-- MAKLOON TABLE --}}
+            @include('pages.finance.report.order-list.partials.product-table', [
+                'productType' => 'makloon',
+                'title' => 'Makloon Orders',
+                'reports' => $reportsByType['makloon'],
+                'searchKey' => 'searchMakloon'
+            ])
 
-        {{-- HOODIE/POLO/JERSEY TABLE --}}
-        @include('pages.finance.report.partials.product-table', [
-            'productType' => 'hoodie_polo_jersey',
-            'title' => 'Hoodie / Polo / Jersey Orders',
-            'reports' => $reportsByType['hoodie_polo_jersey'],
-            'searchKey' => 'searchHoodie'
-        ])
+            {{-- HOODIE/POLO/JERSEY TABLE --}}
+            @include('pages.finance.report.order-list.partials.product-table', [
+                'productType' => 'hoodie_polo_jersey',
+                'title' => 'Hoodie / Polo / Jersey Orders',
+                'reports' => $reportsByType['hoodie_polo_jersey'],
+                'searchKey' => 'searchHoodie'
+            ])
 
-        {{-- PANTS TABLE --}}
-        @include('pages.finance.report.partials.product-table', [
-            'productType' => 'pants',
-            'title' => 'Pants Orders',
-            'reports' => $reportsByType['pants'],
-            'searchKey' => 'searchPants'
-        ])
+            {{-- PANTS TABLE --}}
+            @include('pages.finance.report.order-list.partials.product-table', [
+                'productType' => 'pants',
+                'title' => 'Pants Orders',
+                'reports' => $reportsByType['pants'],
+                'searchKey' => 'searchPants'
+            ])
+
         </div>
 
         {{-- Delete Confirmation Modal --}}

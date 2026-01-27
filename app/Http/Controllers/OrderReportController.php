@@ -60,7 +60,7 @@ class OrderReportController extends Controller
             'pants' => $allReports->where('product_type', 'pants')->sortByDesc('created_at')->values(),
         ];
 
-        return view('pages.finance.report.order-list', compact(
+        return view('pages.finance.report.order-list.index', compact(
             'orderReports',
             'stats',
             'reportsByType',
