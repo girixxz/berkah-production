@@ -868,6 +868,8 @@
                 balanceCash: 0,
                 balanceMonthDropdownOpen: false,
                 balanceYearDropdownOpen: false,
+                periodValidated: false,
+                periodError: '',
                 orderReportId: null,
                 orderReports: [],
                 orderReportDropdownOpen: false,
@@ -925,16 +927,54 @@
                     this.balanceMonth = month;
                     this.balanceMonthDropdownOpen = false;
                     if (this.balanceYear) {
-                        await this.fetchBalanceData();
-                        await this.fetchAvailableOrders();
+                        await this.validatePeriod();
                     }
                 },
                 async selectYear(year) {
                     this.balanceYear = year;
                     this.balanceYearDropdownOpen = false;
                     if (this.balanceMonth) {
+                        await this.validatePeriod();
+                    }
+                },
+                async validatePeriod() {
+                    if (!this.balanceMonth || !this.balanceYear) return;
+                    
+                    // Reset state
+                    this.periodValidated = false;
+                    this.periodError = '';
+                    this.balanceId = null;
+                    this.balanceTransfer = 0;
+                    this.balanceCash = 0;
+                    this.orderReports = [];
+                    this.orderReportId = null;
+                    
+                    try {
+                        // Validate period first
+                        const periodResponse = await fetch(`{{ route('finance.report.material.check-period-status') }}?month=${this.balanceMonth}&year=${this.balanceYear}`, {
+                            headers: {
+                                'X-Requested-With': 'XMLHttpRequest',
+                                'Accept': 'application/json'
+                            }
+                        });
+                        const periodData = await periodResponse.json();
+                        
+                        if (!periodData.success) {
+                            // Period validation failed
+                            this.periodError = periodData.message;
+                            this.periodValidated = false;
+                            return;
+                        }
+                        
+                        // Period is valid, proceed to fetch balance and orders
+                        this.periodValidated = true;
                         await this.fetchBalanceData();
                         await this.fetchAvailableOrders();
+                        
+                    } catch (error) {
+                        console.error('Error validating period:', error);
+                        this.periodError = 'Failed to validate period. Please try again.';
+                        this.periodValidated = false;
                     }
                 },
                 async fetchBalanceData() {
@@ -1023,6 +1063,8 @@
                         balanceId = null;
                         balanceTransfer = 0;
                         balanceCash = 0;
+                        periodValidated = false;
+                        periodError = '';
                         orderReportId = null;
                         orderReports = [];
                         materialName = '';
@@ -1224,16 +1266,29 @@
                                             </div>
                                         </div>
                                     </div>
-                                    <p class="mt-2 text-xs text-primary font-medium" x-show="hasBalancePeriod">
+                                    <p class="mt-2 text-xs text-primary font-medium" x-show="hasBalancePeriod && !periodError">
                                         <span class="font-semibold">Selected:</span> <span x-text="selectedMonthName + ' ' + balanceYear"></span>
                                     </p>
+                                    
+                                    {{-- Period Error Message --}}
+                                    <template x-if="periodError">
+                                        <div class="mt-3 p-3 bg-red-50 border border-red-200 rounded-lg">
+                                            <div class="flex items-start gap-2">
+                                                <svg class="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                                </svg>
+                                                <p class="text-sm text-red-700 font-medium" x-text="periodError"></p>
+                                            </div>
+                                        </div>
+                                    </template>
+                                    
                                     <template x-if="purchaseErrors.balance_period">
                                         <p class="mt-1 text-xs text-red-600" x-text="purchaseErrors.balance_period[0]"></p>
                                     </template>
                                 </div>
 
-                                {{-- Content shown only after Balance Period is selected --}}
-                                <div x-show="hasBalancePeriod" x-transition:enter="transition ease-out duration-200"
+                                {{-- Content shown only after Balance Period is selected AND validated --}}
+                                <div x-show="hasBalancePeriod && periodValidated && !periodError" x-transition:enter="transition ease-out duration-200"
                                     x-transition:enter-start="opacity-0 transform scale-95"
                                     x-transition:enter-end="opacity-100 transform scale-100">
                                     

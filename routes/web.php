@@ -211,6 +211,7 @@ Route::middleware(['auth'])->group(function () {
             Route::patch('order-list/{orderReport}/toggle-lock', [OrderReportController::class, 'toggleLock'])->name('order-list.toggle-lock');
             Route::delete('order-list/{orderReport}', [OrderReportController::class, 'destroy'])->name('order-list.destroy');
             Route::get('material', [MaterialReportController::class, 'index'])->name('material');
+            Route::get('material/check-period-status', [MaterialReportController::class, 'checkPeriodStatus'])->name('material.check-period-status');
             Route::get('material/get-available-orders', [MaterialReportController::class, 'getAvailableOrders'])->name('material.get-available-orders');
             Route::get('material/get-suppliers', [MaterialReportController::class, 'getSuppliers'])->name('material.get-suppliers');
             Route::get('material/get-order-report/{orderReport}', [MaterialReportController::class, 'getOrderReport'])->name('material.get-order-report');

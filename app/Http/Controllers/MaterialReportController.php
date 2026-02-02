@@ -6,6 +6,7 @@ use App\Models\OrderMaterialReport;
 use App\Models\OrderReport;
 use App\Models\MaterialSupplier;
 use App\Models\Balance;
+use App\Models\ReportPeriod;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Storage;
@@ -190,6 +191,53 @@ class MaterialReportController extends Controller
                 'message' => 'Failed to fetch order report: ' . $e->getMessage()
             ], 500);
         }
+    }
+
+    /**
+     * Check period status before creating material purchase
+     */
+    public function checkPeriodStatus(Request $request)
+    {
+        $month = $request->input('month');
+        $year = $request->input('year');
+
+        if (!$month || !$year) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Month and year are required'
+            ], 400);
+        }
+
+        // Calculate period
+        $periodStart = Carbon::create($year, $month, 1)->startOfDay();
+        $periodEnd = Carbon::create($year, $month, 1)->endOfMonth()->endOfDay();
+
+        // Check if period exists in report_periods
+        $reportPeriod = ReportPeriod::where('period_start', $periodStart->toDateString())
+            ->where('period_end', $periodEnd->toDateString())
+            ->first();
+
+        // Validation 1: Period must exist
+        if (!$reportPeriod) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Period not found. Please navigate to Order List for this period first to create the period.'
+            ], 404);
+        }
+
+        // Validation 2: Period must not be locked
+        if ($reportPeriod->lock_status === 'locked') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Period is locked. Cannot add material purchase to a locked period.'
+            ], 403);
+        }
+
+        // Period is valid (exists and draft)
+        return response()->json([
+            'success' => true,
+            'message' => 'Period is valid and ready for material purchase'
+        ]);
     }
 
     /**
