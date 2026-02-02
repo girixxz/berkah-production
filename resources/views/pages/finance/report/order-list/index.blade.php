@@ -10,6 +10,7 @@
         currentMonth: {{ $month }},
         currentYear: {{ $year }},
         displayText: '{{ Carbon\Carbon::create($year, $month, 1)->format('F Y') }}',
+        currentPeriodLocked: {{ $currentPeriod && $currentPeriod->isLocked() ? 'true' : 'false' }},
         searchTShirt: '',
         searchMakloon: '',
         searchHoodie: '',
@@ -17,6 +18,8 @@
         showDeleteConfirm: null,
         showLockConfirm: null,
         lockAction: null,
+        showPeriodLockConfirm: false,
+        periodLockAction: null,
         
         init() {
             const message = sessionStorage.getItem('toast_message');
@@ -87,6 +90,12 @@
                 if (newStats) document.getElementById('stats-section').innerHTML = newStats.innerHTML;
                 if (newTables) document.getElementById('tables-section').innerHTML = newTables.innerHTML;
                 
+                // Update currentPeriodLocked state from data attribute
+                const lockButton = doc.querySelector('[data-period-locked]');
+                if (lockButton) {
+                    this.currentPeriodLocked = lockButton.getAttribute('data-period-locked') === 'true';
+                }
+                
                 NProgress.done();
             })
             .catch(error => {
@@ -106,8 +115,31 @@
     }">
 
         {{-- Date Navigation (Right Aligned) - 100% mirip Internal Transfer --}}
-        <div class="flex items-center justify-end gap-3 mb-6">
-            <button type="button" @click="navigateMonth('prev')" 
+        <div class="flex items-center justify-between gap-3 mb-6">
+            {{-- Lock/Unlock Period Button (Left) --}}
+            @if(auth()->user()->role === 'owner')
+                <button type="button" 
+                    data-period-locked="{{ $currentPeriod && $currentPeriod->isLocked() ? 'true' : 'false' }}"
+                    @click="periodLockAction = currentPeriodLocked ? 'unlock' : 'lock'; showPeriodLockConfirm = true"
+                    class="px-4 py-2 text-white text-sm font-medium rounded-lg transition-colors cursor-pointer flex-shrink-0 flex items-center gap-2"
+                    :class="currentPeriodLocked ? 'bg-orange-600 hover:bg-orange-700' : 'bg-purple-600 hover:bg-purple-700'">
+                    <template x-if="currentPeriodLocked">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z" />
+                        </svg>
+                    </template>
+                    <template x-if="!currentPeriodLocked">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                        </svg>
+                    </template>
+                    <span x-text="currentPeriodLocked ? 'Unlock Reports' : 'Lock Reports'"></span>
+                </button>
+            @endif
+
+            {{-- Date Navigation (Right) --}}
+            <div class="flex items-center gap-3 {{ auth()->user()->role !== 'owner' ? 'ml-auto' : '' }}">
+                <button type="button" @click="navigateMonth('prev')" 
                 class="p-2 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer flex-shrink-0">
                 <svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
@@ -128,6 +160,7 @@
                 class="px-4 py-2 bg-primary hover:bg-primary-dark text-white text-sm font-medium rounded-lg transition-colors cursor-pointer flex-shrink-0">
                 This Month
             </button>
+            </div>
         </div>
 
         {{-- Statistics Cards --}}
@@ -399,6 +432,116 @@
                                 <span x-text="lockAction === 'locked' ? 'Yes, Unlock' : 'Yes, Lock'"></span>
                             </button>
                         </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {{-- Period Lock/Unlock Confirmation Modal --}}
+        <div x-show="showPeriodLockConfirm" x-cloak class="fixed inset-0 z-50">
+            {{-- Background Overlay --}}
+            <div x-show="showPeriodLockConfirm" @click="showPeriodLockConfirm = false; periodLockAction = null"
+                class="fixed inset-0 bg-black/50 bg-opacity-50 backdrop-blur-xs transition-opacity"></div>
+            
+            {{-- Modal Container --}}
+            <div class="fixed inset-0 flex items-center justify-center p-4">
+                <div @click.away="showPeriodLockConfirm = false; periodLockAction = null"
+                    class="relative bg-white rounded-lg shadow-xl max-w-md w-full p-6 z-10">
+                    {{-- Icon --}}
+                    <div class="flex items-center justify-center w-12 h-12 mx-auto mb-4"
+                        :class="periodLockAction === 'unlock' ? 'bg-orange-100' : 'bg-purple-100'">
+                        <svg class="w-6 h-6" :class="periodLockAction === 'unlock' ? 'text-orange-600' : 'text-purple-600'" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <template x-if="periodLockAction === 'unlock'">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z" />
+                            </template>
+                            <template x-if="periodLockAction === 'lock'">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                            </template>
+                        </svg>
+                    </div>
+
+                    {{-- Title --}}
+                    <h3 class="text-lg font-semibold text-gray-900 text-center mb-2">
+                        <span x-text="periodLockAction === 'unlock' ? 'Unlock Period Reports?' : 'Lock Period Reports?'"></span>
+                    </h3>
+
+                    {{-- Message --}}
+                    <p class="text-sm text-gray-600 text-center mb-6">
+                        <template x-if="periodLockAction === 'unlock'">
+                            <span>Are you sure you want to unlock all reports in this period? All reports will be moved to Draft status and can be edited.</span>
+                        </template>
+                        <template x-if="periodLockAction === 'lock'">
+                            <span>Are you sure you want to lock all reports in this period? Once locked, reports cannot be edited or deleted by finance role.</span>
+                        </template>
+                    </p>
+
+                    {{-- Actions --}}
+                    <div class="flex gap-3">
+                        <button type="button" @click="showPeriodLockConfirm = false; periodLockAction = null"
+                            class="flex-1 px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">
+                            Cancel
+                        </button>
+                        <button type="button" 
+                            @click="
+                                const actionToPerform = periodLockAction;
+                                fetch('{{ route('finance.report.order-list.toggle-period-lock') }}', {
+                                    method: 'POST',
+                                    headers: {
+                                        'Content-Type': 'application/json',
+                                        'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                                        'Accept': 'application/json',
+                                        'X-Requested-With': 'XMLHttpRequest'
+                                    },
+                                    body: JSON.stringify({
+                                        month: currentMonth,
+                                        year: currentYear,
+                                        action: actionToPerform
+                                    })
+                                })
+                                .then(res => res.json())
+                                .then(data => {
+                                    showPeriodLockConfirm = false;
+                                    periodLockAction = null;
+                                    
+                                    if (data.success !== false) {
+                                        // Update state immediately based on action performed
+                                        currentPeriodLocked = actionToPerform === 'lock' ? true : false;
+                                        
+                                        // Show toast
+                                        window.dispatchEvent(new CustomEvent('show-toast', {
+                                            detail: { 
+                                                message: data.message || 'Period updated successfully', 
+                                                type: 'success' 
+                                            }
+                                        }));
+                                        
+                                        // Reload tables to reflect locked status
+                                        loadMonth(currentMonth, currentYear);
+                                    } else {
+                                        window.dispatchEvent(new CustomEvent('show-toast', {
+                                            detail: { 
+                                                message: data.message || 'Failed to update period', 
+                                                type: 'error' 
+                                            }
+                                        }));
+                                    }
+                                })
+                                .catch(err => {
+                                    console.error('Error:', err);
+                                    showPeriodLockConfirm = false;
+                                    periodLockAction = null;
+                                    window.dispatchEvent(new CustomEvent('show-toast', {
+                                        detail: { 
+                                            message: 'Failed to update period', 
+                                            type: 'error' 
+                                        }
+                                    }));
+                                })
+                            "
+                            class="flex-1 px-4 py-2 rounded-md text-sm font-medium text-white transition-colors"
+                            :class="periodLockAction === 'unlock' ? 'bg-orange-600 hover:bg-orange-700' : 'bg-purple-600 hover:bg-purple-700'">
+                            <span x-text="periodLockAction === 'unlock' ? 'Yes, Unlock All' : 'Yes, Lock All'"></span>
+                        </button>
                     </div>
                 </div>
             </div>

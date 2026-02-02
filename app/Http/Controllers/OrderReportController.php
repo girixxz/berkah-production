@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\OrderReport;
 use App\Models\Order;
+use App\Models\ReportPeriod;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
@@ -23,6 +24,27 @@ class OrderReportController extends Controller
         // Calculate period start and end
         $periodStart = Carbon::create($year, $month, 1)->startOfDay();
         $periodEnd = Carbon::create($year, $month, 1)->endOfMonth()->endOfDay();
+
+        // Check and auto-create report_period for current/future months (draft)
+        $currentDate = now();
+        $requestDate = Carbon::create($year, $month, 1);
+        
+        if ($requestDate->gte($currentDate->startOfMonth())) {
+            ReportPeriod::firstOrCreate(
+                [
+                    'period_start' => $periodStart->toDateString(),
+                    'period_end' => $periodEnd->toDateString(),
+                ],
+                [
+                    'lock_status' => 'draft'
+                ]
+            );
+        }
+
+        // Get current period status
+        $currentPeriod = ReportPeriod::where('period_start', $periodStart->toDateString())
+            ->where('period_end', $periodEnd->toDateString())
+            ->first();
 
         // Get all order reports for this period with relations (paginated)
         $orderReports = OrderReport::whereYear('period_start', $year)
@@ -65,8 +87,88 @@ class OrderReportController extends Controller
             'stats',
             'reportsByType',
             'month',
-            'year'
+            'year',
+            'currentPeriod'
         ));
+    }
+
+    /**
+     * Toggle lock status for entire period
+     */
+    public function togglePeriodLock(Request $request)
+    {
+        // Check if user is owner
+        if (auth()->user()->role !== 'owner') {
+            if ($request->wantsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Unauthorized action.'
+                ], 403);
+            }
+            return redirect()->back()
+                ->with('toast_message', 'Unauthorized action.')
+                ->with('toast_type', 'error');
+        }
+
+        $month = $request->input('month');
+        $year = $request->input('year');
+        $action = $request->input('action'); // 'lock' or 'unlock'
+
+        try {
+            DB::beginTransaction();
+
+            // Calculate period
+            $periodStart = Carbon::create($year, $month, 1)->startOfDay();
+            $periodEnd = Carbon::create($year, $month, 1)->endOfMonth()->endOfDay();
+
+            // Update or create report_period
+            $reportPeriod = ReportPeriod::updateOrCreate(
+                [
+                    'period_start' => $periodStart->toDateString(),
+                    'period_end' => $periodEnd->toDateString(),
+                ],
+                [
+                    'lock_status' => $action === 'lock' ? 'locked' : 'draft'
+                ]
+            );
+
+            // Update all order_reports in this period
+            OrderReport::whereYear('period_start', $year)
+                ->whereMonth('period_start', $month)
+                ->update(['lock_status' => $action === 'lock' ? 'locked' : 'draft']);
+
+            DB::commit();
+
+            $message = $action === 'lock' 
+                ? 'Period locked successfully. All reports in this period are now locked.' 
+                : 'Period unlocked successfully. All reports are now draft.';
+
+            // Return JSON for AJAX requests
+            if ($request->wantsJson()) {
+                return response()->json([
+                    'success' => true,
+                    'message' => $message,
+                    'lock_status' => $action === 'lock' ? 'locked' : 'draft'
+                ]);
+            }
+
+            return redirect()->back()
+                ->with('toast_message', $message)
+                ->with('toast_type', 'success');
+        } catch (\Exception $e) {
+            DB::rollBack();
+            
+            if ($request->wantsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Failed to ' . $action . ' period: ' . $e->getMessage()
+                ], 500);
+            }
+            
+            return redirect()->back()
+                ->with('toast_message', 'Failed to ' . $action . ' period: ' . $e->getMessage())
+                ->with('toast_type', 'error');
+        }
     }
 
     /**

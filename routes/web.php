@@ -207,6 +207,7 @@ Route::middleware(['auth'])->group(function () {
         // Report Routes
         Route::prefix('report')->name('report.')->group(function () {
             Route::get('order-list', [OrderReportController::class, 'index'])->name('order-list');
+            Route::post('order-list/toggle-period-lock', [OrderReportController::class, 'togglePeriodLock'])->name('order-list.toggle-period-lock');
             Route::patch('order-list/{orderReport}/toggle-lock', [OrderReportController::class, 'toggleLock'])->name('order-list.toggle-lock');
             Route::delete('order-list/{orderReport}', [OrderReportController::class, 'destroy'])->name('order-list.destroy');
             Route::get('material', [MaterialReportController::class, 'index'])->name('material');
