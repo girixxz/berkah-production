@@ -14,6 +14,7 @@ use App\Http\Controllers\ServiceController;
 
 use App\Http\Controllers\Main\ManageWorkOrderDataController;
 use App\Http\Controllers\OrderReportController;
+use App\Http\Controllers\MaterialReportController;
 use App\Http\Controllers\CuttingPatternController;
 use App\Http\Controllers\ChainClothController;
 use App\Http\Controllers\RibSizeController;
@@ -208,8 +209,17 @@ Route::middleware(['auth'])->group(function () {
             Route::get('order-list', [OrderReportController::class, 'index'])->name('order-list');
             Route::patch('order-list/{orderReport}/toggle-lock', [OrderReportController::class, 'toggleLock'])->name('order-list.toggle-lock');
             Route::delete('order-list/{orderReport}', [OrderReportController::class, 'destroy'])->name('order-list.destroy');
-            Route::get('material', fn() => view('pages.finance.report.material'))->name('material');
+            Route::get('material', [MaterialReportController::class, 'index'])->name('material');
+            Route::get('material/get-available-orders', [MaterialReportController::class, 'getAvailableOrders'])->name('material.get-available-orders');
+            Route::get('material/get-suppliers', [MaterialReportController::class, 'getSuppliers'])->name('material.get-suppliers');
+            Route::get('material/get-order-report/{orderReport}', [MaterialReportController::class, 'getOrderReport'])->name('material.get-order-report');
+            Route::post('material/store', [MaterialReportController::class, 'store'])->name('material.store');
+            Route::post('material/store-extra', [MaterialReportController::class, 'storeExtra'])->name('material.store-extra');
+            Route::put('material/{materialReport}', [MaterialReportController::class, 'update'])->name('material.update');
+            Route::delete('material/{materialReport}', [MaterialReportController::class, 'destroy'])->name('material.destroy');
+            Route::get('material/{materialReport}/image', [MaterialReportController::class, 'serveProofImage'])->name('material.serve-image');
             Route::get('support-partner', fn() => view('pages.finance.report.support-partner'))->name('support-partner');
+
             Route::get('operational', fn() => view('pages.finance.report.operational'))->name('operational');
             Route::get('salary', fn() => view('pages.finance.report.salary'))->name('salary');
         });

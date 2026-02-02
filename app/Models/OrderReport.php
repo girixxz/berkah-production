@@ -69,4 +69,12 @@ class OrderReport extends Model
     {
         return $this->update(['lock_status' => 'draft']);
     }
+
+    /**
+     * Get the material reports for this order
+     */
+    public function materialReports()
+    {
+        return $this->hasMany(OrderMaterialReport::class);
+    }
 }
