@@ -255,21 +255,6 @@
                                         </svg>
                                         View Detail
                                     </a>
-                                    @if(auth()->user()->role === 'owner')
-                                        <button type="button" @click="showLockConfirm = {{ $report->id }}; lockAction = '{{ $report->lock_status }}'; open = false" class="w-full text-left px-4 py-2 text-sm {{ $report->lock_status === 'locked' ? 'text-orange-600 hover:bg-orange-50' : 'text-purple-600 hover:bg-purple-50' }} flex items-center gap-2">
-                                            @if($report->lock_status === 'locked')
-                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z" />
-                                                </svg>
-                                                Move to Draft
-                                            @else
-                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                                                </svg>
-                                                Move to Lock
-                                            @endif
-                                        </button>
-                                    @endif
                                     @if($report->lock_status !== 'locked')
                                         <button type="button" @click="showDeleteConfirm = {{ $report->id }}; open = false" class="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2">
                                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

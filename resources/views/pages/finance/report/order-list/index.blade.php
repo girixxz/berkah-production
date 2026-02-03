@@ -114,15 +114,40 @@
         }
     }">
 
-        {{-- Date Navigation (Right Aligned) - 100% mirip Internal Transfer --}}
-        <div class="flex items-center justify-between gap-3 mb-6">
-            {{-- Lock/Unlock Period Button (Left) --}}
+        {{-- Date Navigation - Mobile: Center Stack, Desktop: Horizontal --}}
+        <div class="flex flex-col sm:flex-row items-center sm:items-center sm:justify-between gap-3 mb-6 max-w-full">
+            {{-- Date Navigation - Mobile: Top Center, Desktop: Right --}}
+            <div class="flex items-center gap-2 order-1 sm:order-2 flex-shrink-0 w-full sm:w-auto justify-center sm:justify-end">
+                <button type="button" @click="navigateMonth('prev')" 
+                    class="p-2 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer flex-shrink-0">
+                    <svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+                    </svg>
+                </button>
+                <div class="px-3 py-2 text-center min-w-[140px]">
+                    <span class="text-base font-semibold text-gray-900 whitespace-nowrap" x-text="displayText">
+                        {{ Carbon\Carbon::create($year, $month, 1)->format('F Y') }}
+                    </span>
+                </div>
+                <button type="button" @click="navigateMonth('next')" 
+                    class="p-2 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer flex-shrink-0">
+                    <svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                    </svg>
+                </button>
+                <button type="button" @click="navigateMonth('reset')" 
+                    class="px-4 py-2 bg-primary hover:bg-primary-dark text-white text-sm font-medium rounded-lg transition-colors cursor-pointer flex-shrink-0">
+                    This Month
+                </button>
+            </div>
+
+            {{-- Lock/Unlock Period Button - Mobile: Bottom Center, Desktop: Left --}}
             @if(auth()->user()->role === 'owner')
                 <button type="button" 
                     data-period-locked="{{ $currentPeriod && $currentPeriod->isLocked() ? 'true' : 'false' }}"
                     @click="periodLockAction = currentPeriodLocked ? 'unlock' : 'lock'; showPeriodLockConfirm = true"
-                    class="px-4 py-2 text-white text-sm font-medium rounded-lg transition-colors cursor-pointer flex-shrink-0 flex items-center gap-2"
-                    :class="currentPeriodLocked ? 'bg-orange-600 hover:bg-orange-700' : 'bg-purple-600 hover:bg-purple-700'">
+                    class="px-4 py-2 text-white text-sm font-medium rounded-lg transition-colors cursor-pointer flex items-center justify-center gap-2 order-2 sm:order-1 w-auto"
+                    :class="currentPeriodLocked ? 'bg-green-600 hover:bg-green-700' : 'bg-red-600 hover:bg-red-700'">
                     <template x-if="currentPeriodLocked">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z" />
@@ -136,31 +161,6 @@
                     <span x-text="currentPeriodLocked ? 'Unlock Reports' : 'Lock Reports'"></span>
                 </button>
             @endif
-
-            {{-- Date Navigation (Right) --}}
-            <div class="flex items-center gap-3 {{ auth()->user()->role !== 'owner' ? 'ml-auto' : '' }}">
-                <button type="button" @click="navigateMonth('prev')" 
-                class="p-2 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer flex-shrink-0">
-                <svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
-                </svg>
-            </button>
-            <div class="px-4 py-2 text-center min-w-[150px]">
-                <span class="text-base font-semibold text-gray-900 whitespace-nowrap" x-text="displayText">
-                    {{ Carbon\Carbon::create($year, $month, 1)->format('F Y') }}
-                </span>
-            </div>
-            <button type="button" @click="navigateMonth('next')" 
-                class="p-2 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer flex-shrink-0">
-                <svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-                </svg>
-            </button>
-            <button type="button" @click="navigateMonth('reset')" 
-                class="px-4 py-2 bg-primary hover:bg-primary-dark text-white text-sm font-medium rounded-lg transition-colors cursor-pointer flex-shrink-0">
-                This Month
-            </button>
-            </div>
         </div>
 
         {{-- Statistics Cards --}}
@@ -449,15 +449,17 @@
                     class="relative bg-white rounded-lg shadow-xl max-w-md w-full p-6 z-10">
                     {{-- Icon --}}
                     <div class="flex items-center justify-center w-12 h-12 mx-auto mb-4"
-                        :class="periodLockAction === 'unlock' ? 'bg-orange-100' : 'bg-purple-100'">
-                        <svg class="w-6 h-6" :class="periodLockAction === 'unlock' ? 'text-orange-600' : 'text-purple-600'" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <template x-if="periodLockAction === 'unlock'">
+                        :class="periodLockAction === 'unlock' ? 'bg-green-100' : 'bg-red-100'">
+                        <template x-if="periodLockAction === 'unlock'">
+                            <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z" />
-                            </template>
-                            <template x-if="periodLockAction === 'lock'">
+                            </svg>
+                        </template>
+                        <template x-if="periodLockAction === 'lock'">
+                            <svg class="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                            </template>
-                        </svg>
+                            </svg>
+                        </template>
                     </div>
 
                     {{-- Title --}}
@@ -466,14 +468,14 @@
                     </h3>
 
                     {{-- Message --}}
-                    <p class="text-sm text-gray-600 text-center mb-6">
+                    <div class="text-sm text-gray-600 text-center mb-6">
                         <template x-if="periodLockAction === 'unlock'">
-                            <span>Are you sure you want to unlock all reports in this period? All reports will be moved to Draft status and can be edited.</span>
+                            <p>Are you sure you want to unlock all reports in this period? All reports will be moved to Draft status and can be edited.</p>
                         </template>
                         <template x-if="periodLockAction === 'lock'">
-                            <span>Are you sure you want to lock all reports in this period? Once locked, reports cannot be edited or deleted by finance role.</span>
+                            <p>Are you sure you want to lock all reports in this period? Once locked, reports cannot be edited or deleted by finance role.</p>
                         </template>
-                    </p>
+                    </div>
 
                     {{-- Actions --}}
                     <div class="flex gap-3">
@@ -539,7 +541,7 @@
                                 })
                             "
                             class="flex-1 px-4 py-2 rounded-md text-sm font-medium text-white transition-colors"
-                            :class="periodLockAction === 'unlock' ? 'bg-orange-600 hover:bg-orange-700' : 'bg-purple-600 hover:bg-purple-700'">
+                            :class="periodLockAction === 'unlock' ? 'bg-green-600 hover:bg-green-700' : 'bg-red-600 hover:bg-red-700'">
                             <span x-text="periodLockAction === 'unlock' ? 'Yes, Unlock All' : 'Yes, Lock All'"></span>
                         </button>
                     </div>

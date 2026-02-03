@@ -272,29 +272,32 @@
         }
     }">
 
-        {{-- Date Navigation (Right Aligned) - 100% mirip Order List --}}
-        <div class="flex items-center justify-end gap-3 mb-6">
-            <button type="button" @click="navigateMonth('prev')" 
-                class="p-2 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer flex-shrink-0">
-                <svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
-                </svg>
-            </button>
-            <div class="px-4 py-2 text-center min-w-[150px]">
-                <span class="text-base font-semibold text-gray-900 whitespace-nowrap" x-text="displayText">
-                    {{ Carbon\Carbon::create($year, $month, 1)->format('F Y') }}
-                </span>
+        {{-- Date Navigation - Mobile: Center Stack, Desktop: Right Aligned --}}
+        <div class="flex flex-col sm:flex-row items-center sm:items-center sm:justify-end gap-3 mb-6 max-w-full">
+            {{-- Date Navigation - Mobile: Top Center, Desktop: Right --}}
+            <div class="flex items-center gap-2 flex-shrink-0 w-full sm:w-auto justify-center sm:justify-end">
+                <button type="button" @click="navigateMonth('prev')" 
+                    class="p-2 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer flex-shrink-0">
+                    <svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+                    </svg>
+                </button>
+                <div class="px-3 py-2 text-center min-w-[140px]">
+                    <span class="text-base font-semibold text-gray-900 whitespace-nowrap" x-text="displayText">
+                        {{ Carbon\Carbon::create($year, $month, 1)->format('F Y') }}
+                    </span>
+                </div>
+                <button type="button" @click="navigateMonth('next')" 
+                    class="p-2 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer flex-shrink-0">
+                    <svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                    </svg>
+                </button>
+                <button type="button" @click="navigateMonth('reset')" 
+                    class="px-4 py-2 bg-primary hover:bg-primary-dark text-white text-sm font-medium rounded-lg transition-colors cursor-pointer flex-shrink-0">
+                    This Month
+                </button>
             </div>
-            <button type="button" @click="navigateMonth('next')" 
-                class="p-2 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer flex-shrink-0">
-                <svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-                </svg>
-            </button>
-            <button type="button" @click="navigateMonth('reset')" 
-                class="px-4 py-2 bg-primary hover:bg-primary-dark text-white text-sm font-medium rounded-lg transition-colors cursor-pointer flex-shrink-0">
-                This Month
-            </button>
         </div>
 
         {{-- Statistics Cards --}}
