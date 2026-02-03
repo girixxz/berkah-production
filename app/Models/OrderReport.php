@@ -77,4 +77,12 @@ class OrderReport extends Model
     {
         return $this->hasMany(OrderMaterialReport::class);
     }
+
+    /**
+     * Get the partner reports for this order
+     */
+    public function partnerReports()
+    {
+        return $this->hasMany(OrderPartnerReport::class);
+    }
 }

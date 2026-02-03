@@ -15,6 +15,7 @@ use App\Http\Controllers\ServiceController;
 use App\Http\Controllers\Main\ManageWorkOrderDataController;
 use App\Http\Controllers\OrderReportController;
 use App\Http\Controllers\MaterialReportController;
+use App\Http\Controllers\SupportPartnerReportController;
 use App\Http\Controllers\CuttingPatternController;
 use App\Http\Controllers\ChainClothController;
 use App\Http\Controllers\RibSizeController;
@@ -220,7 +221,17 @@ Route::middleware(['auth'])->group(function () {
             Route::put('material/{materialReport}', [MaterialReportController::class, 'update'])->name('material.update');
             Route::delete('material/{materialReport}', [MaterialReportController::class, 'destroy'])->name('material.destroy');
             Route::get('material/{materialReport}/image', [MaterialReportController::class, 'serveProofImage'])->name('material.serve-image');
-            Route::get('support-partner', fn() => view('pages.finance.report.support-partner'))->name('support-partner');
+            
+            Route::get('support-partner', [\App\Http\Controllers\SupportPartnerReportController::class, 'index'])->name('support-partner');
+            Route::get('support-partner/check-period-status', [\App\Http\Controllers\SupportPartnerReportController::class, 'checkPeriodStatus'])->name('support-partner.check-period-status');
+            Route::get('support-partner/get-available-orders', [\App\Http\Controllers\SupportPartnerReportController::class, 'getAvailableOrders'])->name('support-partner.get-available-orders');
+            Route::get('support-partner/get-partners', [\App\Http\Controllers\SupportPartnerReportController::class, 'getPartners'])->name('support-partner.get-partners');
+            Route::get('support-partner/get-order-report/{orderReport}', [\App\Http\Controllers\SupportPartnerReportController::class, 'getOrderReport'])->name('support-partner.get-order-report');
+            Route::post('support-partner/store', [\App\Http\Controllers\SupportPartnerReportController::class, 'store'])->name('support-partner.store');
+            Route::post('support-partner/store-extra', [\App\Http\Controllers\SupportPartnerReportController::class, 'storeExtra'])->name('support-partner.store-extra');
+            Route::put('support-partner/{partnerReport}', [\App\Http\Controllers\SupportPartnerReportController::class, 'update'])->name('support-partner.update');
+            Route::delete('support-partner/{partnerReport}', [\App\Http\Controllers\SupportPartnerReportController::class, 'destroy'])->name('support-partner.destroy');
+            Route::get('support-partner/{partnerReport}/image', [\App\Http\Controllers\SupportPartnerReportController::class, 'serveImage'])->name('support-partner.serve-image');
 
             Route::get('operational', fn() => view('pages.finance.report.operational'))->name('operational');
             Route::get('salary', fn() => view('pages.finance.report.salary'))->name('salary');
