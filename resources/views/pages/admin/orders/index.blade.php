@@ -1271,7 +1271,7 @@
                                                     {{-- Move to Report (Finance & Owner only, WIP or Finished, hide if reported) --}}
                                                     @if (in_array($role, ['finance', 'owner']) && in_array($order->production_status, ['wip', 'finished']) && $order->report_status !== 'reported')
                                                         <button type="button"
-                                                            @click="selectedOrderForReport = {{ json_encode(['id' => $order->id, 'invoice_no' => $order->invoice->invoice_no ?? 'N/A', 'product_category' => $order->productCategory->product_name ?? '']) }}; showMoveToReportModal = true; reportErrors = {}; open = false"
+                                                            @click="selectedOrderForReport = {{ json_encode(['id' => $order->id, 'invoice_no' => $order->invoice->invoice_no ?? 'N/A', 'customer_name' => $order->customer->customer_name ?? 'N/A', 'product_category' => $order->productCategory->product_name ?? 'N/A', 'total_qty' => $order->orderItems->sum('qty')]) }}; showMoveToReportModal = true; reportErrors = {}; open = false"
                                                             class="w-full text-left px-4 py-2 text-sm text-purple-600 hover:bg-purple-50 flex items-center gap-2">
                                                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -2354,16 +2354,24 @@
                 {{-- Body - Scrollable --}}
                 <div class="overflow-y-auto flex-1 px-6 py-4">
                     {{-- Order Info --}}
-                    <div class="bg-gray-50 rounded-md p-4 mb-4" x-show="selectedOrderForReport">
-                        <div class="flex justify-between items-center mb-2">
-                            <span class="text-sm text-gray-500">Invoice No</span>
-                            <span class="text-sm font-semibold text-gray-800"
-                                x-text="selectedOrderForReport?.invoice_no"></span>
-                        </div>
-                        <div class="flex justify-between items-center">
-                            <span class="text-sm text-gray-500">Product</span>
-                            <span class="text-sm text-gray-700"
-                                x-text="selectedOrderForReport?.product_category"></span>
+                    <div class="bg-gradient-to-br from-primary/5 to-primary/10 rounded-lg p-4 mb-4 border border-primary/20" x-show="selectedOrderForReport">
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <span class="text-xs text-gray-500 font-medium">No Invoice</span>
+                                <p class="text-sm font-semibold text-gray-800 mt-0.5" x-text="selectedOrderForReport?.invoice_no"></p>
+                            </div>
+                            <div>
+                                <span class="text-xs text-gray-500 font-medium">Customer</span>
+                                <p class="text-sm font-semibold text-gray-800 mt-0.5" x-text="selectedOrderForReport?.customer_name"></p>
+                            </div>
+                            <div>
+                                <span class="text-xs text-gray-500 font-medium">Product</span>
+                                <p class="text-sm text-gray-700 mt-0.5" x-text="selectedOrderForReport?.product_category"></p>
+                            </div>
+                            <div>
+                                <span class="text-xs text-gray-500 font-medium">QTY</span>
+                                <p class="text-sm text-gray-700 mt-0.5" x-text="selectedOrderForReport?.total_qty + ' pcs'"></p>
+                            </div>
                         </div>
                     </div>
 
@@ -2473,11 +2481,11 @@
                                     <div x-data="{
                                         open: false,
                                         options: [
-                                            { value: '2024', name: '2024' },
-                                            { value: '2025', name: '2025' },
                                             { value: '2026', name: '2026' },
                                             { value: '2027', name: '2027' },
-                                            { value: '2028', name: '2028' }
+                                            { value: '2028', name: '2028' },
+                                            { value: '2029', name: '2029' },
+                                            { value: '2030', name: '2030' }
                                         ],
                                         selected: null,
                                         selectedValue: '',

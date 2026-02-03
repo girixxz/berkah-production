@@ -17,6 +17,7 @@ use App\Models\ExtraService;
 use App\Models\Invoice;
 use App\Models\OrderReport;
 use App\Models\Balance;
+use App\Models\ReportPeriod;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Cache;
@@ -1046,6 +1047,18 @@ class OrderController extends Controller
         
         $periodStart = Carbon::create($year, $month, 1);
         $periodEnd = Carbon::create($year, $month, 1)->endOfMonth();
+
+        // Check if the selected period is locked in report_periods table
+        $reportPeriod = ReportPeriod::whereYear('period_start', $year)
+            ->whereMonth('period_start', $month)
+            ->first();
+
+        if ($reportPeriod && $reportPeriod->lock_status === 'locked') {
+            $monthName = $periodStart->format('F');
+            return redirect()->back()
+                ->with('message', "Period {$monthName} {$year} is locked. Cannot move order to locked period.")
+                ->with('alert-type', 'error');
+        }
 
         try {
             DB::beginTransaction();
