@@ -63,6 +63,19 @@
         showDeleteMaterial: null,
         
         init() {
+            // Check for Laravel session flash messages first
+            @if(session('toast_message'))
+                setTimeout(() => {
+                    window.dispatchEvent(new CustomEvent('show-toast', {
+                        detail: { 
+                            message: '{{ session('toast_message') }}',
+                            type: '{{ session('toast_type', 'success') }}'
+                        }
+                    }));
+                }, 300);
+            @endif
+
+            // Then check sessionStorage (for AJAX operations)
             const message = sessionStorage.getItem('toast_message');
             const type = sessionStorage.getItem('toast_type');
             if (message) {
@@ -1092,8 +1105,8 @@
                 <div @click.away="showPurchaseModal = false; stopPurchaseWebcam()" 
                      class="relative bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
                     
-                    {{-- Modal Header --}}
-                    <div class="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+                    {{-- Modal Header - Sticky --}}
+                    <div class="sticky top-0 z-10 bg-white flex items-center justify-between px-6 py-4 border-b border-gray-200">
                         <h3 class="text-lg font-semibold text-gray-900">New Material Purchase</h3>
                         <button @click="showPurchaseModal = false; stopPurchaseWebcam()" type="button"
                             class="text-gray-400 hover:text-gray-600 cursor-pointer text-2xl leading-none">
@@ -1204,9 +1217,9 @@
                                 }));
                             });
                         ">
-                            <div class="space-y-4">
+                            <div class="space-y-5">
                                 {{-- Balance Period Selector --}}
-                                <div class="mb-6 p-4 bg-gradient-to-br from-primary/10 to-primary/20 rounded-xl border-2 border-primary/30">
+                                <div class="p-4 bg-gradient-to-br from-primary/10 to-primary/20 rounded-xl border-2 border-primary/30">
                                     <label class="block text-sm font-semibold text-gray-900 mb-3">
                                         Select Balance Period <span class="text-red-600">*</span>
                                     </label>
@@ -1295,8 +1308,9 @@
                                     x-transition:enter-start="opacity-0 transform scale-95"
                                     x-transition:enter-end="opacity-100 transform scale-100">
                                     
-                                    {{-- Balance Cards --}}
-                                    <div class="grid grid-cols-2 gap-3 mb-4">
+                                    <div class="space-y-4">
+                                        {{-- Balance Cards --}}
+                                        <div class="grid grid-cols-2 gap-3">
                                         <div class="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-3 border border-blue-200">
                                             <p class="text-xs text-blue-600 font-medium mb-1">Transfer Balance</p>
                                             <p class="text-base font-bold text-blue-900" x-text="'Rp ' + parseInt(balanceTransfer).toLocaleString('id-ID')"></p>
@@ -1599,30 +1613,32 @@
                                             class="w-full rounded-md border border-gray-200 px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:border-primary focus:ring-primary/20 transition-colors resize-none"
                                             placeholder="Optional notes..."></textarea>
                                     </div>
+                                    </div>
+                                    {{-- End space-y-4 wrapper --}}
 
                                 </div>
                                 {{-- End: Content shown only after Balance Period is selected --}}
                             </div>
-
-                            {{-- Submit Button --}}
-                            <div class="mt-6 flex gap-3">
-                                <button type="button" @click="showPurchaseModal = false; stopPurchaseWebcam()"
-                                    class="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium transition-colors">
-                                    Cancel
-                                </button>
-                                <button type="submit" :disabled="isSubmittingPurchase"
-                                    :class="isSubmittingPurchase ? 'opacity-50 cursor-not-allowed' : 'hover:bg-primary-dark'"
-                                    class="flex-1 px-4 py-2 bg-primary text-white rounded-lg font-medium transition-colors flex items-center justify-center gap-2">
-                                    <template x-if="isSubmittingPurchase">
-                                        <svg class="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
-                                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                        </svg>
-                                    </template>
-                                    <span x-text="isSubmittingPurchase ? 'Processing...' : 'Create Purchase'"></span>
-                                </button>
-                            </div>
                         </form>
+                    </div>
+
+                    {{-- Modal Footer - Sticky --}}
+                    <div class="sticky bottom-0 bg-white border-t border-gray-200 px-6 py-4 flex gap-3">
+                        <button type="button" @click="showPurchaseModal = false; stopPurchaseWebcam()"
+                            class="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium transition-colors">
+                            Cancel
+                        </button>
+                        <button type="submit" form="addPurchaseForm" :disabled="isSubmittingPurchase"
+                            :class="isSubmittingPurchase ? 'opacity-50 cursor-not-allowed' : 'hover:bg-primary-dark'"
+                            class="flex-1 px-4 py-2 bg-primary text-white rounded-lg font-medium transition-colors flex items-center justify-center gap-2">
+                            <template x-if="isSubmittingPurchase">
+                                <svg class="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                </svg>
+                            </template>
+                            <span x-text="isSubmittingPurchase ? 'Processing...' : 'Create Purchase'"></span>
+                        </button>
                     </div>
                 </div>
             </div>
@@ -1811,8 +1827,8 @@
                 <div @click.away="showExtraPurchaseModal = false; stopPurchaseWebcam()" 
                      class="relative bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
                     
-                    {{-- Modal Header --}}
-                    <div class="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+                    {{-- Modal Header - Sticky --}}
+                    <div class="sticky top-0 z-10 bg-white flex items-center justify-between px-6 py-4 border-b border-gray-200">
                         <h3 class="text-lg font-semibold text-gray-900">Extra Material Purchase</h3>
                         <button @click="showExtraPurchaseModal = false; stopPurchaseWebcam()" type="button"
                             class="text-gray-400 hover:text-gray-600 cursor-pointer text-2xl leading-none">
@@ -2175,26 +2191,26 @@
                                         placeholder="Optional notes..."></textarea>
                                 </div>
                             </div>
-
-                            {{-- Submit Button --}}
-                            <div class="mt-6 flex gap-3">
-                                <button type="button" @click="showExtraPurchaseModal = false; stopPurchaseWebcam()"
-                                    class="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium transition-colors">
-                                    Cancel
-                                </button>
-                                <button type="submit" :disabled="isSubmittingExtraPurchase"
-                                    :class="isSubmittingExtraPurchase ? 'opacity-50 cursor-not-allowed' : 'hover:bg-primary-dark'"
-                                    class="flex-1 px-4 py-2 bg-primary text-white rounded-lg font-medium transition-colors flex items-center justify-center gap-2">
-                                    <template x-if="isSubmittingExtraPurchase">
-                                        <svg class="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
-                                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                        </svg>
-                                    </template>
-                                    <span x-text="isSubmittingExtraPurchase ? 'Processing...' : 'Create Extra Purchase'"></span>
-                                </button>
-                            </div>
                         </form>
+                    </div>
+
+                    {{-- Modal Footer - Sticky --}}
+                    <div class="sticky bottom-0 bg-white border-t border-gray-200 px-6 py-4 flex gap-3">
+                        <button type="button" @click="showExtraPurchaseModal = false; stopPurchaseWebcam()"
+                            class="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium transition-colors">
+                            Cancel
+                        </button>
+                        <button type="submit" form="addExtraPurchaseForm" :disabled="isSubmittingExtraPurchase"
+                            :class="isSubmittingExtraPurchase ? 'opacity-50 cursor-not-allowed' : 'hover:bg-primary-dark'"
+                            class="flex-1 px-4 py-2 bg-primary text-white rounded-lg font-medium transition-colors flex items-center justify-center gap-2">
+                            <template x-if="isSubmittingExtraPurchase">
+                                <svg class="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                </svg>
+                            </template>
+                            <span x-text="isSubmittingExtraPurchase ? 'Processing...' : 'Create Extra Purchase'"></span>
+                        </button>
                     </div>
                 </div>
             </div>
@@ -2206,8 +2222,9 @@
             @keydown.escape.window="showEditMaterialModal = false; stopPurchaseWebcam()"
             class="fixed inset-0 z-50 overflow-y-auto bg-black/50 flex items-center justify-center p-4">
             <div @click.away="showEditMaterialModal = false; stopPurchaseWebcam()"
-                class="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-                <div class="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between z-10">
+                class="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+                {{-- Modal Header - Sticky --}}
+                <div class="sticky top-0 z-10 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
                     <h3 class="text-lg font-semibold text-gray-900">Edit Material Purchase</h3>
                     <button @click="showEditMaterialModal = false; stopPurchaseWebcam()" class="text-gray-400 hover:text-gray-600">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -2215,7 +2232,9 @@
                         </svg>
                     </button>
                 </div>
-                <div class="p-6">
+                
+                {{-- Modal Body --}}
+                <div class="flex-1 overflow-y-auto px-6 py-6">
                     <form @submit.prevent="
                         if (isSubmittingEditMaterial) return;
                         isSubmittingEditMaterial = true;
@@ -2536,26 +2555,26 @@
                                     placeholder="Optional notes..."></textarea>
                             </div>
                         </div>
-
-                        {{-- Submit Button --}}
-                        <div class="mt-6 flex gap-3">
-                            <button type="button" @click="showEditMaterialModal = false; stopPurchaseWebcam(); editProofImage = null; imagePreview = null"
-                                class="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium transition-colors">
-                                Cancel
-                            </button>
-                            <button type="submit" :disabled="isSubmittingEditMaterial"
-                                :class="isSubmittingEditMaterial ? 'opacity-50 cursor-not-allowed' : 'hover:bg-primary-dark'"
-                                class="flex-1 px-4 py-2 bg-primary text-white rounded-lg font-medium transition-colors flex items-center justify-center gap-2">
-                                <template x-if="isSubmittingEditMaterial">
-                                    <svg class="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
-                                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                    </svg>
-                                </template>
-                                <span x-text="isSubmittingEditMaterial ? 'Updating...' : 'Update Material'"></span>
-                            </button>
-                        </div>
                     </form>
+                </div>
+                
+                {{-- Modal Footer - Sticky --}}
+                <div class="sticky bottom-0 bg-white border-t border-gray-200 px-6 py-4 flex gap-3">
+                    <button type="button" @click="showEditMaterialModal = false; stopPurchaseWebcam(); editProofImage = null; imagePreview = null"
+                        class="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium transition-colors">
+                        Cancel
+                    </button>
+                    <button type="button" @click="$el.closest('div').previousElementSibling.querySelector('form').requestSubmit()" :disabled="isSubmittingEditMaterial"
+                        :class="isSubmittingEditMaterial ? 'opacity-50 cursor-not-allowed' : 'hover:bg-primary-dark'"
+                        class="flex-1 px-4 py-2 bg-primary text-white rounded-lg font-medium transition-colors flex items-center justify-center gap-2">
+                        <template x-if="isSubmittingEditMaterial">
+                            <svg class="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                        </template>
+                        <span x-text="isSubmittingEditMaterial ? 'Updating...' : 'Update Purchase'"></span>
+                    </button>
                 </div>
             </div>
         </div>
