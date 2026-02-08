@@ -155,10 +155,14 @@
         matchesSearch(row) {
             const query = this.searchQuery.toLowerCase();
             if (!query || query.trim() === '') return true;
+            
+            // Only check primary rows (has data-invoice attribute)
             const invoice = (row.getAttribute('data-invoice') || '').toLowerCase();
             const customer = (row.getAttribute('data-customer') || '').toLowerCase();
-            const service = (row.getAttribute('data-service') || '').toLowerCase();
-            return invoice.includes(query) || customer.includes(query) || service.includes(query);
+            const product = (row.getAttribute('data-product') || '').toLowerCase();
+            const services = (row.getAttribute('data-services') || '').toLowerCase();
+            
+            return invoice.includes(query) || customer.includes(query) || product.includes(query) || services.includes(query);
         },
         
         // Computed property untuk Extra Service Month Name
@@ -509,8 +513,15 @@
                             <tr data-invoice="{{ $invoice->invoice_no ?? '' }}"
                                 data-customer="{{ $customer->customer_name ?? '' }}"
                                 data-product="{{ $productCategory }}"
+                                data-services="{{ $partnerServices->pluck('service_name')->implode(' ') }}"
                                 x-show="matchesSearch($el)"
-                                @click="expandedRows.includes({{ $rowId }}) ? expandedRows = expandedRows.filter(id => id !== {{ $rowId }}) : expandedRows.push({{ $rowId }})"
+                                @click="
+                                    if (expandedRows.includes({{ $rowId }})) {
+                                        expandedRows = expandedRows.filter(id => id !== {{ $rowId }});
+                                    } else {
+                                        expandedRows = [{{ $rowId }}];
+                                    }
+                                "
                                 class="hover:bg-gray-50 cursor-pointer">
                                 
                                 {{-- No Invoice --}}
@@ -674,7 +685,13 @@
                                     {{-- Expand Arrow (Absolute positioned at right edge of table) --}}
                                     <div class="absolute right-0 top-1/2 -translate-y-1/2 pr-2">
                                         <button type="button"
-                                            @click="expandedRows.includes({{ $rowId }}) ? expandedRows = expandedRows.filter(id => id !== {{ $rowId }}) : expandedRows.push({{ $rowId }})"
+                                            @click="
+                                                if (expandedRows.includes({{ $rowId }})) {
+                                                    expandedRows = expandedRows.filter(id => id !== {{ $rowId }});
+                                                } else {
+                                                    expandedRows = [{{ $rowId }}];
+                                                }
+                                            "
                                             class="p-1 hover:bg-gray-100 rounded transition-colors">
                                             <svg class="w-5 h-5 text-gray-400 transition-transform" 
                                                 :class="expandedRows.includes({{ $rowId }}) && 'rotate-180'" 
@@ -687,7 +704,7 @@
                             </tr>
                             
                             {{-- Expandable Detail Row --}}
-                            <tr class="border-b border-gray-200">
+                            <tr class="border-b border-gray-200" x-show="matchesSearch($el.previousElementSibling)">
                                 <td colspan="8" class="p-0">
                                     <div x-show="expandedRows.includes({{ $rowId }})"
                                         x-transition:enter="transition ease-out duration-200"
@@ -865,12 +882,10 @@
                 </table>
             </div>
 
-            {{-- Pagination --}}
-            @if($services->hasPages())
-                <div class="mt-4" id="services-pagination-container">
-                    {{ $services->links() }}
-                </div>
-            @endif
+            {{-- Pagination Component (always visible like Material Report) --}}
+            <div id="services-pagination-container" class="mt-4">
+                <x-custom-pagination :paginator="$services" />
+            </div>
         </div>
 
         {{-- Add Service Modal --}}
@@ -2652,4 +2667,59 @@
             </div>
         </div>
     </div>
+
+    {{-- Pagination AJAX Script --}}
+    @push('scripts')
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            setupServicePagination('services-pagination-container', 'services-section');
+        });
+
+        function setupServicePagination(containerId, sectionId) {
+            const container = document.getElementById(containerId);
+            if (!container) return;
+
+            container.addEventListener('click', function(e) {
+                const link = e.target.closest('a[href*="page="]');
+                if (!link) return;
+
+                e.preventDefault();
+                const url = link.getAttribute('href');
+
+                NProgress.start();
+                fetch(url, {
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest'
+                        }
+                    })
+                    .then(response => response.text())
+                    .then(html => {
+                        const parser = new DOMParser();
+                        const doc = parser.parseFromString(html, 'text/html');
+                        const newSection = doc.getElementById(sectionId);
+
+                        if (newSection) {
+                            document.getElementById(sectionId).innerHTML = newSection.innerHTML;
+
+                            // Re-setup pagination after content update
+                            setupServicePagination(containerId, sectionId);
+                            
+                            // Scroll to pagination area (bottom)
+                            setTimeout(() => {
+                                const paginationContainer = document.getElementById(containerId);
+                                if (paginationContainer) {
+                                    paginationContainer.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                }
+                            }, 100);
+                        }
+                        NProgress.done();
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        NProgress.done();
+                    });
+            });
+        }
+    </script>
+    @endpush
 @endsection
