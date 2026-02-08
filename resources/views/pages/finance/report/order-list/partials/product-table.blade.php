@@ -1,5 +1,5 @@
 {{-- Product Type Table Component --}}
-<div class="bg-white border border-gray-200 rounded-lg p-5 mb-6">
+<div class="bg-white border border-gray-200 rounded-lg p-5 mb-6" data-table-type="{{ $productType }}">
     {{-- Header: Title Left, Search + Show Per Page Right --}}
     <div class="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-4 mb-4">
         <h2 class="text-lg font-semibold text-gray-900">{{ $title }}</h2>
@@ -283,4 +283,68 @@
             </tbody>
         </table>
     </div>
+
+    {{-- Pagination - Always Visible --}}
+    <div class="mt-4">
+        <x-custom-pagination :paginator="$reports" />
+    </div>
+
+    {{-- AJAX Pagination Script --}}
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            setupProductTablePagination_{{ str_replace('-', '_', $productType) }}();
+        });
+
+        function setupProductTablePagination_{{ str_replace('-', '_', $productType) }}() {
+            const container = document.querySelector('[data-table-type="{{ $productType }}"]');
+            if (!container) return;
+
+            const paginationLinks = container.querySelectorAll('.pagination a');
+            
+            paginationLinks.forEach(link => {
+                link.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    
+                    const url = this.href;
+                    if (!url || url.includes('javascript:')) return;
+                    
+                    NProgress.start();
+                    
+                    fetch(url, {
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest'
+                        }
+                    })
+                    .then(response => response.text())
+                    .then(html => {
+                        const parser = new DOMParser();
+                        const doc = parser.parseFromString(html, 'text/html');
+                        const newSection = doc.getElementById('tables-section');
+                        
+                        if (newSection) {
+                            document.getElementById('tables-section').innerHTML = newSection.innerHTML;
+                            
+                            // Re-initialize all pagination scripts
+                            setupProductTablePagination_t_shirt();
+                            setupProductTablePagination_makloon();
+                            setupProductTablePagination_hoodie_polo_jersey();
+                            setupProductTablePagination_pants();
+                            
+                            // Smooth scroll to bottom
+                            window.scrollTo({
+                                top: document.body.scrollHeight,
+                                behavior: 'smooth'
+                            });
+                        }
+                        
+                        NProgress.done();
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        NProgress.done();
+                    });
+                });
+            });
+        }
+    </script>
 </div>

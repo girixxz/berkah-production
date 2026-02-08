@@ -74,12 +74,32 @@ class OrderReportController extends Controller
             'pants_count' => $allReports->where('product_type', 'pants')->count(),
         ];
 
-        // Group by product type (sorted desc - newest first)
+        // Paginate each product type separately
         $reportsByType = [
-            't-shirt' => $allReports->where('product_type', 't-shirt')->sortByDesc('created_at')->values(),
-            'makloon' => $allReports->where('product_type', 'makloon')->sortByDesc('created_at')->values(),
-            'hoodie_polo_jersey' => $allReports->where('product_type', 'hoodie_polo_jersey')->sortByDesc('created_at')->values(),
-            'pants' => $allReports->where('product_type', 'pants')->sortByDesc('created_at')->values(),
+            't-shirt' => OrderReport::whereYear('period_start', $year)
+                ->whereMonth('period_start', $month)
+                ->where('product_type', 't-shirt')
+                ->with(['order.customer', 'order.invoice', 'order.productCategory', 'order.orderItems'])
+                ->orderBy('created_at', 'desc')
+                ->paginate($perPage, ['*'], 'tshirt_page'),
+            'makloon' => OrderReport::whereYear('period_start', $year)
+                ->whereMonth('period_start', $month)
+                ->where('product_type', 'makloon')
+                ->with(['order.customer', 'order.invoice', 'order.productCategory', 'order.orderItems'])
+                ->orderBy('created_at', 'desc')
+                ->paginate($perPage, ['*'], 'makloon_page'),
+            'hoodie_polo_jersey' => OrderReport::whereYear('period_start', $year)
+                ->whereMonth('period_start', $month)
+                ->where('product_type', 'hoodie_polo_jersey')
+                ->with(['order.customer', 'order.invoice', 'order.productCategory', 'order.orderItems'])
+                ->orderBy('created_at', 'desc')
+                ->paginate($perPage, ['*'], 'hoodie_page'),
+            'pants' => OrderReport::whereYear('period_start', $year)
+                ->whereMonth('period_start', $month)
+                ->where('product_type', 'pants')
+                ->with(['order.customer', 'order.invoice', 'order.productCategory', 'order.orderItems'])
+                ->orderBy('created_at', 'desc')
+                ->paginate($perPage, ['*'], 'pants_page'),
         ];
 
         return view('pages.finance.report.order-list.index', compact(
