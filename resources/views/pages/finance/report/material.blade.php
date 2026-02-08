@@ -155,10 +155,14 @@
         matchesSearch(row) {
             const query = this.searchQuery.toLowerCase();
             if (!query || query.trim() === '') return true;
+            
+            // Only check primary rows (has data-invoice attribute)
             const invoice = (row.getAttribute('data-invoice') || '').toLowerCase();
             const customer = (row.getAttribute('data-customer') || '').toLowerCase();
-            const material = (row.getAttribute('data-material') || '').toLowerCase();
-            return invoice.includes(query) || customer.includes(query) || material.includes(query);
+            const product = (row.getAttribute('data-product') || '').toLowerCase();
+            const materials = (row.getAttribute('data-materials') || '').toLowerCase();
+            
+            return invoice.includes(query) || customer.includes(query) || product.includes(query) || materials.includes(query);
         },
         
         // Computed property untuk Extra Purchase Month Name
@@ -276,8 +280,12 @@
                 dataTransfer.items.add(file);
                 const fileInput = document.querySelector(`input[name=${inputName}]`);
                 if (fileInput) {
+                    // Clear old value first
+                    fileInput.value = '';
+                    // Set new file
                     fileInput.files = dataTransfer.files;
                 }
+                // Clear old preview and set new one
                 this.imagePreview = canvas.toDataURL('image/jpeg');
                 this.fileName = file.name;
                 this.stopPurchaseWebcam();
@@ -509,8 +517,15 @@
                             <tr data-invoice="{{ $invoice->invoice_no ?? '' }}"
                                 data-customer="{{ $customer->customer_name ?? '' }}"
                                 data-product="{{ $productCategory }}"
+                                data-materials="{{ $materialPurchases->pluck('material_name')->implode(' ') }}"
                                 x-show="matchesSearch($el)"
-                                @click="expandedRows.includes({{ $rowId }}) ? expandedRows = expandedRows.filter(id => id !== {{ $rowId }}) : expandedRows.push({{ $rowId }})"
+                                @click="
+                                    if (expandedRows.includes({{ $rowId }})) {
+                                        expandedRows = expandedRows.filter(id => id !== {{ $rowId }});
+                                    } else {
+                                        expandedRows = [{{ $rowId }}];
+                                    }
+                                "
                                 class="hover:bg-gray-50 cursor-pointer">
                                 
                                 {{-- No Invoice --}}
@@ -674,7 +689,13 @@
                                     {{-- Expand Arrow (Absolute positioned at right edge of table) --}}
                                     <div class="absolute right-0 top-1/2 -translate-y-1/2 pr-2">
                                         <button type="button"
-                                            @click="expandedRows.includes({{ $rowId }}) ? expandedRows = expandedRows.filter(id => id !== {{ $rowId }}) : expandedRows.push({{ $rowId }})"
+                                            @click="
+                                                if (expandedRows.includes({{ $rowId }})) {
+                                                    expandedRows = expandedRows.filter(id => id !== {{ $rowId }});
+                                                } else {
+                                                    expandedRows = [{{ $rowId }}];
+                                                }
+                                            "
                                             class="p-1 hover:bg-gray-100 rounded transition-colors">
                                             <svg class="w-5 h-5 text-gray-400 transition-transform" 
                                                 :class="expandedRows.includes({{ $rowId }}) && 'rotate-180'" 
@@ -687,7 +708,7 @@
                             </tr>
                             
                             {{-- Expandable Detail Row --}}
-                            <tr class="border-b border-gray-200">
+                            <tr class="border-b border-gray-200" x-show="matchesSearch($el.previousElementSibling)">
                                 <td colspan="8" class="p-0">
                                     <div x-show="expandedRows.includes({{ $rowId }})"
                                         x-transition:enter="transition ease-out duration-200"
@@ -728,7 +749,7 @@
                                                         <td class="py-1.5 px-4 text-[10px] text-gray-700">Rp {{ number_format($totalQty > 0 ? $purchase->amount / $totalQty : 0, 0, ',', '.') }}</td>
                                                         <td class="py-1.5 px-4 text-left">
                                                             @if ($purchase->proof_img)
-                                                                <button @click="$dispatch('open-image-modal', { url: '{{ route('finance.report.material.serve-image', $purchase->id) }}' })" 
+                                                                <button @click="$dispatch('open-image-modal', { url: '{{ route('finance.report.material.serve-image', $purchase->id) }}?t={{ $purchase->updated_at->timestamp }}' })" 
                                                                     class="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-100 text-blue-700 rounded-md hover:bg-blue-200 text-[10px] font-medium cursor-pointer">
                                                                     <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -740,7 +761,7 @@
                                                                 <span class="text-[10px] text-gray-400">-</span>
                                                             @endif
                                                         </td>
-                                                        <td class="py-1.5 px-4 text-[10px] text-gray-700">{{ $purchase->purchase_date->format('d M Y') }}</td>
+                                                        <td class="py-1.5 px-4 text-[10px] text-gray-700">{{ $purchase->updated_at->format('d M Y (H:i)') }}</td>
                                                         <td class="py-1.5 px-4 text-center">
                                                             @if($lockStatus === 'locked' && auth()->user()->role === 'finance')
                                                                 <svg class="w-4 h-4 text-red-600 inline-block" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -818,10 +839,19 @@
                                                                                 editPaymentMethod = '{{ $purchase->payment_method }}';
                                                                                 editPurchaseAmount = '{{ $purchase->amount }}';
                                                                                 editPurchaseNotes = '{{ addslashes($purchase->notes ?? '') }}';
-                                                                                editProofImage = '{{ $purchase->proof_img ? route('finance.report.material.serve-image', $purchase->id) : '' }}';
+                                                                                editProofImage = '{{ $purchase->proof_img ? route('finance.report.material.serve-image', $purchase->id) : '' }}' + ({{ $purchase->proof_img ? 'true' : 'false' }} ? '?t=' + Date.now() : '');
+                                                                                // Reset captured image preview
+                                                                                imagePreview = null;
+                                                                                fileName = '';
+                                                                                showWebcam = false;
                                                                                 showEditMaterialModal = true;
                                                                                 open = false;
                                                                                 editMaterialErrors = {};
+                                                                                // Clear file input
+                                                                                setTimeout(() => {
+                                                                                    const fileInput = document.querySelector('input[name=edit_material_proof_image]');
+                                                                                    if (fileInput) fileInput.value = '';
+                                                                                }, 50);
                                                                             ">
                                                                             <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
@@ -865,12 +895,10 @@
                 </table>
             </div>
 
-            {{-- Pagination --}}
-            @if($materials->hasPages())
-                <div class="mt-4" id="materials-pagination-container">
-                    {{ $materials->links() }}
-                </div>
-            @endif
+            {{-- Pagination Component (always visible like Orders Index) --}}
+            <div id="materials-pagination-container" class="mt-4">
+                <x-custom-pagination :paginator="$materials" />
+            </div>
         </div>
 
         {{-- Add Purchase Modal --}}
@@ -1089,8 +1117,15 @@
                         purchaseAmount = '';
                         purchaseNotes = '';
                         purchaseErrors = {};
+                        // Reset image properly
                         imagePreview = null;
                         fileName = '';
+                        showWebcam = false;
+                        // Clear file input
+                        setTimeout(() => {
+                            const fileInput = document.querySelector('input[name=purchase_proof_image]');
+                            if (fileInput) fileInput.value = '';
+                        }, 50);
                     }
                 })
             "
@@ -1802,15 +1837,20 @@
                         purchaseAmount = '';
                         purchaseNotes = '';
                         extraPurchaseErrors = {};
+                        // Reset image properly
                         imagePreview = null;
                         fileName = '';
+                        showWebcam = false;
                         orderReportData = null;
                         balanceMonth = null;
                         balanceYear = null;
                         balanceId = null;
                         balanceTransfer = 0;
                         balanceCash = 0;
+                        // Clear file input
                         setTimeout(() => {
+                            const fileInput = document.querySelector('input[name=extra_purchase_proof_image]');
+                            if (fileInput) fileInput.value = '';
                             fetchOrderReportData();
                         }, 100);
                     }
@@ -2652,4 +2692,59 @@
             </div>
         </div>
     </div>
+
+    {{-- Pagination AJAX Script --}}
+    @push('scripts')
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            setupMaterialPagination('materials-pagination-container', 'materials-section');
+        });
+
+        function setupMaterialPagination(containerId, sectionId) {
+            const container = document.getElementById(containerId);
+            if (!container) return;
+
+            container.addEventListener('click', function(e) {
+                const link = e.target.closest('a[href*="page="]');
+                if (!link) return;
+
+                e.preventDefault();
+                const url = link.getAttribute('href');
+
+                NProgress.start();
+                fetch(url, {
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest'
+                        }
+                    })
+                    .then(response => response.text())
+                    .then(html => {
+                        const parser = new DOMParser();
+                        const doc = parser.parseFromString(html, 'text/html');
+                        const newSection = doc.getElementById(sectionId);
+
+                        if (newSection) {
+                            document.getElementById(sectionId).innerHTML = newSection.innerHTML;
+
+                            // Re-setup pagination after content update
+                            setupMaterialPagination(containerId, sectionId);
+                            
+                            // Scroll to pagination area (bottom)
+                            setTimeout(() => {
+                                const paginationContainer = document.getElementById(containerId);
+                                if (paginationContainer) {
+                                    paginationContainer.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                }
+                            }, 100);
+                        }
+                        NProgress.done();
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        NProgress.done();
+                    });
+            });
+        }
+    </script>
+    @endpush
 @endsection

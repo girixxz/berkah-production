@@ -312,7 +312,7 @@ class MaterialReportController extends Controller
             $proofImagePath = null;
             if ($request->hasFile('proof_image')) {
                 $file = $request->file('proof_image');
-                $filename = 'material_' . time() . '_' . uniqid() . '.' . $file->getClientOriginalExtension();
+                $filename = 'material_' . $request->order_report_id . '_' . time() . '_' . uniqid() . '.' . $file->getClientOriginalExtension();
                 $proofImagePath = $file->storeAs('material_proofs', $filename, 'local');
             }
 
@@ -421,7 +421,7 @@ class MaterialReportController extends Controller
             $proofImagePath = null;
             if ($request->hasFile('proof_image')) {
                 $file = $request->file('proof_image');
-                $filename = 'material_extra_' . time() . '_' . uniqid() . '.' . $file->getClientOriginalExtension();
+                $filename = 'material_' . $request->order_report_id . '_' . time() . '_' . uniqid() . '.' . $file->getClientOriginalExtension();
                 $proofImagePath = $file->storeAs('material_proofs', $filename, 'local');
             }
 
@@ -526,13 +526,14 @@ class MaterialReportController extends Controller
 
             // Handle image upload if new image provided
             if ($request->hasFile('proof_image')) {
-                // Delete old image
+                // ALWAYS delete old image first (replace system)
                 if ($materialReport->proof_img && Storage::disk('local')->exists($materialReport->proof_img)) {
                     Storage::disk('local')->delete($materialReport->proof_img);
                 }
                 
+                // Upload new image with consistent naming
                 $file = $request->file('proof_image');
-                $filename = 'material_edit_' . time() . '_' . uniqid() . '.' . $file->getClientOriginalExtension();
+                $filename = 'material_' . $materialReport->order_report_id . '_' . time() . '_' . uniqid() . '.' . $file->getClientOriginalExtension();
                 $proofImagePath = $file->storeAs('material_proofs', $filename, 'local');
                 $materialReport->proof_img = $proofImagePath;
             }
@@ -584,10 +585,12 @@ class MaterialReportController extends Controller
         // Get mime type from file extension
         $mimeType = Storage::disk('local')->mimeType($materialReport->proof_img) ?: 'application/octet-stream';
 
-        // Return file response
+        // Return file response with no-cache to prevent browser caching
         return response()->file($path, [
             'Content-Type' => $mimeType,
-            'Cache-Control' => 'public, max-age=31536000',
+            'Cache-Control' => 'no-cache, no-store, must-revalidate',
+            'Pragma' => 'no-cache',
+            'Expires' => '0',
         ]);
     }
 
