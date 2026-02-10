@@ -9,7 +9,9 @@
         openModal: '{{ session('openModal') }}',
         searchSupplier: '',
         searchPartner: '',
-        searchFixCost: '',
+        searchFixCost1: '',
+        searchFixCost2: '',
+        searchPrintingSupply: '',
         editSupplier: {},
         editPartner: {},
         editFixCost: {},
@@ -45,9 +47,7 @@
     
         validateAddFixCost() {
             this.addFixCostErrors = {};
-            if (!this.addFixCostForm.category) {
-                this.addFixCostErrors.category = 'Category is required';
-            }
+            // Category is auto-set from button click, no need to validate
             if (!this.addFixCostForm.list_name) {
                 this.addFixCostErrors.list_name = 'List name is required';
             } else if (this.addFixCostForm.list_name.length > 100) {
@@ -88,8 +88,12 @@
                     this.addPartnerForm = { partner_name: '', notes: '' };
                     this.addPartnerErrors = {};
                 } else if (value === 'addFixCost') {
-                    this.addFixCostForm = { category: '', list_name: '' };
+                    // Only reset list_name, keep category from button click
+                    this.addFixCostForm.list_name = '';
                     this.addFixCostErrors = {};
+                } else if (value === null || value === '') {
+                    // When modal closes, preserve the state for potential re-open
+                    // Don't reset here
                 }
             });
         }
@@ -786,19 +790,19 @@
             </div>
         </section>
 
-        {{-- ===================== Fix Cost Lists ===================== --}}
-        <section id="fix-cost-lists" class="bg-white border border-gray-200 rounded-lg p-5">
+        {{-- ===================== Fix Cost List #1 ===================== --}}
+        <section id="fix-cost-1" class="bg-white border border-gray-200 rounded-lg p-5">
             {{-- Header --}}
             <div class="flex flex-col gap-3 md:flex-row md:items-center">
                 <h2 class="text-xl font-semibold text-gray-900 flex-shrink-0">
-                    Fix Cost Lists
+                    Fix Cost List #1
                 </h2>
 
                 <div class="md:ml-auto flex items-center gap-2 w-full md:w-auto min-w-0">
                     {{-- Search --}}
                     <div class="relative flex-1 min-w-[100px]">
                         <x-icons.search />
-                        <input type="text" x-model="searchFixCost" placeholder="Search lists..."
+                        <input type="text" x-model="searchFixCost1" placeholder="Search lists..."
                             class="w-full rounded-md border border-gray-300 pl-9 pr-3 py-2 text-sm
                       focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary" />
                     </div>
@@ -806,7 +810,7 @@
                     {{-- Show Per Page Dropdown --}}
                     <div x-data="{
                         open: false,
-                        perPage: {{ request('per_page_fix_cost', 10) }},
+                        perPage: {{ request('per_page_fix_cost_1', 10) }},
                         options: [
                             { value: 5, label: '5' },
                             { value: 10, label: '10' },
@@ -816,7 +820,7 @@
                         ],
                         changePerPage(value) {
                             const url = new URL(window.location.href);
-                            url.searchParams.set('per_page_fix_cost', value);
+                            url.searchParams.set('per_page_fix_cost_1', value);
                             window.location.href = url.toString();
                         }
                     }" class="relative flex-shrink-0">
@@ -839,7 +843,7 @@
                     </div>
 
                     {{-- Add Button --}}
-                    <button @click="openModal = 'addFixCost'"
+                    <button @click="addFixCostForm.category = 'fix_cost_1'; openModal = 'addFixCost'"
                         class="flex-shrink-0 flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-md hover:bg-primary-dark cursor-pointer text-sm">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
@@ -853,145 +857,18 @@
             <div class="mt-5 overflow-x-auto">
                 <table class="min-w-[300px] w-full text-sm">
                     <thead class="bg-primary-light text-font-base">
-                            <tr>
-                                <th class="py-2 px-4 text-left rounded-l-md">No</th>
-                                <th class="py-2 px-4 text-left">Category</th>
-                                <th class="py-2 px-4 text-left">List Name</th>
-                                <th class="py-2 px-4 text-right rounded-r-md">Action</th>
-                            </tr>
-                        </thead>
-                        <tbody x-data="{
-                            get filteredData() {
-                                if (!this.searchFixCost.trim()) return {{ $allFixCostLists->toJson() }};
-                                const search = this.searchFixCost.toLowerCase();
-                                return {{ $allFixCostLists->toJson() }}.filter(item =>
-                                    item.list_name.toLowerCase().includes(search) ||
-                                    item.category.toLowerCase().includes(search)
-                                );
-                            },
-                            get hasResults() {
-                                return this.filteredData.length > 0;
-                            },
-                            getCategoryLabel(category) {
-                                const labels = {
-                                    'fix_cost_1': 'Fix Cost 1',
-                                    'fix_cost_2': 'Fix Cost 2',
-                                    'screening': 'Screening'
-                                };
-                                return labels[category] || category;
-                            }
-                        }">
-                            {{-- Data ALL (untuk search) --}}
-                            <template x-for="(fixCost, index) in filteredData" :key="fixCost.id">
-                                <tr x-show="searchFixCost.trim() !== ''" class="border-t border-gray-200">
-                                    <td class="py-2 px-4" x-text="index + 1"></td>
-                                    <td class="py-2 px-4">
-                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
-                                            :class="{
-                                                'bg-blue-100 text-blue-800': fixCost.category === 'fix_cost_1',
-                                                'bg-green-100 text-green-800': fixCost.category === 'fix_cost_2',
-                                                'bg-purple-100 text-purple-800': fixCost.category === 'screening'
-                                            }"
-                                            x-text="getCategoryLabel(fixCost.category)"></span>
-                                    </td>
-                                    <td class="py-2 px-4">
-                                        <div class="font-medium text-gray-900" x-text="fixCost.list_name"></div>
-                                    </td>
-                                    <td class="py-2 px-4 text-right">
-                                        <div x-data="{
-                                            open: false,
-                                            dropdownStyle: {},
-                                            checkPosition() {
-                                                const button = this.$refs.button;
-                                                const rect = button.getBoundingClientRect();
-                                                const spaceBelow = window.innerHeight - rect.bottom;
-                                                const spaceAbove = rect.top;
-                                                const dropUp = spaceBelow < 200 && spaceAbove > spaceBelow;
-                                        
-                                                if (dropUp) {
-                                                    this.dropdownStyle = {
-                                                        position: 'fixed',
-                                                        top: (rect.top - 90) + 'px',
-                                                        left: (rect.right - 160) + 'px',
-                                                        width: '160px'
-                                                    };
-                                                } else {
-                                                    this.dropdownStyle = {
-                                                        position: 'fixed',
-                                                        top: (rect.bottom + 8) + 'px',
-                                                        left: (rect.right - 160) + 'px',
-                                                        width: '160px'
-                                                    };
-                                                }
-                                            }
-                                        }"
-                                            x-init="$watch('open', value => {
-                                                if (value) {
-                                                    const scrollContainer = $el.closest('.overflow-y-auto');
-                                                    const mainContent = document.querySelector('main');
-                                                    const closeOnScroll = () => { open = false; };
-                                            
-                                                    scrollContainer?.addEventListener('scroll', closeOnScroll);
-                                                    mainContent?.addEventListener('scroll', closeOnScroll);
-                                                    window.addEventListener('resize', closeOnScroll);
-                                                }
-                                            })" class="relative inline-block text-left">
-                                            <button x-ref="button" @click="checkPosition(); open = !open" type="button"
-                                                class="cursor-pointer inline-flex items-center justify-center w-8 h-8 rounded-md border border-gray-300 text-gray-600 hover:bg-gray-100"
-                                                title="Actions">
-                                                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                                                    <path d="M6 10a2 2 0 11-4 0 2 2 0 014 0zM12 10a2 2 0 11-4 0 2 2 0 014 0zM16 12a2 2 0 100-4 2 2 0 000 4z" />
-                                                </svg>
-                                            </button>
-
-                                            <div x-show="open" @click.away="open = false" x-transition
-                                                :style="dropdownStyle"
-                                                class="rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-[9999]">
-                                                <div class="py-1">
-                                                    <button @click="editFixCost = fixCost; openModal = 'editFixCost'; open = false"
-                                                        class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2">
-                                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                                d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                                                        </svg>
-                                                        Edit
-                                                    </button>
-                                                    <button type="button" @click="showDeleteFixCostConfirm = fixCost.id; open = false"
-                                                        class="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100 flex items-center gap-2">
-                                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                                        </svg>
-                                                        Delete
-                                                    </button>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </td>
-                                </tr>
-                            </template>
-
-                            {{-- Data Paginated --}}
-                        </template>
-
-                        @foreach ($fixCostLists as $index => $fixCost)
-                            <tr x-show="searchFixCost.trim() === ''" class="border-t border-gray-200">
-                                <td class="py-2 px-4">{{ $fixCostLists->firstItem() + $loop->index }}</td>
+                        <tr>
+                            <th class="py-2 px-4 text-left rounded-l-md">No</th>
+                            <th class="py-2 px-4 text-left">List Name</th>
+                            <th class="py-2 px-4 text-right rounded-r-md">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @forelse ($fixCostLists1 as $item)
+                            <tr class="border-t border-gray-200" x-show="searchFixCost1.trim() === ''">
+                                <td class="py-2 px-4">{{ $fixCostLists1->firstItem() + $loop->index }}</td>
                                 <td class="py-2 px-4">
-                                    @php
-                                        $categoryLabels = [
-                                            'fix_cost_1' => ['label' => 'Fix Cost 1', 'class' => 'bg-blue-100 text-blue-800'],
-                                            'fix_cost_2' => ['label' => 'Fix Cost 2', 'class' => 'bg-green-100 text-green-800'],
-                                            'screening' => ['label' => 'Screening', 'class' => 'bg-purple-100 text-purple-800'],
-                                        ];
-                                        $category = $categoryLabels[$fixCost->category] ?? ['label' => $fixCost->category, 'class' => 'bg-gray-100 text-gray-800'];
-                                    @endphp
-                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium {{ $category['class'] }}">
-                                        {{ $category['label'] }}
-                                    </span>
-                                </td>
-                                <td class="py-2 px-4">
-                                    <div class="font-medium text-gray-900">{{ $fixCost->list_name }}</div>
+                                    <div class="font-medium text-gray-900">{{ $item->list_name }}</div>
                                 </td>
                                 <td class="py-2 px-4 text-right">
                                     <div class="relative inline-block text-left" x-data="{
@@ -1023,7 +900,7 @@
                                     }"
                                         x-init="$watch('open', value => {
                                             if (value) {
-                                                const scrollContainer = $el.closest('.overflow-y-auto');
+                                                const scrollContainer = $el.closest('.overflow-x-auto');
                                                 const mainContent = document.querySelector('main');
                                                 const closeOnScroll = () => { open = false; };
                                         
@@ -1036,8 +913,7 @@
                                             class="cursor-pointer inline-flex items-center justify-center w-8 h-8 rounded-md border border-gray-300 text-gray-600 hover:bg-gray-100"
                                             title="Actions">
                                             <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                                                <path
-                                                    d="M6 10a2 2 0 11-4 0 2 2 0 014 0zM12 10a2 2 0 11-4 0 2 2 0 014 0zM16 12a2 2 0 100-4 2 2 0 000 4z" />
+                                                <path d="M6 10a2 2 0 11-4 0 2 2 0 014 0zM12 10a2 2 0 11-4 0 2 2 0 014 0zM16 12a2 2 0 100-4 2 2 0 000 4z" />
                                             </svg>
                                         </button>
 
@@ -1045,25 +921,105 @@
                                             :style="dropdownStyle"
                                             class="rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-[9999]">
                                             <div class="py-1">
-                                                <button
-                                                    @click="editFixCost = {{ $fixCost->toJson() }}; openModal = 'editFixCost'; open = false"
+                                                <button @click="editFixCost = {{ $item->toJson() }}; openModal = 'editFixCost'; open = false"
                                                     class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2">
-                                                    <svg class="w-4 h-4" fill="none" stroke="currentColor"
-                                                        viewBox="0 0 24 24">
-                                                        <path stroke-linecap="round" stroke-linejoin="round"
-                                                            stroke-width="2"
+                                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                                             d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                                                     </svg>
                                                     Edit
                                                 </button>
-
-                                                <button type="button"
-                                                    @click="showDeleteFixCostConfirm = {{ $fixCost->id }}; open = false"
+                                                <button type="button" @click="showDeleteFixCostConfirm = {{ $item->id }}; open = false"
                                                     class="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100 flex items-center gap-2">
-                                                    <svg class="w-4 h-4" fill="none" stroke="currentColor"
-                                                        viewBox="0 0 24 24">
-                                                        <path stroke-linecap="round" stroke-linejoin="round"
-                                                            stroke-width="2"
+                                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                            d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                                    </svg>
+                                                    Delete
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </td>
+                            </tr>
+                        @empty
+                            <tr x-show="searchFixCost1.trim() === ''">
+                                <td colspan="3" class="py-3 px-4 text-center text-red-500 border-t border-gray-200">
+                                    No data available
+                                </td>
+                            </tr>
+                        @endforelse
+
+                        @foreach ($allFixCostLists1 as $index => $item)
+                            <tr class="border-t border-gray-200"
+                                x-show="searchFixCost1.trim() !== '' && '{{ strtolower($item->list_name) }}'.includes(searchFixCost1.toLowerCase())">
+                                <td class="py-2 px-4">{{ $index + 1 }}</td>
+                                <td class="py-2 px-4">
+                                    <div class="font-medium text-gray-900">{{ $item->list_name }}</div>
+                                </td>
+                                <td class="py-2 px-4 text-right">
+                                    <div class="relative inline-block text-left" x-data="{
+                                        open: false,
+                                        dropdownStyle: {},
+                                        checkPosition() {
+                                            const button = this.$refs.button;
+                                            const rect = button.getBoundingClientRect();
+                                            const spaceBelow = window.innerHeight - rect.bottom;
+                                            const spaceAbove = rect.top;
+                                            const dropUp = spaceBelow < 200 && spaceAbove > spaceBelow;
+                                    
+                                            if (dropUp) {
+                                                this.dropdownStyle = {
+                                                    position: 'fixed',
+                                                    top: (rect.top - 90) + 'px',
+                                                    left: (rect.right - 160) + 'px',
+                                                    width: '160px'
+                                                };
+                                            } else {
+                                                this.dropdownStyle = {
+                                                    position: 'fixed',
+                                                    top: (rect.bottom + 8) + 'px',
+                                                    left: (rect.right - 160) + 'px',
+                                                    width: '160px'
+                                                };
+                                            }
+                                        }
+                                    }"
+                                        x-init="$watch('open', value => {
+                                            if (value) {
+                                                const scrollContainer = $el.closest('.overflow-x-auto');
+                                                const mainContent = document.querySelector('main');
+                                                const closeOnScroll = () => { open = false; };
+                                        
+                                                scrollContainer?.addEventListener('scroll', closeOnScroll);
+                                                mainContent?.addEventListener('scroll', closeOnScroll);
+                                                window.addEventListener('resize', closeOnScroll);
+                                            }
+                                        })">
+                                        <button x-ref="button" @click="checkPosition(); open = !open" type="button"
+                                            class="cursor-pointer inline-flex items-center justify-center w-8 h-8 rounded-md border border-gray-300 text-gray-600 hover:bg-gray-100"
+                                            title="Actions">
+                                            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                                <path d="M6 10a2 2 0 11-4 0 2 2 0 014 0zM12 10a2 2 0 11-4 0 2 2 0 014 0zM16 12a2 2 0 100-4 2 2 0 000 4z" />
+                                            </svg>
+                                        </button>
+
+                                        <div x-show="open" @click.away="open = false" x-transition
+                                            :style="dropdownStyle"
+                                            class="rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-[9999]">
+                                            <div class="py-1">
+                                                <button @click="editFixCost = {{ $item->toJson() }}; openModal = 'editFixCost'; open = false"
+                                                    class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2">
+                                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                            d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                                    </svg>
+                                                    Edit
+                                                </button>
+                                                <button type="button" @click="showDeleteFixCostConfirm = {{ $item->id }}; open = false"
+                                                    class="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100 flex items-center gap-2">
+                                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                                             d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                                                     </svg>
                                                     Delete
@@ -1074,29 +1030,516 @@
                                 </td>
                             </tr>
                         @endforeach
-                        
-                        {{-- Empty state for search --}}
-                        <tr x-show="searchFixCost.trim() !== '' && !hasResults" x-cloak>
-                            <td colspan="4" class="py-3 px-4 text-center text-red-500 border-t border-gray-200">
-                                <div class="flex flex-col items-center gap-2">
-                                    <svg class="w-12 h-12 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                                    </svg>
-                                    <p class="text-sm font-medium">No fix cost lists found</p>
-                                    <p class="text-xs text-gray-400">Try searching with a different keyword</p>
-                                </div>
-                            </td>
-                        </tr>
                     </tbody>
                 </table>
             </div>
 
             <!-- Pagination -->
-        <div x-show="searchFixCost.trim() === ''" id="fix-cost-pagination-container" class="mt-4">
-            <x-custom-pagination :paginator="$fixCostLists" />
-        </div>
-    </section>
-</div>
+            <div x-show="searchFixCost1.trim() === ''" id="fix-cost-1-pagination-container" class="mt-4">
+                <x-custom-pagination :paginator="$fixCostLists1" />
+            </div>
+        </section>
+
+        {{-- ===================== Fix Cost List #2 ===================== --}}
+        <section id="fix-cost-2" class="bg-white border border-gray-200 rounded-lg p-5">
+            {{-- Header --}}
+            <div class="flex flex-col gap-3 md:flex-row md:items-center">
+                <h2 class="text-xl font-semibold text-gray-900 flex-shrink-0">
+                    Fix Cost List #2
+                </h2>
+
+                <div class="md:ml-auto flex items-center gap-2 w-full md:w-auto min-w-0">
+                    {{-- Search --}}
+                    <div class="relative flex-1 min-w-[100px]">
+                        <x-icons.search />
+                        <input type="text" x-model="searchFixCost2" placeholder="Search lists..."
+                            class="w-full rounded-md border border-gray-300 pl-9 pr-3 py-2 text-sm
+                      focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary" />
+                    </div>
+
+                    {{-- Show Per Page Dropdown --}}
+                    <div x-data="{
+                        open: false,
+                        perPage: {{ request('per_page_fix_cost_2', 10) }},
+                        options: [
+                            { value: 5, label: '5' },
+                            { value: 10, label: '10' },
+                            { value: 15, label: '15' },
+                            { value: 20, label: '20' },
+                            { value: 25, label: '25' }
+                        ],
+                        changePerPage(value) {
+                            const url = new URL(window.location.href);
+                            url.searchParams.set('per_page_fix_cost_2', value);
+                            window.location.href = url.toString();
+                        }
+                    }" class="relative flex-shrink-0">
+                        <button @click="open = !open" type="button"
+                            class="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary/20">
+                            <span x-text="perPage"></span>
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                            </svg>
+                        </button>
+                        <div x-show="open" @click.away="open = false" x-transition
+                            class="absolute right-0 z-50 mt-2 w-16 bg-white rounded-md shadow-lg border border-gray-200">
+                            <template x-for="option in options" :key="option.value">
+                                <button type="button" @click="changePerPage(option.value)"
+                                    :class="perPage === option.value ? 'bg-primary/10 text-primary' : 'text-gray-700'"
+                                    class="block w-full px-4 py-2 text-sm text-left hover:bg-gray-100 first:rounded-t-md last:rounded-b-md"
+                                    x-text="option.label"></button>
+                            </template>
+                        </div>
+                    </div>
+
+                    {{-- Add Button --}}
+                    <button @click="addFixCostForm.category = 'fix_cost_2'; openModal = 'addFixCost'"
+                        class="flex-shrink-0 flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-md hover:bg-primary-dark cursor-pointer text-sm">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                        </svg>
+                        <span class="hidden sm:inline">Add</span>
+                    </button>
+                </div>
+            </div>
+
+            {{-- Table --}}
+            <div class="mt-5 overflow-x-auto">
+                <table class="min-w-[300px] w-full text-sm">
+                    <thead class="bg-primary-light text-font-base">
+                        <tr>
+                            <th class="py-2 px-4 text-left rounded-l-md">No</th>
+                            <th class="py-2 px-4 text-left">List Name</th>
+                            <th class="py-2 px-4 text-right rounded-r-md">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @forelse ($fixCostLists2 as $item)
+                            <tr class="border-t border-gray-200" x-show="searchFixCost2.trim() === ''">
+                                <td class="py-2 px-4">{{ $fixCostLists2->firstItem() + $loop->index }}</td>
+                                <td class="py-2 px-4">
+                                    <div class="font-medium text-gray-900">{{ $item->list_name }}</div>
+                                </td>
+                                <td class="py-2 px-4 text-right">
+                                    <div class="relative inline-block text-left" x-data="{
+                                        open: false,
+                                        dropdownStyle: {},
+                                        checkPosition() {
+                                            const button = this.$refs.button;
+                                            const rect = button.getBoundingClientRect();
+                                            const spaceBelow = window.innerHeight - rect.bottom;
+                                            const spaceAbove = rect.top;
+                                            const dropUp = spaceBelow < 200 && spaceAbove > spaceBelow;
+                                    
+                                            if (dropUp) {
+                                                this.dropdownStyle = {
+                                                    position: 'fixed',
+                                                    top: (rect.top - 90) + 'px',
+                                                    left: (rect.right - 160) + 'px',
+                                                    width: '160px'
+                                                };
+                                            } else {
+                                                this.dropdownStyle = {
+                                                    position: 'fixed',
+                                                    top: (rect.bottom + 8) + 'px',
+                                                    left: (rect.right - 160) + 'px',
+                                                    width: '160px'
+                                                };
+                                            }
+                                        }
+                                    }"
+                                        x-init="$watch('open', value => {
+                                            if (value) {
+                                                const scrollContainer = $el.closest('.overflow-x-auto');
+                                                const mainContent = document.querySelector('main');
+                                                const closeOnScroll = () => { open = false; };
+                                        
+                                                scrollContainer?.addEventListener('scroll', closeOnScroll);
+                                                mainContent?.addEventListener('scroll', closeOnScroll);
+                                                window.addEventListener('resize', closeOnScroll);
+                                            }
+                                        })">
+                                        <button x-ref="button" @click="checkPosition(); open = !open" type="button"
+                                            class="cursor-pointer inline-flex items-center justify-center w-8 h-8 rounded-md border border-gray-300 text-gray-600 hover:bg-gray-100"
+                                            title="Actions">
+                                            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                                <path d="M6 10a2 2 0 11-4 0 2 2 0 014 0zM12 10a2 2 0 11-4 0 2 2 0 014 0zM16 12a2 2 0 100-4 2 2 0 000 4z" />
+                                            </svg>
+                                        </button>
+
+                                        <div x-show="open" @click.away="open = false" x-transition
+                                            :style="dropdownStyle"
+                                            class="rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-[9999]">
+                                            <div class="py-1">
+                                                <button @click="editFixCost = {{ $item->toJson() }}; openModal = 'editFixCost'; open = false"
+                                                    class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2">
+                                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                            d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                                    </svg>
+                                                    Edit
+                                                </button>
+                                                <button type="button" @click="showDeleteFixCostConfirm = {{ $item->id }}; open = false"
+                                                    class="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100 flex items-center gap-2">
+                                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                            d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                                    </svg>
+                                                    Delete
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </td>
+                            </tr>
+                        @empty
+                            <tr x-show="searchFixCost2.trim() === ''">
+                                <td colspan="3" class="py-3 px-4 text-center text-red-500 border-t border-gray-200">
+                                    No data available
+                                </td>
+                            </tr>
+                        @endforelse
+
+                        @foreach ($allFixCostLists2 as $index => $item)
+                            <tr class="border-t border-gray-200"
+                                x-show="searchFixCost2.trim() !== '' && '{{ strtolower($item->list_name) }}'.includes(searchFixCost2.toLowerCase())">
+                                <td class="py-2 px-4">{{ $index + 1 }}</td>
+                                <td class="py-2 px-4">
+                                    <div class="font-medium text-gray-900">{{ $item->list_name }}</div>
+                                </td>
+                                <td class="py-2 px-4 text-right">
+                                    <div class="relative inline-block text-left" x-data="{
+                                        open: false,
+                                        dropdownStyle: {},
+                                        checkPosition() {
+                                            const button = this.$refs.button;
+                                            const rect = button.getBoundingClientRect();
+                                            const spaceBelow = window.innerHeight - rect.bottom;
+                                            const spaceAbove = rect.top;
+                                            const dropUp = spaceBelow < 200 && spaceAbove > spaceBelow;
+                                    
+                                            if (dropUp) {
+                                                this.dropdownStyle = {
+                                                    position: 'fixed',
+                                                    top: (rect.top - 90) + 'px',
+                                                    left: (rect.right - 160) + 'px',
+                                                    width: '160px'
+                                                };
+                                            } else {
+                                                this.dropdownStyle = {
+                                                    position: 'fixed',
+                                                    top: (rect.bottom + 8) + 'px',
+                                                    left: (rect.right - 160) + 'px',
+                                                    width: '160px'
+                                                };
+                                            }
+                                        }
+                                    }"
+                                        x-init="$watch('open', value => {
+                                            if (value) {
+                                                const scrollContainer = $el.closest('.overflow-x-auto');
+                                                const mainContent = document.querySelector('main');
+                                                const closeOnScroll = () => { open = false; };
+                                        
+                                                scrollContainer?.addEventListener('scroll', closeOnScroll);
+                                                mainContent?.addEventListener('scroll', closeOnScroll);
+                                                window.addEventListener('resize', closeOnScroll);
+                                            }
+                                        })">
+                                        <button x-ref="button" @click="checkPosition(); open = !open" type="button"
+                                            class="cursor-pointer inline-flex items-center justify-center w-8 h-8 rounded-md border border-gray-300 text-gray-600 hover:bg-gray-100"
+                                            title="Actions">
+                                            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                                <path d="M6 10a2 2 0 11-4 0 2 2 0 014 0zM12 10a2 2 0 11-4 0 2 2 0 014 0zM16 12a2 2 0 100-4 2 2 0 000 4z" />
+                                            </svg>
+                                        </button>
+
+                                        <div x-show="open" @click.away="open = false" x-transition
+                                            :style="dropdownStyle"
+                                            class="rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-[9999]">
+                                            <div class="py-1">
+                                                <button @click="editFixCost = {{ $item->toJson() }}; openModal = 'editFixCost'; open = false"
+                                                    class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2">
+                                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                            d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                                    </svg>
+                                                    Edit
+                                                </button>
+                                                <button type="button" @click="showDeleteFixCostConfirm = {{ $item->id }}; open = false"
+                                                    class="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100 flex items-center gap-2">
+                                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                            d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                                    </svg>
+                                                    Delete
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Pagination -->
+            <div x-show="searchFixCost2.trim() === ''" id="fix-cost-2-pagination-container" class="mt-4">
+                <x-custom-pagination :paginator="$fixCostLists2" />
+            </div>
+        </section>
+
+        {{-- ===================== Printing Supply ===================== --}}
+        <section id="printing-supply" class="bg-white border border-gray-200 rounded-lg p-5">
+            {{-- Header --}}
+            <div class="flex flex-col gap-3 md:flex-row md:items-center">
+                <h2 class="text-xl font-semibold text-gray-900 flex-shrink-0">
+                    Printing Supply
+                </h2>
+
+                <div class="md:ml-auto flex items-center gap-2 w-full md:w-auto min-w-0">
+                    {{-- Search --}}
+                    <div class="relative flex-1 min-w-[100px]">
+                        <x-icons.search />
+                        <input type="text" x-model="searchPrintingSupply" placeholder="Search lists..."
+                            class="w-full rounded-md border border-gray-300 pl-9 pr-3 py-2 text-sm
+                      focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary" />
+                    </div>
+
+                    {{-- Show Per Page Dropdown --}}
+                    <div x-data="{
+                        open: false,
+                        perPage: {{ request('per_page_printing_supply', 10) }},
+                        options: [
+                            { value: 5, label: '5' },
+                            { value: 10, label: '10' },
+                            { value: 15, label: '15' },
+                            { value: 20, label: '20' },
+                            { value: 25, label: '25' }
+                        ],
+                        changePerPage(value) {
+                            const url = new URL(window.location.href);
+                            url.searchParams.set('per_page_printing_supply', value);
+                            window.location.href = url.toString();
+                        }
+                    }" class="relative flex-shrink-0">
+                        <button @click="open = !open" type="button"
+                            class="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary/20">
+                            <span x-text="perPage"></span>
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                            </svg>
+                        </button>
+                        <div x-show="open" @click.away="open = false" x-transition
+                            class="absolute right-0 z-50 mt-2 w-16 bg-white rounded-md shadow-lg border border-gray-200">
+                            <template x-for="option in options" :key="option.value">
+                                <button type="button" @click="changePerPage(option.value)"
+                                    :class="perPage === option.value ? 'bg-primary/10 text-primary' : 'text-gray-700'"
+                                    class="block w-full px-4 py-2 text-sm text-left hover:bg-gray-100 first:rounded-t-md last:rounded-b-md"
+                                    x-text="option.label"></button>
+                            </template>
+                        </div>
+                    </div>
+
+                    {{-- Add Button --}}
+                    <button @click="addFixCostForm.category = 'printing_supply'; openModal = 'addFixCost'"
+                        class="flex-shrink-0 flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-md hover:bg-primary-dark cursor-pointer text-sm">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                        </svg>
+                        <span class="hidden sm:inline">Add</span>
+                    </button>
+                </div>
+            </div>
+
+            {{-- Table --}}
+            <div class="mt-5 overflow-x-auto">
+                <table class="min-w-[300px] w-full text-sm">
+                    <thead class="bg-primary-light text-font-base">
+                        <tr>
+                            <th class="py-2 px-4 text-left rounded-l-md">No</th>
+                            <th class="py-2 px-4 text-left">List Name</th>
+                            <th class="py-2 px-4 text-right rounded-r-md">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @forelse ($printingSupplyLists as $item)
+                            <tr class="border-t border-gray-200" x-show="searchPrintingSupply.trim() === ''">
+                                <td class="py-2 px-4">{{ $printingSupplyLists->firstItem() + $loop->index }}</td>
+                                <td class="py-2 px-4">
+                                    <div class="font-medium text-gray-900">{{ $item->list_name }}</div>
+                                </td>
+                                <td class="py-2 px-4 text-right">
+                                    <div class="relative inline-block text-left" x-data="{
+                                        open: false,
+                                        dropdownStyle: {},
+                                        checkPosition() {
+                                            const button = this.$refs.button;
+                                            const rect = button.getBoundingClientRect();
+                                            const spaceBelow = window.innerHeight - rect.bottom;
+                                            const spaceAbove = rect.top;
+                                            const dropUp = spaceBelow < 200 && spaceAbove > spaceBelow;
+                                    
+                                            if (dropUp) {
+                                                this.dropdownStyle = {
+                                                    position: 'fixed',
+                                                    top: (rect.top - 90) + 'px',
+                                                    left: (rect.right - 160) + 'px',
+                                                    width: '160px'
+                                                };
+                                            } else {
+                                                this.dropdownStyle = {
+                                                    position: 'fixed',
+                                                    top: (rect.bottom + 8) + 'px',
+                                                    left: (rect.right - 160) + 'px',
+                                                    width: '160px'
+                                                };
+                                            }
+                                        }
+                                    }"
+                                        x-init="$watch('open', value => {
+                                            if (value) {
+                                                const scrollContainer = $el.closest('.overflow-x-auto');
+                                                const mainContent = document.querySelector('main');
+                                                const closeOnScroll = () => { open = false; };
+                                        
+                                                scrollContainer?.addEventListener('scroll', closeOnScroll);
+                                                mainContent?.addEventListener('scroll', closeOnScroll);
+                                                window.addEventListener('resize', closeOnScroll);
+                                            }
+                                        })">
+                                        <button x-ref="button" @click="checkPosition(); open = !open" type="button"
+                                            class="cursor-pointer inline-flex items-center justify-center w-8 h-8 rounded-md border border-gray-300 text-gray-600 hover:bg-gray-100"
+                                            title="Actions">
+                                            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                                <path d="M6 10a2 2 0 11-4 0 2 2 0 014 0zM12 10a2 2 0 11-4 0 2 2 0 014 0zM16 12a2 2 0 100-4 2 2 0 000 4z" />
+                                            </svg>
+                                        </button>
+
+                                        <div x-show="open" @click.away="open = false" x-transition
+                                            :style="dropdownStyle"
+                                            class="rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-[9999]">
+                                            <div class="py-1">
+                                                <button @click="editFixCost = {{ $item->toJson() }}; openModal = 'editFixCost'; open = false"
+                                                    class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2">
+                                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                            d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                                    </svg>
+                                                    Edit
+                                                </button>
+                                                <button type="button" @click="showDeleteFixCostConfirm = {{ $item->id }}; open = false"
+                                                    class="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100 flex items-center gap-2">
+                                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                            d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                                    </svg>
+                                                    Delete
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </td>
+                            </tr>
+                        @empty
+                            <tr x-show="searchPrintingSupply.trim() === ''">
+                                <td colspan="3" class="py-3 px-4 text-center text-red-500 border-t border-gray-200">
+                                    No data available
+                                </td>
+                            </tr>
+                        @endforelse
+
+                        @foreach ($allPrintingSupplyLists as $index => $item)
+                            <tr class="border-t border-gray-200"
+                                x-show="searchPrintingSupply.trim() !== '' && '{{ strtolower($item->list_name) }}'.includes(searchPrintingSupply.toLowerCase())">
+                                <td class="py-2 px-4">{{ $index + 1 }}</td>
+                                <td class="py-2 px-4">
+                                    <div class="font-medium text-gray-900">{{ $item->list_name }}</div>
+                                </td>
+                                <td class="py-2 px-4 text-right">
+                                    <div class="relative inline-block text-left" x-data="{
+                                        open: false,
+                                        dropdownStyle: {},
+                                        checkPosition() {
+                                            const button = this.$refs.button;
+                                            const rect = button.getBoundingClientRect();
+                                            const spaceBelow = window.innerHeight - rect.bottom;
+                                            const spaceAbove = rect.top;
+                                            const dropUp = spaceBelow < 200 && spaceAbove > spaceBelow;
+                                    
+                                            if (dropUp) {
+                                                this.dropdownStyle = {
+                                                    position: 'fixed',
+                                                    top: (rect.top - 90) + 'px',
+                                                    left: (rect.right - 160) + 'px',
+                                                    width: '160px'
+                                                };
+                                            } else {
+                                                this.dropdownStyle = {
+                                                    position: 'fixed',
+                                                    top: (rect.bottom + 8) + 'px',
+                                                    left: (rect.right - 160) + 'px',
+                                                    width: '160px'
+                                                };
+                                            }
+                                        }
+                                    }"
+                                        x-init="$watch('open', value => {
+                                            if (value) {
+                                                const scrollContainer = $el.closest('.overflow-x-auto');
+                                                const mainContent = document.querySelector('main');
+                                                const closeOnScroll = () => { open = false; };
+                                        
+                                                scrollContainer?.addEventListener('scroll', closeOnScroll);
+                                                mainContent?.addEventListener('scroll', closeOnScroll);
+                                                window.addEventListener('resize', closeOnScroll);
+                                            }
+                                        })">
+                                        <button x-ref="button" @click="checkPosition(); open = !open" type="button"
+                                            class="cursor-pointer inline-flex items-center justify-center w-8 h-8 rounded-md border border-gray-300 text-gray-600 hover:bg-gray-100"
+                                            title="Actions">
+                                            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                                <path d="M6 10a2 2 0 11-4 0 2 2 0 014 0zM12 10a2 2 0 11-4 0 2 2 0 014 0zM16 12a2 2 0 100-4 2 2 0 000 4z" />
+                                            </svg>
+                                        </button>
+
+                                        <div x-show="open" @click.away="open = false" x-transition
+                                            :style="dropdownStyle"
+                                            class="rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-[9999]">
+                                            <div class="py-1">
+                                                <button @click="editFixCost = {{ $item->toJson() }}; openModal = 'editFixCost'; open = false"
+                                                    class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2">
+                                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                            d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                                    </svg>
+                                                    Edit
+                                                </button>
+                                                <button type="button" @click="showDeleteFixCostConfirm = {{ $item->id }}; open = false"
+                                                    class="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100 flex items-center gap-2">
+                                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                            d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                                    </svg>
+                                                    Delete
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Pagination -->
+            <div x-show="searchPrintingSupply.trim() === ''" id="printing-supply-pagination-container" class="mt-4">
+                <x-custom-pagination :paginator="$printingSupplyLists" />
+            </div>
+        </section>
+    </div>
 
     {{-- ===================== MODALS ===================== --}}
         {{-- ADD MATERIAL SUPPLIER MODAL --}}
@@ -1306,32 +1749,50 @@
             class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 bg-opacity-50 backdrop-blur-xs transition-opacity px-4">
             <div @click.away="openModal=null" class="bg-white rounded-xl shadow-lg w-full max-w-lg">
                 <div class="flex justify-between items-center px-6 py-4 border-b border-gray-200">
-                    <h3 class="text-lg font-semibold text-gray-900">Add Fix Cost List</h3>
+                    <h3 class="text-lg font-semibold text-gray-900">
+                        <span x-text="
+                            addFixCostForm.category === 'fix_cost_1' ? 'Add Fix Cost List #1' :
+                            addFixCostForm.category === 'fix_cost_2' ? 'Add Fix Cost List #2' :
+                            addFixCostForm.category === 'printing_supply' ? 'Add Printing Supply' :
+                            'Add Fix Cost List'
+                        "></span>
+                    </h3>
                     <button @click="openModal=null" class="text-gray-400 hover:text-gray-600 cursor-pointer">✕</button>
                 </div>
-                <form action="{{ route('owner.manage-data.finance.fix-cost-lists.store') }}" method="POST"
+                <form action="{{ route('owner.manage-data.finance.operational-lists.store') }}" method="POST"
                     @submit="if (!validateAddFixCost()) $event.preventDefault()" class="px-6 py-4 space-y-4">
                     @csrf
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Category <span class="text-red-500">*</span></label>
-                        <select name="category" x-model="addFixCostForm.category"
-                            @blur="validateAddFixCost()"
-                            :class="addFixCostErrors.category ||
-                                {{ $errors->addFixCost->has('category') ? 'true' : 'false' }} ?
-                                'w-full rounded-md px-4 py-2 text-sm border border-red-500 focus:border-red-500 focus:outline-none focus:ring-2 focus:ring-red-200 text-gray-700' :
-                                'w-full rounded-md px-4 py-2 text-sm border border-gray-200 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 text-gray-700'">
-                            <option value="">Select Category</option>
-                            <option value="fix_cost_1">Fix Cost 1</option>
-                            <option value="fix_cost_2">Fix Cost 2</option>
-                            <option value="screening">Screening</option>
-                        </select>
-                        @if ($errors->addFixCost->has('category'))
-                            <p class="mt-1 text-sm text-red-600">{{ $errors->addFixCost->first('category') }}</p>
-                        @else
-                            <p x-show="addFixCostErrors.category" x-text="addFixCostErrors.category"
-                                class="mt-1 text-sm text-red-600"></p>
-                        @endif
+                    {{-- Hidden Category Field (auto-set from button click) --}}
+                    <input type="hidden" name="category" x-model="addFixCostForm.category">
+                    
+                    {{-- Debug: Show category value --}}
+                    <div x-show="!addFixCostForm.category" class="bg-red-50 border border-red-200 rounded-md px-4 py-3">
+                        <p class="text-sm text-red-700">⚠️ Category not set! Please close and reopen from the section's Add button.</p>
                     </div>
+                    
+                    {{-- Display Category Info --}}
+                    <div class="bg-blue-50 border border-blue-200 rounded-md px-4 py-3 flex items-center gap-2"
+                        x-show="addFixCostForm.category">
+                        <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                        <div>
+                            <span class="text-sm font-medium text-blue-900">Category: </span>
+                            <span class="text-sm text-blue-700" x-text="
+                                addFixCostForm.category === 'fix_cost_1' ? 'Fix Cost List #1' :
+                                addFixCostForm.category === 'fix_cost_2' ? 'Fix Cost List #2' :
+                                addFixCostForm.category === 'printing_supply' ? 'Printing Supply' :
+                                'Not Set'
+                            "></span>
+                        </div>
+                    </div>
+                    
+                    {{-- Server-side category validation error --}}
+                    @if ($errors->addFixCost->has('category'))
+                        <div class="bg-red-50 border border-red-200 rounded-md px-4 py-3">
+                            <p class="text-sm text-red-700">{{ $errors->addFixCost->first('category') }}</p>
+                        </div>
+                    @endif
                     <div>
                         <label class="block text-sm font-medium text-gray-700">List Name <span class="text-red-500">*</span></label>
                         <div class="relative">
@@ -1367,32 +1828,42 @@
         </div>
 
         {{-- EDIT FIX COST LIST MODAL --}}
-        <div x-show="openModal === 'editFixCost'" x-cloak x-init="@if (session('openModal') === 'editFixCost' && session('editFixCostId')) editFixCost = {{ \App\Models\FixCostList::find(session('editFixCostId'))->toJson() }}; @endif"
+        <div x-show="openModal === 'editFixCost'" x-cloak x-init="@if (session('openModal') === 'editFixCost' && session('editFixCostId')) editFixCost = {{ \App\Models\OperationalList::find(session('editFixCostId'))->toJson() }}; @endif"
             class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 bg-opacity-50 backdrop-blur-xs transition-opacity px-4">
             <div @click.away="openModal=null" class="bg-white rounded-xl shadow-lg w-full max-w-lg">
                 <div class="flex justify-between items-center border-b border-gray-200 px-6 py-4">
-                    <h3 class="text-lg font-semibold text-gray-900">Edit Fix Cost List</h3>
+                    <h3 class="text-lg font-semibold text-gray-900">
+                        <span x-text="
+                            editFixCost.category === 'fix_cost_1' ? 'Edit Fix Cost List #1' :
+                            editFixCost.category === 'fix_cost_2' ? 'Edit Fix Cost List #2' :
+                            editFixCost.category === 'printing_supply' ? 'Edit Printing Supply' :
+                            'Edit Fix Cost List'
+                        "></span>
+                    </h3>
                     <button @click="openModal=null" class="text-gray-400 hover:text-gray-600 cursor-pointer">✕</button>
                 </div>
-                <form :action="`/owner/manage-data/finance/fix-cost-lists/${editFixCost.id || ''}`" method="POST"
+                <form :action="`/owner/manage-data/finance/operational-lists/${editFixCost.id || ''}`" method="POST"
                     @submit="if (!validateEditFixCost()) $event.preventDefault()" class="px-6 py-4 space-y-4">
                     @csrf
                     @method('PUT')
 
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Category <span class="text-red-500">*</span></label>
-                        <select name="category" x-model="editFixCost.category"
-                            :class="{{ $errors->editFixCost->has('category') ? 'true' : 'false' }} ?
-                                'w-full rounded-md px-4 py-2 text-sm border border-red-500 focus:border-red-500 focus:outline-none focus:ring-2 focus:ring-red-200 text-gray-700' :
-                                'w-full rounded-md px-4 py-2 text-sm border border-gray-200 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 text-gray-700'">
-                            <option value="">Select Category</option>
-                            <option value="fix_cost_1">Fix Cost 1</option>
-                            <option value="fix_cost_2">Fix Cost 2</option>
-                            <option value="screening">Screening</option>
-                        </select>
-                        @error('category', 'editFixCost')
-                            <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                        @enderror
+                    {{-- Hidden Category Field (readonly in edit mode) --}}
+                    <input type="hidden" name="category" x-model="editFixCost.category">
+                    
+                    {{-- Display Category Info --}}
+                    <div class="bg-gray-50 border border-gray-200 rounded-md px-4 py-3 flex items-center gap-2">
+                        <svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"></path>
+                        </svg>
+                        <div>
+                            <span class="text-sm font-medium text-gray-700">Category: </span>
+                            <span class="text-sm text-gray-600" x-text="
+                                editFixCost.category === 'fix_cost_1' ? 'Fix Cost List #1' :
+                                editFixCost.category === 'fix_cost_2' ? 'Fix Cost List #2' :
+                                editFixCost.category === 'printing_supply' ? 'Printing Supply' :
+                                editFixCost.category
+                            "></span>
+                        </div>
                     </div>
 
                     <div>
@@ -1510,7 +1981,7 @@
                         class="flex-1 px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">
                         Cancel
                     </button>
-                    <form :action="`/owner/manage-data/finance/fix-cost-lists/${showDeleteFixCostConfirm}`" method="POST" class="flex-1">
+                    <form :action="`/owner/manage-data/finance/operational-lists/${showDeleteFixCostConfirm}`" method="POST" class="flex-1">
                         @csrf
                         @method('DELETE')
                         <button type="submit"
@@ -1527,7 +1998,9 @@
             function setupAllPagination() {
                 setupPagination('supplier-pagination-container', 'material-suppliers');
                 setupPagination('partner-pagination-container', 'support-partners');
-                setupPagination('fix-cost-pagination-container', 'fix-cost-lists');
+                setupPagination('fix-cost-1-pagination-container', 'fix-cost-1');
+                setupPagination('fix-cost-2-pagination-container', 'fix-cost-2');
+                setupPagination('printing-supply-pagination-container', 'printing-supply');
             }
 
             function setupPagination(containerId, sectionId) {

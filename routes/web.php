@@ -113,7 +113,7 @@ Route::middleware(['auth'])->group(function () {
                 Route::get('/', [\App\Http\Controllers\Main\ManageFinanceDataController::class, 'index'])->name('index');
                 Route::resource('material-suppliers', \App\Http\Controllers\MaterialSupplierController::class)->except(['index', 'create', 'show', 'edit']);
                 Route::resource('support-partners', \App\Http\Controllers\SupportPartnerController::class)->except(['index', 'create', 'show', 'edit']);
-                Route::resource('fix-cost-lists', \App\Http\Controllers\FixCostListController::class)->except(['index', 'create', 'show', 'edit']);
+                Route::resource('operational-lists', \App\Http\Controllers\OperationalListController::class)->except(['index', 'create', 'show', 'edit']);
             });
 
             // Users Management

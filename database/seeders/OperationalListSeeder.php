@@ -2,11 +2,11 @@
 
 namespace Database\Seeders;
 
-use App\Models\FixCostList;
+use App\Models\OperationalList;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 
-class FixCostListSeeder extends Seeder
+class OperationalListSeeder extends Seeder
 {
     /**
      * Run the database seeds.
@@ -41,63 +41,63 @@ class FixCostListSeeder extends Seeder
                 'sort_order' => 5,
             ],
 
-            // Fix Cost 2
+            // Fix Cost 2 - starts from 1
             [
                 'category' => 'fix_cost_2',
                 'list_name' => 'Equipment Maintenance',
-                'sort_order' => 6,
+                'sort_order' => 1,
             ],
             [
                 'category' => 'fix_cost_2',
                 'list_name' => 'Transportation',
-                'sort_order' => 7,
+                'sort_order' => 2,
             ],
             [
                 'category' => 'fix_cost_2',
                 'list_name' => 'Marketing & Advertising',
-                'sort_order' => 8,
+                'sort_order' => 3,
             ],
             [
                 'category' => 'fix_cost_2',
                 'list_name' => 'Insurance',
-                'sort_order' => 9,
+                'sort_order' => 4,
             ],
             [
                 'category' => 'fix_cost_2',
                 'list_name' => 'Legal & Administration',
-                'sort_order' => 10,
+                'sort_order' => 5,
             ],
 
-            // Screening
+            // Printing Supply - starts from 1
             [
-                'category' => 'screening',
+                'category' => 'printing_supply',
                 'list_name' => 'Screen Making',
-                'sort_order' => 11,
+                'sort_order' => 1,
             ],
             [
-                'category' => 'screening',
+                'category' => 'printing_supply',
                 'list_name' => 'Screen Coating',
-                'sort_order' => 12,
+                'sort_order' => 2,
             ],
             [
-                'category' => 'screening',
+                'category' => 'printing_supply',
                 'list_name' => 'Screen Exposure',
-                'sort_order' => 13,
+                'sort_order' => 3,
             ],
             [
-                'category' => 'screening',
+                'category' => 'printing_supply',
                 'list_name' => 'Screen Washing',
-                'sort_order' => 14,
+                'sort_order' => 4,
             ],
             [
-                'category' => 'screening',
+                'category' => 'printing_supply',
                 'list_name' => 'Screen Reclaiming',
-                'sort_order' => 15,
+                'sort_order' => 5,
             ],
         ];
 
         foreach ($fixCosts as $fixCost) {
-            FixCostList::create($fixCost);
+            OperationalList::create($fixCost);
         }
     }
 }

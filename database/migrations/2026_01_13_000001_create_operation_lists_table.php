@@ -11,9 +11,9 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('fix_cost_lists', function (Blueprint $table) {
+        Schema::create('operational_lists', function (Blueprint $table) {
             $table->id();
-            $table->enum('category', ['fix_cost_1', 'fix_cost_2', 'screening'])->notNullable();
+            $table->enum('category', ['fix_cost_1', 'fix_cost_2', 'printing_supply']);
             $table->string('list_name', 100);
             $table->integer('sort_order');
             $table->timestamps();
@@ -28,6 +28,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('fix_cost_lists');
+        Schema::dropIfExists('operational_lists');
     }
 };
