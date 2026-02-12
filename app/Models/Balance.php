@@ -4,6 +4,8 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use App\Models\LoanCapital;
+use App\Models\OperationalReport;
 
 class Balance extends Model
 {
@@ -29,5 +31,13 @@ class Balance extends Model
     public function loanCapitals(): HasMany
     {
         return $this->hasMany(LoanCapital::class);
+    }
+
+    /**
+     * Get all operational reports for this balance period.
+     */
+    public function operationalReports(): HasMany
+    {
+        return $this->hasMany(OperationalReport::class);
     }
 }

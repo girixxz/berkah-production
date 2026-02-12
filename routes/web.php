@@ -233,7 +233,15 @@ Route::middleware(['auth'])->group(function () {
             Route::delete('support-partner/{partnerReport}', [\App\Http\Controllers\SupportPartnerReportController::class, 'destroy'])->name('support-partner.destroy');
             Route::get('support-partner/{partnerReport}/image', [\App\Http\Controllers\SupportPartnerReportController::class, 'serveImage'])->name('support-partner.serve-image');
 
-            Route::get('operational', fn() => view('pages.finance.report.operational'))->name('operational');
+            Route::get('operational', [\App\Http\Controllers\OperationalReportController::class, 'index'])->name('operational');
+            Route::get('operational/check-period-status', [\App\Http\Controllers\OperationalReportController::class, 'checkPeriodStatus'])->name('operational.check-period-status');
+            Route::post('operational/toggle-period-lock', [\App\Http\Controllers\OperationalReportController::class, 'togglePeriodLock'])->name('operational.toggle-period-lock');
+            Route::get('operational/get-lists', [\App\Http\Controllers\OperationalReportController::class, 'getOperationalLists'])->name('operational.get-lists');
+            Route::post('operational/store', [\App\Http\Controllers\OperationalReportController::class, 'store'])->name('operational.store');
+            Route::put('operational/{operationalReport}', [\App\Http\Controllers\OperationalReportController::class, 'update'])->name('operational.update');
+            Route::delete('operational/{operationalReport}', [\App\Http\Controllers\OperationalReportController::class, 'destroy'])->name('operational.destroy');
+            Route::get('operational/{operationalReport}/image', [\App\Http\Controllers\OperationalReportController::class, 'serveImage'])->name('operational.serve-image');
+
             Route::get('salary', fn() => view('pages.finance.report.salary'))->name('salary');
         });
 
