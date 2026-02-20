@@ -11,10 +11,8 @@
         currentYear: {{ $year }},
         displayText: '',
 
-        {{-- Lock state --}}
+        {{-- Lock state (read-only, dikendalikan dari Order List) --}}
         currentPeriodLocked: {{ $periodLocked ? 'true' : 'false' }},
-        showPeriodLockConfirm: false,
-        periodLockAction: null,
 
         {{-- Data arrays from controller --}}
         fixCost1Data: @js($fixCost1->toArray()),
@@ -756,35 +754,6 @@
             }, 'image/jpeg', 0.95);
         },
 
-        {{-- Toggle Period Lock/Unlock --}}
-        async togglePeriodLock() {
-            try {
-                NProgress.start();
-                const res = await axios.post('{{ route('finance.report.operational.toggle-period-lock') }}', {
-                    month: this.currentMonth,
-                    year: this.currentYear,
-                    action: this.periodLockAction
-                });
-
-                if (res.data.success) {
-                    this.currentPeriodLocked = res.data.lock_status === 'locked';
-                    this.showPeriodLockConfirm = false;
-                    this.periodLockAction = null;
-                    window.dispatchEvent(new CustomEvent('show-toast', {
-                        detail: { message: res.data.message, type: 'success' }
-                    }));
-                    await this.fetchData();
-                }
-            } catch (e) {
-                const msg = e.response?.data?.message || 'Failed to toggle lock';
-                window.dispatchEvent(new CustomEvent('show-toast', {
-                    detail: { message: msg, type: 'error' }
-                }));
-            } finally {
-                NProgress.done();
-            }
-        },
-
         {{-- Client-side search matching --}}
         matchesSearch(text, searchKey) {
             const query = this[searchKey].toLowerCase().trim();
@@ -886,50 +855,27 @@
         },
     }">
 
-        {{-- ==================== HEADER: Lock Button + Date Navigation ==================== --}}
-        <div class="flex flex-col sm:flex-row items-center sm:items-center sm:justify-between gap-3 mb-6 max-w-full">
-            {{-- Date Navigation - Mobile: Top Center, Desktop: Right --}}
-            <div class="flex items-center gap-2 order-1 sm:order-2 flex-shrink-0 w-full sm:w-auto justify-center sm:justify-end">
-                <button type="button" @click="navigateMonth('prev')"
-                    class="p-2 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer flex-shrink-0">
-                    <svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
-                    </svg>
-                </button>
-                <div class="px-3 py-2 text-center min-w-[140px]">
-                    <span class="text-base font-semibold text-gray-900 whitespace-nowrap" x-text="displayText"></span>
-                </div>
-                <button type="button" @click="navigateMonth('next')"
-                    class="p-2 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer flex-shrink-0">
-                    <svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-                    </svg>
-                </button>
-                <button type="button" @click="navigateMonth('reset')"
-                    class="px-4 py-2 bg-primary hover:bg-primary-dark text-white text-sm font-medium rounded-lg transition-colors cursor-pointer flex-shrink-0">
-                    This Month
-                </button>
+        {{-- ==================== HEADER: Date Navigation ==================== --}}
+        <div class="flex items-center justify-end gap-2 mb-6">
+            <button type="button" @click="navigateMonth('prev')"
+                class="p-2 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer flex-shrink-0">
+                <svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+                </svg>
+            </button>
+            <div class="px-3 py-2 text-center min-w-[140px]">
+                <span class="text-base font-semibold text-gray-900 whitespace-nowrap" x-text="displayText"></span>
             </div>
-
-            {{-- Lock/Unlock Period Button - Mobile: Bottom Center, Desktop: Left --}}
-            @if(auth()->user()->role === 'owner')
-                <button type="button"
-                    @click="periodLockAction = currentPeriodLocked ? 'unlock' : 'lock'; showPeriodLockConfirm = true"
-                    class="px-4 py-2 text-white text-sm font-medium rounded-lg transition-colors cursor-pointer flex items-center justify-center gap-2 order-2 sm:order-1 w-auto"
-                    :class="currentPeriodLocked ? 'bg-green-600 hover:bg-green-700' : 'bg-red-600 hover:bg-red-700'">
-                    <template x-if="currentPeriodLocked">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z" />
-                        </svg>
-                    </template>
-                    <template x-if="!currentPeriodLocked">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                        </svg>
-                    </template>
-                    <span x-text="currentPeriodLocked ? 'Unlock Reports' : 'Lock Reports'"></span>
-                </button>
-            @endif
+            <button type="button" @click="navigateMonth('next')"
+                class="p-2 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer flex-shrink-0">
+                <svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                </svg>
+            </button>
+            <button type="button" @click="navigateMonth('reset')"
+                class="px-4 py-2 bg-primary hover:bg-primary-dark text-white text-sm font-medium rounded-lg transition-colors cursor-pointer flex-shrink-0">
+                This Month
+            </button>
         </div>
 
         {{-- ==================== STATISTICS CARDS ==================== --}}
@@ -2693,56 +2639,6 @@
             </div>
         </div>
         {{-- End Delete Confirmation Modal --}}
-
-        {{-- ==================== PERIOD LOCK/UNLOCK MODAL ==================== --}}
-        <div x-show="showPeriodLockConfirm" x-cloak class="fixed inset-0 z-50">
-            <div x-show="showPeriodLockConfirm" @click="showPeriodLockConfirm = false; periodLockAction = null"
-                class="fixed inset-0 bg-black/50 backdrop-blur-xs transition-opacity"></div>
-
-            <div class="fixed inset-0 flex items-center justify-center p-4">
-                <div @click.away="showPeriodLockConfirm = false; periodLockAction = null"
-                    class="relative bg-white rounded-lg shadow-xl max-w-md w-full p-6 z-10">
-                    <div class="flex items-center justify-center w-12 h-12 mx-auto mb-4"
-                        :class="periodLockAction === 'unlock' ? 'bg-green-100' : 'bg-red-100'">
-                        <template x-if="periodLockAction === 'unlock'">
-                            <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z" />
-                            </svg>
-                        </template>
-                        <template x-if="periodLockAction === 'lock'">
-                            <svg class="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                            </svg>
-                        </template>
-                    </div>
-
-                    <h3 class="text-lg font-semibold text-gray-900 text-center mb-2">
-                        <span x-text="periodLockAction === 'unlock' ? 'Unlock Period Reports?' : 'Lock Period Reports?'"></span>
-                    </h3>
-
-                    <div class="text-sm text-gray-600 text-center mb-6">
-                        <template x-if="periodLockAction === 'unlock'">
-                            <p>Are you sure you want to unlock all operational reports in this period? All records can be edited or deleted.</p>
-                        </template>
-                        <template x-if="periodLockAction === 'lock'">
-                            <p>Are you sure you want to lock all operational reports in this period? Records cannot be edited or deleted after locking.</p>
-                        </template>
-                    </div>
-
-                    <div class="flex gap-3">
-                        <button type="button" @click="showPeriodLockConfirm = false; periodLockAction = null"
-                            class="flex-1 px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors cursor-pointer">
-                            Cancel
-                        </button>
-                        <button type="button" @click="togglePeriodLock()"
-                            class="flex-1 px-4 py-2 rounded-md text-sm font-medium text-white transition-colors cursor-pointer"
-                            :class="periodLockAction === 'unlock' ? 'bg-green-600 hover:bg-green-700' : 'bg-red-600 hover:bg-red-700'">
-                            <span x-text="periodLockAction === 'unlock' ? 'Yes, Unlock All' : 'Yes, Lock All'"></span>
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
 
         {{-- ==================== IMAGE PREVIEW MODAL ==================== --}}
         <div x-show="showImagePreview" x-cloak class="fixed inset-0 z-50">

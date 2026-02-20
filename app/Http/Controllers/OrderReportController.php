@@ -3,8 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Models\OrderReport;
-use App\Models\Order;
 use App\Models\ReportPeriod;
+use App\Models\Balance;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
@@ -192,6 +192,130 @@ class OrderReportController extends Controller
     }
 
     /**
+     * Update report period and product type
+     */
+    public function update(Request $request, OrderReport $orderReport)
+    {
+        // Cannot edit locked reports
+        if ($orderReport->isLocked()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Cannot edit a locked report.'
+            ], 403);
+        }
+
+        $validated = $request->validate([
+            'month'        => 'required|integer|min:1|max:12',
+            'year'         => 'required|integer|min:2025',
+            'product_type' => 'required|in:t-shirt,makloon,hoodie_polo_jersey,pants',
+        ]);
+
+        try {
+            DB::beginTransaction();
+
+            $oldPeriodStart = Carbon::parse($orderReport->period_start);
+            $newPeriodStart = Carbon::create($validated['year'], $validated['month'], 1)->startOfDay();
+            $newPeriodEnd   = Carbon::create($validated['year'], $validated['month'], 1)->endOfMonth()->endOfDay();
+
+            $periodChanged = $oldPeriodStart->format('Y-m') !== $newPeriodStart->format('Y-m');
+
+            if ($periodChanged) {
+                $order    = $orderReport->order;
+                $payments = $order->invoice->payments()->where('status', 'approved')->get();
+
+                $payTransfer = (float) $payments->where('payment_method', 'transfer')->sum('amount');
+                $payCash     = (float) $payments->where('payment_method', 'cash')->sum('amount');
+
+                // Aggregate material expenses by payment method
+                $materials    = $orderReport->materialReports()->get();
+                $matCash      = (float) $materials->where('payment_method', 'cash')->sum('amount');
+                $matTransfer  = (float) $materials->where('payment_method', 'transfer')->sum('amount');
+
+                // Aggregate partner expenses by payment method
+                $partners     = $orderReport->partnerReports()->get();
+                $partCash     = (float) $partners->where('payment_method', 'cash')->sum('amount');
+                $partTransfer = (float) $partners->where('payment_method', 'transfer')->sum('amount');
+
+                // Net contribution of this order to old balance
+                $netTransfer = $payTransfer - $matTransfer - $partTransfer;
+                $netCash     = $payCash     - $matCash     - $partCash;
+                $netTotal    = $netTransfer + $netCash;
+
+                // 1. Check if removing this order from old balance would cause it to go negative
+                $oldBalance = Balance::whereYear('period_start', $oldPeriodStart->year)
+                    ->whereMonth('period_start', $oldPeriodStart->month)
+                    ->first();
+
+                if ($oldBalance && $netTotal > 0) {
+                    $projectedTotal    = (float) $oldBalance->total_balance    - $netTotal;
+                    $projectedTransfer = (float) $oldBalance->transfer_balance - $netTransfer;
+                    $projectedCash     = (float) $oldBalance->cash_balance     - $netCash;
+
+                    if ($projectedTotal < 0 || $projectedTransfer < 0 || $projectedCash < 0) {
+                        DB::rollBack();
+                        $oldPeriodLabel = $oldPeriodStart->format('F Y');
+                        return response()->json([
+                            'success' => false,
+                            'message' => "Cannot move this report. Removing it would cause the {$oldPeriodLabel} balance to go negative (other expenses like operational costs rely on this order's income)."
+                        ], 422);
+                    }
+                }
+
+                // 2. REVERSE net effect from OLD balance
+                if ($oldBalance) {
+                    $oldBalance->decrement('transfer_balance', $netTransfer);
+                    $oldBalance->decrement('cash_balance',     $netCash);
+                    $oldBalance->decrement('total_balance',    $netTotal);
+                }
+
+                // 3. Find or Create NEW balance
+                $newBalance = Balance::whereYear('period_start', $validated['year'])
+                    ->whereMonth('period_start', $validated['month'])
+                    ->first();
+
+                if (!$newBalance) {
+                    $newBalance = Balance::create([
+                        'period_start'     => $newPeriodStart->toDateString(),
+                        'period_end'       => $newPeriodEnd->toDateString(),
+                        'total_balance'    => 0,
+                        'transfer_balance' => 0,
+                        'cash_balance'     => 0,
+                    ]);
+                }
+
+                // 4. APPLY net effect to NEW balance
+                $newBalance->increment('transfer_balance', $netTransfer);
+                $newBalance->increment('cash_balance',     $netCash);
+                $newBalance->increment('total_balance',    $netTotal);
+
+                // 5. Cascade balance_id on Material & Partner reports
+                $orderReport->materialReports()->update(['balance_id' => $newBalance->id]);
+                $orderReport->partnerReports()->update(['balance_id' => $newBalance->id]);
+            }
+
+            // 5. Update OrderReport
+            $orderReport->update([
+                'period_start' => $newPeriodStart->toDateString(),
+                'period_end'   => $newPeriodEnd->toDateString(),
+                'product_type' => $validated['product_type'],
+            ]);
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Report updated successfully.'
+            ]);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to update report: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
      * Toggle lock status (owner only)
      */
     public function toggleLock(OrderReport $orderReport)
@@ -250,47 +374,72 @@ class OrderReportController extends Controller
         try {
             DB::beginTransaction();
 
-            // Get order and invoice
             $order = $orderReport->order;
             if (!$order || !$order->invoice) {
                 throw new \Exception('Order or invoice not found');
             }
 
-            // Get all approved payments for this order
-            $payments = $order->invoice->payments()
-                ->where('status', 'approved')
-                ->get();
+            // Approved payments (income added to balance)
+            $payments    = $order->invoice->payments()->where('status', 'approved')->get();
+            $payTransfer = (float) $payments->where('payment_method', 'transfer')->sum('amount');
+            $payCash     = (float) $payments->where('payment_method', 'cash')->sum('amount');
 
-            // Calculate total transfer and cash to be deducted from balance
-            $transferTotal = $payments->where('payment_method', 'transfer')->sum('amount');
-            $cashTotal = $payments->where('payment_method', 'cash')->sum('amount');
-            $totalAmount = $transferTotal + $cashTotal;
+            // Material expenses (deducted from balance)
+            $materials   = $orderReport->materialReports()->get();
+            $matTransfer = (float) $materials->where('payment_method', 'transfer')->sum('amount');
+            $matCash     = (float) $materials->where('payment_method', 'cash')->sum('amount');
+
+            // Partner expenses (deducted from balance)
+            $partners    = $orderReport->partnerReports()->get();
+            $partTransfer = (float) $partners->where('payment_method', 'transfer')->sum('amount');
+            $partCash     = (float) $partners->where('payment_method', 'cash')->sum('amount');
+
+            // Net contribution of this order to balance
+            $netTransfer = $payTransfer - $matTransfer - $partTransfer;
+            $netCash     = $payCash     - $matCash     - $partCash;
+            $netTotal    = $netTransfer + $netCash;
 
             // Find balance for this period
-            $balance = \App\Models\Balance::where('period_start', $orderReport->period_start)
-                ->where('period_end', $orderReport->period_end)
+            $periodStart = Carbon::parse($orderReport->period_start);
+            $balance = Balance::whereYear('period_start', $periodStart->year)
+                ->whereMonth('period_start', $periodStart->month)
                 ->first();
 
-            // Deduct from balance if exists
+            // Check if removing this report would cause balance to go negative
+            if ($balance && $netTotal > 0) {
+                $projectedTotal    = (float) $balance->total_balance    - $netTotal;
+                $projectedTransfer = (float) $balance->transfer_balance - $netTransfer;
+                $projectedCash     = (float) $balance->cash_balance     - $netCash;
+
+                if ($projectedTotal < 0 || $projectedTransfer < 0 || $projectedCash < 0) {
+                    DB::rollBack();
+                    $periodLabel = $periodStart->format('F Y');
+                    return redirect()->back()
+                        ->with('message', "Cannot delete this report. Removing it would cause the {$periodLabel} balance to go negative (other expenses rely on this order's income).")
+                        ->with('alert-type', 'error');
+                }
+            }
+
+            // Deduct net from balance
             if ($balance) {
-                $balance->decrement('transfer_balance', $transferTotal);
-                $balance->decrement('cash_balance', $cashTotal);
-                $balance->decrement('total_balance', $totalAmount);
+                $balance->decrement('transfer_balance', $netTransfer);
+                $balance->decrement('cash_balance',     $netCash);
+                $balance->decrement('total_balance',    $netTotal);
             }
 
             // Update order report_status back to 'pending'
             $order->update([
                 'report_status' => 'pending',
-                'report_date' => null,
+                'report_date'   => null,
             ]);
 
-            // Delete the report
+            // Delete the report (cascades to material & partner reports if FK set)
             $orderReport->delete();
 
             DB::commit();
 
             return redirect()->back()
-                ->with('message', 'Report removed successfully and balance updated')
+                ->with('message', 'Report removed successfully and balance updated.')
                 ->with('alert-type', 'success');
         } catch (\Exception $e) {
             DB::rollBack();

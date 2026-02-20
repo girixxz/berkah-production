@@ -112,6 +112,7 @@
                     <th class="py-3 px-4 text-left font-bold">Product</th>
                     <th class="py-3 px-4 text-left font-bold">QTY</th>
                     <th class="py-3 px-4 text-left font-bold">Total Bill</th>
+                    <th class="py-3 px-4 text-left font-bold">Paid</th>
                     <th class="py-3 px-4 text-left font-bold">Remaining</th>
                     <th class="py-3 px-4 text-left font-bold">Report Date</th>
                     <th class="py-3 px-4 text-left font-bold">Status</th>
@@ -173,6 +174,12 @@
                             <span class="text-gray-700">Rp {{ number_format($invoice->total_bill ?? 0, 0, ',', '.') }}</span>
                         </td>
 
+                        {{-- Paid --}}
+                        <td class="py-3 px-4 text-[12px]">
+                            @php $paid = ($invoice->total_bill ?? 0) - ($invoice->amount_due ?? 0); @endphp
+                            <span class="font-medium text-green-600">Rp {{ number_format($paid, 0, ',', '.') }}</span>
+                        </td>
+
                         {{-- Remaining --}}
                         <td class="py-3 px-4 text-[12px]">
                             <span class="font-medium text-red-600">Rp {{ number_format($invoice->amount_due ?? 0, 0, ',', '.') }}</span>
@@ -194,20 +201,9 @@
                                 ];
                                 $statusClass = $statusClasses[$order->production_status] ?? 'bg-gray-100 text-gray-800';
                             @endphp
-                            <div class="flex items-center gap-2 flex-wrap">
-                                <span class="px-2 py-1 rounded-full  text-[12px] font-medium {{ $statusClass }}">
-                                    {{ strtoupper($order->production_status) }}
-                                </span>
-                                @if($report->lock_status === 'locked')
-                                    <span class="px-2 py-1 rounded-full  text-[12px] font-medium bg-purple-100 text-purple-800">
-                                        LOCKED
-                                    </span>
-                                @else
-                                    <span class="px-2 py-1 rounded-full  text-[12px] font-medium bg-gray-100 text-gray-800">
-                                        DRAFT
-                                    </span>
-                                @endif
-                            </div>
+                            <span class="px-2 py-1 rounded-full text-[12px] font-medium {{ $statusClass }}">
+                                {{ strtoupper($order->production_status) }}
+                            </span>
                         </td>
 
                         {{-- Action --}}
@@ -256,6 +252,14 @@
                                         View Detail
                                     </a>
                                     @if($report->lock_status !== 'locked')
+                                        <button type="button"
+                                            @click="showEditModal = {{ $report->id }}; editReportId = {{ $report->id }}; editMonth = {{ \Carbon\Carbon::parse($report->period_start)->month }}; editYear = {{ \Carbon\Carbon::parse($report->period_start)->year }}; editProductType = '{{ $report->product_type }}'; editInvoiceNo = '{{ $invoice->invoice_no ?? '-' }}'; editCustomerName = '{{ $customer->customer_name ?? '-' }}'; editProductLabel = '{{ $productCategory }}'; editQty = '{{ number_format($totalQty) }}'; editError = ''; open = false"
+                                            class="w-full text-left px-4 py-2 text-sm text-blue-600 hover:bg-blue-50 flex items-center gap-2">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                            </svg>
+                                            Edit
+                                        </button>
                                         <button type="button" @click="showDeleteConfirm = {{ $report->id }}; open = false" class="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2">
                                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -269,7 +273,7 @@
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="9" class="px-4 py-12 text-center">
+                        <td colspan="10" class="px-4 py-12 text-center">
                             <div class="flex flex-col items-center justify-center text-gray-500">
                                 <svg class="w-12 h-12 mb-3 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"

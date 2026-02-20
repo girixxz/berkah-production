@@ -15,7 +15,6 @@ use App\Http\Controllers\ServiceController;
 use App\Http\Controllers\Main\ManageWorkOrderDataController;
 use App\Http\Controllers\OrderReportController;
 use App\Http\Controllers\MaterialReportController;
-use App\Http\Controllers\SupportPartnerReportController;
 use App\Http\Controllers\CuttingPatternController;
 use App\Http\Controllers\ChainClothController;
 use App\Http\Controllers\RibSizeController;
@@ -28,12 +27,9 @@ use App\Http\Controllers\SewingLabelController;
 use App\Http\Controllers\PlasticPackingController;
 use App\Http\Controllers\StickerController;
 
-use App\Http\Controllers\Main\ManageUsersSalesController;
 use App\Http\Controllers\UserController;
-use App\Http\Controllers\SalesController;
 use App\Http\Controllers\OrderController;
 use App\Http\Controllers\ManageTaskController;
-use App\Http\Controllers\CalendarController;
 use App\Http\Controllers\Finance;
 
 /* ================= DEFAULT INDEX / LOGIN ================= */
@@ -210,6 +206,7 @@ Route::middleware(['auth'])->group(function () {
             Route::get('order-list', [OrderReportController::class, 'index'])->name('order-list');
             Route::post('order-list/toggle-period-lock', [OrderReportController::class, 'togglePeriodLock'])->name('order-list.toggle-period-lock');
             Route::patch('order-list/{orderReport}/toggle-lock', [OrderReportController::class, 'toggleLock'])->name('order-list.toggle-lock');
+            Route::patch('order-list/{orderReport}/update', [OrderReportController::class, 'update'])->name('order-list.update');
             Route::delete('order-list/{orderReport}', [OrderReportController::class, 'destroy'])->name('order-list.destroy');
             Route::get('material', [MaterialReportController::class, 'index'])->name('material');
             Route::get('material/check-period-status', [MaterialReportController::class, 'checkPeriodStatus'])->name('material.check-period-status');
@@ -235,7 +232,6 @@ Route::middleware(['auth'])->group(function () {
 
             Route::get('operational', [\App\Http\Controllers\OperationalReportController::class, 'index'])->name('operational');
             Route::get('operational/check-period-status', [\App\Http\Controllers\OperationalReportController::class, 'checkPeriodStatus'])->name('operational.check-period-status');
-            Route::post('operational/toggle-period-lock', [\App\Http\Controllers\OperationalReportController::class, 'togglePeriodLock'])->name('operational.toggle-period-lock');
             Route::get('operational/get-lists', [\App\Http\Controllers\OperationalReportController::class, 'getOperationalLists'])->name('operational.get-lists');
             Route::post('operational/store', [\App\Http\Controllers\OperationalReportController::class, 'store'])->name('operational.store');
             Route::put('operational/{operationalReport}', [\App\Http\Controllers\OperationalReportController::class, 'update'])->name('operational.update');

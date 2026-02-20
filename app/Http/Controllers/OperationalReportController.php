@@ -10,7 +10,6 @@ use App\Models\ReportPeriod;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
 
 class OperationalReportController extends Controller
@@ -396,84 +395,6 @@ class OperationalReportController extends Controller
             }
             return redirect()->back()
                 ->with('toast_message', 'Failed to delete: ' . $e->getMessage())
-                ->with('toast_type', 'error');
-        }
-    }
-
-    /**
-     * Toggle lock/unlock for operational reports period.
-     */
-    public function togglePeriodLock(Request $request)
-    {
-        // Check if user is owner
-        if (auth()->user()->role !== 'owner') {
-            if ($request->wantsJson()) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Unauthorized action.'
-                ], 403);
-            }
-            return redirect()->back()
-                ->with('toast_message', 'Unauthorized action.')
-                ->with('toast_type', 'error');
-        }
-
-        $month = $request->input('month');
-        $year = $request->input('year');
-        $action = $request->input('action'); // 'lock' or 'unlock'
-
-        try {
-            DB::beginTransaction();
-
-            // Calculate period
-            $periodStart = Carbon::create($year, $month, 1)->startOfDay();
-            $periodEnd = Carbon::create($year, $month, 1)->endOfMonth()->endOfDay();
-
-            // Update or create report_period
-            $reportPeriod = ReportPeriod::updateOrCreate(
-                [
-                    'period_start' => $periodStart->toDateString(),
-                    'period_end' => $periodEnd->toDateString(),
-                ],
-                [
-                    'lock_status' => $action === 'lock' ? 'locked' : 'draft'
-                ]
-            );
-
-            // Update all operational_reports in this period
-            OperationalReport::whereYear('operational_date', $year)
-                ->whereMonth('operational_date', $month)
-                ->update(['lock_status' => $action === 'lock' ? 'locked' : 'draft']);
-
-            DB::commit();
-
-            $message = $action === 'lock' 
-                ? 'Period locked successfully. All operational reports in this period are now locked.' 
-                : 'Period unlocked successfully. All operational reports are now draft.';
-
-            // Return JSON for AJAX requests
-            if ($request->wantsJson()) {
-                return response()->json([
-                    'success' => true,
-                    'message' => $message,
-                    'lock_status' => $action === 'lock' ? 'locked' : 'draft'
-                ]);
-            }
-
-            return redirect()->back()
-                ->with('toast_message', $message)
-                ->with('toast_type', 'success');
-        } catch (\Exception $e) {
-            DB::rollBack();
-            
-            if ($request->wantsJson()) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Failed to toggle lock: ' . $e->getMessage(),
-                ], 500);
-            }
-            return redirect()->back()
-                ->with('toast_message', 'Failed to toggle lock: ' . $e->getMessage())
                 ->with('toast_type', 'error');
         }
     }
