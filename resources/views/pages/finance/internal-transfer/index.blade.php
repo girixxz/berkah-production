@@ -320,7 +320,7 @@
                 <div class="flex items-center justify-between">
                     <div>
                         <p class="text-sm text-gray-500">Total Balance</p>
-                        <p class="text-2xl font-bold text-gray-900 mt-1">Rp {{ number_format($balance->total_balance, 0, ',', '.') }}</p>
+                        <p class="text-2xl font-bold text-gray-900 mt-1">Rp {{ number_format($balance->total_balance ?? 0, 0, ',', '.') }}</p>
                     </div>
                     <div class="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
                         <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -335,7 +335,7 @@
                 <div class="flex items-center justify-between">
                     <div>
                         <p class="text-sm text-gray-500">Transfer Balance</p>
-                        <p class="text-2xl font-bold text-gray-900 mt-1">Rp {{ number_format($balance->transfer_balance, 0, ',', '.') }}</p>
+                        <p class="text-2xl font-bold text-gray-900 mt-1">Rp {{ number_format($balance->transfer_balance ?? 0, 0, ',', '.') }}</p>
                     </div>
                     <div class="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
                         <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -350,7 +350,7 @@
                 <div class="flex items-center justify-between">
                     <div>
                         <p class="text-sm text-gray-500">Cash Balance</p>
-                        <p class="text-2xl font-bold text-gray-900 mt-1">Rp {{ number_format($balance->cash_balance, 0, ',', '.') }}</p>
+                        <p class="text-2xl font-bold text-gray-900 mt-1">Rp {{ number_format($balance->cash_balance ?? 0, 0, ',', '.') }}</p>
                     </div>
                     <div class="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
                         <svg class="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -609,11 +609,19 @@
             ],
             balanceYearOptions: [],
             init() {
-                // Generate year options (2026 onwards)
-                const currentYear = 2026;
-                for (let i = 0; i < 10; i++) {
-                    this.balanceYearOptions.push({ value: currentYear + i, name: (currentYear + i).toString() });
+                // Generate year options (2025 onwards - fitur mulai Feb 2025)
+                const currentYear = new Date().getFullYear();
+                const startYear = 2025;
+                for (let year = startYear; year <= currentYear + 5; year++) {
+                    this.balanceYearOptions.push({ value: year, name: year.toString() });
                 }
+            },
+            get filteredMonthOptions() {
+                // Jika tahun 2025, hanya tampilkan Feb-Des (fitur mulai Feb 2025)
+                if (this.balanceYear === 2025) {
+                    return this.balanceMonthOptions.filter(m => m.value >= 2);
+                }
+                return this.balanceMonthOptions;
             },
             get selectedMonthName() {
                 const month = this.balanceMonthOptions.find(m => m.value === this.balanceMonth);
@@ -816,7 +824,7 @@
                                             x-transition:leave-end="opacity-0 scale-95"
                                             class="fixed z-[100] mt-1 w-[200px] bg-white border-2 border-primary/30 rounded-lg shadow-2xl">
                                             <ul class="max-h-60 overflow-y-auto py-1">
-                                                <template x-for="month in balanceMonthOptions" :key="month.value">
+                                                <template x-for="month in filteredMonthOptions" :key="month.value">
                                                     <li @click="selectMonth(month.value)"
                                                         class="px-4 py-2 cursor-pointer text-sm text-gray-700 hover:bg-primary/10 transition-colors"
                                                         :class="{ 'bg-primary/20 font-semibold text-primary': balanceMonth === month.value }">

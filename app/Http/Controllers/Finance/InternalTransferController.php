@@ -18,7 +18,7 @@ class InternalTransferController extends Controller
         $month = $request->input('month', now()->month);
         $year = $request->input('year', now()->year);
 
-        // Get balance for selected period
+        // Get balance for selected period (JANGAN auto-create di index)
         $balance = Balance::whereYear('period_start', $year)
             ->whereMonth('period_start', $month)
             ->first();
@@ -91,12 +91,17 @@ class InternalTransferController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
+            'balance_month' => 'required|integer|min:1|max:12',
+            'balance_year' => 'required|integer|min:2025',
             'transfer_date' => 'required|date',
             'transfer_type' => 'required|in:transfer_to_cash,cash_to_transfer',
             'amount' => 'required|numeric|min:0.01',
             'notes' => 'nullable|string|max:1000',
             'proof_image' => 'nullable|image|mimes:jpeg,jpg,png|max:2048'
         ], [
+            'balance_month.required' => 'Balance month is required',
+            'balance_year.required' => 'Balance year is required',
+            'balance_year.min' => 'Year must be 2025 or later',
             'transfer_date.required' => 'Transfer date is required',
             'transfer_type.required' => 'Transfer type is required',
             'amount.required' => 'Amount is required',
@@ -106,20 +111,29 @@ class InternalTransferController extends Controller
             'proof_image.max' => 'Image size cannot exceed 2MB'
         ]);
 
-        // Get balance for the transfer month
-        $transferDate = Carbon::parse($validated['transfer_date']);
-        $balance = Balance::whereYear('period_start', $transferDate->year)
-            ->whereMonth('period_start', $transferDate->month)
-            ->first();
-
-        if (!$balance) {
+        // Validasi: Tidak boleh create transfer sebelum Feb 2025
+        $periodStart = Carbon::create($validated['balance_year'], $validated['balance_month'], 1);
+        $minPeriod = Carbon::create(2025, 2, 1);
+        
+        if ($periodStart->lt($minPeriod)) {
             return response()->json([
                 'success' => false,
                 'errors' => [
-                    'transfer_date' => ['Balance record not found for ' . $transferDate->format('F Y')]
+                    'balance_period' => ['This feature is only available from February 2025 onwards']
                 ]
             ], 422);
         }
+        $balance = Balance::firstOrCreate(
+            [
+                'period_start' => $periodStart,
+            ],
+            [
+                'period_end' => $periodStart->copy()->endOfMonth(),
+                'total_balance' => 0,
+                'transfer_balance' => 0,
+                'cash_balance' => 0,
+            ]
+        );
 
         // Validate sufficient balance based on transfer type
         if ($validated['transfer_type'] === 'transfer_to_cash') {
