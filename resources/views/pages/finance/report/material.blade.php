@@ -9,6 +9,7 @@
     <div x-data="{
         currentMonth: {{ $month }},
         currentYear: {{ $year }},
+        currentPeriodLocked: {{ $reportPeriod && $reportPeriod->lock_status === 'locked' ? 'true' : 'false' }},
         displayText: '{{ Carbon\Carbon::create($year, $month, 1)->format('F Y') }}',
         searchQuery: '{{ $search }}',
         showPurchaseModal: false,
@@ -143,6 +144,12 @@
                 
                 if (newStats) document.getElementById('stats-section').innerHTML = newStats.innerHTML;
                 if (newMaterials) document.getElementById('materials-section').innerHTML = newMaterials.innerHTML;
+                
+                // Update lock status from returned HTML
+                const newStatsEl = doc.getElementById('stats-section');
+                if (newStatsEl) {
+                    this.currentPeriodLocked = newStatsEl.getAttribute('data-period-locked') === 'true';
+                }
                 
                 NProgress.done();
             })
@@ -293,8 +300,35 @@
         }
     }">
 
-        {{-- Date Navigation - Mobile: Center Stack, Desktop: Right Aligned --}}
-        <div class="flex flex-col sm:flex-row items-center sm:items-center sm:justify-end gap-3 mb-6 max-w-full">
+        {{-- Date Navigation - Mobile: Center Stack, Desktop: Space Between --}}
+        <div class="flex flex-col sm:flex-row items-center sm:items-center sm:justify-between gap-3 mb-6 max-w-full">
+            {{-- Lock Status Badge (Left) --}}
+            <div class="flex items-center gap-2 flex-shrink-0">
+                <div class="flex items-center gap-2 px-3 py-2 rounded-lg border font-semibold text-sm"
+                    :class="currentPeriodLocked
+                        ? 'bg-red-100 border-red-300 text-red-800'
+                        : 'bg-green-100 border-green-300 text-green-800'">
+                    <span class="relative flex h-2.5 w-2.5 flex-shrink-0">
+                        <template x-if="!currentPeriodLocked">
+                            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                        </template>
+                        <span class="relative inline-flex rounded-full h-2.5 w-2.5"
+                            :class="currentPeriodLocked ? 'bg-red-500' : 'bg-green-500'"></span>
+                    </span>
+                    <span x-text="currentPeriodLocked ? 'Locked' : 'Draft'"></span>
+                    <template x-if="!currentPeriodLocked">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z" />
+                        </svg>
+                    </template>
+                    <template x-if="currentPeriodLocked">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                        </svg>
+                    </template>
+                </div>
+            </div>
+
             {{-- Date Navigation - Mobile: Top Center, Desktop: Right --}}
             <div class="flex items-center gap-2 flex-shrink-0 w-full sm:w-auto justify-center sm:justify-end">
                 <button type="button" @click="navigateMonth('prev')" 
@@ -322,7 +356,8 @@
         </div>
 
         {{-- Statistics Cards --}}
-        <div id="stats-section" class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+        <div id="stats-section" class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6"
+            data-period-locked="{{ $reportPeriod && $reportPeriod->lock_status === 'locked' ? 'true' : 'false' }}">
             {{-- Total Transactions --}}
             <div class="bg-white border border-gray-200 rounded-lg p-4">
                 <div class="flex items-center justify-between">
@@ -583,15 +618,6 @@
                                         <span class="px-2 py-1 rounded-full text-[12px] font-medium {{ $statusClass }}">
                                             {{ strtoupper($productionStatus) }}
                                         </span>
-                                        @if($lockStatus === 'locked')
-                                            <span class="px-2 py-1 rounded-full text-[12px] font-medium bg-purple-100 text-purple-800">
-                                                LOCKED
-                                            </span>
-                                        @else
-                                            <span class="px-2 py-1 rounded-full text-[12px] font-medium bg-gray-100 text-gray-800">
-                                                DRAFT
-                                            </span>
-                                        @endif
                                     </div>
                                 </td>
 
@@ -910,8 +936,6 @@
                 balanceId: null,
                 balanceTransfer: 0,
                 balanceCash: 0,
-                balanceMonthDropdownOpen: false,
-                balanceYearDropdownOpen: false,
                 periodValidated: false,
                 periodError: '',
                 orderReportId: null,
@@ -939,24 +963,16 @@
                     { value: 11, name: 'November' },
                     { value: 12, name: 'December' }
                 ],
-                balanceYearOptions: [],
                 paymentMethodOptions: [
                     { value: 'cash', name: 'Cash' },
                     { value: 'transfer', name: 'Transfer' }
                 ],
                 init() {
-                    const currentYear = 2026;
-                    for (let i = 0; i < 10; i++) {
-                        this.balanceYearOptions.push({ value: currentYear + i, name: (currentYear + i).toString() });
-                    }
                     this.fetchSuppliers();
                 },
                 get selectedMonthName() {
                     const month = this.balanceMonthOptions.find(m => m.value === this.balanceMonth);
                     return month ? month.name : null;
-                },
-                get hasBalancePeriod() {
-                    return this.balanceMonth !== null && this.balanceYear !== null;
                 },
                 get selectedOrderReport() {
                     return this.orderReports.find(o => o.id === this.orderReportId) || null;
@@ -966,20 +982,6 @@
                 },
                 get selectedPaymentMethod() {
                     return this.paymentMethodOptions.find(p => p.value === this.paymentMethod) || null;
-                },
-                async selectMonth(month) {
-                    this.balanceMonth = month;
-                    this.balanceMonthDropdownOpen = false;
-                    if (this.balanceYear) {
-                        await this.validatePeriod();
-                    }
-                },
-                async selectYear(year) {
-                    this.balanceYear = year;
-                    this.balanceYearDropdownOpen = false;
-                    if (this.balanceMonth) {
-                        await this.validatePeriod();
-                    }
                 },
                 async validatePeriod() {
                     if (!this.balanceMonth || !this.balanceYear) return;
@@ -1102,8 +1104,8 @@
             x-init="
                 $watch('showPurchaseModal', value => {
                     if (value) {
-                        balanceMonth = null;
-                        balanceYear = null;
+                        balanceMonth = currentMonth;
+                        balanceYear = currentYear;
                         balanceId = null;
                         balanceTransfer = 0;
                         balanceCash = 0;
@@ -1126,6 +1128,8 @@
                             const fileInput = document.querySelector('input[name=purchase_proof_image]');
                             if (fileInput) fileInput.value = '';
                         }, 50);
+                        // Auto-validate period from navigation month/year
+                        validatePeriod();
                     }
                 })
             "
@@ -1154,11 +1158,6 @@
                         <form id="addPurchaseForm" x-ref="addPurchaseForm" @submit.prevent="
                             purchaseErrors = {};
                             let hasValidationError = false;
-
-                            if (!balanceMonth || !balanceYear) {
-                                purchaseErrors.balance_period = ['Balance period is required'];
-                                hasValidationError = true;
-                            }
 
                             if (!orderReportId) {
                                 purchaseErrors.order_report_id = ['Order selection is required'];
@@ -1253,74 +1252,34 @@
                             });
                         ">
                             <div class="space-y-5">
-                                {{-- Balance Period Selector --}}
+                                {{-- Balance Period Info (auto-follows navigation month) --}}
                                 <div class="p-4 bg-gradient-to-br from-primary/10 to-primary/20 rounded-xl border-2 border-primary/30">
-                                    <label class="block text-sm font-semibold text-gray-900 mb-3">
-                                        Select Balance Period <span class="text-red-600">*</span>
-                                    </label>
-                                    <div class="grid grid-cols-2 gap-3">
-                                        {{-- Month Selector --}}
-                                        <div class="relative">
-                                            <button type="button" @click="balanceMonthDropdownOpen = !balanceMonthDropdownOpen"
-                                                class="w-full flex justify-between items-center rounded-lg border-2 border-primary/40 bg-white px-4 py-2.5 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary transition-all hover:border-primary">
-                                                <span x-text="selectedMonthName || 'Select Month'"
-                                                    :class="!selectedMonthName ? 'text-gray-400' : 'text-gray-900'"></span>
-                                                <svg class="w-4 h-4 text-primary transition-transform" :class="balanceMonthDropdownOpen && 'rotate-180'" fill="none"
-                                                    stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                                    <label class="block text-sm font-semibold text-gray-900 mb-2">Balance Period</label>
+                                    <div class="flex items-center gap-2">
+                                        <template x-if="selectedMonthName && balanceYear">
+                                            <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white border border-primary/40 text-primary font-semibold text-sm">
+                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                                                 </svg>
-                                            </button>
-                                            <div x-show="balanceMonthDropdownOpen" @click.away="balanceMonthDropdownOpen = false" x-cloak
-                                                x-transition:enter="transition ease-out duration-100"
-                                                x-transition:enter-start="opacity-0 scale-95" x-transition:enter-end="opacity-100 scale-100"
-                                                x-transition:leave="transition ease-in duration-75" x-transition:leave-start="opacity-100 scale-100"
-                                                x-transition:leave-end="opacity-0 scale-95"
-                                                class="fixed z-[100] mt-1 w-[200px] bg-white border-2 border-primary/30 rounded-lg shadow-2xl">
-                                                <ul class="max-h-60 overflow-y-auto py-1">
-                                                    <template x-for="month in balanceMonthOptions" :key="month.value">
-                                                        <li @click="selectMonth(month.value)"
-                                                            class="px-4 py-2 cursor-pointer text-sm text-gray-700 hover:bg-primary/10 transition-colors"
-                                                            :class="{ 'bg-primary/20 font-semibold text-primary': balanceMonth === month.value }">
-                                                            <span x-text="month.name"></span>
-                                                        </li>
-                                                    </template>
-                                                </ul>
-                                            </div>
-                                        </div>
-
-                                        {{-- Year Selector --}}
-                                        <div class="relative">
-                                            <button type="button" @click="balanceYearDropdownOpen = !balanceYearDropdownOpen"
-                                                class="w-full flex justify-between items-center rounded-lg border-2 border-primary/40 bg-white px-4 py-2.5 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary transition-all hover:border-primary">
-                                                <span x-text="balanceYear || 'Select Year'"
-                                                    :class="!balanceYear ? 'text-gray-400' : 'text-gray-900'"></span>
-                                                <svg class="w-4 h-4 text-primary transition-transform" :class="balanceYearDropdownOpen && 'rotate-180'" fill="none"
-                                                    stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-                                                </svg>
-                                            </button>
-                                            <div x-show="balanceYearDropdownOpen" @click.away="balanceYearDropdownOpen = false" x-cloak
-                                                x-transition:enter="transition ease-out duration-100"
-                                                x-transition:enter-start="opacity-0 scale-95" x-transition:enter-end="opacity-100 scale-100"
-                                                x-transition:leave="transition ease-in duration-75" x-transition:leave-start="opacity-100 scale-100"
-                                                x-transition:leave-end="opacity-0 scale-95"
-                                                class="fixed z-[100] mt-1 w-[200px] bg-white border-2 border-primary/30 rounded-lg shadow-2xl">
-                                                <ul class="max-h-60 overflow-y-auto py-1">
-                                                    <template x-for="year in balanceYearOptions" :key="year.value">
-                                                        <li @click="selectYear(year.value)"
-                                                            class="px-4 py-2 cursor-pointer text-sm text-gray-700 hover:bg-primary/10 transition-colors"
-                                                            :class="{ 'bg-primary/20 font-semibold text-primary': balanceYear === year.value }">
-                                                            <span x-text="year.name"></span>
-                                                        </li>
-                                                    </template>
-                                                </ul>
-                                            </div>
-                                        </div>
+                                                <span x-text="selectedMonthName + ' ' + balanceYear"></span>
+                                            </span>
+                                        </template>
+                                        <template x-if="!selectedMonthName || !balanceYear">
+                                            <span class="text-sm text-gray-400 italic">Loading period...</span>
+                                        </template>
                                     </div>
-                                    <p class="mt-2 text-xs text-primary font-medium" x-show="hasBalancePeriod && !periodError">
-                                        <span class="font-semibold">Selected:</span> <span x-text="selectedMonthName + ' ' + balanceYear"></span>
-                                    </p>
-                                    
+
+                                    {{-- Loading indicator --}}
+                                    <template x-if="(selectedMonthName && balanceYear) && !periodValidated && !periodError">
+                                        <div class="mt-3 flex items-center gap-2 text-sm text-primary">
+                                            <svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                                            </svg>
+                                            Validating period...
+                                        </div>
+                                    </template>
+
                                     {{-- Period Error Message --}}
                                     <template x-if="periodError">
                                         <div class="mt-3 p-3 bg-red-50 border border-red-200 rounded-lg">
@@ -1332,14 +1291,10 @@
                                             </div>
                                         </div>
                                     </template>
-                                    
-                                    <template x-if="purchaseErrors.balance_period">
-                                        <p class="mt-1 text-xs text-red-600" x-text="purchaseErrors.balance_period[0]"></p>
-                                    </template>
                                 </div>
 
-                                {{-- Content shown only after Balance Period is selected AND validated --}}
-                                <div x-show="hasBalancePeriod && periodValidated && !periodError" x-transition:enter="transition ease-out duration-200"
+                                {{-- Content shown only after Balance Period is validated --}}
+                                <div x-show="periodValidated && !periodError" x-transition:enter="transition ease-out duration-200"
                                     x-transition:enter-start="opacity-0 transform scale-95"
                                     x-transition:enter-end="opacity-100 transform scale-100">
                                     
@@ -1968,18 +1923,22 @@
                             });
                         ">
                             <div class="space-y-4">
-                                {{-- Balance Period Selector (Locked) --}}
-                                <div class="mb-6 p-4 bg-gradient-to-br from-primary/10 to-primary/20 rounded-xl border-2 border-primary/30">
-                                    <label class="block text-sm font-semibold text-gray-900 mb-3">
-                                        Balance Period <span class="text-red-600">*</span>
-                                    </label>
-                                    <input type="text" 
-                                        :value="extraPurchaseMonthName && extraPurchaseBalanceYear ? extraPurchaseMonthName + ' ' + extraPurchaseBalanceYear : 'Loading...'"
-                                        readonly
-                                        class="w-full rounded-md px-4 py-2 text-sm border border-gray-200 bg-gray-50 text-gray-600 cursor-not-allowed pointer-events-none">
-                                    <p class="mt-2 text-xs text-primary font-medium" x-show="extraPurchaseMonthName && extraPurchaseBalanceYear">
-                                        <span class="font-semibold">Selected:</span> <span x-text="extraPurchaseMonthName + ' ' + extraPurchaseBalanceYear"></span>
-                                    </p>
+                                {{-- Balance Period Info --}}
+                                <div class="mb-4 p-4 bg-gradient-to-br from-primary/10 to-primary/20 rounded-xl border-2 border-primary/30">
+                                    <label class="block text-sm font-semibold text-gray-900 mb-2">Balance Period</label>
+                                    <div class="flex items-center gap-2">
+                                        <template x-if="extraPurchaseMonthName && extraPurchaseBalanceYear">
+                                            <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white border border-primary/40 text-primary font-semibold text-sm">
+                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                                </svg>
+                                                <span x-text="extraPurchaseMonthName + ' ' + extraPurchaseBalanceYear"></span>
+                                            </span>
+                                        </template>
+                                        <template x-if="!extraPurchaseMonthName || !extraPurchaseBalanceYear">
+                                            <span class="text-sm text-gray-400 italic">Loading period...</span>
+                                        </template>
+                                    </div>
                                 </div>
 
                                 {{-- Balance Cards --}}

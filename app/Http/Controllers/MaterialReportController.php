@@ -8,6 +8,7 @@ use App\Models\MaterialSupplier;
 use App\Models\Balance;
 use App\Models\ReportPeriod;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Storage;
 use Carbon\Carbon;
@@ -25,19 +26,26 @@ class MaterialReportController extends Controller
         $perPage = $request->input('per_page', 25);
         $search = $request->input('search', '');
 
-        // Get order_report_ids that have material purchases for this period
-        $orderReportIds = OrderMaterialReport::whereYear('purchase_date', $year)
-            ->whereMonth('purchase_date', $month)
+        // Get order_report_ids that have material purchases linked to the balance period for this month/year
+        $orderReportIds = OrderMaterialReport::whereHas('balance', function ($q) use ($month, $year) {
+                $q->whereYear('period_start', $year)
+                  ->whereMonth('period_start', $month);
+            })
             ->distinct()
             ->pluck('order_report_id');
 
-        // Build query - Get order reports with their material purchases
+        // Build query - Get order reports with their material purchases FOR THIS PERIOD ONLY
         $query = OrderReport::with([
             'order.customer',
             'order.productCategory',
             'order.orderItems',
             'invoice',
-            'materialReports.materialSupplier'
+            'materialReports' => function ($q) use ($month, $year) {
+                $q->whereHas('balance', function ($b) use ($month, $year) {
+                    $b->whereYear('period_start', $year)
+                      ->whereMonth('period_start', $month);
+                })->with(['materialSupplier', 'balance']);
+            },
         ])
         ->select('order_reports.*') // Ensure all columns including production_status and lock_status
         ->whereIn('id', $orderReportIds);
@@ -57,20 +65,37 @@ class MaterialReportController extends Controller
             });
         }
 
-        // Get paginated data - Latest first
-        $materials = $query->orderBy('id', 'desc')
+        // Get paginated data - sorted by most recently added/modified purchase within the balance period
+        $materials = $query
+            ->addSelect(DB::raw("(
+                SELECT MAX(omr.updated_at)
+                FROM order_material_reports omr
+                INNER JOIN balances b ON b.id = omr.balance_id
+                WHERE omr.order_report_id = order_reports.id
+                AND YEAR(b.period_start) = {$year}
+                AND MONTH(b.period_start) = {$month}
+            ) as period_last_updated_at"))
+            ->orderBy('period_last_updated_at', 'desc')
             ->paginate($perPage)
             ->withQueryString();
 
-        // Calculate statistics (all order reports for the period)
-        $allMaterials = OrderMaterialReport::whereYear('purchase_date', $year)
-            ->whereMonth('purchase_date', $month)
+        // Calculate statistics (all material purchases linked to the balance period)
+        $allMaterials = OrderMaterialReport::whereHas('balance', function ($q) use ($month, $year) {
+                $q->whereYear('period_start', $year)
+                  ->whereMonth('period_start', $month);
+            })
             ->get();
 
         $stats = [
             'total_transactions' => $allMaterials->count(),
             'balance_used' => $allMaterials->sum('amount'),
         ];
+
+        // Get report period lock status for current month/year
+        $periodStart = \Carbon\Carbon::create($year, $month, 1)->startOfMonth();
+        $reportPeriod = ReportPeriod::where('period_start', $periodStart->toDateString())
+            ->where('period_end', $periodStart->copy()->endOfMonth()->toDateString())
+            ->first();
 
         // If AJAX request, return only the section
         if ($request->wantsJson() || $request->header('X-Requested-With') === 'XMLHttpRequest') {
@@ -79,7 +104,8 @@ class MaterialReportController extends Controller
                 'stats',
                 'month',
                 'year',
-                'search'
+                'search',
+                'reportPeriod'
             ))->render();
         }
 
@@ -88,7 +114,8 @@ class MaterialReportController extends Controller
             'stats',
             'month',
             'year',
-            'search'
+            'search',
+            'reportPeriod'
         ));
     }
 
