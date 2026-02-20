@@ -8,6 +8,7 @@ use App\Models\SupportPartner;
 use App\Models\Balance;
 use App\Models\ReportPeriod;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Storage;
 use Carbon\Carbon;
@@ -25,19 +26,26 @@ class SupportPartnerReportController extends Controller
         $perPage = $request->input('per_page', 25);
         $search = $request->input('search', '');
 
-        // Get order_report_ids that have partner purchases for this period
-        $orderReportIds = OrderPartnerReport::whereYear('service_date', $year)
-            ->whereMonth('service_date', $month)
+        // Get order_report_ids that have partner services linked to the balance period for this month/year
+        $orderReportIds = OrderPartnerReport::whereHas('balance', function ($q) use ($month, $year) {
+                $q->whereYear('period_start', $year)
+                  ->whereMonth('period_start', $month);
+            })
             ->distinct()
             ->pluck('order_report_id');
 
-        // Build query - Get order reports with their partner purchases
+        // Build query - Get order reports with their partner services FOR THIS PERIOD ONLY
         $query = OrderReport::with([
             'order.customer',
             'order.productCategory',
             'order.orderItems',
             'invoice',
-            'partnerReports.supportPartner'
+            'partnerReports' => function ($q) use ($month, $year) {
+                $q->whereHas('balance', function ($b) use ($month, $year) {
+                    $b->whereYear('period_start', $year)
+                      ->whereMonth('period_start', $month);
+                })->with(['supportPartner', 'balance']);
+            },
         ])
         ->select('order_reports.*')
         ->whereIn('id', $orderReportIds);
@@ -57,20 +65,37 @@ class SupportPartnerReportController extends Controller
             });
         }
 
-        // Get paginated data - Latest first
-        $services = $query->orderBy('id', 'desc')
+        // Get paginated data - sorted by most recently added/modified service within the balance period
+        $services = $query
+            ->addSelect(DB::raw("(
+                SELECT MAX(opr.updated_at)
+                FROM order_partner_reports opr
+                INNER JOIN balances b ON b.id = opr.balance_id
+                WHERE opr.order_report_id = order_reports.id
+                AND YEAR(b.period_start) = {$year}
+                AND MONTH(b.period_start) = {$month}
+            ) as period_last_updated_at"))
+            ->orderBy('period_last_updated_at', 'desc')
             ->paginate($perPage)
             ->withQueryString();
 
-        // Calculate statistics
-        $allServices = OrderPartnerReport::whereYear('service_date', $year)
-            ->whereMonth('service_date', $month)
+        // Calculate statistics (all partner services linked to the balance period)
+        $allServices = OrderPartnerReport::whereHas('balance', function ($q) use ($month, $year) {
+                $q->whereYear('period_start', $year)
+                  ->whereMonth('period_start', $month);
+            })
             ->get();
 
         $stats = [
             'total_transactions' => $allServices->count(),
             'balance_used' => $allServices->sum('amount'),
         ];
+
+        // Get report period lock status for current month/year
+        $periodStart = Carbon::create($year, $month, 1)->startOfMonth();
+        $reportPeriod = ReportPeriod::where('period_start', $periodStart->toDateString())
+            ->where('period_end', $periodStart->copy()->endOfMonth()->toDateString())
+            ->first();
 
         // If AJAX request, return only the section
         if ($request->wantsJson() || $request->header('X-Requested-With') === 'XMLHttpRequest') {
@@ -79,7 +104,8 @@ class SupportPartnerReportController extends Controller
                 'stats',
                 'month',
                 'year',
-                'search'
+                'search',
+                'reportPeriod'
             ))->render();
         }
 
@@ -88,7 +114,8 @@ class SupportPartnerReportController extends Controller
             'stats',
             'month',
             'year',
-            'search'
+            'search',
+            'reportPeriod'
         ));
     }
 
