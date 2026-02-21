@@ -366,6 +366,7 @@ class SupportPartnerReportController extends Controller
                 'payment_method' => $paymentMethod,
                 'proof_img' => $proofImagePath,
                 'proof_img2' => $proofImagePath2,
+                'report_status' => $proofImagePath2 ? 'fixed' : 'draft',
             ]);
 
             // Update balance
@@ -482,6 +483,7 @@ class SupportPartnerReportController extends Controller
                 'payment_method' => $request->payment_method,
                 'proof_img' => $proofImagePath,
                 'proof_img2' => $proofImagePath2,
+                'report_status' => $proofImagePath2 ? 'fixed' : 'draft',
             ]);
 
             // Update balance
@@ -595,6 +597,9 @@ class SupportPartnerReportController extends Controller
                 }
                 $partnerReport->proof_img2 = null;
             }
+
+            // Auto-set report_status based on whether proof_img2 exists
+            $partnerReport->report_status = $partnerReport->proof_img2 ? 'fixed' : 'draft';
 
             $partnerReport->save();
 

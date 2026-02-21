@@ -1217,32 +1217,6 @@
                                                                             </svg>
                                                                             Delete
                                                                         </button>
-                                                                        <button type="button"
-                                                                            x-data="{ toggling: false, status: '{{ $purchase->report_status }}' }"
-                                                                            @click="
-                                                                                toggling = true;
-                                                                                fetch('{{ route('finance.report.material.toggle-status', $purchase->id) }}', {
-                                                                                    method: 'PATCH',
-                                                                                    headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}', 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
-                                                                                })
-                                                                                .then(r => r.json())
-                                                                                .then(data => {
-                                                                                    if (data.success) {
-                                                                                        sessionStorage.setItem('toast_message', data.message);
-                                                                                        sessionStorage.setItem('toast_type', 'success');
-                                                                                        window.location.reload();
-                                                                                    }
-                                                                                    toggling = false;
-                                                                                })
-                                                                                .catch(() => { toggling = false; });
-                                                                            "
-                                                                            :disabled="toggling"
-                                                                            class="w-full text-left px-3 py-1.5 text-[11px] text-amber-600 hover:bg-amber-50 flex items-center gap-1.5 disabled:opacity-50">
-                                                                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
-                                                                            </svg>
-                                                                            <span x-text="status === 'fixed' ? 'Move to Draft' : 'Move to Fixed'"></span>
-                                                                        </button>
                                                                     </div>
                                                                 </div>
                                                                 @endif

@@ -363,7 +363,8 @@ class MaterialReportController extends Controller
                 'notes' => $request->notes,
                 'payment_method' => $request->payment_method,
                 'proof_img' => $proofImagePath,
-                'proof_img2' => $proofImage2Path
+                'proof_img2' => $proofImage2Path,
+                'report_status' => $proofImage2Path ? 'fixed' : 'draft',
             ]);
 
             // Update balance
@@ -483,6 +484,7 @@ class MaterialReportController extends Controller
                 'payment_method' => $request->payment_method,
                 'proof_img' => $proofImagePath,
                 'proof_img2' => $proofImage2Path,
+                'report_status' => $proofImage2Path ? 'fixed' : 'draft',
             ]);
 
             // Update balance
@@ -603,6 +605,9 @@ class MaterialReportController extends Controller
                 $filename2 = 'material2_' . $materialReport->order_report_id . '_' . time() . '_' . uniqid() . '.' . $file2->getClientOriginalExtension();
                 $materialReport->proof_img2 = $file2->storeAs('material_proofs/proof2', $filename2, 'local');
             }
+
+            // Auto-set report_status based on whether proof_img2 exists
+            $materialReport->report_status = $materialReport->proof_img2 ? 'fixed' : 'draft';
 
             // Update material report
             $materialReport->material_name = $request->material_name;
