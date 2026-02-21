@@ -166,7 +166,7 @@
                         <span class="relative inline-flex rounded-full h-2.5 w-2.5"
                             :class="currentPeriodLocked ? 'bg-red-500' : 'bg-green-500'"></span>
                     </span>
-                    <span x-text="currentPeriodLocked ? 'Locked' : 'Draft'"></span>
+                    <span x-text="currentPeriodLocked ? 'Locked' : 'Unlocked'"></span>
                     <template x-if="!currentPeriodLocked">
                         <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z" />
@@ -198,7 +198,7 @@
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z" />
                             </svg>
                         </template>
-                        <span x-text="currentPeriodLocked ? 'Move to Draft' : 'Move to Locked'"></span>
+                        <span x-text="currentPeriodLocked ? 'Move to Unlocked' : 'Move to Locked'"></span>
                     </button>
                 @endif
             </div>
@@ -436,7 +436,7 @@
                             <template x-if="lockAction === 'locked'">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z" />
                             </template>
-                            <template x-if="lockAction === 'draft'">
+                            <template x-if="lockAction === 'unlocked'">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                             </template>
                         </svg>
@@ -450,9 +450,9 @@
                     {{-- Message --}}
                     <p class="text-sm text-gray-600 text-center mb-6">
                         <template x-if="lockAction === 'locked'">
-                            <span>Are you sure you want to unlock this report? It will be moved to Draft status.</span>
+                            <span>Are you sure you want to unlock this report? It will be moved to Unlocked status.</span>
                         </template>
-                        <template x-if="lockAction === 'draft'">
+                        <template x-if="lockAction === 'unlocked'">
                             <span>Are you sure you want to lock this report? Once locked, it cannot be edited or deleted.</span>
                         </template>
                     </p>
@@ -514,7 +514,7 @@
                             <p>Are you sure you want to move all reports in this period to <strong class="text-red-600">Locked</strong> status? Reports cannot be edited or deleted after locking.</p>
                         </template>
                         <template x-if="periodLockAction === 'unlock'">
-                            <p>Are you sure you want to move all reports in this period back to <strong class="text-green-600">Draft</strong> status? Reports can be edited and deleted again.</p>
+                            <p>Are you sure you want to move all reports in this period back to <strong class="text-green-600">Unlocked</strong> status? Reports can be edited and deleted again.</p>
                         </template>
                     </div>
 
@@ -584,7 +584,7 @@
                                 })
                             "
                             >
-                            <span x-text="periodLockAction === 'lock' ? 'Yes, Move to Locked' : 'Yes, Move to Draft'"></span>
+                            <span x-text="periodLockAction === 'lock' ? 'Yes, Move to Locked' : 'Yes, Move to Unlocked'"></span>
                         </button>
                     </div>
                 </div>

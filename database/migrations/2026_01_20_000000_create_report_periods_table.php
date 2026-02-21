@@ -15,7 +15,7 @@ return new class extends Migration
             $table->id();
             $table->date('period_start');
             $table->date('period_end');
-            $table->enum('lock_status', ['draft', 'locked'])->default('draft');
+            $table->enum('lock_status', ['unlocked', 'locked'])->default('unlocked');
             $table->timestamps();
 
             // Unique constraint untuk memastikan tidak ada duplikasi periode

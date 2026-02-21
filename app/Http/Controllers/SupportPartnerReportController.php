@@ -299,6 +299,7 @@ class SupportPartnerReportController extends Controller
             'amount' => 'required|numeric|min:1',
             'notes' => 'nullable|string',
             'proof_image' => 'required|image|mimes:jpeg,png,jpg|max:5120', // 5MB
+            'proof_image2' => 'nullable|image|mimes:jpeg,png,jpg|max:5120',
         ]);
 
         if ($validator->fails()) {
@@ -342,7 +343,15 @@ class SupportPartnerReportController extends Controller
             // Upload proof image
             $proofImage = $request->file('proof_image');
             $filename = 'partner_' . time() . '_' . uniqid() . '.' . $proofImage->getClientOriginalExtension();
-            $proofImagePath = $proofImage->storeAs('partner_reports', $filename, 'local');
+            $proofImagePath = $proofImage->storeAs('partner_report_proofs/proof1', $filename, 'local');
+
+            // Upload proof image 2 if provided
+            $proofImagePath2 = null;
+            if ($request->hasFile('proof_image2')) {
+                $proofImage2 = $request->file('proof_image2');
+                $filename2 = 'partner2_' . time() . '_' . uniqid() . '.' . $proofImage2->getClientOriginalExtension();
+                $proofImagePath2 = $proofImage2->storeAs('partner_report_proofs/proof2', $filename2, 'local');
+            }
 
             // Create partner report
             $partnerReport = OrderPartnerReport::create([
@@ -356,6 +365,7 @@ class SupportPartnerReportController extends Controller
                 'notes' => $request->notes,
                 'payment_method' => $paymentMethod,
                 'proof_img' => $proofImagePath,
+                'proof_img2' => $proofImagePath2,
             ]);
 
             // Update balance
@@ -394,6 +404,7 @@ class SupportPartnerReportController extends Controller
                 'payment_method' => 'required|in:cash,transfer',
                 'amount' => 'required|numeric|min:1',
                 'proof_image' => 'required|image|mimes:jpeg,jpg,png|max:5120',
+                'proof_image2' => 'nullable|image|mimes:jpeg,jpg,png|max:5120',
                 'notes' => 'nullable|string'
             ]);
 
@@ -448,7 +459,15 @@ class SupportPartnerReportController extends Controller
             // Handle image upload
             $proofImage = $request->file('proof_image');
             $filename = 'partner_extra_' . time() . '_' . uniqid() . '.' . $proofImage->getClientOriginalExtension();
-            $proofImagePath = $proofImage->storeAs('partner_reports', $filename, 'local');
+            $proofImagePath = $proofImage->storeAs('partner_report_proofs/proof1', $filename, 'local');
+
+            // Upload proof image 2 if provided
+            $proofImagePath2 = null;
+            if ($request->hasFile('proof_image2')) {
+                $proofImage2 = $request->file('proof_image2');
+                $filename2 = 'partner_extra2_' . time() . '_' . uniqid() . '.' . $proofImage2->getClientOriginalExtension();
+                $proofImagePath2 = $proofImage2->storeAs('partner_report_proofs/proof2', $filename2, 'local');
+            }
 
             // Create extra partner report
             $partnerReport = OrderPartnerReport::create([
@@ -461,7 +480,8 @@ class SupportPartnerReportController extends Controller
                 'amount' => $amount,
                 'notes' => $request->notes,
                 'payment_method' => $request->payment_method,
-                'proof_img' => $proofImagePath
+                'proof_img' => $proofImagePath,
+                'proof_img2' => $proofImagePath2,
             ]);
 
             // Update balance
@@ -500,6 +520,8 @@ class SupportPartnerReportController extends Controller
                 'amount' => 'required|numeric|min:1',
                 'notes' => 'nullable|string',
                 'proof_image' => 'nullable|image|mimes:jpeg,png,jpg|max:5120',
+                'proof_image2' => 'nullable|image|mimes:jpeg,png,jpg|max:5120',
+                'remove_proof_image2' => 'nullable|in:1,true',
             ]);
 
             if ($validator->fails()) {
@@ -554,8 +576,24 @@ class SupportPartnerReportController extends Controller
 
                 $proofImage = $request->file('proof_image');
                 $filename = 'partner_' . time() . '_' . uniqid() . '.' . $proofImage->getClientOriginalExtension();
-                $proofImagePath = $proofImage->storeAs('partner_reports', $filename, 'local');
+                $proofImagePath = $proofImage->storeAs('partner_report_proofs/proof1', $filename, 'local');
                 $partnerReport->proof_img = $proofImagePath;
+            }
+
+            // Handle proof image 2
+            if ($request->hasFile('proof_image2')) {
+                if ($partnerReport->proof_img2) {
+                    Storage::disk('local')->delete($partnerReport->proof_img2);
+                }
+                $proofImage2 = $request->file('proof_image2');
+                $filename2 = 'partner2_' . time() . '_' . uniqid() . '.' . $proofImage2->getClientOriginalExtension();
+                $proofImagePath2 = $proofImage2->storeAs('partner_report_proofs/proof2', $filename2, 'local');
+                $partnerReport->proof_img2 = $proofImagePath2;
+            } elseif ($request->input('remove_proof_image2')) {
+                if ($partnerReport->proof_img2) {
+                    Storage::disk('local')->delete($partnerReport->proof_img2);
+                }
+                $partnerReport->proof_img2 = null;
             }
 
             $partnerReport->save();
@@ -611,9 +649,13 @@ class SupportPartnerReportController extends Controller
             $balance->total_balance = $balance->cash_balance + $balance->transfer_balance;
             $balance->save();
 
-            // Delete proof image from storage if exists
+            // Delete proof images from storage if they exist
             if ($partnerReport->proof_img && Storage::disk('local')->exists($partnerReport->proof_img)) {
                 Storage::disk('local')->delete($partnerReport->proof_img);
+            }
+
+            if ($partnerReport->proof_img2 && Storage::disk('local')->exists($partnerReport->proof_img2)) {
+                Storage::disk('local')->delete($partnerReport->proof_img2);
             }
 
             // Delete the partner report
@@ -658,5 +700,49 @@ class SupportPartnerReportController extends Controller
             'Content-Type' => $mimeType,
             'Cache-Control' => 'public, max-age=31536000',
         ]);
+    }
+
+    /**
+     * Serve partner proof image 2 from private storage
+     */
+    public function serveImage2(OrderPartnerReport $partnerReport)
+    {
+        if (!auth()->check()) {
+            abort(403, 'Unauthorized');
+        }
+
+        if (!$partnerReport->proof_img2 || !Storage::disk('local')->exists($partnerReport->proof_img2)) {
+            abort(404, 'Image not found');
+        }
+
+        $path = Storage::disk('local')->path($partnerReport->proof_img2);
+        $mimeType = Storage::disk('local')->mimeType($partnerReport->proof_img2) ?: 'application/octet-stream';
+
+        return response()->file($path, [
+            'Content-Type' => $mimeType,
+            'Cache-Control' => 'public, max-age=31536000',
+        ]);
+    }
+
+    /**
+     * Toggle report_status between draft and fixed
+     */
+    public function toggleReportStatus(OrderPartnerReport $partnerReport)
+    {
+        try {
+            $partnerReport->report_status = $partnerReport->report_status === 'fixed' ? 'draft' : 'fixed';
+            $partnerReport->save();
+
+            return response()->json([
+                'success' => true,
+                'new_status' => $partnerReport->report_status,
+                'message' => 'Status updated to ' . $partnerReport->report_status,
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to update status: ' . $e->getMessage(),
+            ], 500);
+        }
     }
 }

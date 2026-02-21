@@ -218,6 +218,8 @@ Route::middleware(['auth'])->group(function () {
             Route::put('material/{materialReport}', [MaterialReportController::class, 'update'])->name('material.update');
             Route::delete('material/{materialReport}', [MaterialReportController::class, 'destroy'])->name('material.destroy');
             Route::get('material/{materialReport}/image', [MaterialReportController::class, 'serveProofImage'])->name('material.serve-image');
+            Route::get('material/{materialReport}/image2', [MaterialReportController::class, 'serveProofImage2'])->name('material.serve-image2');
+            Route::patch('material/{materialReport}/toggle-status', [MaterialReportController::class, 'toggleReportStatus'])->name('material.toggle-status');
             
             Route::get('support-partner', [\App\Http\Controllers\SupportPartnerReportController::class, 'index'])->name('support-partner');
             Route::get('support-partner/check-period-status', [\App\Http\Controllers\SupportPartnerReportController::class, 'checkPeriodStatus'])->name('support-partner.check-period-status');
@@ -229,6 +231,8 @@ Route::middleware(['auth'])->group(function () {
             Route::put('support-partner/{partnerReport}', [\App\Http\Controllers\SupportPartnerReportController::class, 'update'])->name('support-partner.update');
             Route::delete('support-partner/{partnerReport}', [\App\Http\Controllers\SupportPartnerReportController::class, 'destroy'])->name('support-partner.destroy');
             Route::get('support-partner/{partnerReport}/image', [\App\Http\Controllers\SupportPartnerReportController::class, 'serveImage'])->name('support-partner.serve-image');
+            Route::get('support-partner/{partnerReport}/image2', [\App\Http\Controllers\SupportPartnerReportController::class, 'serveImage2'])->name('support-partner.serve-image2');
+            Route::patch('support-partner/{partnerReport}/toggle-status', [\App\Http\Controllers\SupportPartnerReportController::class, 'toggleReportStatus'])->name('support-partner.toggle-status');
 
             Route::get('operational', [\App\Http\Controllers\OperationalReportController::class, 'index'])->name('operational');
             Route::get('operational/check-period-status', [\App\Http\Controllers\OperationalReportController::class, 'checkPeriodStatus'])->name('operational.check-period-status');

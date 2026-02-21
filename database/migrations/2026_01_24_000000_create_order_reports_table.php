@@ -26,7 +26,7 @@ return new class extends Migration
             $table->enum('product_type', ['t-shirt', 'makloon', 'hoodie_polo_jersey', 'pants']);
             
             // Lock Status
-            $table->enum('lock_status', ['draft', 'locked'])->default('draft');
+
             
             // Note
             $table->text('note')->nullable();

@@ -251,7 +251,7 @@
                                         </svg>
                                         View Detail
                                     </a>
-                                    @if($report->lock_status !== 'locked')
+                                    @if(!($currentPeriod && $currentPeriod->isLocked()))
                                         <button type="button"
                                             @click="showEditModal = {{ $report->id }}; editReportId = {{ $report->id }}; editMonth = {{ \Carbon\Carbon::parse($report->period_start)->month }}; editYear = {{ \Carbon\Carbon::parse($report->period_start)->year }}; editProductType = '{{ $report->product_type }}'; editInvoiceNo = '{{ $invoice->invoice_no ?? '-' }}'; editCustomerName = '{{ $customer->customer_name ?? '-' }}'; editProductLabel = '{{ $productCategory }}'; editQty = '{{ number_format($totalQty) }}'; editError = ''; open = false"
                                             class="w-full text-left px-4 py-2 text-sm text-blue-600 hover:bg-blue-50 flex items-center gap-2">

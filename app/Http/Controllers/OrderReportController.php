@@ -36,7 +36,7 @@ class OrderReportController extends Controller
                     'period_end' => $periodEnd->toDateString(),
                 ],
                 [
-                    'lock_status' => 'draft'
+                    'lock_status' => 'unlocked'
                 ]
             );
         }
@@ -148,14 +148,9 @@ class OrderReportController extends Controller
                     'period_end' => $periodEnd->toDateString(),
                 ],
                 [
-                    'lock_status' => $action === 'lock' ? 'locked' : 'draft'
+                    'lock_status' => $action === 'lock' ? 'locked' : 'unlocked'
                 ]
             );
-
-            // Update all order_reports in this period
-            OrderReport::whereYear('period_start', $year)
-                ->whereMonth('period_start', $month)
-                ->update(['lock_status' => $action === 'lock' ? 'locked' : 'draft']);
 
             DB::commit();
 
@@ -168,7 +163,7 @@ class OrderReportController extends Controller
                 return response()->json([
                     'success' => true,
                     'message' => $message,
-                    'lock_status' => $action === 'lock' ? 'locked' : 'draft'
+                    'lock_status' => $action === 'lock' ? 'locked' : 'unlocked'
                 ]);
             }
 
@@ -316,39 +311,11 @@ class OrderReportController extends Controller
     }
 
     /**
-     * Toggle lock status (owner only)
+     * Toggle lock status (owner only) - DEPRECATED: lock is now period-level only
      */
     public function toggleLock(OrderReport $orderReport)
     {
-        // Check if user is owner
-        if (auth()->user()->role !== 'owner') {
-            return redirect()->back()
-                ->with('message', 'Unauthorized action.')
-                ->with('alert-type', 'error');
-        }
-
-        try {
-            DB::beginTransaction();
-
-            if ($orderReport->lock_status === 'draft') {
-                $orderReport->lock();
-                $message = 'Report locked successfully';
-            } else {
-                $orderReport->unlock();
-                $message = 'Report unlocked successfully';
-            }
-
-            DB::commit();
-
-            return redirect()->back()
-                ->with('message', $message)
-                ->with('alert-type', 'success');
-        } catch (\Exception $e) {
-            DB::rollBack();
-            return redirect()->back()
-                ->with('message', 'Failed to toggle lock status: ' . $e->getMessage())
-                ->with('alert-type', 'error');
-        }
+        return response()->json(['success' => false, 'message' => 'Per-report locking is no longer supported. Use period lock instead.'], 400);
     }
 
     /**

@@ -15,7 +15,6 @@ use App\Models\DesignVariant;
 use App\Models\OrderItem;
 use App\Models\ExtraService;
 use App\Models\Invoice;
-use App\Models\OrderReport;
 use App\Models\Balance;
 use App\Models\ReportPeriod;
 use Illuminate\Http\Request;
@@ -1080,7 +1079,6 @@ class OrderController extends Controller
                 'order_id' => $order->id,
                 'invoice_id' => $order->invoice->id,
                 'product_type' => $request->product_type,
-                'lock_status' => 'draft',
                 'note' => null,
             ]);
 

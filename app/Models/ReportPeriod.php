@@ -29,10 +29,10 @@ class ReportPeriod extends Model
     }
 
     /**
-     * Check if this period is draft
+     * Check if this period is unlocked (not locked)
      */
     public function isDraft(): bool
     {
-        return $this->lock_status === 'draft';
+        return $this->lock_status === 'unlocked';
     }
 }

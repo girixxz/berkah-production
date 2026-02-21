@@ -13,7 +13,6 @@ class OrderReport extends Model
         'order_id',
         'invoice_id',
         'product_type',
-        'lock_status',
         'note',
     ];
 
@@ -39,35 +38,12 @@ class OrderReport extends Model
     }
 
     /**
-     * Check if report is locked
+     * Check if this report's period is locked (via report_periods table)
      */
     public function isLocked(): bool
     {
-        return $this->lock_status === 'locked';
-    }
-
-    /**
-     * Check if report is draft
-     */
-    public function isDraft(): bool
-    {
-        return $this->lock_status === 'draft';
-    }
-
-    /**
-     * Lock the report
-     */
-    public function lock(): bool
-    {
-        return $this->update(['lock_status' => 'locked']);
-    }
-
-    /**
-     * Unlock the report (set to draft)
-     */
-    public function unlock(): bool
-    {
-        return $this->update(['lock_status' => 'draft']);
+        $period = ReportPeriod::where('period_start', $this->period_start->toDateString())->first();
+        return $period && $period->lock_status === 'locked';
     }
 
     /**

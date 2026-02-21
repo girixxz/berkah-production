@@ -51,6 +51,8 @@
         editServiceAmount: '',
         editServiceNotes: '',
         editProofImage: null,
+        editProofImage2: null,
+        removeProof2: false,
         editServiceErrors: {},
         isSubmittingEditService: false,
         serviceErrors: {},
@@ -61,6 +63,12 @@
         fileName: '',
         isMirrored: false,
         facingMode: 'environment',
+        stream2: null,
+        showWebcam2: false,
+        imagePreview2: null,
+        fileName2: '',
+        isMirrored2: false,
+        facingMode2: 'environment',
         showDeleteService: null,
         
         init() {
@@ -293,6 +301,195 @@
                 this.fileName = file.name;
                 this.stopServiceWebcam();
             }, 'image/jpeg', 0.95);
+        },
+
+        // Webcam2 functions (Proof 2 - + Service modal)
+        async startServiceWebcam2() {
+            if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) return;
+            const isSecure = window.location.protocol === 'https:' ||
+                           window.location.hostname === 'localhost' ||
+                           window.location.hostname === '127.0.0.1';
+            if (!isSecure) { alert('WEBCAM HARUS PAKAI HTTPS!'); return; }
+            try {
+                this.stream2 = await navigator.mediaDevices.getUserMedia({
+                    video: { facingMode: this.facingMode2, width: { ideal: 1280 }, height: { ideal: 720 } }
+                });
+                this.$refs.service2Video.srcObject = this.stream2;
+                this.showWebcam2 = true;
+            } catch (err) {
+                alert('Tidak dapat mengakses webcam: ' + err.message);
+            }
+        },
+
+        async toggleServiceCamera2() {
+            this.facingMode2 = this.facingMode2 === 'user' ? 'environment' : 'user';
+            this.isMirrored2 = this.facingMode2 === 'user';
+            if (this.stream2) this.stream2.getTracks().forEach(track => track.stop());
+            try {
+                this.stream2 = await navigator.mediaDevices.getUserMedia({
+                    video: { facingMode: this.facingMode2, width: { ideal: 1280 }, height: { ideal: 720 } }
+                });
+                this.$refs.service2Video.srcObject = this.stream2;
+            } catch (err) {
+                alert('Gagal mengganti kamera: ' + err.message);
+            }
+        },
+
+        stopServiceWebcam2() {
+            if (this.stream2) {
+                this.stream2.getTracks().forEach(track => track.stop());
+                this.stream2 = null;
+            }
+            this.showWebcam2 = false;
+        },
+
+        captureServicePhoto2(inputName = 'service_proof_image2') {
+            const video = this.$refs.service2Video;
+            const canvas = this.$refs.service2Canvas;
+            const context = canvas.getContext('2d');
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            if (this.isMirrored2) {
+                context.translate(canvas.width, 0);
+                context.scale(-1, 1);
+            }
+            context.drawImage(video, 0, 0, canvas.width, canvas.height);
+            canvas.toBlob((blob) => {
+                const file = new File([blob], 'webcam2_' + Date.now() + '.jpg', { type: 'image/jpeg' });
+                const dataTransfer = new DataTransfer();
+                dataTransfer.items.add(file);
+                const fileInput = document.querySelector(`input[name=${inputName}]`);
+                if (fileInput) fileInput.files = dataTransfer.files;
+                this.imagePreview2 = canvas.toDataURL('image/jpeg');
+                this.fileName2 = file.name;
+                this.stopServiceWebcam2();
+            }, 'image/jpeg', 0.95);
+        },
+
+        // Webcam2 functions (Proof 2 - Extra Service modal)
+        async startExtraWebcam2() {
+            if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) return;
+            const isSecure = window.location.protocol === 'https:' ||
+                           window.location.hostname === 'localhost' ||
+                           window.location.hostname === '127.0.0.1';
+            if (!isSecure) { alert('WEBCAM HARUS PAKAI HTTPS!'); return; }
+            try {
+                this.stream2 = await navigator.mediaDevices.getUserMedia({
+                    video: { facingMode: this.facingMode2, width: { ideal: 1280 }, height: { ideal: 720 } }
+                });
+                this.$refs.extra2Video.srcObject = this.stream2;
+                this.showWebcam2 = true;
+            } catch (err) {
+                alert('Tidak dapat mengakses webcam: ' + err.message);
+            }
+        },
+
+        async toggleExtraCamera2() {
+            this.facingMode2 = this.facingMode2 === 'user' ? 'environment' : 'user';
+            this.isMirrored2 = this.facingMode2 === 'user';
+            if (this.stream2) this.stream2.getTracks().forEach(track => track.stop());
+            try {
+                this.stream2 = await navigator.mediaDevices.getUserMedia({
+                    video: { facingMode: this.facingMode2, width: { ideal: 1280 }, height: { ideal: 720 } }
+                });
+                this.$refs.extra2Video.srcObject = this.stream2;
+            } catch (err) {
+                alert('Gagal mengganti kamera: ' + err.message);
+            }
+        },
+
+        stopExtraWebcam2() {
+            if (this.stream2) {
+                this.stream2.getTracks().forEach(track => track.stop());
+                this.stream2 = null;
+            }
+            this.showWebcam2 = false;
+        },
+
+        captureExtraPhoto2() {
+            const video = this.$refs.extra2Video;
+            const canvas = this.$refs.extra2Canvas;
+            const context = canvas.getContext('2d');
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            if (this.isMirrored2) {
+                context.translate(canvas.width, 0);
+                context.scale(-1, 1);
+            }
+            context.drawImage(video, 0, 0, canvas.width, canvas.height);
+            canvas.toBlob((blob) => {
+                const file = new File([blob], 'webcam2_' + Date.now() + '.jpg', { type: 'image/jpeg' });
+                const dataTransfer = new DataTransfer();
+                dataTransfer.items.add(file);
+                const fileInput = document.querySelector('input[name=extra_service_proof_image2]');
+                if (fileInput) fileInput.files = dataTransfer.files;
+                this.imagePreview2 = canvas.toDataURL('image/jpeg');
+                this.fileName2 = file.name;
+                this.stopExtraWebcam2();
+            }, 'image/jpeg', 0.95);
+        },
+
+        // Webcam2 functions (Proof 2 - Edit Service modal)
+        async startEditWebcam2() {
+            if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) return;
+            const isSecure = window.location.protocol === 'https:' ||
+                           window.location.hostname === 'localhost' ||
+                           window.location.hostname === '127.0.0.1';
+            if (!isSecure) { alert('WEBCAM HARUS PAKAI HTTPS!'); return; }
+            try {
+                this.stream2 = await navigator.mediaDevices.getUserMedia({
+                    video: { facingMode: this.facingMode2, width: { ideal: 1280 }, height: { ideal: 720 } }
+                });
+                this.$refs.editProof2Video.srcObject = this.stream2;
+                this.showWebcam2 = true;
+            } catch (err) {
+                alert('Tidak dapat mengakses webcam: ' + err.message);
+            }
+        },
+
+        async toggleEditCamera2() {
+            this.facingMode2 = this.facingMode2 === 'user' ? 'environment' : 'user';
+            this.isMirrored2 = this.facingMode2 === 'user';
+            if (this.stream2) this.stream2.getTracks().forEach(track => track.stop());
+            try {
+                this.stream2 = await navigator.mediaDevices.getUserMedia({
+                    video: { facingMode: this.facingMode2, width: { ideal: 1280 }, height: { ideal: 720 } }
+                });
+                this.$refs.editProof2Video.srcObject = this.stream2;
+            } catch (err) {
+                alert('Gagal mengganti kamera: ' + err.message);
+            }
+        },
+
+        stopEditWebcam2() {
+            if (this.stream2) {
+                this.stream2.getTracks().forEach(track => track.stop());
+                this.stream2 = null;
+            }
+            this.showWebcam2 = false;
+        },
+
+        captureEditPhoto2() {
+            const video = this.$refs.editProof2Video;
+            const canvas = this.$refs.editProof2Canvas;
+            const context = canvas.getContext('2d');
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            if (this.isMirrored2) {
+                context.translate(canvas.width, 0);
+                context.scale(-1, 1);
+            }
+            context.drawImage(video, 0, 0, canvas.width, canvas.height);
+            canvas.toBlob((blob) => {
+                const file = new File([blob], 'webcam2_' + Date.now() + '.jpg', { type: 'image/jpeg' });
+                const dataTransfer = new DataTransfer();
+                dataTransfer.items.add(file);
+                const fileInput = document.querySelector('input[name=edit_service_proof_image2]');
+                if (fileInput) fileInput.files = dataTransfer.files;
+                this.imagePreview2 = canvas.toDataURL('image/jpeg');
+                this.fileName2 = file.name;
+                this.stopEditWebcam2();
+            }, 'image/jpeg', 0.95);
         }
     }">
 
@@ -311,7 +508,7 @@
                         <span class="relative inline-flex rounded-full h-2.5 w-2.5"
                             :class="currentPeriodLocked ? 'bg-red-500' : 'bg-green-500'"></span>
                     </span>
-                    <span x-text="currentPeriodLocked ? 'Locked' : 'Draft'"></span>
+                    <span x-text="currentPeriodLocked ? 'Locked' : 'Unlocked'"></span>
                     <template x-if="!currentPeriodLocked">
                         <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z" />
@@ -511,6 +708,7 @@
                             <th class="py-3 px-4 text-left font-bold">Product</th>
                             <th class="py-3 px-4 text-left font-bold">QTY</th>
                             <th class="py-3 px-4 text-left font-bold">Total Expense</th>
+                            <th class="py-3 px-4 text-left font-bold">Price / Pcs</th>
                             <th class="py-3 px-4 text-left font-bold">Status</th>
                             <th class="py-3 px-4 text-left font-bold">Date</th>
                             <th class="py-3 px-4 text-center font-bold rounded-r-lg">Action</th>
@@ -541,7 +739,7 @@
                                 
                                 // Get status from order and order_reports
                                 $productionStatus = $order->production_status ?? '-';
-                                $lockStatus = $orderReport->lock_status ?? 'draft';
+                                $lockStatus = ($reportPeriod && $reportPeriod->lock_status === 'locked') ? 'locked' : 'unlocked';
                                 
                                 // Unique row ID
                                 $rowId = $orderReport->id;
@@ -600,6 +798,11 @@
                                     Rp {{ number_format($totalExpense, 0, ',', '.') }}
                                 </td>
 
+                                {{-- Price / Pcs --}}
+                                <td class="py-3 px-4 text-[12px] text-gray-700">
+                                    Rp {{ number_format($totalQty > 0 ? $totalExpense / $totalQty : 0, 0, ',', '.') }}
+                                </td>
+
                                 {{-- Status --}}
                                 <td class="py-3 px-4">
                                     @php
@@ -610,11 +813,17 @@
                                             'cancelled' => 'bg-red-100 text-red-800',
                                         ];
                                         $statusClass = $statusClasses[$productionStatus] ?? 'bg-gray-100 text-gray-800';
+                                        $allFixed = $partnerServices->isNotEmpty() && $partnerServices->every(fn($s) => $s->report_status === 'fixed');
                                     @endphp
                                     <div class="flex items-center gap-2 flex-wrap">
                                         <span class="px-2 py-1 rounded-full text-[12px] font-medium {{ $statusClass }}">
                                             {{ strtoupper($productionStatus) }}
                                         </span>
+                                        @if($partnerServices->isNotEmpty())
+                                            <span class="px-2 py-1 rounded-full text-[10px] font-semibold {{ $allFixed ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700' }}">
+                                                {{ $allFixed ? 'FIXED' : 'DRAFT' }}
+                                            </span>
+                                        @endif
                                     </div>
                                 </td>
 
@@ -732,7 +941,7 @@
                             
                             {{-- Expandable Detail Row --}}
                             <tr class="border-b border-gray-200" x-show="matchesSearch($el.previousElementSibling)">
-                                <td colspan="8" class="p-0">
+                                <td colspan="9" class="p-0">
                                     <div x-show="expandedRows.includes({{ $rowId }})"
                                         x-transition:enter="transition ease-out duration-200"
                                         x-transition:enter-start="opacity-0 max-h-0"
@@ -750,8 +959,9 @@
                                                     <th class="py-1.5 px-4 text-left text-[10px] font-semibold text-gray-600">Partner</th>
                                                     <th class="py-1.5 px-4 text-left text-[10px] font-semibold text-gray-600">Payment Method</th>
                                                     <th class="py-1.5 px-4 text-left text-[10px] font-semibold text-gray-600">Amount</th>
-                                                    <th class="py-1.5 px-4 text-left text-[10px] font-semibold text-gray-600">Price / Pcs</th>
-                                                    <th class="py-1.5 px-4 text-left text-[10px] font-semibold text-gray-600">Attachment</th>
+                                                    <th class="py-1.5 px-4 text-left text-[10px] font-semibold text-gray-600">Proof 1</th>
+                                                    <th class="py-1.5 px-4 text-left text-[10px] font-semibold text-gray-600">Proof 2</th>
+                                                    <th class="py-1.5 px-4 text-left text-[10px] font-semibold text-gray-600">Status</th>
                                                     <th class="py-1.5 px-4 text-left text-[10px] font-semibold text-gray-600">Date</th>
                                                     <th class="py-1.5 px-4 text-center text-[10px] font-semibold text-gray-600">Action</th>
                                                 </tr>
@@ -769,7 +979,6 @@
                                                             </span>
                                                         </td>
                                                         <td class="py-1.5 px-4 text-[10px] text-gray-900 font-semibold">Rp {{ number_format($service->amount, 0, ',', '.') }}</td>
-                                                        <td class="py-1.5 px-4 text-[10px] text-gray-700">Rp {{ number_format($totalQty > 0 ? $service->amount / $totalQty : 0, 0, ',', '.') }}</td>
                                                         <td class="py-1.5 px-4 text-left">
                                                             @if ($service->proof_img)
                                                                 <button @click="$dispatch('open-image-modal', { url: '{{ route('finance.report.support-partner.serve-image', $service->id) }}' })" 
@@ -783,6 +992,25 @@
                                                             @else
                                                                 <span class="text-[10px] text-gray-400">-</span>
                                                             @endif
+                                                        </td>
+                                                        <td class="py-1.5 px-4 text-left">
+                                                            @if ($service->proof_img2)
+                                                                <button @click="$dispatch('open-image-modal', { url: '{{ route('finance.report.support-partner.serve-image2', $service->id) }}' })" 
+                                                                    class="inline-flex items-center gap-1 px-2 py-0.5 bg-purple-100 text-purple-700 rounded-md hover:bg-purple-200 text-[10px] font-medium cursor-pointer">
+                                                                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                                            d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                                                    </svg>
+                                                                    View
+                                                                </button>
+                                                            @else
+                                                                <span class="text-[10px] text-gray-400">-</span>
+                                                            @endif
+                                                        </td>
+                                                        <td class="py-1.5 px-4">
+                                                            <span class="px-1.5 py-0.5 rounded text-[9px] font-semibold {{ $service->report_status === 'fixed' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700' }}">
+                                                                {{ strtoupper($service->report_status ?? 'draft') }}
+                                                            </span>
                                                         </td>
                                                         <td class="py-1.5 px-4 text-[10px] text-gray-700">{{ \Carbon\Carbon::parse($service->service_date)->format('d M Y') }}</td>
                                                         <td class="py-1.5 px-4 text-center">
@@ -801,9 +1029,9 @@
                                                                         const spaceAbove = rect.top; 
                                                                         const dropUp = spaceBelow < 150 && spaceAbove > spaceBelow; 
                                                                         if (dropUp) { 
-                                                                            this.dropdownStyle = { position: 'fixed', top: (rect.top - 150) + 'px', left: (rect.right - 140) + 'px', width: '140px' }; 
+                                                                            this.dropdownStyle = { position: 'fixed', top: (rect.top - 215) + 'px', left: (rect.right - 160) + 'px', width: '155px' }; 
                                                                         } else { 
-                                                                            this.dropdownStyle = { position: 'fixed', top: (rect.bottom + 4) + 'px', left: (rect.right - 140) + 'px', width: '140px' }; 
+                                                                            this.dropdownStyle = { position: 'fixed', top: (rect.bottom + 4) + 'px', left: (rect.right - 160) + 'px', width: '155px' }; 
                                                                         } 
                                                                     } 
                                                                 }" 
@@ -863,6 +1091,14 @@
                                                                                 editServiceAmount = '{{ $service->amount }}';
                                                                                 editServiceNotes = '{{ addslashes($service->notes ?? '') }}';
                                                                                 editProofImage = '{{ $service->proof_img ? route('finance.report.support-partner.serve-image', $service->id) : '' }}';
+                                                                                editProofImage2 = '{{ $service->proof_img2 ? route('finance.report.support-partner.serve-image2', $service->id) : '' }}';
+                                                                                imagePreview2 = null;
+                                                                                fileName2 = '';
+                                                                                showWebcam2 = false;
+                                                                                removeProof2 = false;
+                                                                                if (stream2) { stream2.getTracks().forEach(t => t.stop()); stream2 = null; }
+                                                                                const ep2 = document.querySelector('input[name=edit_service_proof_image2]'); if (ep2) ep2.value = '';
+                                                                                const rp2 = document.querySelector('input[name=remove_proof_image2]'); if (rp2) rp2.value = '';
                                                                                 showEditServiceModal = true;
                                                                                 open = false;
                                                                                 editServiceErrors = {};
@@ -880,6 +1116,26 @@
                                                                             </svg>
                                                                             Delete
                                                                         </button>
+                                                                        <button type="button"
+                                                                            @click="
+                                                                                open = false;
+                                                                                fetch('{{ route('finance.report.support-partner.toggle-status', $service->id) }}', {
+                                                                                    method: 'PATCH',
+                                                                                    headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}', 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
+                                                                                }).then(r => r.json()).then(data => {
+                                                                                    if (data.success) {
+                                                                                        sessionStorage.setItem('toast_message', data.message);
+                                                                                        sessionStorage.setItem('toast_type', 'success');
+                                                                                        window.location.reload();
+                                                                                    }
+                                                                                });
+                                                                            "
+                                                                            class="w-full text-left px-3 py-1.5 text-[11px] {{ $service->report_status === 'fixed' ? 'text-amber-600 hover:bg-amber-50' : 'text-emerald-600 hover:bg-emerald-50' }} flex items-center gap-1.5">
+                                                                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+                                                                            </svg>
+                                                                            {{ $service->report_status === 'fixed' ? 'Move to Draft' : 'Move to Fixed' }}
+                                                                        </button>
                                                                     </div>
                                                                 </div>
                                                                 @endif
@@ -894,7 +1150,7 @@
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="8" class="py-12 text-center text-gray-500">
+                                <td colspan="9" class="py-12 text-center text-gray-500">
                                     <div class="flex flex-col items-center gap-3">
                                         <svg class="w-16 h-16 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -1107,6 +1363,10 @@
                         serviceErrors = {};
                         imagePreview = null;
                         fileName = '';
+                        imagePreview2 = null;
+                        fileName2 = '';
+                        showWebcam2 = false;
+                        if (stream2) { stream2.getTracks().forEach(t => t.stop()); stream2 = null; }
                         // Auto-validate period from navigation month/year
                         validatePeriod();
                     }
@@ -1188,6 +1448,13 @@
                                 const fileInput = document.querySelector('input[name=service_proof_image]');
                                 if (fileInput && fileInput.files[0]) {
                                     formData.append('proof_image', fileInput.files[0]);
+                                }
+                            }
+                            
+                            if (imagePreview2 && fileName2) {
+                                const fileInput2 = document.querySelector('input[name=service_proof_image2]');
+                                if (fileInput2 && fileInput2.files[0]) {
+                                    formData.append('proof_image2', fileInput2.files[0]);
                                 }
                             }
                             
@@ -1573,6 +1840,82 @@
                                         </template>
                                     </div>
 
+                                    {{-- Proof of Payment 2 (Optional) --}}
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">
+                                            Proof of Payment 2 <span class="text-gray-400 text-xs font-normal">(Optional)</span>
+                                        </label>
+
+                                        {{-- Webcam2 Section --}}
+                                        <div x-show="showWebcam2" class="mb-3">
+                                            <div class="relative bg-black rounded-xl overflow-hidden shadow-xl" style="height: 320px;">
+                                                <video x-ref="service2Video" autoplay playsinline
+                                                    :class="{ 'scale-x-[-1]': isMirrored2 }"
+                                                    class="w-full h-full object-cover"></video>
+                                                <canvas x-ref="service2Canvas" class="hidden"></canvas>
+                                            </div>
+                                            <div class="flex gap-2 mt-3">
+                                                <button type="button" @click="captureServicePhoto2('service_proof_image2')"
+                                                    class="flex-1 px-3 py-2 text-sm bg-primary text-white rounded-md hover:bg-primary-dark transition-colors flex items-center justify-center gap-2">
+                                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                                                    </svg>
+                                                    Capture
+                                                </button>
+                                                <button type="button" @click="toggleServiceCamera2()"
+                                                    class="px-3 py-2 text-sm bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors">
+                                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7h12m0 0l-4-4m4 4l-4 4M16 17H4m0 0l4-4m-4 4l4 4" />
+                                                    </svg>
+                                                </button>
+                                                <button type="button" @click="stopServiceWebcam2()"
+                                                    class="px-3 py-2 text-sm bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors flex items-center gap-1">
+                                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                                                    </svg>
+                                                    Close
+                                                </button>
+                                            </div>
+                                        </div>
+
+                                        {{-- Image Preview 2 --}}
+                                        <div x-show="imagePreview2 && !showWebcam2" class="mb-3 border-2 border-dashed border-green-400 rounded-lg p-3 bg-green-50">
+                                            <div class="flex items-center gap-3">
+                                                <img :src="imagePreview2" class="w-24 h-24 object-cover rounded-md border-2 border-green-500">
+                                                <div class="flex-1">
+                                                    <p class="text-sm font-medium text-gray-900" x-text="fileName2"></p>
+                                                    <p class="text-xs text-green-600 mt-1">✓ Image ready to upload</p>
+                                                </div>
+                                                <button type="button" @click="imagePreview2 = null; fileName2 = ''; document.querySelector('input[name=service_proof_image2]').value = ''; startServiceWebcam2()"
+                                                    class="text-blue-600 hover:text-blue-700 p-1" title="Retake photo">
+                                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                                    </svg>
+                                                </button>
+                                                <button type="button" @click="imagePreview2 = null; fileName2 = ''; document.querySelector('input[name=service_proof_image2]').value = ''"
+                                                    class="text-red-600 hover:text-red-700 p-1" title="Delete photo">
+                                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                                    </svg>
+                                                </button>
+                                            </div>
+                                        </div>
+
+                                        {{-- Open Camera Button 2 --}}
+                                        <div x-show="!imagePreview2 && !showWebcam2">
+                                            <button type="button" @click="startServiceWebcam2()"
+                                                class="w-full px-4 py-3 text-sm border-2 border-dashed border-gray-300 rounded-md hover:border-primary hover:bg-primary/5 transition-all flex items-center justify-center gap-2 text-gray-700">
+                                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                                                </svg>
+                                                Open Camera (Optional)
+                                            </button>
+                                        </div>
+                                        <input type="file" name="service_proof_image2" accept="image/*" class="hidden">
+                                    </div>
+
                                     {{-- Notes --}}
                                     <div>
                                         <label class="block text-sm font-medium text-gray-700 mb-1">
@@ -1773,6 +2116,10 @@
                         extraServiceErrors = {};
                         imagePreview = null;
                         fileName = '';
+                        imagePreview2 = null;
+                        fileName2 = '';
+                        showWebcam2 = false;
+                        if (stream2) { stream2.getTracks().forEach(t => t.stop()); stream2 = null; }
                         orderReportData = null;
                         balanceMonth = null;
                         balanceYear = null;
@@ -1854,6 +2201,13 @@
                                 const fileInput = document.querySelector('input[name=extra_service_proof_image]');
                                 if (fileInput && fileInput.files[0]) {
                                     formData.append('proof_image', fileInput.files[0]);
+                                }
+                            }
+                            
+                            if (imagePreview2 && fileName2) {
+                                const fileInput2 = document.querySelector('input[name=extra_service_proof_image2]');
+                                if (fileInput2 && fileInput2.files[0]) {
+                                    formData.append('proof_image2', fileInput2.files[0]);
                                 }
                             }
                             
@@ -2154,6 +2508,82 @@
                                     </template>
                                 </div>
 
+                                {{-- Proof of Payment 2 (Optional) --}}
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">
+                                        Proof of Payment 2 <span class="text-gray-400 text-xs font-normal">(Optional)</span>
+                                    </label>
+
+                                    {{-- Webcam2 Section --}}
+                                    <div x-show="showWebcam2" class="mb-3">
+                                        <div class="relative bg-black rounded-xl overflow-hidden shadow-xl" style="height: 320px;">
+                                            <video x-ref="extra2Video" autoplay playsinline
+                                                :class="{ 'scale-x-[-1]': isMirrored2 }"
+                                                class="w-full h-full object-cover"></video>
+                                            <canvas x-ref="extra2Canvas" class="hidden"></canvas>
+                                        </div>
+                                        <div class="flex gap-2 mt-3">
+                                            <button type="button" @click="captureExtraPhoto2()"
+                                                class="flex-1 px-3 py-2 text-sm bg-primary text-white rounded-md hover:bg-primary-dark transition-colors flex items-center justify-center gap-2">
+                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                                                </svg>
+                                                Capture
+                                            </button>
+                                            <button type="button" @click="toggleExtraCamera2()"
+                                                class="px-3 py-2 text-sm bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors">
+                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7h12m0 0l-4-4m4 4l-4 4M16 17H4m0 0l4-4m-4 4l4 4" />
+                                                </svg>
+                                            </button>
+                                            <button type="button" @click="stopExtraWebcam2()"
+                                                class="px-3 py-2 text-sm bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors flex items-center gap-1">
+                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                                                </svg>
+                                                Close
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    {{-- Image Preview 2 --}}
+                                    <div x-show="imagePreview2 && !showWebcam2" class="mb-3 border-2 border-dashed border-green-400 rounded-lg p-3 bg-green-50">
+                                        <div class="flex items-center gap-3">
+                                            <img :src="imagePreview2" class="w-24 h-24 object-cover rounded-md border-2 border-green-500">
+                                            <div class="flex-1">
+                                                <p class="text-sm font-medium text-gray-900" x-text="fileName2"></p>
+                                                <p class="text-xs text-green-600 mt-1">✓ Image ready to upload</p>
+                                            </div>
+                                            <button type="button" @click="imagePreview2 = null; fileName2 = ''; document.querySelector('input[name=extra_service_proof_image2]').value = ''; startExtraWebcam2()"
+                                                class="text-blue-600 hover:text-blue-700 p-1" title="Retake photo">
+                                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                                </svg>
+                                            </button>
+                                            <button type="button" @click="imagePreview2 = null; fileName2 = ''; document.querySelector('input[name=extra_service_proof_image2]').value = ''"
+                                                class="text-red-600 hover:text-red-700 p-1" title="Delete photo">
+                                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                                </svg>
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    {{-- Open Camera Button 2 --}}
+                                    <div x-show="!imagePreview2 && !showWebcam2">
+                                        <button type="button" @click="startExtraWebcam2()"
+                                            class="w-full px-4 py-3 text-sm border-2 border-dashed border-gray-300 rounded-md hover:border-primary hover:bg-primary/5 transition-all flex items-center justify-center gap-2 text-gray-700">
+                                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                                            </svg>
+                                            Open Camera (Optional)
+                                        </button>
+                                    </div>
+                                    <input type="file" name="extra_service_proof_image2" accept="image/*" class="hidden">
+                                </div>
+
                                 {{-- Notes --}}
                                 <div>
                                     <label class="block text-sm font-medium text-gray-700 mb-1">
@@ -2225,6 +2655,14 @@
                         const fileInput = document.querySelector('input[name=edit_service_proof_image]');
                         if (fileInput && fileInput.files[0]) {
                             formData.append('proof_image', fileInput.files[0]);
+                        }
+                        
+                        // Handle proof image 2
+                        const fileInput2 = document.querySelector('input[name=edit_service_proof_image2]');
+                        if (fileInput2 && fileInput2.files[0]) {
+                            formData.append('proof_image2', fileInput2.files[0]);
+                        } else if (removeProof2) {
+                            formData.append('remove_proof_image2', '1');
                         }
                         
                         fetch(`{{ url('finance/report/support-partner') }}/${editServiceId}`, {
@@ -2518,6 +2956,83 @@
                                 </template>
                             </div>
 
+                            {{-- Proof of Payment 2 (Optional) --}}
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">
+                                    Proof of Payment 2 <span class="text-gray-400 text-xs font-normal">(Optional)</span>
+                                </label>
+
+                                {{-- Webcam2 Section --}}
+                                <div x-show="showWebcam2" class="mb-3">
+                                    <div class="relative bg-black rounded-xl overflow-hidden shadow-xl" style="height: 320px;">
+                                        <video x-ref="editProof2Video" autoplay playsinline
+                                            :class="{ 'scale-x-[-1]': isMirrored2 }"
+                                            class="w-full h-full object-cover"></video>
+                                        <canvas x-ref="editProof2Canvas" class="hidden"></canvas>
+                                    </div>
+                                    <div class="flex gap-2 mt-3">
+                                        <button type="button" @click="captureEditPhoto2()"
+                                            class="flex-1 px-3 py-2 text-sm bg-primary text-white rounded-md hover:bg-primary-dark transition-colors flex items-center justify-center gap-2">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                                            </svg>
+                                            Capture
+                                        </button>
+                                        <button type="button" @click="toggleEditCamera2()"
+                                            class="px-3 py-2 text-sm bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7h12m0 0l-4-4m4 4l-4 4M16 17H4m0 0l4-4m-4 4l4 4" />
+                                            </svg>
+                                        </button>
+                                        <button type="button" @click="stopEditWebcam2()"
+                                            class="px-3 py-2 text-sm bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors flex items-center gap-1">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                                            </svg>
+                                            Close
+                                        </button>
+                                    </div>
+                                </div>
+
+                                {{-- Existing Proof 2 Thumbnail (or new capture) --}}
+                                <div x-show="(imagePreview2 || editProofImage2) && !showWebcam2" class="mb-3 border-2 border-dashed border-green-400 rounded-lg p-3 bg-green-50">
+                                    <div class="flex items-center gap-3">
+                                        <img :src="imagePreview2 || editProofImage2" class="w-24 h-24 object-cover rounded-md border-2 border-green-500">
+                                        <div class="flex-1">
+                                            <p class="text-sm font-medium text-gray-900" x-text="fileName2 || (editProofImage2 ? 'existing_proof2.jpg' : '')"></p>
+                                            <p class="text-xs text-green-600 mt-1">✓ Image ready to upload</p>
+                                        </div>
+                                        <button type="button" @click="editProofImage2 = null; imagePreview2 = null; fileName2 = ''; document.querySelector('input[name=edit_service_proof_image2]').value = ''; startEditWebcam2()"
+                                            class="text-blue-600 hover:text-blue-700 p-1" title="Retake photo">
+                                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                            </svg>
+                                        </button>
+                                        <button type="button" @click="editProofImage2 = null; imagePreview2 = null; fileName2 = ''; removeProof2 = true; document.querySelector('input[name=edit_service_proof_image2]').value = ''"
+                                            class="text-red-600 hover:text-red-700 p-1" title="Delete photo">
+                                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                            </svg>
+                                        </button>
+                                    </div>
+                                </div>
+
+                                {{-- Open Camera 2 Button --}}
+                                <div x-show="!imagePreview2 && !showWebcam2 && !editProofImage2">
+                                    <button type="button" @click="startEditWebcam2()"
+                                        class="w-full px-4 py-3 text-sm border-2 border-dashed border-gray-300 rounded-md hover:border-primary hover:bg-primary/5 transition-all flex items-center justify-center gap-2 text-gray-700">
+                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                                        </svg>
+                                        Open Camera (Optional)
+                                    </button>
+                                </div>
+                                <input type="file" name="edit_service_proof_image2" accept="image/*" class="hidden">
+                                <input type="hidden" name="remove_proof_image2" :value="removeProof2 ? '1' : ''">
+                            </div>
+
                             {{-- Notes --}}
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-1">
@@ -2533,7 +3048,7 @@
                 
                 {{-- Modal Footer - Sticky --}}
                 <div class="sticky bottom-0 bg-white border-t border-gray-200 px-6 py-4 flex gap-3">
-                    <button type="button" @click="showEditServiceModal = false; stopServiceWebcam(); editProofImage = null; imagePreview = null"
+                    <button type="button" @click="showEditServiceModal = false; stopServiceWebcam(); stopEditWebcam2(); editProofImage = null; imagePreview = null; editProofImage2 = null; imagePreview2 = null; removeProof2 = false;"
                         class="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium transition-colors">
                         Cancel
                     </button>

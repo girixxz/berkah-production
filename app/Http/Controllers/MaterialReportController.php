@@ -294,7 +294,8 @@ class MaterialReportController extends Controller
             'payment_method' => 'required|in:cash,transfer',
             'amount' => 'required|numeric|min:1',
             'notes' => 'nullable|string',
-            'proof_image' => 'required|image|mimes:jpeg,jpg,png|max:5120'
+            'proof_image' => 'required|image|mimes:jpeg,jpg,png|max:5120',
+            'proof_image2' => 'nullable|image|mimes:jpeg,jpg,png|max:5120'
         ]);
 
         if ($validator->fails()) {
@@ -340,7 +341,14 @@ class MaterialReportController extends Controller
             if ($request->hasFile('proof_image')) {
                 $file = $request->file('proof_image');
                 $filename = 'material_' . $request->order_report_id . '_' . time() . '_' . uniqid() . '.' . $file->getClientOriginalExtension();
-                $proofImagePath = $file->storeAs('material_proofs', $filename, 'local');
+                $proofImagePath = $file->storeAs('material_proofs/proof1', $filename, 'local');
+            }
+
+            $proofImage2Path = null;
+            if ($request->hasFile('proof_image2')) {
+                $file2 = $request->file('proof_image2');
+                $filename2 = 'material_' . $request->order_report_id . '_' . time() . '_' . uniqid() . '.' . $file2->getClientOriginalExtension();
+                $proofImage2Path = $file2->storeAs('material_proofs/proof2', $filename2, 'local');
             }
 
             // Create material report
@@ -354,7 +362,8 @@ class MaterialReportController extends Controller
                 'amount' => $amount,
                 'notes' => $request->notes,
                 'payment_method' => $request->payment_method,
-                'proof_img' => $proofImagePath
+                'proof_img' => $proofImagePath,
+                'proof_img2' => $proofImage2Path
             ]);
 
             // Update balance
@@ -393,6 +402,7 @@ class MaterialReportController extends Controller
                 'payment_method' => 'required|in:cash,transfer',
                 'amount' => 'required|numeric|min:1',
                 'proof_image' => 'required|image|mimes:jpeg,jpg,png|max:5120',
+                'proof_image2' => 'nullable|image|mimes:jpeg,jpg,png|max:5120',
                 'notes' => 'nullable|string'
             ]);
 
@@ -449,7 +459,15 @@ class MaterialReportController extends Controller
             if ($request->hasFile('proof_image')) {
                 $file = $request->file('proof_image');
                 $filename = 'material_' . $request->order_report_id . '_' . time() . '_' . uniqid() . '.' . $file->getClientOriginalExtension();
-                $proofImagePath = $file->storeAs('material_proofs', $filename, 'local');
+                $proofImagePath = $file->storeAs('material_proofs/proof1', $filename, 'local');
+            }
+
+            // Handle proof_image2 upload (optional)
+            $proofImage2Path = null;
+            if ($request->hasFile('proof_image2')) {
+                $file2 = $request->file('proof_image2');
+                $filename2 = 'material_' . $request->order_report_id . '_' . time() . '_' . uniqid() . '.' . $file2->getClientOriginalExtension();
+                $proofImage2Path = $file2->storeAs('material_proofs/proof2', $filename2, 'local');
             }
 
             // Create extra material report
@@ -463,7 +481,8 @@ class MaterialReportController extends Controller
                 'amount' => $amount,
                 'notes' => $request->notes,
                 'payment_method' => $request->payment_method,
-                'proof_img' => $proofImagePath
+                'proof_img' => $proofImagePath,
+                'proof_img2' => $proofImage2Path,
             ]);
 
             // Update balance
@@ -501,6 +520,8 @@ class MaterialReportController extends Controller
                 'payment_method' => 'required|in:cash,transfer',
                 'amount' => 'required|numeric|min:1',
                 'proof_image' => 'nullable|image|mimes:jpeg,jpg,png|max:5120',
+                'proof_image2' => 'nullable|image|mimes:jpeg,jpg,png|max:5120',
+                'remove_proof_image2' => 'nullable|boolean',
                 'notes' => 'nullable|string'
             ]);
 
@@ -561,8 +582,26 @@ class MaterialReportController extends Controller
                 // Upload new image with consistent naming
                 $file = $request->file('proof_image');
                 $filename = 'material_' . $materialReport->order_report_id . '_' . time() . '_' . uniqid() . '.' . $file->getClientOriginalExtension();
-                $proofImagePath = $file->storeAs('material_proofs', $filename, 'local');
+                $proofImagePath = $file->storeAs('material_proofs/proof1', $filename, 'local');
                 $materialReport->proof_img = $proofImagePath;
+            }
+
+            // Handle proof_image2 upload (optional second attachment)
+            if ($request->boolean('remove_proof_image2')) {
+                // Remove existing proof_img2
+                if ($materialReport->proof_img2 && Storage::disk('local')->exists($materialReport->proof_img2)) {
+                    Storage::disk('local')->delete($materialReport->proof_img2);
+                }
+                $materialReport->proof_img2 = null;
+            } elseif ($request->hasFile('proof_image2')) {
+                // Delete old proof_img2 first
+                if ($materialReport->proof_img2 && Storage::disk('local')->exists($materialReport->proof_img2)) {
+                    Storage::disk('local')->delete($materialReport->proof_img2);
+                }
+                // Upload new proof_img2
+                $file2 = $request->file('proof_image2');
+                $filename2 = 'material2_' . $materialReport->order_report_id . '_' . time() . '_' . uniqid() . '.' . $file2->getClientOriginalExtension();
+                $materialReport->proof_img2 = $file2->storeAs('material_proofs/proof2', $filename2, 'local');
             }
 
             // Update material report
@@ -622,6 +661,53 @@ class MaterialReportController extends Controller
     }
 
     /**
+     * Serve second material proof image (proof_img2) from private storage
+     */
+    public function serveProofImage2(OrderMaterialReport $materialReport)
+    {
+        if (!auth()->check()) {
+            abort(403, 'Unauthorized');
+        }
+
+        if (!$materialReport->proof_img2 || !Storage::disk('local')->exists($materialReport->proof_img2)) {
+            abort(404, 'Image not found');
+        }
+
+        $path = Storage::disk('local')->path($materialReport->proof_img2);
+        $mimeType = Storage::disk('local')->mimeType($materialReport->proof_img2) ?: 'application/octet-stream';
+
+        return response()->file($path, [
+            'Content-Type' => $mimeType,
+            'Cache-Control' => 'no-cache, no-store, must-revalidate',
+            'Pragma' => 'no-cache',
+            'Expires' => '0',
+        ]);
+    }
+
+    /**
+     * Toggle report_status between draft and fixed
+     */
+    public function toggleReportStatus(Request $request, OrderMaterialReport $materialReport)
+    {
+        try {
+            $newStatus = $materialReport->report_status === 'fixed' ? 'draft' : 'fixed';
+            $materialReport->report_status = $newStatus;
+            $materialReport->save();
+
+            return response()->json([
+                'success' => true,
+                'report_status' => $newStatus,
+                'message' => 'Report status updated to ' . ucfirst($newStatus),
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to toggle report status: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
      * Delete material purchase and restore balance
      */
     public function destroy(OrderMaterialReport $materialReport)
@@ -652,6 +738,11 @@ class MaterialReportController extends Controller
             // Delete proof image from storage if exists
             if ($materialReport->proof_img && Storage::disk('local')->exists($materialReport->proof_img)) {
                 Storage::disk('local')->delete($materialReport->proof_img);
+            }
+
+            // Delete second proof image from storage if exists
+            if ($materialReport->proof_img2 && Storage::disk('local')->exists($materialReport->proof_img2)) {
+                Storage::disk('local')->delete($materialReport->proof_img2);
             }
 
             // Delete the material report

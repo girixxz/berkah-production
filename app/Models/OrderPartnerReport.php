@@ -17,6 +17,8 @@ class OrderPartnerReport extends Model
         'notes',
         'payment_method',
         'proof_img',
+        'proof_img2',
+        'report_status',
     ];
 
     protected $casts = [

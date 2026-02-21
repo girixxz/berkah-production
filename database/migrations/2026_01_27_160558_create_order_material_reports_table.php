@@ -23,6 +23,8 @@ return new class extends Migration
             $table->text('notes')->nullable();
             $table->enum('payment_method', ['cash', 'transfer']);
             $table->string('proof_img', 255);
+            $table->string('proof_img2', 255)->nullable();
+            $table->enum('report_status', ['draft', 'fixed'])->default('draft');
             $table->timestamps();
         });
     }
