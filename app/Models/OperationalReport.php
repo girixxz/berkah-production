@@ -12,13 +12,15 @@ class OperationalReport extends Model
     protected $fillable = [
         'balance_id',
         'operational_date',
+        'operational_type',
         'category',
         'operational_name',
         'amount',
         'notes',
         'payment_method',
         'proof_img',
-        'lock_status',
+        'proof_img2',
+        'report_status',
     ];
 
     protected $casts = [

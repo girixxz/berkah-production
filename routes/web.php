@@ -238,9 +238,12 @@ Route::middleware(['auth'])->group(function () {
             Route::get('operational/check-period-status', [\App\Http\Controllers\OperationalReportController::class, 'checkPeriodStatus'])->name('operational.check-period-status');
             Route::get('operational/get-lists', [\App\Http\Controllers\OperationalReportController::class, 'getOperationalLists'])->name('operational.get-lists');
             Route::post('operational/store', [\App\Http\Controllers\OperationalReportController::class, 'store'])->name('operational.store');
+            Route::post('operational/extract', [\App\Http\Controllers\OperationalReportController::class, 'extractFromOperationLists'])->name('operational.extract');
+            Route::post('operational/store-extra', [\App\Http\Controllers\OperationalReportController::class, 'storeExtra'])->name('operational.store-extra');
             Route::put('operational/{operationalReport}', [\App\Http\Controllers\OperationalReportController::class, 'update'])->name('operational.update');
             Route::delete('operational/{operationalReport}', [\App\Http\Controllers\OperationalReportController::class, 'destroy'])->name('operational.destroy');
             Route::get('operational/{operationalReport}/image', [\App\Http\Controllers\OperationalReportController::class, 'serveImage'])->name('operational.serve-image');
+            Route::get('operational/{operationalReport}/image2', [\App\Http\Controllers\OperationalReportController::class, 'serveImage2'])->name('operational.serve-image2');
 
             Route::get('salary', fn() => view('pages.finance.report.salary'))->name('salary');
         });

@@ -1,4 +1,4 @@
-@extends('layouts.app')
+﻿@extends('layouts.app')
 
 @section('title', 'Operational Report')
 
@@ -13,6 +13,10 @@
 
         {{-- Lock state (read-only, dikendalikan dari Order List) --}}
         currentPeriodLocked: {{ $periodLocked ? 'true' : 'false' }},
+
+        {{-- Extract state --}}
+        hasExtracted: {{ $hasExtracted ? 'true' : 'false' }},
+        extractLoading: false,
 
         {{-- Data arrays from controller --}}
         fixCost1Data: @js($fixCost1->toArray()),
@@ -102,6 +106,34 @@
         isMirrored: false,
         facingMode: 'environment',
 
+        {{-- Proof 2 Webcam State --}}
+        showWebcam2: false,
+        stream2: null,
+        imagePreview2: null,
+        fileName2: '',
+        isMirrored2: false,
+        facingMode2: 'environment',
+
+        {{-- Group expand/collapse state --}}
+        openGroups: { fixCost1: {}, fixCost2: {}, printingSupply: {}, daily: {} },
+
+        {{-- Extra Expense Modal State --}}
+        showExtraModal: false,
+        extraParentId: null,
+        extraParentName: '',
+        extraCategory: '',
+        extraCategoryLabel: '',
+        extraForm: { payment_method: '', amount: '', notes: '' },
+        extraErrors: {},
+        extraLoading: false,
+        extraPaymentDropdownOpen: false,
+        extraBalanceTransfer: 0,
+        extraBalanceCash: 0,
+
+        {{-- Edit Proof 2 --}}
+        editProofImage2: '',
+        removeProof2: false,
+
         {{-- Initialization --}}
         init() {
             const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
@@ -185,6 +217,7 @@
                     this.dailyData = res.data.data.daily;
                     this.stats = res.data.data.stats;
                     this.currentPeriodLocked = res.data.data.periodLocked;
+                    this.hasExtracted = res.data.data.hasExtracted;
 
                     // Reset search and pagination
                     this.searchFixCost1 = '';
@@ -199,6 +232,31 @@
                 }));
             } finally {
                 NProgress.done();
+            }
+        },
+
+        {{-- Extract data from operation_lists --}}
+        async extractData() {
+            this.extractLoading = true;
+            try {
+                const res = await axios.post('{{ route('finance.report.operational.extract') }}', {
+                    balance_month: this.currentMonth,
+                    balance_year: this.currentYear,
+                });
+                if (res.data.success) {
+                    this.hasExtracted = true;
+                    window.dispatchEvent(new CustomEvent('show-toast', {
+                        detail: { message: res.data.message, type: 'success' }
+                    }));
+                    await this.fetchData();
+                }
+            } catch (err) {
+                const msg = err.response?.data?.message || 'Failed to extract data';
+                window.dispatchEvent(new CustomEvent('show-toast', {
+                    detail: { message: msg, type: 'error' }
+                }));
+            } finally {
+                this.extractLoading = false;
             }
         },
 
@@ -224,24 +282,48 @@
         },
 
         {{-- Open Add Modal per category --}}
-        openAddModal(category, label) {
+        async openAddModal(category, label) {
             this.addCategory = category;
             this.addCategoryLabel = label;
             this.addForm = { operational_name: '', payment_method: '', amount: '', notes: '' };
             this.addErrors = {};
             this.imagePreview = null;
             this.fileName = '';
+            this.imagePreview2 = null;
+            this.fileName2 = '';
             this.operationalListOptions = [];
-            this.addBalanceMonth = null;
-            this.addBalanceYear = null;
+            this.addBalanceMonth = this.currentMonth;
+            this.addBalanceYear = this.currentYear;
             this.addBalanceId = null;
             this.addBalanceTransfer = 0;
             this.addBalanceCash = 0;
-            this.addPeriodValidated = false;
+            this.addPeriodValidated = true;
             this.addPeriodError = '';
             this.addPaymentMethodDropdownOpen = false;
             this.addOperationalNameDropdownOpen = false;
             this.showAddModal = true;
+
+            // Auto-fetch balance for the current navigation period
+            await this.addFetchBalanceData();
+
+            // For non-daily categories, fetch list options and filter out names already in this period
+            if (category !== 'daily') {
+                try {
+                    const res = await axios.get(`{{ route('finance.report.operational.get-lists') }}?category=${category}`);
+                    if (res.data.success) {
+                        const dataMap = {
+                            fix_cost_1: this.fixCost1Data,
+                            fix_cost_2: this.fixCost2Data,
+                            printing_supply: this.printingSupplyData,
+                        };
+                        const existingData = dataMap[category] || [];
+                        const existingNames = new Set(existingData.map(item => item.operational_name));
+                        this.operationalListOptions = res.data.lists.filter(opt => !existingNames.has(opt.list_name));
+                    }
+                } catch (e) {
+                    console.error('Failed to fetch operational lists:', e);
+                }
+            }
         },
 
         {{-- Balance Period Selection for Add Modal --}}
@@ -347,6 +429,54 @@
             this.addOperationalNameDropdownOpen = false;
         },
 
+        {{-- Group helpers for 2-level table --}}
+        groupData(dataArray) {
+            const map = {};
+            dataArray.forEach(item => {
+                const key = item.operational_name;
+                if (!map[key]) {
+                    map[key] = { name: key, total: 0, items: [], allFixed: true, latestDate: '', firstId: null };
+                }
+                map[key].total += parseFloat(item.amount || 0);
+                map[key].items.push(item);
+                if (item.report_status !== 'fixed') map[key].allFixed = false;
+                const d = item.operational_date ? new Date(item.operational_date).toLocaleDateString('en-CA') : '';
+                if (!map[key].latestDate || d > map[key].latestDate) map[key].latestDate = d;
+                if (map[key].firstId === null || item.operational_type === 'first_expense') map[key].firstId = item.id;
+            });
+            return Object.values(map);
+        },
+
+        getFilteredGroups(dataArray, searchKey) {
+            const q = (this[searchKey] || '').toLowerCase().trim();
+            const groups = this.groupData(dataArray);
+            if (!q) return groups;
+            return groups.filter(g => g.name.toLowerCase().includes(q));
+        },
+
+        getGroupedPaginated(dataArray, searchKey, perPage, currentPage) {
+            const filtered = this.getFilteredGroups(dataArray, searchKey);
+            const start = (currentPage - 1) * perPage;
+            return filtered.slice(start, start + perPage);
+        },
+
+        getTotalGroupPages(dataArray, searchKey, perPage) {
+            return Math.max(1, Math.ceil(this.getFilteredGroups(dataArray, searchKey).length / perPage));
+        },
+
+        getTotalGroupFiltered(dataArray, searchKey) {
+            return this.getFilteredGroups(dataArray, searchKey).length;
+        },
+
+        isGroupOpen(catKey, name) {
+            return !!(this.openGroups[catKey] && this.openGroups[catKey][name]);
+        },
+
+        toggleGroup(catKey, name) {
+            if (!this.openGroups[catKey]) this.openGroups[catKey] = {};
+            this.openGroups[catKey][name] = !this.openGroups[catKey][name];
+        },
+
         {{-- Webcam functions for Add Modal --}}
         async startAddWebcam() {
             if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
@@ -371,8 +501,11 @@
                         height: { ideal: 720 }
                     }
                 });
-                this.$refs.addVideo.srcObject = this.stream;
                 this.showWebcam = true;
+                this.$nextTick(() => {
+                    const v = this.$refs.addVideo;
+                    if (v) { v.srcObject = this.stream; v.play(); }
+                });
             } catch (err) {
                 console.error('Webcam error:', err);
                 let errorMsg = 'Tidak dapat mengakses webcam. ';
@@ -403,7 +536,10 @@
                         height: { ideal: 720 }
                     }
                 });
-                this.$refs.addVideo.srcObject = this.stream;
+                this.$nextTick(() => {
+                    const v = this.$refs.addVideo;
+                    if (v) { v.srcObject = this.stream; v.play(); }
+                });
             } catch (err) {
                 alert('Gagal mengganti kamera. Error: ' + err.message);
             }
@@ -447,6 +583,354 @@
             }, 'image/jpeg', 0.95);
         },
 
+        {{-- Webcam2 functions for Proof 2 (Add / Extra modals) --}}
+        async startAddWebcam2() {
+            if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                alert('Webcam tidak didukung di browser ini.');
+                return;
+            }
+            const isSecure = window.location.protocol === 'https:' ||
+                window.location.hostname === 'localhost' ||
+                window.location.hostname === '127.0.0.1';
+            if (!isSecure) { alert('Webcam membutuhkan HTTPS!'); return; }
+            try {
+                this.stream2 = await navigator.mediaDevices.getUserMedia({
+                    video: { facingMode: this.facingMode2, width: { ideal: 1280 }, height: { ideal: 720 } }
+                });
+                this.$nextTick(() => {
+                    const v2 = this.$refs.addVideo2;
+                    if (v2) { v2.srcObject = this.stream2; v2.play(); }
+                });
+                this.showWebcam2 = true;
+            } catch (err) { alert('Webcam error: ' + err.message); }
+        },
+
+        async toggleAddCamera2() {
+            this.facingMode2 = this.facingMode2 === 'user' ? 'environment' : 'user';
+            this.isMirrored2 = this.facingMode2 === 'user';
+            if (this.stream2) this.stream2.getTracks().forEach(t => t.stop());
+            try {
+                this.stream2 = await navigator.mediaDevices.getUserMedia({
+                    video: { facingMode: this.facingMode2, width: { ideal: 1280 }, height: { ideal: 720 } }
+                });
+                this.$nextTick(() => {
+                    const v2 = this.$refs.addVideo2;
+                    if (v2) { v2.srcObject = this.stream2; v2.play(); }
+                });
+            } catch (err) { alert('Camera switch error: ' + err.message); }
+        },
+
+        stopAddWebcam2() {
+            if (this.stream2) { this.stream2.getTracks().forEach(t => t.stop()); this.stream2 = null; }
+            this.showWebcam2 = false;
+        },
+
+        captureAddPhoto2(inputName) {
+            const video = this.$refs.addVideo2;
+            const canvas = this.$refs.addCanvas2;
+            if (!video || !canvas) return;
+            const context = canvas.getContext('2d');
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            if (this.isMirrored2) { context.translate(canvas.width, 0); context.scale(-1, 1); }
+            context.drawImage(video, 0, 0, canvas.width, canvas.height);
+            canvas.toBlob((blob) => {
+                const file = new File([blob], 'webcam2_' + Date.now() + '.jpg', { type: 'image/jpeg' });
+                const dt = new DataTransfer();
+                dt.items.add(file);
+                const fi = document.querySelector('input[name=' + (inputName || 'add_proof_image2') + ']');
+                if (fi) { fi.value = ''; fi.files = dt.files; }
+                this.imagePreview2 = canvas.toDataURL('image/jpeg');
+                this.fileName2 = file.name;
+                this.stopAddWebcam2();
+            }, 'image/jpeg', 0.95);
+        },
+
+        {{-- Extra Expense Modal functions --}}
+        async openAddExtraModal(parentId, parentName, category, label) {
+            this.extraParentId = parentId;
+            this.extraParentName = parentName;
+            this.extraCategory = category;
+            this.extraCategoryLabel = label;
+            this.extraForm = { payment_method: '', amount: '', notes: '' };
+            this.extraErrors = {};
+            this.imagePreview = null;
+            this.fileName = '';
+            this.imagePreview2 = null;
+            this.fileName2 = '';
+            this.showWebcam = false;
+            this.showWebcam2 = false;
+            this.extraPaymentDropdownOpen = false;
+            this.extraBalanceTransfer = 0;
+            this.extraBalanceCash = 0;
+
+            // Fetch balance for current period
+            try {
+                const r = await fetch(`{{ url('finance/balance/find-by-period') }}?month=${this.currentMonth}&year=${this.currentYear}`, {
+                    headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' }
+                });
+                const d = await r.json();
+                if (d.success && d.balance) {
+                    this.extraBalanceTransfer = d.balance.transfer_balance;
+                    this.extraBalanceCash = d.balance.cash_balance;
+                }
+            } catch (e) { /* silently ignore */ }
+
+            this.showExtraModal = true;
+        },
+
+        async submitExtraForm() {
+            this.extraErrors = {};
+            this.extraLoading = true;
+            let hasError = false;
+
+            if (!this.extraForm.payment_method) {
+                this.extraErrors.payment_method = 'Payment method wajib dipilih';
+                hasError = true;
+            }
+            const amtClean = String(this.extraForm.amount || '').replace(/\./g, '').replace(/[^0-9]/g, '');
+            if (!amtClean || parseInt(amtClean) < 1) {
+                this.extraErrors.amount = 'Jumlah wajib diisi';
+                hasError = true;
+            }
+            const fileInput1 = document.querySelector('input[name=extra_proof_image]');
+            if (!fileInput1 || !fileInput1.files[0]) {
+                this.extraErrors.proof_image = 'Bukti foto 1 wajib diupload';
+                hasError = true;
+            }
+
+            if (hasError) { this.extraLoading = false; return; }
+
+            const formData = new FormData();
+            formData.append('parent_id', this.extraParentId);
+            formData.append('payment_method', this.extraForm.payment_method);
+            formData.append('amount', amtClean);
+            formData.append('operational_date', new Date().toLocaleDateString('en-CA'));
+            if (this.extraForm.notes) formData.append('notes', this.extraForm.notes);
+            if (fileInput1 && fileInput1.files[0]) formData.append('proof_image', fileInput1.files[0]);
+            const fileInput2 = document.querySelector('input[name=extra_proof_image2]');
+            if (fileInput2 && fileInput2.files[0]) formData.append('proof_image2', fileInput2.files[0]);
+
+            try {
+                const res = await axios.post('{{ route('finance.report.operational.store-extra') }}', formData, {
+                    headers: { 'Content-Type': 'multipart/form-data' }
+                });
+                if (res.data.success) {
+                    this.showExtraModal = false;
+                    this.stopExtraWebcam1();
+                    this.stopExtraWebcam2();
+                    window.dispatchEvent(new CustomEvent('show-toast', { detail: { message: res.data.message, type: 'success' } }));
+                    await this.fetchData();
+                }
+            } catch (err) {
+                if (err.response?.status === 422) {
+                    const e = err.response.data.errors || {};
+                    this.extraErrors = {
+                        payment_method: e.payment_method?.[0],
+                        amount: e.amount?.[0],
+                        proof_image: e.proof_image?.[0],
+                        proof_image2: e.proof_image2?.[0],
+                    };
+                } else {
+                    window.dispatchEvent(new CustomEvent('show-toast', {
+                        detail: { message: err.response?.data?.message || 'Terjadi kesalahan', type: 'error' }
+                    }));
+                }
+            } finally {
+                this.extraLoading = false;
+            }
+        },
+
+        {{-- Webcam functions for Extra Modal Proof 1 --}}
+        async startExtraWebcam1() {
+            if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                alert('Webcam tidak didukung di browser ini.');
+                return;
+            }
+            const isSecure = window.location.protocol === 'https:' ||
+                window.location.hostname === 'localhost' ||
+                window.location.hostname === '127.0.0.1';
+            if (!isSecure) { alert('Webcam membutuhkan HTTPS!'); return; }
+            try {
+                this.stream = await navigator.mediaDevices.getUserMedia({
+                    video: { facingMode: this.facingMode, width: { ideal: 1280 }, height: { ideal: 720 } }
+                });
+                this.showWebcam = true;
+                this.$nextTick(() => {
+                    const v = this.$refs.extraVideo1;
+                    if (v) { v.srcObject = this.stream; v.play(); }
+                });
+            } catch (err) { alert('Webcam error: ' + err.message); }
+        },
+
+        async toggleExtraCamera1() {
+            this.facingMode = this.facingMode === 'user' ? 'environment' : 'user';
+            this.isMirrored = this.facingMode === 'user';
+            if (this.stream) this.stream.getTracks().forEach(t => t.stop());
+            try {
+                this.stream = await navigator.mediaDevices.getUserMedia({
+                    video: { facingMode: this.facingMode, width: { ideal: 1280 }, height: { ideal: 720 } }
+                });
+                this.$nextTick(() => {
+                    const v = this.$refs.extraVideo1;
+                    if (v) { v.srcObject = this.stream; v.play(); }
+                });
+            } catch (err) { alert('Camera switch error: ' + err.message); }
+        },
+
+        stopExtraWebcam1() {
+            if (this.stream) { this.stream.getTracks().forEach(t => t.stop()); this.stream = null; }
+            this.showWebcam = false;
+        },
+
+        captureExtraPhoto1() {
+            const video = this.$refs.extraVideo1;
+            const canvas = this.$refs.extraCanvas1;
+            if (!video || !canvas) return;
+            const context = canvas.getContext('2d');
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            if (this.isMirrored) { context.translate(canvas.width, 0); context.scale(-1, 1); }
+            context.drawImage(video, 0, 0, canvas.width, canvas.height);
+            canvas.toBlob((blob) => {
+                const file = new File([blob], 'webcam_extra1_' + Date.now() + '.jpg', { type: 'image/jpeg' });
+                const dt = new DataTransfer();
+                dt.items.add(file);
+                const fi = document.querySelector('input[name=extra_proof_image]');
+                if (fi) { fi.value = ''; fi.files = dt.files; }
+                this.imagePreview = canvas.toDataURL('image/jpeg');
+                this.fileName = file.name;
+                this.stopExtraWebcam1();
+            }, 'image/jpeg', 0.95);
+        },
+
+        {{-- Webcam functions for Extra Modal Proof 2 --}}
+        async startExtraWebcam2() {
+            if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                alert('Webcam tidak didukung di browser ini.');
+                return;
+            }
+            const isSecure = window.location.protocol === 'https:' ||
+                window.location.hostname === 'localhost' ||
+                window.location.hostname === '127.0.0.1';
+            if (!isSecure) { alert('Webcam membutuhkan HTTPS!'); return; }
+            try {
+                this.stream2 = await navigator.mediaDevices.getUserMedia({
+                    video: { facingMode: this.facingMode2, width: { ideal: 1280 }, height: { ideal: 720 } }
+                });
+                this.showWebcam2 = true;
+                this.$nextTick(() => {
+                    const v = this.$refs.extraVideo2;
+                    if (v) { v.srcObject = this.stream2; v.play(); }
+                });
+            } catch (err) { alert('Webcam error: ' + err.message); }
+        },
+
+        async toggleExtraCamera2() {
+            this.facingMode2 = this.facingMode2 === 'user' ? 'environment' : 'user';
+            this.isMirrored2 = this.facingMode2 === 'user';
+            if (this.stream2) this.stream2.getTracks().forEach(t => t.stop());
+            try {
+                this.stream2 = await navigator.mediaDevices.getUserMedia({
+                    video: { facingMode: this.facingMode2, width: { ideal: 1280 }, height: { ideal: 720 } }
+                });
+                this.$nextTick(() => {
+                    const v = this.$refs.extraVideo2;
+                    if (v) { v.srcObject = this.stream2; v.play(); }
+                });
+            } catch (err) { alert('Camera switch error: ' + err.message); }
+        },
+
+        stopExtraWebcam2() {
+            if (this.stream2) { this.stream2.getTracks().forEach(t => t.stop()); this.stream2 = null; }
+            this.showWebcam2 = false;
+        },
+
+        captureExtraPhoto2() {
+            const video = this.$refs.extraVideo2;
+            const canvas = this.$refs.extraCanvas2;
+            if (!video || !canvas) return;
+            const context = canvas.getContext('2d');
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            if (this.isMirrored2) { context.translate(canvas.width, 0); context.scale(-1, 1); }
+            context.drawImage(video, 0, 0, canvas.width, canvas.height);
+            canvas.toBlob((blob) => {
+                const file = new File([blob], 'webcam_extra2_' + Date.now() + '.jpg', { type: 'image/jpeg' });
+                const dt = new DataTransfer();
+                dt.items.add(file);
+                const fi = document.querySelector('input[name=extra_proof_image2]');
+                if (fi) { fi.value = ''; fi.files = dt.files; }
+                this.imagePreview2 = canvas.toDataURL('image/jpeg');
+                this.fileName2 = file.name;
+                this.stopExtraWebcam2();
+            }, 'image/jpeg', 0.95);
+        },
+
+        {{-- Webcam2 for Edit Modal (proof 2) --}}
+        async startEditWebcam2() {
+            if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                alert('Webcam tidak didukung di browser ini.');
+                return;
+            }
+            const isSecure = window.location.protocol === 'https:' ||
+                window.location.hostname === 'localhost' ||
+                window.location.hostname === '127.0.0.1';
+            if (!isSecure) { alert('Webcam membutuhkan HTTPS!'); return; }
+            try {
+                this.stream2 = await navigator.mediaDevices.getUserMedia({
+                    video: { facingMode: this.facingMode2, width: { ideal: 1280 }, height: { ideal: 720 } }
+                });
+                this.$nextTick(() => {
+                    const v2 = this.$refs.editVideo2;
+                    if (v2) { v2.srcObject = this.stream2; v2.play(); }
+                });
+                this.showWebcam2 = true;
+            } catch (err) { alert('Webcam error: ' + err.message); }
+        },
+
+        async toggleEditCamera2() {
+            this.facingMode2 = this.facingMode2 === 'user' ? 'environment' : 'user';
+            this.isMirrored2 = this.facingMode2 === 'user';
+            if (this.stream2) this.stream2.getTracks().forEach(t => t.stop());
+            try {
+                this.stream2 = await navigator.mediaDevices.getUserMedia({
+                    video: { facingMode: this.facingMode2, width: { ideal: 1280 }, height: { ideal: 720 } }
+                });
+                this.$nextTick(() => {
+                    const v2 = this.$refs.editVideo2;
+                    if (v2) { v2.srcObject = this.stream2; v2.play(); }
+                });
+            } catch (err) { alert('Camera switch error: ' + err.message); }
+        },
+
+        stopEditWebcam2() {
+            if (this.stream2) { this.stream2.getTracks().forEach(t => t.stop()); this.stream2 = null; }
+            this.showWebcam2 = false;
+        },
+
+        captureEditPhoto2() {
+            const video = this.$refs.editVideo2;
+            const canvas = this.$refs.editCanvas2;
+            if (!video || !canvas) return;
+            const context = canvas.getContext('2d');
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            if (this.isMirrored2) { context.translate(canvas.width, 0); context.scale(-1, 1); }
+            context.drawImage(video, 0, 0, canvas.width, canvas.height);
+            canvas.toBlob((blob) => {
+                const file = new File([blob], 'webcam2_edit_' + Date.now() + '.jpg', { type: 'image/jpeg' });
+                const dt = new DataTransfer();
+                dt.items.add(file);
+                const fi = document.querySelector('input[name=edit_proof_image2]');
+                if (fi) { fi.value = ''; fi.files = dt.files; }
+                this.imagePreview2 = canvas.toDataURL('image/jpeg');
+                this.fileName2 = file.name;
+                this.editProofImage2 = '';
+                this.stopEditWebcam2();
+            }, 'image/jpeg', 0.95);
+        },
+
         {{-- Submit Add Form --}}
         async submitAddForm() {
             this.addErrors = {};
@@ -454,10 +938,6 @@
 
             // Client-side validation
             let hasError = false;
-            if (!this.addBalanceMonth || !this.addBalanceYear) {
-                this.addErrors.balance_period = 'Balance period is required';
-                hasError = true;
-            }
             if (!this.addForm.operational_name || this.addForm.operational_name.trim() === '') {
                 this.addErrors.operational_name = 'Operational name is required';
                 hasError = true;
@@ -488,12 +968,16 @@
             formData.append('operational_name', this.addForm.operational_name);
             formData.append('payment_method', this.addForm.payment_method);
             formData.append('amount', amountClean);
-            formData.append('operational_date', new Date().toISOString().split('T')[0]);
+            formData.append('operational_date', new Date().toLocaleDateString('en-CA'));
             if (this.addForm.notes) formData.append('notes', this.addForm.notes);
 
             const fileInput = document.querySelector('input[name=add_proof_image]');
             if (fileInput && fileInput.files[0]) {
                 formData.append('proof_image', fileInput.files[0]);
+            }
+            const fileInput2 = document.querySelector('input[name=add_proof_image2]');
+            if (fileInput2 && fileInput2.files[0]) {
+                formData.append('proof_image2', fileInput2.files[0]);
             }
 
             try {
@@ -504,6 +988,8 @@
                 if (res.data.success) {
                     this.showAddModal = false;
                     this.stopAddWebcam();
+                    this.stopAddWebcam2();
+                    this.imagePreview2 = null; this.fileName2 = '';
                     window.dispatchEvent(new CustomEvent('show-toast', {
                         detail: { message: res.data.message, type: 'success' }
                     }));
@@ -517,6 +1003,7 @@
                         payment_method: errors.payment_method?.[0],
                         amount: errors.amount?.[0],
                         proof_image: errors.proof_image?.[0],
+                        proof_image2: errors.proof_image2?.[0],
                     };
                 } else {
                     const msg = err.response?.data?.message || 'Something went wrong';
@@ -540,7 +1027,7 @@
             cleanAmount = cleanAmount.replace(/\B(?=(\d{3})+(?!\d))/g, '.'); // Add thousand separator
             
             // Set date to now() (today)
-            const today = new Date().toISOString().split('T')[0];
+            const today = new Date().toLocaleDateString('en-CA');
             
             this.editForm = {
                 name: data.name,
@@ -553,6 +1040,11 @@
             this.editErrors = {};
             this.imagePreview = null;
             this.fileName = '';
+            this.imagePreview2 = null;
+            this.fileName2 = '';
+            this.showWebcam2 = false;
+            if (this.stream2) { this.stream2.getTracks().forEach(t => t.stop()); this.stream2 = null; }
+            this.removeProof2 = false;
             this.editListOptions = [];
             
             // Load existing proof image
@@ -560,6 +1052,13 @@
                 this.editProofImage = `{{ url('finance/report/operational') }}/${id}/image?t=${Date.now()}`;
             } else {
                 this.editProofImage = '';
+            }
+
+            // Load existing proof image 2
+            if (data.proof_img2) {
+                this.editProofImage2 = `{{ url('finance/report/operational') }}/${id}/image2?t=${Date.now()}`;
+            } else {
+                this.editProofImage2 = '';
             }
 
             // Fetch balance data
@@ -611,6 +1110,10 @@
             formData.append('operational_date', this.editForm.date);
             if (this.editForm.notes) formData.append('notes', this.editForm.notes);
             if (this.editForm.proof_image) formData.append('proof_image', this.editForm.proof_image);
+            // Proof 2 handling
+            const editP2Input = document.querySelector('input[name=edit_proof_image2]');
+            if (editP2Input && editP2Input.files[0]) formData.append('proof_image2', editP2Input.files[0]);
+            if (this.removeProof2) formData.append('remove_proof_image2', '1');
 
             try {
                 const url = `{{ url('finance/report/operational') }}/${this.editId}`;
@@ -620,6 +1123,9 @@
 
                 if (res.data.success) {
                     this.showEditModal = false;
+                    this.stopEditWebcam2();
+                    this.imagePreview2 = null; this.fileName2 = '';
+                    this.editProofImage2 = ''; this.removeProof2 = false;
                     window.dispatchEvent(new CustomEvent('show-toast', {
                         detail: { message: res.data.message, type: 'success' }
                     }));
@@ -856,26 +1362,74 @@
     }">
 
         {{-- ==================== HEADER: Date Navigation ==================== --}}
-        <div class="flex items-center justify-end gap-2 mb-6">
-            <button type="button" @click="navigateMonth('prev')"
-                class="p-2 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer flex-shrink-0">
-                <svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
-                </svg>
-            </button>
-            <div class="px-3 py-2 text-center min-w-[140px]">
-                <span class="text-base font-semibold text-gray-900 whitespace-nowrap" x-text="displayText"></span>
+        <div class="flex flex-col sm:flex-row items-center sm:justify-between gap-3 mb-6">
+            {{-- Left group: Lock Badge + Extract Button --}}
+            <div class="flex items-center gap-2 flex-shrink-0">
+                {{-- Lock Status Badge --}}
+                <div class="flex items-center gap-2 px-3 py-2 rounded-lg border font-semibold text-sm flex-shrink-0"
+                    :class="currentPeriodLocked ? 'bg-red-100 border-red-300 text-red-800' : 'bg-green-100 border-green-300 text-green-800'">
+                    <span class="relative flex h-2.5 w-2.5 flex-shrink-0">
+                        <template x-if="!currentPeriodLocked">
+                            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                        </template>
+                        <span class="relative inline-flex rounded-full h-2.5 w-2.5"
+                            :class="currentPeriodLocked ? 'bg-red-500' : 'bg-green-500'"></span>
+                    </span>
+                    <span x-text="currentPeriodLocked ? 'Locked' : 'Unlocked'"></span>
+                    <template x-if="!currentPeriodLocked">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z"/>
+                        </svg>
+                    </template>
+                    <template x-if="currentPeriodLocked">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+                        </svg>
+                    </template>
+                </div>
+
+                {{-- Extract Data Button --}}
+                <template x-if="!hasExtracted && !currentPeriodLocked">
+                    <button type="button" @click="extractData()" :disabled="extractLoading"
+                        class="flex items-center gap-2 px-3 py-2 rounded-lg border font-semibold text-sm flex-shrink-0 bg-violet-100 border-violet-300 text-violet-800 hover:bg-violet-200 transition-colors disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer">
+                        <template x-if="!extractLoading">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+                            </svg>
+                        </template>
+                        <template x-if="extractLoading">
+                            <svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+                            </svg>
+                        </template>
+                        <span x-text="extractLoading ? 'Extracting...' : 'Extract Data'"></span>
+                    </button>
+                </template>
             </div>
-            <button type="button" @click="navigateMonth('next')"
-                class="p-2 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer flex-shrink-0">
-                <svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-                </svg>
-            </button>
-            <button type="button" @click="navigateMonth('reset')"
-                class="px-4 py-2 bg-primary hover:bg-primary-dark text-white text-sm font-medium rounded-lg transition-colors cursor-pointer flex-shrink-0">
-                This Month
-            </button>
+
+            {{-- Date Navigation --}}
+            <div class="flex items-center gap-2 flex-shrink-0">
+                <button type="button" @click="navigateMonth('prev')"
+                    class="p-2 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer flex-shrink-0">
+                    <svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+                    </svg>
+                </button>
+                <div class="px-3 py-2 text-center min-w-[140px]">
+                    <span class="text-base font-semibold text-gray-900 whitespace-nowrap" x-text="displayText"></span>
+                </div>
+                <button type="button" @click="navigateMonth('next')"
+                    class="p-2 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer flex-shrink-0">
+                    <svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                    </svg>
+                </button>
+                <button type="button" @click="navigateMonth('reset')"
+                    class="px-4 py-2 bg-primary hover:bg-primary-dark text-white text-sm font-medium rounded-lg transition-colors cursor-pointer flex-shrink-0">
+                    This Month
+                </button>
+            </div>
         </div>
 
         {{-- ==================== STATISTICS CARDS ==================== --}}
@@ -1006,145 +1560,214 @@
 
                 {{-- Table --}}
                 <div class="mt-5 overflow-x-auto">
-                    <div class="max-h-124 overflow-y-auto">
-                        <table class="min-w-[600px] w-full text-sm">
-                            <thead class="sticky top-0 bg-primary-light text-font-base z-10">
-                                <tr>
-                                    <th class="py-2 px-4 text-left rounded-l-md w-10">No</th>
-                                    <th class="py-2 px-4 text-left">Name</th>
-                                    <th class="py-2 px-4 text-left">Payment</th>
-                                    <th class="py-2 px-4 text-left">Amount</th>
-                                    <th class="py-2 px-4 text-left">Attach</th>
-                                    <th class="py-2 px-4 text-left">Date</th>
-                                    <th class="py-2 px-4 text-right rounded-r-md">Action</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <template x-for="(item, idx) in getPaginatedData(fixCost1Data, 'searchFixCost1', perPageFixCost1, currentPageFixCost1)" :key="item.id">
-                                    <tr class="border-t border-gray-200">
-                                        <td class="py-2 px-4" x-text="idx + ((currentPageFixCost1 - 1) * perPageFixCost1) + 1"></td>
-                                        <td class="py-2 px-4" x-text="item.operational_name"></td>
-                                        <td class="py-2 px-4">
-                                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium"
-                                                :class="item.payment_method === 'transfer' ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800'"
-                                                x-text="item.payment_method === 'transfer' ? 'Transfer' : 'Cash'"></span>
-                                        </td>
-                                        <td class="py-2 px-4 text-left" x-text="formatCurrency(item.amount)"></td>
-                                        <td class="py-2 px-4 text-left">
-                                            <template x-if="item.proof_img">
-                                                <button @click="showImagePreview = true; imagePreviewSrc = `{{ url('finance/report/operational') }}/${item.id}/image`"
-                                                    class="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-100 text-blue-700 rounded-md hover:bg-blue-200 text-[10px] font-medium cursor-pointer">
-                                                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                            d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                                                    </svg>
-                                                    View
-                                                </button>
-                                            </template>
-                                            <template x-if="!item.proof_img">
-                                                <span class="text-[10px] text-gray-400">-</span>
-                                            </template>
-                                        </td>
-                                        <td class="py-2 px-4 whitespace-nowrap" x-text="new Date(item.operational_date).toLocaleDateString('en-GB', {day:'2-digit',month:'short',year:'2-digit'})"></td>
-                                        <td class="py-2 px-4 text-right">
-                                            {{-- Locked Action - Show Lock Icon --}}
-                                            <template x-if="item.lock_status === 'locked'">
-                                                <div class="flex justify-end">
-                                                    <svg class="w-7 h-7 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                                                    </svg>
-                                                </div>
-                                            </template>
-                                            {{-- Unlocked Action - Show Dropdown --}}
-                                            <template x-if="item.lock_status !== 'locked'">
-                                                <div class="relative inline-block text-left" x-data="{
-                                                    open: false,
-                                                    dropdownStyle: {},
-                                                    checkPosition() {
-                                                        const button = this.$refs.button;
-                                                        const rect = button.getBoundingClientRect();
-                                                        const spaceBelow = window.innerHeight - rect.bottom;
-                                                        const spaceAbove = rect.top;
-                                                        const dropUp = spaceBelow < 200 && spaceAbove > spaceBelow;
-                                                        if (dropUp) {
-                                                            this.dropdownStyle = { position: 'fixed', top: (rect.top - 90) + 'px', left: (rect.right - 160) + 'px', width: '160px' };
-                                                        } else {
-                                                            this.dropdownStyle = { position: 'fixed', top: (rect.bottom + 8) + 'px', left: (rect.right - 160) + 'px', width: '160px' };
-                                                        }
-                                                    }
-                                                }" x-init="$watch('open', value => {
-                                                    if (value) {
-                                                        const scrollContainer = $el.closest('.overflow-y-auto');
-                                                        const mainContent = document.querySelector('main');
-                                                        const closeOnScroll = () => { open = false; };
-                                                        scrollContainer?.addEventListener('scroll', closeOnScroll);
-                                                        mainContent?.addEventListener('scroll', closeOnScroll);
-                                                        window.addEventListener('resize', closeOnScroll);
-                                                    }
-                                                })">
-                                                    <button x-ref="button" @click="checkPosition(); open = !open" type="button"
-                                                        class="cursor-pointer inline-flex items-center justify-center w-8 h-8 rounded-md border border-gray-300 text-gray-600 hover:bg-gray-100"
-                                                        title="Actions">
-                                                        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                                                            <path d="M6 10a2 2 0 11-4 0 2 2 0 014 0zM12 10a2 2 0 11-4 0 2 2 0 014 0zM16 12a2 2 0 100-4 2 2 0 000 4z" />
-                                                        </svg>
-                                                    </button>
-                                                    <div x-show="open" @click.away="open = false" x-transition
-                                                        :style="dropdownStyle"
-                                                        class="rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-[9999]">
-                                                        <div class="py-1">
-                                                            <button @click="openEditModal(item.id, 'fix_cost_1', 'Fix Cost #1', {
-                                                                name: item.operational_name,
-                                                                payment_method: item.payment_method,
-                                                                amount: item.amount,
-                                                                date: item.operational_date.split('T')[0],
-                                                                notes: item.notes,
-                                                                proof_img: item.proof_img
-                                                            }); open = false"
-                                                                class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2">
-                                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                                        d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                                                                </svg>
-                                                                Edit
-                                                            </button>
-                                                            <button @click="showDeleteConfirm = item.id; open = false"
-                                                                class="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100 flex items-center gap-2">
-                                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                                        d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                                                </svg>
-                                                                Delete
-                                                            </button>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </template>
-                                        </td>
-                                    </tr>
-                                </template>
+                    <table class="min-w-full text-sm">
+                        <thead class="bg-primary-light text-gray-600">
+                            <tr>
+                                <th class="py-3 px-4 text-left font-bold rounded-l-lg">Operational Name</th>
+                                <th class="py-3 px-4 text-left font-bold">Total Expense</th>
+                                <th class="py-3 px-4 text-left font-bold">Status</th>
+                                <th class="py-3 px-4 text-left font-bold">Date</th>
+                                <th class="py-3 px-4 text-center font-bold rounded-r-lg">Action</th>
+                            </tr>
+                        </thead>
 
-                                {{-- Empty state --}}
-                                <tr x-show="fixCost1Data.length === 0" class="border-t border-gray-200">
-                                    <td colspan="7" class="py-3 text-center text-gray-400 text-sm">No data available for this period</td>
+                        {{-- Each group: one <tbody> containing primary row + collapsible detail row --}}
+                        <template x-for="(group, gIdx) in getGroupedPaginated(fixCost1Data, 'searchFixCost1', perPageFixCost1, currentPageFixCost1)" :key="group.name + '_' + gIdx">
+                            <tbody>
+                                {{-- PRIMARY ROW --}}
+                                <tr class="hover:bg-gray-50 cursor-pointer"
+                                    @click="toggleGroup('fixCost1', group.name)">
+                                    <td class="py-3 px-4 text-[12px] font-semibold text-gray-900" x-text="group.name"></td>
+                                    <td class="py-3 px-4 text-[12px] font-semibold text-gray-800" x-text="formatCurrency(group.total)"></td>
+                                    <td class="py-3 px-4 text-[12px]">
+                                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold"
+                                            :class="group.allFixed ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'"
+                                            x-text="group.allFixed ? 'FIXED' : 'DRAFT'"></span>
+                                    </td>
+                                    <td class="py-3 px-4 text-[12px] text-gray-700"
+                                        x-text="group.latestDate ? new Date(group.latestDate + 'T00:00:00').toLocaleDateString('en-GB', {day:'2-digit', month:'short', year:'2-digit'}) : '-'"></td>
+                                    <td class="py-3 px-4 text-center relative" @click.stop>
+                                        <template x-if="currentPeriodLocked"><div class="inline-flex items-center justify-center w-8 h-8 text-red-400"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg></div></template>
+                                        {{-- Dropdown --}}
+                                        <div class="relative inline-block text-left" x-data="{
+                                            open: false,
+                                            dropdownStyle: {},
+                                            checkPosition() {
+                                                const rect = this.$refs.primaryBtn.getBoundingClientRect();
+                                                const spaceBelow = window.innerHeight - rect.bottom;
+                                                this.dropdownStyle = spaceBelow < 100
+                                                    ? { position: 'fixed', bottom: (window.innerHeight - rect.top + 4) + 'px', right: (window.innerWidth - rect.right) + 'px' }
+                                                    : { position: 'fixed', top: (rect.bottom + 4) + 'px', right: (window.innerWidth - rect.right) + 'px' };
+                                            }
+                                        }" @scroll.window="open = false" @close-primary-menus.window="open = false" x-show="!currentPeriodLocked">
+                                            <button x-ref="primaryBtn" @click.stop="checkPosition(); if(!open){ $dispatch('close-secondary-menus'); } open = !open" type="button"
+                                                class="cursor-pointer inline-flex items-center justify-center w-8 h-8 rounded-md border border-gray-300 text-gray-600 hover:bg-gray-100">
+                                                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                                    <path d="M6 10a2 2 0 11-4 0 2 2 0 014 0zM12 10a2 2 0 11-4 0 2 2 0 014 0zM16 12a2 2 0 100-4 2 2 0 000 4z" />
+                                                </svg>
+                                            </button>
+                                            <div x-show="open" @click.away="open = false" x-transition
+                                                :style="dropdownStyle"
+                                                class="min-w-[160px] bg-white border border-gray-200 rounded-md shadow-lg z-50 py-1">
+                                                <button @click.stop="openAddExtraModal(group.firstId, group.name, 'fix_cost_1', 'Fix Cost #1'); open = false"
+                                                    :disabled="currentPeriodLocked"
+                                                    class="w-full text-left px-4 py-2 text-sm text-blue-600 hover:bg-blue-50 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
+                                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                                                    Extra Expense
+                                                </button>
+                                            </div>
+                                        </div>
+                                        {{-- Expand Arrow --}}
+                                        <div class="absolute right-0 top-1/2 -translate-y-1/2 pr-2">
+                                            <button type="button"
+                                                @click.stop="toggleGroup('fixCost1', group.name)"
+                                                class="p-1 hover:bg-gray-100 rounded transition-colors">
+                                                <svg class="w-5 h-5 text-gray-400 transition-transform"
+                                                    :class="isGroupOpen('fixCost1', group.name) && 'rotate-180'"
+                                                    fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                                                </svg>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+
+                                {{-- DETAIL EXPAND ROW --}}
+                                <tr x-show="isGroupOpen('fixCost1', group.name)" x-cloak>
+                                    <td colspan="5" class="p-0">
+                                        <div x-show="isGroupOpen('fixCost1', group.name)"
+                                            x-transition:enter="transition ease-out duration-200"
+                                            x-transition:enter-start="opacity-0 max-h-0"
+                                            x-transition:enter-end="opacity-100 max-h-[1000px]"
+                                            x-transition:leave="transition ease-in duration-200"
+                                            x-transition:leave-start="opacity-100 max-h-[1000px]"
+                                            x-transition:leave-end="opacity-0 max-h-0"
+                                            class="overflow-hidden bg-gray-50">
+                                            <div class="bg-white pl-8">
+                                                <table class="w-full">
+                                                    <thead class="bg-gray-100">
+                                                        <tr>
+                                                            <th class="py-1.5 px-4 text-left text-[10px] font-semibold text-gray-600 rounded-l-md">No</th>
+                                                            <th class="py-1.5 px-4 text-left text-[10px] font-semibold text-gray-600">Payment</th>
+                                                            <th class="py-1.5 px-4 text-left text-[10px] font-semibold text-gray-600">Amount</th>
+                                                            <th class="py-1.5 px-4 text-left text-[10px] font-semibold text-gray-600">Proof 1</th>
+                                                            <th class="py-1.5 px-4 text-left text-[10px] font-semibold text-gray-600">Proof 2</th>
+                                                            <th class="py-1.5 px-4 text-left text-[10px] font-semibold text-gray-600">Status</th>
+                                                            <th class="py-1.5 px-4 text-left text-[10px] font-semibold text-gray-600">Date</th>
+                                                            <th class="py-1.5 px-4 text-center text-[10px] font-semibold text-gray-600 rounded-r-md">Action</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        <template x-for="(item, sIdx) in group.items" :key="item.id">
+                                                            <tr class="hover:bg-gray-50">
+                                                                <td class="py-1.5 px-4 text-[10px] text-gray-600" x-text="sIdx + 1"></td>
+                                                                <td class="py-1.5 px-4 text-[10px]">
+                                                                    <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-semibold"
+                                                                        :class="item.payment_method === 'transfer' ? 'bg-blue-100 text-blue-700' : item.payment_method === 'cash' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'"
+                                                                        x-text="item.payment_method === 'transfer' ? 'Transfer' : item.payment_method === 'cash' ? 'Cash' : '-'"></span>
+                                                                </td>
+                                                                <td class="py-1.5 px-4 text-[10px] text-gray-900 font-semibold" x-text="formatCurrency(item.amount)"></td>
+                                                                <td class="py-1.5 px-4 text-left">
+                                                                    <template x-if="item.proof_img && item.proof_img !== '-'">
+                                                                        <button @click="showImagePreview = true; imagePreviewSrc = `{{ url('finance/report/operational') }}/${item.id}/image`"
+                                                                            class="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-100 text-blue-700 rounded-md hover:bg-blue-200 text-[10px] font-medium cursor-pointer">
+                                                                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                                                                            View
+                                                                        </button>
+                                                                    </template>
+                                                                    <template x-if="!item.proof_img || item.proof_img === '-'"><span class="text-[10px] text-gray-400">-</span></template>
+                                                                </td>
+                                                                <td class="py-1.5 px-4 text-left">
+                                                                    <template x-if="item.proof_img2">
+                                                                        <button @click="showImagePreview = true; imagePreviewSrc = `{{ url('finance/report/operational') }}/${item.id}/image2`"
+                                                                            class="inline-flex items-center gap-1 px-2 py-0.5 bg-purple-100 text-purple-700 rounded-md hover:bg-purple-200 text-[10px] font-medium cursor-pointer">
+                                                                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                                                                            View
+                                                                        </button>
+                                                                    </template>
+                                                                    <template x-if="!item.proof_img2"><span class="text-[10px] text-gray-400">-</span></template>
+                                                                </td>
+                                                                <td class="py-1.5 px-4">
+                                                                    <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-semibold"
+                                                                        :class="item.report_status === 'fixed' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'"
+                                                                        x-text="item.report_status === 'fixed' ? 'FIXED' : 'DRAFT'"></span>
+                                                                </td>
+                                                                <td class="py-1.5 px-4 text-[10px] text-gray-700"
+                                                                    x-text="item.updated_at ? new Date(item.updated_at).toLocaleDateString('en-GB', {day:'2-digit', month:'short', year:'2-digit'}) + ' (' + new Date(item.updated_at).toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'}) + ')' : '-'"></td>
+                                                                <td class="py-1.5 px-4 text-center">
+                                                                    <div class="relative inline-block text-left" x-data="{
+                                                                        open: false,
+                                                                        dropdownStyle: {},
+                                                                        checkPosition() {
+                                                                            const rect = this.$refs.secBtn.getBoundingClientRect();
+                                                                            const spaceBelow = window.innerHeight - rect.bottom;
+                                                                            this.dropdownStyle = spaceBelow < 120
+                                                                                ? { position: 'fixed', bottom: (window.innerHeight - rect.top + 4) + 'px', right: (window.innerWidth - rect.right) + 'px' }
+                                                                                : { position: 'fixed', top: (rect.bottom + 4) + 'px', right: (window.innerWidth - rect.right) + 'px' };
+                                                                        }
+                                                                    }"
+                                                                    @scroll.window="open = false" @close-secondary-menus.window="open = false" x-show="!currentPeriodLocked">
+                                                                        <button x-ref="secBtn" @click="checkPosition(); if(!open){ $dispatch('close-primary-menus'); } open = !open" type="button"
+                                                                            class="inline-flex items-center justify-center w-6 h-6 rounded border border-gray-300 text-gray-600 hover:bg-gray-100 cursor-pointer">
+                                                                            <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                                                                                <path d="M6 10a2 2 0 11-4 0 2 2 0 014 0zM12 10a2 2 0 11-4 0 2 2 0 014 0zM16 12a2 2 0 100-4 2 2 0 000 4z" />
+                                                                            </svg>
+                                                                        </button>
+                                                                        <div x-show="open" @click.away="open = false" x-cloak :style="dropdownStyle"
+                                                                            class="bg-white border border-gray-200 rounded-md shadow-lg z-50 py-1">
+                                                                            <button @click="openEditModal(item.id, item.category, 'Fix Cost #1', {
+                                                                                name: item.operational_name,
+                                                                                payment_method: item.payment_method,
+                                                                                amount: item.amount,
+                                                                                date: item.operational_date ? new Date(item.operational_date).toLocaleDateString('en-CA') : new Date().toLocaleDateString('en-CA'),
+                                                                                notes: item.notes,
+                                                                                proof_img: item.proof_img,
+                                                                                proof_img2: item.proof_img2
+                                                                            }); open = false"
+                                                                                class="px-3 py-1.5 text-[11px] text-gray-700 hover:bg-gray-50 flex items-center gap-1.5 w-full text-left">
+                                                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                                                                                Edit
+                                                                            </button>
+                                                                            <button @click="showDeleteConfirm = item.id; open = false"
+                                                                                class="px-3 py-1.5 text-[11px] text-red-600 hover:bg-red-50 flex items-center gap-1.5 w-full text-left">
+                                                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                                                                                Delete
+                                                                            </button>
+                                                                        </div>
+                                                                    </div>
+                                                                </td>
+                                                            </tr>
+                                                        </template>
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        </div>
+                                    </td>
                                 </tr>
                             </tbody>
-                        </table>
-                    </div>
+                        </template>
+
+                        {{-- Empty state --}}
+                        <tbody>
+                            <tr x-show="fixCost1Data.length === 0">
+                                <td colspan="5" class="py-8 text-center text-gray-400 text-sm">No data available for this period</td>
+                            </tr>
+                        </tbody>
+                    </table>
                 </div>
 
-                {{-- Pagination (Material Report Style) --}}
+                {{-- Pagination (Grouped) --}}
                 <div class="mt-4 flex flex-col items-center gap-3">
                     {{-- Info Text --}}
                     <div class="text-sm text-gray-600">
-                        Showing <span x-text="getTotalFiltered(fixCost1Data, 'searchFixCost1') === 0 ? 0 : getStartIndex(currentPageFixCost1, perPageFixCost1)"></span>
-                        to <span x-text="getEndIndex(fixCost1Data, 'searchFixCost1', currentPageFixCost1, perPageFixCost1)"></span>
-                        of <span x-text="getTotalFiltered(fixCost1Data, 'searchFixCost1')"></span> entries
+                        Showing <span x-text="getTotalGroupFiltered(fixCost1Data, 'searchFixCost1') === 0 ? 0 : getStartIndex(currentPageFixCost1, perPageFixCost1)"></span>
+                        to <span x-text="Math.min(currentPageFixCost1 * perPageFixCost1, getTotalGroupFiltered(fixCost1Data, 'searchFixCost1'))"></span>
+                        of <span x-text="getTotalGroupFiltered(fixCost1Data, 'searchFixCost1')"></span> groups
                     </div>
 
                     {{-- Pagination Navigation --}}
                     <div class="flex items-center gap-1">
-                        {{-- Previous Button --}}
+                        {{-- Previous --}}
                         <button @click="changePage('fixCost1', 'prev')" :disabled="currentPageFixCost1 === 1"
                             class="w-9 h-9 flex items-center justify-center rounded-md transition"
                             :class="currentPageFixCost1 === 1 ? 'text-gray-400 cursor-not-allowed' : 'bg-white text-gray-600 hover:bg-gray-100'">
@@ -1153,43 +1776,19 @@
                             </svg>
                         </button>
 
-                        {{-- First Page --}}
-                        <template x-if="showFirstPage(fixCost1Data, 'searchFixCost1', perPageFixCost1, currentPageFixCost1)">
-                            <button @click="goToPage('fixCost1', 1)"
-                                class="w-9 h-9 flex items-center justify-center rounded-md bg-white text-gray-600 hover:bg-gray-100 transition text-sm">
-                                1
-                            </button>
-                        </template>
-
-                        {{-- First Dots --}}
-                        <template x-if="showFirstDots(fixCost1Data, 'searchFixCost1', perPageFixCost1, currentPageFixCost1)">
-                            <span class="px-2 text-gray-400 text-sm">...</span>
-                        </template>
-
-                        {{-- Page Numbers --}}
-                        <template x-for="page in getPageNumbers(fixCost1Data, 'searchFixCost1', perPageFixCost1, currentPageFixCost1)" :key="page">
+                        {{-- Page numbers (simple: show up to 5) --}}
+                        <template x-for="page in Array.from({length: getTotalGroupPages(fixCost1Data, 'searchFixCost1', perPageFixCost1)}, (_,i) => i+1)" :key="page">
                             <button @click="goToPage('fixCost1', page)"
                                 class="w-9 h-9 flex items-center justify-center rounded-md transition text-sm"
                                 :class="page === currentPageFixCost1 ? 'bg-primary text-white font-medium' : 'bg-white text-gray-600 hover:bg-gray-100'"
                                 x-text="page"></button>
                         </template>
 
-                        {{-- Last Dots --}}
-                        <template x-if="showLastDots(fixCost1Data, 'searchFixCost1', perPageFixCost1, currentPageFixCost1)">
-                            <span class="px-2 text-gray-400 text-sm">...</span>
-                        </template>
-
-                        {{-- Last Page --}}
-                        <template x-if="showLastPage(fixCost1Data, 'searchFixCost1', perPageFixCost1, currentPageFixCost1)">
-                            <button @click="goToPage('fixCost1', getTotalPages(fixCost1Data, 'searchFixCost1', perPageFixCost1))"
-                                class="w-9 h-9 flex items-center justify-center rounded-md bg-white text-gray-600 hover:bg-gray-100 transition text-sm"
-                                x-text="getTotalPages(fixCost1Data, 'searchFixCost1', perPageFixCost1)"></button>
-                        </template>
-
-                        {{-- Next Button --}}
-                        <button @click="changePage('fixCost1', 'next')" :disabled="currentPageFixCost1 >= getTotalPages(fixCost1Data, 'searchFixCost1', perPageFixCost1)"
+                        {{-- Next --}}
+                        <button @click="changePage('fixCost1', 'next')"
+                            :disabled="currentPageFixCost1 >= getTotalGroupPages(fixCost1Data, 'searchFixCost1', perPageFixCost1)"
                             class="w-9 h-9 flex items-center justify-center rounded-md transition"
-                            :class="currentPageFixCost1 >= getTotalPages(fixCost1Data, 'searchFixCost1', perPageFixCost1) ? 'text-gray-400 cursor-not-allowed' : 'bg-white text-gray-600 hover:bg-gray-100'">
+                            :class="currentPageFixCost1 >= getTotalGroupPages(fixCost1Data, 'searchFixCost1', perPageFixCost1) ? 'text-gray-400 cursor-not-allowed' : 'bg-white text-gray-600 hover:bg-gray-100'">
                             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="3">
                                 <path d="M12 24H36M28 16L36 24L28 32" stroke-linecap="round" stroke-linejoin="round" />
                             </svg>
@@ -1253,145 +1852,214 @@
 
                 {{-- Table --}}
                 <div class="mt-5 overflow-x-auto">
-                    <div class="max-h-124 overflow-y-auto">
-                        <table class="min-w-[600px] w-full text-sm">
-                            <thead class="sticky top-0 bg-primary-light text-font-base z-10">
-                                <tr>
-                                    <th class="py-2 px-4 text-left rounded-l-md w-10">No</th>
-                                    <th class="py-2 px-4 text-left">Name</th>
-                                    <th class="py-2 px-4 text-left">Payment</th>
-                                    <th class="py-2 px-4 text-right">Amount</th>
-                                    <th class="py-2 px-4 text-left">Attach</th>
-                                    <th class="py-2 px-4 text-left">Date</th>
-                                    <th class="py-2 px-4 text-right rounded-r-md">Action</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <template x-for="(item, idx) in getPaginatedData(fixCost2Data, 'searchFixCost2', perPageFixCost2, currentPageFixCost2)" :key="item.id">
-                                    <tr class="border-t border-gray-200">
-                                        <td class="py-2 px-4" x-text="idx + ((currentPageFixCost2 - 1) * perPageFixCost2) + 1"></td>
-                                        <td class="py-2 px-4" x-text="item.operational_name"></td>
-                                        <td class="py-2 px-4">
-                                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium"
-                                                :class="item.payment_method === 'transfer' ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800'"
-                                                x-text="item.payment_method === 'transfer' ? 'Transfer' : 'Cash'"></span>
-                                        </td>
-                                        <td class="py-2 px-4 text-right" x-text="formatCurrency(item.amount)"></td>
-                                        <td class="py-2 px-4 text-left">
-                                            <template x-if="item.proof_img">
-                                                <button @click="showImagePreview = true; imagePreviewSrc = `{{ url('finance/report/operational') }}/${item.id}/image`"
-                                                    class="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-100 text-blue-700 rounded-md hover:bg-blue-200 text-[10px] font-medium cursor-pointer">
-                                                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                            d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                                                    </svg>
-                                                    View
-                                                </button>
-                                            </template>
-                                            <template x-if="!item.proof_img">
-                                                <span class="text-[10px] text-gray-400">-</span>
-                                            </template>
-                                        </td>
-                                        <td class="py-2 px-4 whitespace-nowrap" x-text="new Date(item.operational_date).toLocaleDateString('en-GB', {day:'2-digit',month:'short',year:'2-digit'})"></td>
-                                        <td class="py-2 px-4 text-right">
-                                            {{-- Locked Action - Show Lock Icon --}}
-                                            <template x-if="item.lock_status === 'locked'">
-                                                <div class="flex justify-end">
-                                                    <svg class="w-4 h-4 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                                                    </svg>
-                                                </div>
-                                            </template>
-                                            {{-- Unlocked Action - Show Dropdown --}}
-                                            <template x-if="item.lock_status !== 'locked'">
-                                                <div class="relative inline-block text-left" x-data="{
-                                                    open: false,
-                                                    dropdownStyle: {},
-                                                    checkPosition() {
-                                                        const button = this.$refs.button;
-                                                        const rect = button.getBoundingClientRect();
-                                                        const spaceBelow = window.innerHeight - rect.bottom;
-                                                        const spaceAbove = rect.top;
-                                                        const dropUp = spaceBelow < 200 && spaceAbove > spaceBelow;
-                                                        if (dropUp) {
-                                                            this.dropdownStyle = { position: 'fixed', top: (rect.top - 90) + 'px', left: (rect.right - 160) + 'px', width: '160px' };
-                                                        } else {
-                                                            this.dropdownStyle = { position: 'fixed', top: (rect.bottom + 8) + 'px', left: (rect.right - 160) + 'px', width: '160px' };
-                                                        }
-                                                    }
-                                                }" x-init="$watch('open', value => {
-                                                    if (value) {
-                                                        const scrollContainer = $el.closest('.overflow-y-auto');
-                                                        const mainContent = document.querySelector('main');
-                                                        const closeOnScroll = () => { open = false; };
-                                                        scrollContainer?.addEventListener('scroll', closeOnScroll);
-                                                        mainContent?.addEventListener('scroll', closeOnScroll);
-                                                        window.addEventListener('resize', closeOnScroll);
-                                                    }
-                                                })">
-                                                    <button x-ref="button" @click="checkPosition(); open = !open" type="button"
-                                                        class="cursor-pointer inline-flex items-center justify-center w-8 h-8 rounded-md border border-gray-300 text-gray-600 hover:bg-gray-100"
-                                                        title="Actions">
-                                                        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                                                            <path d="M6 10a2 2 0 11-4 0 2 2 0 014 0zM12 10a2 2 0 11-4 0 2 2 0 014 0zM16 12a2 2 0 100-4 2 2 0 000 4z" />
-                                                        </svg>
-                                                    </button>
-                                                    <div x-show="open" @click.away="open = false" x-transition
-                                                        :style="dropdownStyle"
-                                                        class="rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-[9999]">
-                                                        <div class="py-1">
-                                                            <button @click="openEditModal(item.id, 'fix_cost_2', 'Fix Cost #2', {
-                                                                name: item.operational_name,
-                                                                payment_method: item.payment_method,
-                                                                amount: item.amount,
-                                                                date: item.operational_date.split('T')[0],
-                                                                notes: item.notes,
-                                                                proof_img: item.proof_img
-                                                            }); open = false"
-                                                                class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2">
-                                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                                        d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                                                                </svg>
-                                                                Edit
-                                                            </button>
-                                                            <button @click="showDeleteConfirm = item.id; open = false"
-                                                                class="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100 flex items-center gap-2">
-                                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                                        d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                                                </svg>
-                                                                Delete
-                                                            </button>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </template>
-                                        </td>
-                                    </tr>
-                                </template>
+                    <table class="min-w-full text-sm">
+                        <thead class="bg-primary-light text-gray-600">
+                            <tr>
+                                <th class="py-3 px-4 text-left font-bold rounded-l-lg">Operational Name</th>
+                                <th class="py-3 px-4 text-left font-bold">Total Expense</th>
+                                <th class="py-3 px-4 text-left font-bold">Status</th>
+                                <th class="py-3 px-4 text-left font-bold">Date</th>
+                                <th class="py-3 px-4 text-center font-bold rounded-r-lg">Action</th>
+                            </tr>
+                        </thead>
 
-                                {{-- Empty state --}}
-                                <tr x-show="fixCost2Data.length === 0" class="border-t border-gray-200">
-                                    <td colspan="7" class="py-3 text-center text-gray-400 text-sm">No data available for this period</td>
+                        {{-- Each group: one <tbody> containing primary row + collapsible detail row --}}
+                        <template x-for="(group, gIdx) in getGroupedPaginated(fixCost2Data, 'searchFixCost2', perPageFixCost2, currentPageFixCost2)" :key="group.name + '_' + gIdx">
+                            <tbody>
+                                {{-- PRIMARY ROW --}}
+                                <tr class="hover:bg-gray-50 cursor-pointer"
+                                    @click="toggleGroup('fixCost2', group.name)">
+                                    <td class="py-3 px-4 text-[12px] font-semibold text-gray-900" x-text="group.name"></td>
+                                    <td class="py-3 px-4 text-[12px] font-semibold text-gray-800" x-text="formatCurrency(group.total)"></td>
+                                    <td class="py-3 px-4 text-[12px]">
+                                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold"
+                                            :class="group.allFixed ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'"
+                                            x-text="group.allFixed ? 'FIXED' : 'DRAFT'"></span>
+                                    </td>
+                                    <td class="py-3 px-4 text-[12px] text-gray-700"
+                                        x-text="group.latestDate ? new Date(group.latestDate + 'T00:00:00').toLocaleDateString('en-GB', {day:'2-digit', month:'short', year:'2-digit'}) : '-'"></td>
+                                    <td class="py-3 px-4 text-center relative" @click.stop>
+                                        <template x-if="currentPeriodLocked"><div class="inline-flex items-center justify-center w-8 h-8 text-red-400"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg></div></template>
+                                        {{-- Dropdown --}}
+                                        <div class="relative inline-block text-left" x-data="{
+                                            open: false,
+                                            dropdownStyle: {},
+                                            checkPosition() {
+                                                const rect = this.$refs.primaryBtn.getBoundingClientRect();
+                                                const spaceBelow = window.innerHeight - rect.bottom;
+                                                this.dropdownStyle = spaceBelow < 100
+                                                    ? { position: 'fixed', bottom: (window.innerHeight - rect.top + 4) + 'px', right: (window.innerWidth - rect.right) + 'px' }
+                                                    : { position: 'fixed', top: (rect.bottom + 4) + 'px', right: (window.innerWidth - rect.right) + 'px' };
+                                            }
+                                        }" @scroll.window="open = false" @close-primary-menus.window="open = false" x-show="!currentPeriodLocked">
+                                            <button x-ref="primaryBtn" @click.stop="checkPosition(); if(!open){ $dispatch('close-secondary-menus'); } open = !open" type="button"
+                                                class="cursor-pointer inline-flex items-center justify-center w-8 h-8 rounded-md border border-gray-300 text-gray-600 hover:bg-gray-100">
+                                                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                                    <path d="M6 10a2 2 0 11-4 0 2 2 0 014 0zM12 10a2 2 0 11-4 0 2 2 0 014 0zM16 12a2 2 0 100-4 2 2 0 000 4z" />
+                                                </svg>
+                                            </button>
+                                            <div x-show="open" @click.away="open = false" x-transition
+                                                :style="dropdownStyle"
+                                                class="min-w-[160px] bg-white border border-gray-200 rounded-md shadow-lg z-50 py-1">
+                                                <button @click.stop="openAddExtraModal(group.firstId, group.name, 'fix_cost_2', 'Fix Cost #2'); open = false"
+                                                    :disabled="currentPeriodLocked"
+                                                    class="w-full text-left px-4 py-2 text-sm text-blue-600 hover:bg-blue-50 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
+                                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                                                    Extra Expense
+                                                </button>
+                                            </div>
+                                        </div>
+                                        {{-- Expand Arrow --}}
+                                        <div class="absolute right-0 top-1/2 -translate-y-1/2 pr-2">
+                                            <button type="button"
+                                                @click.stop="toggleGroup('fixCost2', group.name)"
+                                                class="p-1 hover:bg-gray-100 rounded transition-colors">
+                                                <svg class="w-5 h-5 text-gray-400 transition-transform"
+                                                    :class="isGroupOpen('fixCost2', group.name) && 'rotate-180'"
+                                                    fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                                                </svg>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+
+                                {{-- DETAIL EXPAND ROW --}}
+                                <tr x-show="isGroupOpen('fixCost2', group.name)" x-cloak>
+                                    <td colspan="5" class="p-0">
+                                        <div x-show="isGroupOpen('fixCost2', group.name)"
+                                            x-transition:enter="transition ease-out duration-200"
+                                            x-transition:enter-start="opacity-0 max-h-0"
+                                            x-transition:enter-end="opacity-100 max-h-[1000px]"
+                                            x-transition:leave="transition ease-in duration-200"
+                                            x-transition:leave-start="opacity-100 max-h-[1000px]"
+                                            x-transition:leave-end="opacity-0 max-h-0"
+                                            class="overflow-hidden bg-gray-50">
+                                            <div class="bg-white pl-8">
+                                                <table class="w-full">
+                                                    <thead class="bg-gray-100">
+                                                        <tr>
+                                                            <th class="py-1.5 px-4 text-left text-[10px] font-semibold text-gray-600 rounded-l-md">No</th>
+                                                            <th class="py-1.5 px-4 text-left text-[10px] font-semibold text-gray-600">Payment</th>
+                                                            <th class="py-1.5 px-4 text-left text-[10px] font-semibold text-gray-600">Amount</th>
+                                                            <th class="py-1.5 px-4 text-left text-[10px] font-semibold text-gray-600">Proof 1</th>
+                                                            <th class="py-1.5 px-4 text-left text-[10px] font-semibold text-gray-600">Proof 2</th>
+                                                            <th class="py-1.5 px-4 text-left text-[10px] font-semibold text-gray-600">Status</th>
+                                                            <th class="py-1.5 px-4 text-left text-[10px] font-semibold text-gray-600">Date</th>
+                                                            <th class="py-1.5 px-4 text-center text-[10px] font-semibold text-gray-600 rounded-r-md">Action</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        <template x-for="(item, sIdx) in group.items" :key="item.id">
+                                                            <tr class="hover:bg-gray-50">
+                                                                <td class="py-1.5 px-4 text-[10px] text-gray-600" x-text="sIdx + 1"></td>
+                                                                <td class="py-1.5 px-4 text-[10px]">
+                                                                    <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-semibold"
+                                                                        :class="item.payment_method === 'transfer' ? 'bg-blue-100 text-blue-700' : item.payment_method === 'cash' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'"
+                                                                        x-text="item.payment_method === 'transfer' ? 'Transfer' : item.payment_method === 'cash' ? 'Cash' : '-'"></span>
+                                                                </td>
+                                                                <td class="py-1.5 px-4 text-[10px] text-gray-900 font-semibold" x-text="formatCurrency(item.amount)"></td>
+                                                                <td class="py-1.5 px-4 text-left">
+                                                                    <template x-if="item.proof_img && item.proof_img !== '-'">
+                                                                        <button @click="showImagePreview = true; imagePreviewSrc = `{{ url('finance/report/operational') }}/${item.id}/image`"
+                                                                            class="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-100 text-blue-700 rounded-md hover:bg-blue-200 text-[10px] font-medium cursor-pointer">
+                                                                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                                                                            View
+                                                                        </button>
+                                                                    </template>
+                                                                    <template x-if="!item.proof_img || item.proof_img === '-'"><span class="text-[10px] text-gray-400">-</span></template>
+                                                                </td>
+                                                                <td class="py-1.5 px-4 text-left">
+                                                                    <template x-if="item.proof_img2">
+                                                                        <button @click="showImagePreview = true; imagePreviewSrc = `{{ url('finance/report/operational') }}/${item.id}/image2`"
+                                                                            class="inline-flex items-center gap-1 px-2 py-0.5 bg-purple-100 text-purple-700 rounded-md hover:bg-purple-200 text-[10px] font-medium cursor-pointer">
+                                                                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                                                                            View
+                                                                        </button>
+                                                                    </template>
+                                                                    <template x-if="!item.proof_img2"><span class="text-[10px] text-gray-400">-</span></template>
+                                                                </td>
+                                                                <td class="py-1.5 px-4">
+                                                                    <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-semibold"
+                                                                        :class="item.report_status === 'fixed' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'"
+                                                                        x-text="item.report_status === 'fixed' ? 'FIXED' : 'DRAFT'"></span>
+                                                                </td>
+                                                                <td class="py-1.5 px-4 text-[10px] text-gray-700"
+                                                                    x-text="item.updated_at ? new Date(item.updated_at).toLocaleDateString('en-GB', {day:'2-digit', month:'short', year:'2-digit'}) + ' (' + new Date(item.updated_at).toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'}) + ')' : '-'"></td>
+                                                                <td class="py-1.5 px-4 text-center">
+                                                                    <div class="relative inline-block text-left" x-data="{
+                                                                        open: false,
+                                                                        dropdownStyle: {},
+                                                                        checkPosition() {
+                                                                            const rect = this.$refs.secBtn.getBoundingClientRect();
+                                                                            const spaceBelow = window.innerHeight - rect.bottom;
+                                                                            this.dropdownStyle = spaceBelow < 120
+                                                                                ? { position: 'fixed', bottom: (window.innerHeight - rect.top + 4) + 'px', right: (window.innerWidth - rect.right) + 'px' }
+                                                                                : { position: 'fixed', top: (rect.bottom + 4) + 'px', right: (window.innerWidth - rect.right) + 'px' };
+                                                                        }
+                                                                    }"
+                                                                    @scroll.window="open = false" @close-secondary-menus.window="open = false" x-show="!currentPeriodLocked">
+                                                                        <button x-ref="secBtn" @click="checkPosition(); if(!open){ $dispatch('close-primary-menus'); } open = !open" type="button"
+                                                                            class="inline-flex items-center justify-center w-6 h-6 rounded border border-gray-300 text-gray-600 hover:bg-gray-100 cursor-pointer">
+                                                                            <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                                                                                <path d="M6 10a2 2 0 11-4 0 2 2 0 014 0zM12 10a2 2 0 11-4 0 2 2 0 014 0zM16 12a2 2 0 100-4 2 2 0 000 4z" />
+                                                                            </svg>
+                                                                        </button>
+                                                                        <div x-show="open" @click.away="open = false" x-cloak :style="dropdownStyle"
+                                                                            class="bg-white border border-gray-200 rounded-md shadow-lg z-50 py-1">
+                                                                            <button @click="openEditModal(item.id, item.category, 'Fix Cost #2', {
+                                                                                name: item.operational_name,
+                                                                                payment_method: item.payment_method,
+                                                                                amount: item.amount,
+                                                                                date: item.operational_date ? new Date(item.operational_date).toLocaleDateString('en-CA') : new Date().toLocaleDateString('en-CA'),
+                                                                                notes: item.notes,
+                                                                                proof_img: item.proof_img,
+                                                                                proof_img2: item.proof_img2
+                                                                            }); open = false"
+                                                                                class="px-3 py-1.5 text-[11px] text-gray-700 hover:bg-gray-50 flex items-center gap-1.5 w-full text-left">
+                                                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                                                                                Edit
+                                                                            </button>
+                                                                            <button @click="showDeleteConfirm = item.id; open = false"
+                                                                                class="px-3 py-1.5 text-[11px] text-red-600 hover:bg-red-50 flex items-center gap-1.5 w-full text-left">
+                                                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                                                                                Delete
+                                                                            </button>
+                                                                        </div>
+                                                                    </div>
+                                                                </td>
+                                                            </tr>
+                                                        </template>
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        </div>
+                                    </td>
                                 </tr>
                             </tbody>
-                        </table>
-                    </div>
+                        </template>
+
+                        {{-- Empty state --}}
+                        <tbody>
+                            <tr x-show="fixCost2Data.length === 0">
+                                <td colspan="5" class="py-8 text-center text-gray-400 text-sm">No data available for this period</td>
+                            </tr>
+                        </tbody>
+                    </table>
                 </div>
 
-                {{-- Pagination (Material Report Style) --}}
+                {{-- Pagination (Grouped) --}}
                 <div class="mt-4 flex flex-col items-center gap-3">
                     {{-- Info Text --}}
                     <div class="text-sm text-gray-600">
-                        Showing <span x-text="getTotalFiltered(fixCost2Data, 'searchFixCost2') === 0 ? 0 : getStartIndex(currentPageFixCost2, perPageFixCost2)"></span>
-                        to <span x-text="getEndIndex(fixCost2Data, 'searchFixCost2', currentPageFixCost2, perPageFixCost2)"></span>
-                        of <span x-text="getTotalFiltered(fixCost2Data, 'searchFixCost2')"></span> entries
+                        Showing <span x-text="getTotalGroupFiltered(fixCost2Data, 'searchFixCost2') === 0 ? 0 : getStartIndex(currentPageFixCost2, perPageFixCost2)"></span>
+                        to <span x-text="Math.min(currentPageFixCost2 * perPageFixCost2, getTotalGroupFiltered(fixCost2Data, 'searchFixCost2'))"></span>
+                        of <span x-text="getTotalGroupFiltered(fixCost2Data, 'searchFixCost2')"></span> groups
                     </div>
 
                     {{-- Pagination Navigation --}}
                     <div class="flex items-center gap-1">
-                        {{-- Previous Button --}}
+                        {{-- Previous --}}
                         <button @click="changePage('fixCost2', 'prev')" :disabled="currentPageFixCost2 === 1"
                             class="w-9 h-9 flex items-center justify-center rounded-md transition"
                             :class="currentPageFixCost2 === 1 ? 'text-gray-400 cursor-not-allowed' : 'bg-white text-gray-600 hover:bg-gray-100'">
@@ -1400,43 +2068,19 @@
                             </svg>
                         </button>
 
-                        {{-- First Page --}}
-                        <template x-if="showFirstPage(fixCost2Data, 'searchFixCost2', perPageFixCost2, currentPageFixCost2)">
-                            <button @click="goToPage('fixCost2', 1)"
-                                class="w-9 h-9 flex items-center justify-center rounded-md bg-white text-gray-600 hover:bg-gray-100 transition text-sm">
-                                1
-                            </button>
-                        </template>
-
-                        {{-- First Dots --}}
-                        <template x-if="showFirstDots(fixCost2Data, 'searchFixCost2', perPageFixCost2, currentPageFixCost2)">
-                            <span class="px-2 text-gray-400 text-sm">...</span>
-                        </template>
-
-                        {{-- Page Numbers --}}
-                        <template x-for="page in getPageNumbers(fixCost2Data, 'searchFixCost2', perPageFixCost2, currentPageFixCost2)" :key="page">
+                        {{-- Page numbers --}}
+                        <template x-for="page in Array.from({length: getTotalGroupPages(fixCost2Data, 'searchFixCost2', perPageFixCost2)}, (_,i) => i+1)" :key="page">
                             <button @click="goToPage('fixCost2', page)"
                                 class="w-9 h-9 flex items-center justify-center rounded-md transition text-sm"
                                 :class="page === currentPageFixCost2 ? 'bg-primary text-white font-medium' : 'bg-white text-gray-600 hover:bg-gray-100'"
                                 x-text="page"></button>
                         </template>
 
-                        {{-- Last Dots --}}
-                        <template x-if="showLastDots(fixCost2Data, 'searchFixCost2', perPageFixCost2, currentPageFixCost2)">
-                            <span class="px-2 text-gray-400 text-sm">...</span>
-                        </template>
-
-                        {{-- Last Page --}}
-                        <template x-if="showLastPage(fixCost2Data, 'searchFixCost2', perPageFixCost2, currentPageFixCost2)">
-                            <button @click="goToPage('fixCost2', getTotalPages(fixCost2Data, 'searchFixCost2', perPageFixCost2))"
-                                class="w-9 h-9 flex items-center justify-center rounded-md bg-white text-gray-600 hover:bg-gray-100 transition text-sm"
-                                x-text="getTotalPages(fixCost2Data, 'searchFixCost2', perPageFixCost2)"></button>
-                        </template>
-
-                        {{-- Next Button --}}
-                        <button @click="changePage('fixCost2', 'next')" :disabled="currentPageFixCost2 >= getTotalPages(fixCost2Data, 'searchFixCost2', perPageFixCost2)"
+                        {{-- Next --}}
+                        <button @click="changePage('fixCost2', 'next')"
+                            :disabled="currentPageFixCost2 >= getTotalGroupPages(fixCost2Data, 'searchFixCost2', perPageFixCost2)"
                             class="w-9 h-9 flex items-center justify-center rounded-md transition"
-                            :class="currentPageFixCost2 >= getTotalPages(fixCost2Data, 'searchFixCost2', perPageFixCost2) ? 'text-gray-400 cursor-not-allowed' : 'bg-white text-gray-600 hover:bg-gray-100'">
+                            :class="currentPageFixCost2 >= getTotalGroupPages(fixCost2Data, 'searchFixCost2', perPageFixCost2) ? 'text-gray-400 cursor-not-allowed' : 'bg-white text-gray-600 hover:bg-gray-100'">
                             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="3">
                                 <path d="M12 24H36M28 16L36 24L28 32" stroke-linecap="round" stroke-linejoin="round" />
                             </svg>
@@ -1500,145 +2144,214 @@
 
                 {{-- Table --}}
                 <div class="mt-5 overflow-x-auto">
-                    <div class="max-h-124 overflow-y-auto">
-                        <table class="min-w-[600px] w-full text-sm">
-                            <thead class="sticky top-0 bg-primary-light text-font-base z-10">
-                                <tr>
-                                    <th class="py-2 px-4 text-left rounded-l-md w-10">No</th>
-                                    <th class="py-2 px-4 text-left">Name</th>
-                                    <th class="py-2 px-4 text-left">Payment</th>
-                                    <th class="py-2 px-4 text-right">Amount</th>
-                                    <th class="py-2 px-4 text-left">Attach</th>
-                                    <th class="py-2 px-4 text-left">Date</th>
-                                    <th class="py-2 px-4 text-right rounded-r-md">Action</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <template x-for="(item, idx) in getPaginatedData(printingSupplyData, 'searchPrintingSupply', perPagePrintingSupply, currentPagePrintingSupply)" :key="item.id">
-                                    <tr class="border-t border-gray-200">
-                                        <td class="py-2 px-4" x-text="idx + ((currentPagePrintingSupply - 1) * perPagePrintingSupply) + 1"></td>
-                                        <td class="py-2 px-4" x-text="item.operational_name"></td>
-                                        <td class="py-2 px-4">
-                                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium"
-                                                :class="item.payment_method === 'transfer' ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800'"
-                                                x-text="item.payment_method === 'transfer' ? 'Transfer' : 'Cash'"></span>
-                                        </td>
-                                        <td class="py-2 px-4 text-right" x-text="formatCurrency(item.amount)"></td>
-                                        <td class="py-2 px-4 text-left">
-                                            <template x-if="item.proof_img">
-                                                <button @click="showImagePreview = true; imagePreviewSrc = `{{ url('finance/report/operational') }}/${item.id}/image`"
-                                                    class="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-100 text-blue-700 rounded-md hover:bg-blue-200 text-[10px] font-medium cursor-pointer">
-                                                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                            d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                                                    </svg>
-                                                    View
-                                                </button>
-                                            </template>
-                                            <template x-if="!item.proof_img">
-                                                <span class="text-[10px] text-gray-400">-</span>
-                                            </template>
-                                        </td>
-                                        <td class="py-2 px-4 whitespace-nowrap" x-text="new Date(item.operational_date).toLocaleDateString('en-GB', {day:'2-digit',month:'short',year:'2-digit'})"></td>
-                                        <td class="py-2 px-4 text-right">
-                                            {{-- Locked Action - Show Lock Icon --}}
-                                            <template x-if="item.lock_status === 'locked'">
-                                                <div class="flex justify-end">
-                                                    <svg class="w-4 h-4 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                                                    </svg>
-                                                </div>
-                                            </template>
-                                            {{-- Unlocked Action - Show Dropdown --}}
-                                            <template x-if="item.lock_status !== 'locked'">
-                                                <div class="relative inline-block text-left" x-data="{
-                                                    open: false,
-                                                    dropdownStyle: {},
-                                                    checkPosition() {
-                                                        const button = this.$refs.button;
-                                                        const rect = button.getBoundingClientRect();
-                                                        const spaceBelow = window.innerHeight - rect.bottom;
-                                                        const spaceAbove = rect.top;
-                                                        const dropUp = spaceBelow < 200 && spaceAbove > spaceBelow;
-                                                        if (dropUp) {
-                                                            this.dropdownStyle = { position: 'fixed', top: (rect.top - 90) + 'px', left: (rect.right - 160) + 'px', width: '160px' };
-                                                        } else {
-                                                            this.dropdownStyle = { position: 'fixed', top: (rect.bottom + 8) + 'px', left: (rect.right - 160) + 'px', width: '160px' };
-                                                        }
-                                                    }
-                                                }" x-init="$watch('open', value => {
-                                                    if (value) {
-                                                        const scrollContainer = $el.closest('.overflow-y-auto');
-                                                        const mainContent = document.querySelector('main');
-                                                        const closeOnScroll = () => { open = false; };
-                                                        scrollContainer?.addEventListener('scroll', closeOnScroll);
-                                                        mainContent?.addEventListener('scroll', closeOnScroll);
-                                                        window.addEventListener('resize', closeOnScroll);
-                                                    }
-                                                })">
-                                                    <button x-ref="button" @click="checkPosition(); open = !open" type="button"
-                                                        class="cursor-pointer inline-flex items-center justify-center w-8 h-8 rounded-md border border-gray-300 text-gray-600 hover:bg-gray-100"
-                                                        title="Actions">
-                                                        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                                                            <path d="M6 10a2 2 0 11-4 0 2 2 0 014 0zM12 10a2 2 0 11-4 0 2 2 0 014 0zM16 12a2 2 0 100-4 2 2 0 000 4z" />
-                                                        </svg>
-                                                    </button>
-                                                    <div x-show="open" @click.away="open = false" x-transition
-                                                        :style="dropdownStyle"
-                                                        class="rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-[9999]">
-                                                        <div class="py-1">
-                                                            <button @click="openEditModal(item.id, 'printing_supply', 'Printing Supply', {
-                                                                name: item.operational_name,
-                                                                payment_method: item.payment_method,
-                                                                amount: item.amount,
-                                                                date: item.operational_date.split('T')[0],
-                                                                notes: item.notes,
-                                                                proof_img: item.proof_img
-                                                            }); open = false"
-                                                                class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2">
-                                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                                        d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                                                                </svg>
-                                                                Edit
-                                                            </button>
-                                                            <button @click="showDeleteConfirm = item.id; open = false"
-                                                                class="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100 flex items-center gap-2">
-                                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                                        d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                                                </svg>
-                                                                Delete
-                                                            </button>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </template>
-                                        </td>
-                                    </tr>
-                                </template>
+                    <table class="min-w-full text-sm">
+                        <thead class="bg-primary-light text-gray-600">
+                            <tr>
+                                <th class="py-3 px-4 text-left font-bold rounded-l-lg">Operational Name</th>
+                                <th class="py-3 px-4 text-left font-bold">Total Expense</th>
+                                <th class="py-3 px-4 text-left font-bold">Status</th>
+                                <th class="py-3 px-4 text-left font-bold">Date</th>
+                                <th class="py-3 px-4 text-center font-bold rounded-r-lg">Action</th>
+                            </tr>
+                        </thead>
 
-                                {{-- Empty state --}}
-                                <tr x-show="printingSupplyData.length === 0" class="border-t border-gray-200">
-                                    <td colspan="7" class="py-3 text-center text-gray-400 text-sm">No data available for this period</td>
+                        {{-- Each group: one <tbody> containing primary row + collapsible detail row --}}
+                        <template x-for="(group, gIdx) in getGroupedPaginated(printingSupplyData, 'searchPrintingSupply', perPagePrintingSupply, currentPagePrintingSupply)" :key="group.name + '_' + gIdx">
+                            <tbody>
+                                {{-- PRIMARY ROW --}}
+                                <tr class="hover:bg-gray-50 cursor-pointer"
+                                    @click="toggleGroup('printingSupply', group.name)">
+                                    <td class="py-3 px-4 text-[12px] font-semibold text-gray-900" x-text="group.name"></td>
+                                    <td class="py-3 px-4 text-[12px] font-semibold text-gray-800" x-text="formatCurrency(group.total)"></td>
+                                    <td class="py-3 px-4 text-[12px]">
+                                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold"
+                                            :class="group.allFixed ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'"
+                                            x-text="group.allFixed ? 'FIXED' : 'DRAFT'"></span>
+                                    </td>
+                                    <td class="py-3 px-4 text-[12px] text-gray-700"
+                                        x-text="group.latestDate ? new Date(group.latestDate + 'T00:00:00').toLocaleDateString('en-GB', {day:'2-digit', month:'short', year:'2-digit'}) : '-'"></td>
+                                    <td class="py-3 px-4 text-center relative" @click.stop>
+                                        <template x-if="currentPeriodLocked"><div class="inline-flex items-center justify-center w-8 h-8 text-red-400"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg></div></template>
+                                        {{-- Dropdown --}}
+                                        <div class="relative inline-block text-left" x-data="{
+                                            open: false,
+                                            dropdownStyle: {},
+                                            checkPosition() {
+                                                const rect = this.$refs.primaryBtn.getBoundingClientRect();
+                                                const spaceBelow = window.innerHeight - rect.bottom;
+                                                this.dropdownStyle = spaceBelow < 100
+                                                    ? { position: 'fixed', bottom: (window.innerHeight - rect.top + 4) + 'px', right: (window.innerWidth - rect.right) + 'px' }
+                                                    : { position: 'fixed', top: (rect.bottom + 4) + 'px', right: (window.innerWidth - rect.right) + 'px' };
+                                            }
+                                        }" @scroll.window="open = false" @close-primary-menus.window="open = false" x-show="!currentPeriodLocked">
+                                            <button x-ref="primaryBtn" @click.stop="checkPosition(); if(!open){ $dispatch('close-secondary-menus'); } open = !open" type="button"
+                                                class="cursor-pointer inline-flex items-center justify-center w-8 h-8 rounded-md border border-gray-300 text-gray-600 hover:bg-gray-100">
+                                                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                                    <path d="M6 10a2 2 0 11-4 0 2 2 0 014 0zM12 10a2 2 0 11-4 0 2 2 0 014 0zM16 12a2 2 0 100-4 2 2 0 000 4z" />
+                                                </svg>
+                                            </button>
+                                            <div x-show="open" @click.away="open = false" x-transition
+                                                :style="dropdownStyle"
+                                                class="min-w-[160px] bg-white border border-gray-200 rounded-md shadow-lg z-50 py-1">
+                                                <button @click.stop="openAddExtraModal(group.firstId, group.name, 'printing_supply', 'Printing Supply'); open = false"
+                                                    :disabled="currentPeriodLocked"
+                                                    class="w-full text-left px-4 py-2 text-sm text-blue-600 hover:bg-blue-50 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
+                                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                                                    Extra Expense
+                                                </button>
+                                            </div>
+                                        </div>
+                                        {{-- Expand Arrow --}}
+                                        <div class="absolute right-0 top-1/2 -translate-y-1/2 pr-2">
+                                            <button type="button"
+                                                @click.stop="toggleGroup('printingSupply', group.name)"
+                                                class="p-1 hover:bg-gray-100 rounded transition-colors">
+                                                <svg class="w-5 h-5 text-gray-400 transition-transform"
+                                                    :class="isGroupOpen('printingSupply', group.name) && 'rotate-180'"
+                                                    fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                                                </svg>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+
+                                {{-- DETAIL EXPAND ROW --}}
+                                <tr x-show="isGroupOpen('printingSupply', group.name)" x-cloak>
+                                    <td colspan="5" class="p-0">
+                                        <div x-show="isGroupOpen('printingSupply', group.name)"
+                                            x-transition:enter="transition ease-out duration-200"
+                                            x-transition:enter-start="opacity-0 max-h-0"
+                                            x-transition:enter-end="opacity-100 max-h-[1000px]"
+                                            x-transition:leave="transition ease-in duration-200"
+                                            x-transition:leave-start="opacity-100 max-h-[1000px]"
+                                            x-transition:leave-end="opacity-0 max-h-0"
+                                            class="overflow-hidden bg-gray-50">
+                                            <div class="bg-white pl-8">
+                                                <table class="w-full">
+                                                    <thead class="bg-gray-100">
+                                                        <tr>
+                                                            <th class="py-1.5 px-4 text-left text-[10px] font-semibold text-gray-600 rounded-l-md">No</th>
+                                                            <th class="py-1.5 px-4 text-left text-[10px] font-semibold text-gray-600">Payment</th>
+                                                            <th class="py-1.5 px-4 text-left text-[10px] font-semibold text-gray-600">Amount</th>
+                                                            <th class="py-1.5 px-4 text-left text-[10px] font-semibold text-gray-600">Proof 1</th>
+                                                            <th class="py-1.5 px-4 text-left text-[10px] font-semibold text-gray-600">Proof 2</th>
+                                                            <th class="py-1.5 px-4 text-left text-[10px] font-semibold text-gray-600">Status</th>
+                                                            <th class="py-1.5 px-4 text-left text-[10px] font-semibold text-gray-600">Date</th>
+                                                            <th class="py-1.5 px-4 text-center text-[10px] font-semibold text-gray-600 rounded-r-md">Action</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        <template x-for="(item, sIdx) in group.items" :key="item.id">
+                                                            <tr class="hover:bg-gray-50">
+                                                                <td class="py-1.5 px-4 text-[10px] text-gray-600" x-text="sIdx + 1"></td>
+                                                                <td class="py-1.5 px-4 text-[10px]">
+                                                                    <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-semibold"
+                                                                        :class="item.payment_method === 'transfer' ? 'bg-blue-100 text-blue-700' : item.payment_method === 'cash' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'"
+                                                                        x-text="item.payment_method === 'transfer' ? 'Transfer' : item.payment_method === 'cash' ? 'Cash' : '-'"></span>
+                                                                </td>
+                                                                <td class="py-1.5 px-4 text-[10px] text-gray-900 font-semibold" x-text="formatCurrency(item.amount)"></td>
+                                                                <td class="py-1.5 px-4 text-left">
+                                                                    <template x-if="item.proof_img && item.proof_img !== '-'">
+                                                                        <button @click="showImagePreview = true; imagePreviewSrc = `{{ url('finance/report/operational') }}/${item.id}/image`"
+                                                                            class="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-100 text-blue-700 rounded-md hover:bg-blue-200 text-[10px] font-medium cursor-pointer">
+                                                                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                                                                            View
+                                                                        </button>
+                                                                    </template>
+                                                                    <template x-if="!item.proof_img || item.proof_img === '-'"><span class="text-[10px] text-gray-400">-</span></template>
+                                                                </td>
+                                                                <td class="py-1.5 px-4 text-left">
+                                                                    <template x-if="item.proof_img2">
+                                                                        <button @click="showImagePreview = true; imagePreviewSrc = `{{ url('finance/report/operational') }}/${item.id}/image2`"
+                                                                            class="inline-flex items-center gap-1 px-2 py-0.5 bg-purple-100 text-purple-700 rounded-md hover:bg-purple-200 text-[10px] font-medium cursor-pointer">
+                                                                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                                                                            View
+                                                                        </button>
+                                                                    </template>
+                                                                    <template x-if="!item.proof_img2"><span class="text-[10px] text-gray-400">-</span></template>
+                                                                </td>
+                                                                <td class="py-1.5 px-4">
+                                                                    <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-semibold"
+                                                                        :class="item.report_status === 'fixed' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'"
+                                                                        x-text="item.report_status === 'fixed' ? 'FIXED' : 'DRAFT'"></span>
+                                                                </td>
+                                                                <td class="py-1.5 px-4 text-[10px] text-gray-700"
+                                                                    x-text="item.updated_at ? new Date(item.updated_at).toLocaleDateString('en-GB', {day:'2-digit', month:'short', year:'2-digit'}) + ' (' + new Date(item.updated_at).toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'}) + ')' : '-'"></td>
+                                                                <td class="py-1.5 px-4 text-center">
+                                                                    <div class="relative inline-block text-left" x-data="{
+                                                                        open: false,
+                                                                        dropdownStyle: {},
+                                                                        checkPosition() {
+                                                                            const rect = this.$refs.secBtn.getBoundingClientRect();
+                                                                            const spaceBelow = window.innerHeight - rect.bottom;
+                                                                            this.dropdownStyle = spaceBelow < 120
+                                                                                ? { position: 'fixed', bottom: (window.innerHeight - rect.top + 4) + 'px', right: (window.innerWidth - rect.right) + 'px' }
+                                                                                : { position: 'fixed', top: (rect.bottom + 4) + 'px', right: (window.innerWidth - rect.right) + 'px' };
+                                                                        }
+                                                                    }"
+                                                                    @scroll.window="open = false" @close-secondary-menus.window="open = false" x-show="!currentPeriodLocked">
+                                                                        <button x-ref="secBtn" @click="checkPosition(); if(!open){ $dispatch('close-primary-menus'); } open = !open" type="button"
+                                                                            class="inline-flex items-center justify-center w-6 h-6 rounded border border-gray-300 text-gray-600 hover:bg-gray-100 cursor-pointer">
+                                                                            <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                                                                                <path d="M6 10a2 2 0 11-4 0 2 2 0 014 0zM12 10a2 2 0 11-4 0 2 2 0 014 0zM16 12a2 2 0 100-4 2 2 0 000 4z" />
+                                                                            </svg>
+                                                                        </button>
+                                                                        <div x-show="open" @click.away="open = false" x-cloak :style="dropdownStyle"
+                                                                            class="bg-white border border-gray-200 rounded-md shadow-lg z-50 py-1">
+                                                                            <button @click="openEditModal(item.id, item.category, 'Printing Supply', {
+                                                                                name: item.operational_name,
+                                                                                payment_method: item.payment_method,
+                                                                                amount: item.amount,
+                                                                                date: item.operational_date ? new Date(item.operational_date).toLocaleDateString('en-CA') : new Date().toLocaleDateString('en-CA'),
+                                                                                notes: item.notes,
+                                                                                proof_img: item.proof_img,
+                                                                                proof_img2: item.proof_img2
+                                                                            }); open = false"
+                                                                                class="px-3 py-1.5 text-[11px] text-gray-700 hover:bg-gray-50 flex items-center gap-1.5 w-full text-left">
+                                                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                                                                                Edit
+                                                                            </button>
+                                                                            <button @click="showDeleteConfirm = item.id; open = false"
+                                                                                class="px-3 py-1.5 text-[11px] text-red-600 hover:bg-red-50 flex items-center gap-1.5 w-full text-left">
+                                                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                                                                                Delete
+                                                                            </button>
+                                                                        </div>
+                                                                    </div>
+                                                                </td>
+                                                            </tr>
+                                                        </template>
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        </div>
+                                    </td>
                                 </tr>
                             </tbody>
-                        </table>
-                    </div>
+                        </template>
+
+                        {{-- Empty state --}}
+                        <tbody>
+                            <tr x-show="printingSupplyData.length === 0">
+                                <td colspan="5" class="py-8 text-center text-gray-400 text-sm">No data available for this period</td>
+                            </tr>
+                        </tbody>
+                    </table>
                 </div>
 
-                {{-- Pagination (Material Report Style) --}}
+                {{-- Pagination (Grouped) --}}
                 <div class="mt-4 flex flex-col items-center gap-3">
                     {{-- Info Text --}}
                     <div class="text-sm text-gray-600">
-                        Showing <span x-text="getTotalFiltered(printingSupplyData, 'searchPrintingSupply') === 0 ? 0 : getStartIndex(currentPagePrintingSupply, perPagePrintingSupply)"></span>
-                        to <span x-text="getEndIndex(printingSupplyData, 'searchPrintingSupply', currentPagePrintingSupply, perPagePrintingSupply)"></span>
-                        of <span x-text="getTotalFiltered(printingSupplyData, 'searchPrintingSupply')"></span> entries
+                        Showing <span x-text="getTotalGroupFiltered(printingSupplyData, 'searchPrintingSupply') === 0 ? 0 : getStartIndex(currentPagePrintingSupply, perPagePrintingSupply)"></span>
+                        to <span x-text="Math.min(currentPagePrintingSupply * perPagePrintingSupply, getTotalGroupFiltered(printingSupplyData, 'searchPrintingSupply'))"></span>
+                        of <span x-text="getTotalGroupFiltered(printingSupplyData, 'searchPrintingSupply')"></span> groups
                     </div>
 
                     {{-- Pagination Navigation --}}
                     <div class="flex items-center gap-1">
-                        {{-- Previous Button --}}
+                        {{-- Previous --}}
                         <button @click="changePage('printingSupply', 'prev')" :disabled="currentPagePrintingSupply === 1"
                             class="w-9 h-9 flex items-center justify-center rounded-md transition"
                             :class="currentPagePrintingSupply === 1 ? 'text-gray-400 cursor-not-allowed' : 'bg-white text-gray-600 hover:bg-gray-100'">
@@ -1647,43 +2360,19 @@
                             </svg>
                         </button>
 
-                        {{-- First Page --}}
-                        <template x-if="showFirstPage(printingSupplyData, 'searchPrintingSupply', perPagePrintingSupply, currentPagePrintingSupply)">
-                            <button @click="goToPage('printingSupply', 1)"
-                                class="w-9 h-9 flex items-center justify-center rounded-md bg-white text-gray-600 hover:bg-gray-100 transition text-sm">
-                                1
-                            </button>
-                        </template>
-
-                        {{-- First Dots --}}
-                        <template x-if="showFirstDots(printingSupplyData, 'searchPrintingSupply', perPagePrintingSupply, currentPagePrintingSupply)">
-                            <span class="px-2 text-gray-400 text-sm">...</span>
-                        </template>
-
-                        {{-- Page Numbers --}}
-                        <template x-for="page in getPageNumbers(printingSupplyData, 'searchPrintingSupply', perPagePrintingSupply, currentPagePrintingSupply)" :key="page">
+                        {{-- Page numbers --}}
+                        <template x-for="page in Array.from({length: getTotalGroupPages(printingSupplyData, 'searchPrintingSupply', perPagePrintingSupply)}, (_,i) => i+1)" :key="page">
                             <button @click="goToPage('printingSupply', page)"
                                 class="w-9 h-9 flex items-center justify-center rounded-md transition text-sm"
                                 :class="page === currentPagePrintingSupply ? 'bg-primary text-white font-medium' : 'bg-white text-gray-600 hover:bg-gray-100'"
                                 x-text="page"></button>
                         </template>
 
-                        {{-- Last Dots --}}
-                        <template x-if="showLastDots(printingSupplyData, 'searchPrintingSupply', perPagePrintingSupply, currentPagePrintingSupply)">
-                            <span class="px-2 text-gray-400 text-sm">...</span>
-                        </template>
-
-                        {{-- Last Page --}}
-                        <template x-if="showLastPage(printingSupplyData, 'searchPrintingSupply', perPagePrintingSupply, currentPagePrintingSupply)">
-                            <button @click="goToPage('printingSupply', getTotalPages(printingSupplyData, 'searchPrintingSupply', perPagePrintingSupply))"
-                                class="w-9 h-9 flex items-center justify-center rounded-md bg-white text-gray-600 hover:bg-gray-100 transition text-sm"
-                                x-text="getTotalPages(printingSupplyData, 'searchPrintingSupply', perPagePrintingSupply)"></button>
-                        </template>
-
-                        {{-- Next Button --}}
-                        <button @click="changePage('printingSupply', 'next')" :disabled="currentPagePrintingSupply >= getTotalPages(printingSupplyData, 'searchPrintingSupply', perPagePrintingSupply)"
+                        {{-- Next --}}
+                        <button @click="changePage('printingSupply', 'next')"
+                            :disabled="currentPagePrintingSupply >= getTotalGroupPages(printingSupplyData, 'searchPrintingSupply', perPagePrintingSupply)"
                             class="w-9 h-9 flex items-center justify-center rounded-md transition"
-                            :class="currentPagePrintingSupply >= getTotalPages(printingSupplyData, 'searchPrintingSupply', perPagePrintingSupply) ? 'text-gray-400 cursor-not-allowed' : 'bg-white text-gray-600 hover:bg-gray-100'">
+                            :class="currentPagePrintingSupply >= getTotalGroupPages(printingSupplyData, 'searchPrintingSupply', perPagePrintingSupply) ? 'text-gray-400 cursor-not-allowed' : 'bg-white text-gray-600 hover:bg-gray-100'">
                             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="3">
                                 <path d="M12 24H36M28 16L36 24L28 32" stroke-linecap="round" stroke-linejoin="round" />
                             </svg>
@@ -1747,144 +2436,214 @@
 
                 {{-- Table --}}
                 <div class="mt-5 overflow-x-auto">
-                    <div class="max-h-124 overflow-y-auto">
-                        <table class="min-w-[600px] w-full text-sm">
-                            <thead class="sticky top-0 bg-primary-light text-font-base z-10">
-                                <tr>
-                                    <th class="py-2 px-4 text-left rounded-l-md w-10">No</th>
-                                    <th class="py-2 px-4 text-left">Name</th>
-                                    <th class="py-2 px-4 text-left">Payment</th>
-                                    <th class="py-2 px-4 text-right">Amount</th>
-                                    <th class="py-2 px-4 text-left">Attach</th>
-                                    <th class="py-2 px-4 text-left">Date</th>
-                                    <th class="py-2 px-4 text-right rounded-r-md">Action</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <template x-for="(item, idx) in getPaginatedData(dailyData, 'searchDaily', perPageDaily, currentPageDaily)" :key="item.id">
-                                    <tr class="border-t border-gray-200">
-                                        <td class="py-2 px-4" x-text="idx + ((currentPageDaily - 1) * perPageDaily) + 1"></td>
-                                        <td class="py-2 px-4" x-text="item.operational_name"></td>
-                                        <td class="py-2 px-4">
-                                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium"
-                                                :class="item.payment_method === 'transfer' ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800'"
-                                                x-text="item.payment_method === 'transfer' ? 'Transfer' : 'Cash'"></span>
-                                        </td>
-                                        <td class="py-2 px-4 text-right" x-text="formatCurrency(item.amount)"></td>
-                                        <td class="py-2 px-4 text-left">
-                                            <template x-if="item.proof_img">
-                                                <button @click="showImagePreview = true; imagePreviewSrc = `{{ url('finance/report/operational') }}/${item.id}/image`"
-                                                    class="inline-flex items-center px-2 py-1 bg-blue-100 text-blue-700 rounded hover:bg-blue-200 transition-colors text-xs font-medium">
-                                                    <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                                                    </svg>
-                                                    View
-                                                </button>
-                                            </template>
-                                            <template x-if="!item.proof_img">
-                                                <span class="text-gray-400 text-sm">-</span>
-                                            </template>
-                                        </td>
-                                        <td class="py-2 px-4 whitespace-nowrap" x-text="new Date(item.operational_date).toLocaleDateString('en-GB', {day:'2-digit',month:'short',year:'2-digit'})"></td>
-                                        <td class="py-2 px-4 text-right">
-                                            {{-- Locked Action - Show Lock Icon --}}
-                                            <template x-if="item.lock_status === 'locked'">
-                                                <div class="flex justify-end">
-                                                    <svg class="w-4 h-4 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                                                    </svg>
-                                                </div>
-                                            </template>
-                                            {{-- Unlocked Action - Show Dropdown --}}
-                                            <template x-if="item.lock_status !== 'locked'">
-                                                <div class="relative inline-block text-left" x-data="{
-                                                    open: false,
-                                                    dropdownStyle: {},
-                                                    checkPosition() {
-                                                        const button = this.$refs.button;
-                                                        const rect = button.getBoundingClientRect();
-                                                        const spaceBelow = window.innerHeight - rect.bottom;
-                                                        const spaceAbove = rect.top;
-                                                        const dropUp = spaceBelow < 200 && spaceAbove > spaceBelow;
-                                                        if (dropUp) {
-                                                            this.dropdownStyle = { position: 'fixed', top: (rect.top - 90) + 'px', left: (rect.right - 160) + 'px', width: '160px' };
-                                                        } else {
-                                                            this.dropdownStyle = { position: 'fixed', top: (rect.bottom + 8) + 'px', left: (rect.right - 160) + 'px', width: '160px' };
-                                                        }
-                                                    }
-                                                }" x-init="$watch('open', value => {
-                                                    if (value) {
-                                                        const scrollContainer = $el.closest('.overflow-y-auto');
-                                                        const mainContent = document.querySelector('main');
-                                                        const closeOnScroll = () => { open = false; };
-                                                        scrollContainer?.addEventListener('scroll', closeOnScroll);
-                                                        mainContent?.addEventListener('scroll', closeOnScroll);
-                                                        window.addEventListener('resize', closeOnScroll);
-                                                    }
-                                                })">
-                                                    <button x-ref="button" @click="checkPosition(); open = !open" type="button"
-                                                        class="cursor-pointer inline-flex items-center justify-center w-8 h-8 rounded-md border border-gray-300 text-gray-600 hover:bg-gray-100"
-                                                        title="Actions">
-                                                        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                                                            <path d="M6 10a2 2 0 11-4 0 2 2 0 014 0zM12 10a2 2 0 11-4 0 2 2 0 014 0zM16 12a2 2 0 100-4 2 2 0 000 4z" />
-                                                        </svg>
-                                                    </button>
-                                                    <div x-show="open" @click.away="open = false" x-transition
-                                                        :style="dropdownStyle"
-                                                        class="rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-[9999]">
-                                                        <div class="py-1">
-                                                            <button @click="openEditModal(item.id, 'daily', 'Daily', {
-                                                                name: item.operational_name,
-                                                                payment_method: item.payment_method,
-                                                                amount: item.amount,
-                                                                date: item.operational_date.split('T')[0],
-                                                                notes: item.notes,
-                                                                proof_img: item.proof_img
-                                                            }); open = false"
-                                                                class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2">
-                                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                                        d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                                                                </svg>
-                                                                Edit
-                                                            </button>
-                                                            <button @click="showDeleteConfirm = item.id; open = false"
-                                                                class="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100 flex items-center gap-2">
-                                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                                        d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                                                </svg>
-                                                                Delete
-                                                            </button>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </template>
-                                        </td>
-                                    </tr>
-                                </template>
+                    <table class="min-w-full text-sm">
+                        <thead class="bg-primary-light text-gray-600">
+                            <tr>
+                                <th class="py-3 px-4 text-left font-bold rounded-l-lg">Operational Name</th>
+                                <th class="py-3 px-4 text-left font-bold">Total Expense</th>
+                                <th class="py-3 px-4 text-left font-bold">Status</th>
+                                <th class="py-3 px-4 text-left font-bold">Date</th>
+                                <th class="py-3 px-4 text-center font-bold rounded-r-lg">Action</th>
+                            </tr>
+                        </thead>
 
-                                {{-- Empty state --}}
-                                <tr x-show="dailyData.length === 0" class="border-t border-gray-200">
-                                    <td colspan="7" class="py-3 text-center text-gray-400 text-sm">No data available for this period</td>
+                        {{-- Each group: one <tbody> containing primary row + collapsible detail row --}}
+                        <template x-for="(group, gIdx) in getGroupedPaginated(dailyData, 'searchDaily', perPageDaily, currentPageDaily)" :key="group.name + '_' + gIdx">
+                            <tbody>
+                                {{-- PRIMARY ROW --}}
+                                <tr class="hover:bg-gray-50 cursor-pointer"
+                                    @click="toggleGroup('daily', group.name)">
+                                    <td class="py-3 px-4 text-[12px] font-semibold text-gray-900" x-text="group.name"></td>
+                                    <td class="py-3 px-4 text-[12px] font-semibold text-gray-800" x-text="formatCurrency(group.total)"></td>
+                                    <td class="py-3 px-4 text-[12px]">
+                                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold"
+                                            :class="group.allFixed ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'"
+                                            x-text="group.allFixed ? 'FIXED' : 'DRAFT'"></span>
+                                    </td>
+                                    <td class="py-3 px-4 text-[12px] text-gray-700"
+                                        x-text="group.latestDate ? new Date(group.latestDate + 'T00:00:00').toLocaleDateString('en-GB', {day:'2-digit', month:'short', year:'2-digit'}) : '-'"></td>
+                                    <td class="py-3 px-4 text-center relative" @click.stop>
+                                        <template x-if="currentPeriodLocked"><div class="inline-flex items-center justify-center w-8 h-8 text-red-400"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg></div></template>
+                                        {{-- Dropdown --}}
+                                        <div class="relative inline-block text-left" x-data="{
+                                            open: false,
+                                            dropdownStyle: {},
+                                            checkPosition() {
+                                                const rect = this.$refs.primaryBtn.getBoundingClientRect();
+                                                const spaceBelow = window.innerHeight - rect.bottom;
+                                                this.dropdownStyle = spaceBelow < 100
+                                                    ? { position: 'fixed', bottom: (window.innerHeight - rect.top + 4) + 'px', right: (window.innerWidth - rect.right) + 'px' }
+                                                    : { position: 'fixed', top: (rect.bottom + 4) + 'px', right: (window.innerWidth - rect.right) + 'px' };
+                                            }
+                                        }" @scroll.window="open = false" @close-primary-menus.window="open = false" x-show="!currentPeriodLocked">
+                                            <button x-ref="primaryBtn" @click.stop="checkPosition(); if(!open){ $dispatch('close-secondary-menus'); } open = !open" type="button"
+                                                class="cursor-pointer inline-flex items-center justify-center w-8 h-8 rounded-md border border-gray-300 text-gray-600 hover:bg-gray-100">
+                                                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                                    <path d="M6 10a2 2 0 11-4 0 2 2 0 014 0zM12 10a2 2 0 11-4 0 2 2 0 014 0zM16 12a2 2 0 100-4 2 2 0 000 4z" />
+                                                </svg>
+                                            </button>
+                                            <div x-show="open" @click.away="open = false" x-transition
+                                                :style="dropdownStyle"
+                                                class="min-w-[160px] bg-white border border-gray-200 rounded-md shadow-lg z-50 py-1">
+                                                <button @click.stop="openAddExtraModal(group.firstId, group.name, 'daily', 'Daily'); open = false"
+                                                    :disabled="currentPeriodLocked"
+                                                    class="w-full text-left px-4 py-2 text-sm text-blue-600 hover:bg-blue-50 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
+                                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                                                    Extra Expense
+                                                </button>
+                                            </div>
+                                        </div>
+                                        {{-- Expand Arrow --}}
+                                        <div class="absolute right-0 top-1/2 -translate-y-1/2 pr-2">
+                                            <button type="button"
+                                                @click.stop="toggleGroup('daily', group.name)"
+                                                class="p-1 hover:bg-gray-100 rounded transition-colors">
+                                                <svg class="w-5 h-5 text-gray-400 transition-transform"
+                                                    :class="isGroupOpen('daily', group.name) && 'rotate-180'"
+                                                    fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                                                </svg>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+
+                                {{-- DETAIL EXPAND ROW --}}
+                                <tr x-show="isGroupOpen('daily', group.name)" x-cloak>
+                                    <td colspan="5" class="p-0">
+                                        <div x-show="isGroupOpen('daily', group.name)"
+                                            x-transition:enter="transition ease-out duration-200"
+                                            x-transition:enter-start="opacity-0 max-h-0"
+                                            x-transition:enter-end="opacity-100 max-h-[1000px]"
+                                            x-transition:leave="transition ease-in duration-200"
+                                            x-transition:leave-start="opacity-100 max-h-[1000px]"
+                                            x-transition:leave-end="opacity-0 max-h-0"
+                                            class="overflow-hidden bg-gray-50">
+                                            <div class="bg-white pl-8">
+                                                <table class="w-full">
+                                                    <thead class="bg-gray-100">
+                                                        <tr>
+                                                            <th class="py-1.5 px-4 text-left text-[10px] font-semibold text-gray-600 rounded-l-md">No</th>
+                                                            <th class="py-1.5 px-4 text-left text-[10px] font-semibold text-gray-600">Payment</th>
+                                                            <th class="py-1.5 px-4 text-left text-[10px] font-semibold text-gray-600">Amount</th>
+                                                            <th class="py-1.5 px-4 text-left text-[10px] font-semibold text-gray-600">Proof 1</th>
+                                                            <th class="py-1.5 px-4 text-left text-[10px] font-semibold text-gray-600">Proof 2</th>
+                                                            <th class="py-1.5 px-4 text-left text-[10px] font-semibold text-gray-600">Status</th>
+                                                            <th class="py-1.5 px-4 text-left text-[10px] font-semibold text-gray-600">Date</th>
+                                                            <th class="py-1.5 px-4 text-center text-[10px] font-semibold text-gray-600 rounded-r-md">Action</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        <template x-for="(item, sIdx) in group.items" :key="item.id">
+                                                            <tr class="hover:bg-gray-50">
+                                                                <td class="py-1.5 px-4 text-[10px] text-gray-600" x-text="sIdx + 1"></td>
+                                                                <td class="py-1.5 px-4 text-[10px]">
+                                                                    <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-semibold"
+                                                                        :class="item.payment_method === 'transfer' ? 'bg-blue-100 text-blue-700' : item.payment_method === 'cash' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'"
+                                                                        x-text="item.payment_method === 'transfer' ? 'Transfer' : item.payment_method === 'cash' ? 'Cash' : '-'"></span>
+                                                                </td>
+                                                                <td class="py-1.5 px-4 text-[10px] text-gray-900 font-semibold" x-text="formatCurrency(item.amount)"></td>
+                                                                <td class="py-1.5 px-4 text-left">
+                                                                    <template x-if="item.proof_img && item.proof_img !== '-'">
+                                                                        <button @click="showImagePreview = true; imagePreviewSrc = `{{ url('finance/report/operational') }}/${item.id}/image`"
+                                                                            class="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-100 text-blue-700 rounded-md hover:bg-blue-200 text-[10px] font-medium cursor-pointer">
+                                                                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                                                                            View
+                                                                        </button>
+                                                                    </template>
+                                                                    <template x-if="!item.proof_img || item.proof_img === '-'"><span class="text-[10px] text-gray-400">-</span></template>
+                                                                </td>
+                                                                <td class="py-1.5 px-4 text-left">
+                                                                    <template x-if="item.proof_img2">
+                                                                        <button @click="showImagePreview = true; imagePreviewSrc = `{{ url('finance/report/operational') }}/${item.id}/image2`"
+                                                                            class="inline-flex items-center gap-1 px-2 py-0.5 bg-purple-100 text-purple-700 rounded-md hover:bg-purple-200 text-[10px] font-medium cursor-pointer">
+                                                                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                                                                            View
+                                                                        </button>
+                                                                    </template>
+                                                                    <template x-if="!item.proof_img2"><span class="text-[10px] text-gray-400">-</span></template>
+                                                                </td>
+                                                                <td class="py-1.5 px-4">
+                                                                    <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-semibold"
+                                                                        :class="item.report_status === 'fixed' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'"
+                                                                        x-text="item.report_status === 'fixed' ? 'FIXED' : 'DRAFT'"></span>
+                                                                </td>
+                                                                <td class="py-1.5 px-4 text-[10px] text-gray-700"
+                                                                    x-text="item.updated_at ? new Date(item.updated_at).toLocaleDateString('en-GB', {day:'2-digit', month:'short', year:'2-digit'}) + ' (' + new Date(item.updated_at).toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'}) + ')' : '-'"></td>
+                                                                <td class="py-1.5 px-4 text-center">
+                                                                    <div class="relative inline-block text-left" x-data="{
+                                                                        open: false,
+                                                                        dropdownStyle: {},
+                                                                        checkPosition() {
+                                                                            const rect = this.$refs.secBtn.getBoundingClientRect();
+                                                                            const spaceBelow = window.innerHeight - rect.bottom;
+                                                                            this.dropdownStyle = spaceBelow < 120
+                                                                                ? { position: 'fixed', bottom: (window.innerHeight - rect.top + 4) + 'px', right: (window.innerWidth - rect.right) + 'px' }
+                                                                                : { position: 'fixed', top: (rect.bottom + 4) + 'px', right: (window.innerWidth - rect.right) + 'px' };
+                                                                        }
+                                                                    }"
+                                                                    @scroll.window="open = false" @close-secondary-menus.window="open = false" x-show="!currentPeriodLocked">
+                                                                        <button x-ref="secBtn" @click="checkPosition(); if(!open){ $dispatch('close-primary-menus'); } open = !open" type="button"
+                                                                            class="inline-flex items-center justify-center w-6 h-6 rounded border border-gray-300 text-gray-600 hover:bg-gray-100 cursor-pointer">
+                                                                            <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                                                                                <path d="M6 10a2 2 0 11-4 0 2 2 0 014 0zM12 10a2 2 0 11-4 0 2 2 0 014 0zM16 12a2 2 0 100-4 2 2 0 000 4z" />
+                                                                            </svg>
+                                                                        </button>
+                                                                        <div x-show="open" @click.away="open = false" x-cloak :style="dropdownStyle"
+                                                                            class="bg-white border border-gray-200 rounded-md shadow-lg z-50 py-1">
+                                                                            <button @click="openEditModal(item.id, item.category, 'Daily', {
+                                                                                name: item.operational_name,
+                                                                                payment_method: item.payment_method,
+                                                                                amount: item.amount,
+                                                                                date: item.operational_date ? new Date(item.operational_date).toLocaleDateString('en-CA') : new Date().toLocaleDateString('en-CA'),
+                                                                                notes: item.notes,
+                                                                                proof_img: item.proof_img,
+                                                                                proof_img2: item.proof_img2
+                                                                            }); open = false"
+                                                                                class="px-3 py-1.5 text-[11px] text-gray-700 hover:bg-gray-50 flex items-center gap-1.5 w-full text-left">
+                                                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                                                                                Edit
+                                                                            </button>
+                                                                            <button @click="showDeleteConfirm = item.id; open = false"
+                                                                                class="px-3 py-1.5 text-[11px] text-red-600 hover:bg-red-50 flex items-center gap-1.5 w-full text-left">
+                                                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                                                                                Delete
+                                                                            </button>
+                                                                        </div>
+                                                                    </div>
+                                                                </td>
+                                                            </tr>
+                                                        </template>
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        </div>
+                                    </td>
                                 </tr>
                             </tbody>
-                        </table>
-                    </div>
+                        </template>
+
+                        {{-- Empty state --}}
+                        <tbody>
+                            <tr x-show="dailyData.length === 0">
+                                <td colspan="5" class="py-8 text-center text-gray-400 text-sm">No data available for this period</td>
+                            </tr>
+                        </tbody>
+                    </table>
                 </div>
 
-                {{-- Pagination (Material Report Style) --}}
+                {{-- Pagination (Grouped) --}}
                 <div class="mt-4 flex flex-col items-center gap-3">
                     {{-- Info Text --}}
                     <div class="text-sm text-gray-600">
-                        Showing <span x-text="getTotalFiltered(dailyData, 'searchDaily') === 0 ? 0 : getStartIndex(currentPageDaily, perPageDaily)"></span>
-                        to <span x-text="getEndIndex(dailyData, 'searchDaily', currentPageDaily, perPageDaily)"></span>
-                        of <span x-text="getTotalFiltered(dailyData, 'searchDaily')"></span> entries
+                        Showing <span x-text="getTotalGroupFiltered(dailyData, 'searchDaily') === 0 ? 0 : getStartIndex(currentPageDaily, perPageDaily)"></span>
+                        to <span x-text="Math.min(currentPageDaily * perPageDaily, getTotalGroupFiltered(dailyData, 'searchDaily'))"></span>
+                        of <span x-text="getTotalGroupFiltered(dailyData, 'searchDaily')"></span> groups
                     </div>
 
                     {{-- Pagination Navigation --}}
                     <div class="flex items-center gap-1">
-                        {{-- Previous Button --}}
+                        {{-- Previous --}}
                         <button @click="changePage('daily', 'prev')" :disabled="currentPageDaily === 1"
                             class="w-9 h-9 flex items-center justify-center rounded-md transition"
                             :class="currentPageDaily === 1 ? 'text-gray-400 cursor-not-allowed' : 'bg-white text-gray-600 hover:bg-gray-100'">
@@ -1893,43 +2652,19 @@
                             </svg>
                         </button>
 
-                        {{-- First Page --}}
-                        <template x-if="showFirstPage(dailyData, 'searchDaily', perPageDaily, currentPageDaily)">
-                            <button @click="goToPage('daily', 1)"
-                                class="w-9 h-9 flex items-center justify-center rounded-md bg-white text-gray-600 hover:bg-gray-100 transition text-sm">
-                                1
-                            </button>
-                        </template>
-
-                        {{-- First Dots --}}
-                        <template x-if="showFirstDots(dailyData, 'searchDaily', perPageDaily, currentPageDaily)">
-                            <span class="px-2 text-gray-400 text-sm">...</span>
-                        </template>
-
-                        {{-- Page Numbers --}}
-                        <template x-for="page in getPageNumbers(dailyData, 'searchDaily', perPageDaily, currentPageDaily)" :key="page">
+                        {{-- Page numbers --}}
+                        <template x-for="page in Array.from({length: getTotalGroupPages(dailyData, 'searchDaily', perPageDaily)}, (_,i) => i+1)" :key="page">
                             <button @click="goToPage('daily', page)"
                                 class="w-9 h-9 flex items-center justify-center rounded-md transition text-sm"
                                 :class="page === currentPageDaily ? 'bg-primary text-white font-medium' : 'bg-white text-gray-600 hover:bg-gray-100'"
                                 x-text="page"></button>
                         </template>
 
-                        {{-- Last Dots --}}
-                        <template x-if="showLastDots(dailyData, 'searchDaily', perPageDaily, currentPageDaily)">
-                            <span class="px-2 text-gray-400 text-sm">...</span>
-                        </template>
-
-                        {{-- Last Page --}}
-                        <template x-if="showLastPage(dailyData, 'searchDaily', perPageDaily, currentPageDaily)">
-                            <button @click="goToPage('daily', getTotalPages(dailyData, 'searchDaily', perPageDaily))"
-                                class="w-9 h-9 flex items-center justify-center rounded-md bg-white text-gray-600 hover:bg-gray-100 transition text-sm"
-                                x-text="getTotalPages(dailyData, 'searchDaily', perPageDaily)"></button>
-                        </template>
-
-                        {{-- Next Button --}}
-                        <button @click="changePage('daily', 'next')" :disabled="currentPageDaily >= getTotalPages(dailyData, 'searchDaily', perPageDaily)"
+                        {{-- Next --}}
+                        <button @click="changePage('daily', 'next')"
+                            :disabled="currentPageDaily >= getTotalGroupPages(dailyData, 'searchDaily', perPageDaily)"
                             class="w-9 h-9 flex items-center justify-center rounded-md transition"
-                            :class="currentPageDaily >= getTotalPages(dailyData, 'searchDaily', perPageDaily) ? 'text-gray-400 cursor-not-allowed' : 'bg-white text-gray-600 hover:bg-gray-100'">
+                            :class="currentPageDaily >= getTotalGroupPages(dailyData, 'searchDaily', perPageDaily) ? 'text-gray-400 cursor-not-allowed' : 'bg-white text-gray-600 hover:bg-gray-100'">
                             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="3">
                                 <path d="M12 24H36M28 16L36 24L28 32" stroke-linecap="round" stroke-linejoin="round" />
                             </svg>
@@ -1970,98 +2705,22 @@
                         <form id="addOperationalForm" @submit.prevent="submitAddForm()">
                             <div class="space-y-5">
 
-                                {{-- Balance Period Selector --}}
+                                {{-- Balance Period Display (Auto-set from navigation) --}}
                                 <div class="p-4 bg-gradient-to-br from-primary/10 to-primary/20 rounded-xl border-2 border-primary/30">
-                                    <label class="block text-sm font-semibold text-gray-900 mb-3">
-                                        Select Balance Period <span class="text-red-600">*</span>
+                                    <label class="block text-sm font-semibold text-gray-900 mb-2">
+                                        Balance Period
                                     </label>
-                                    <div class="grid grid-cols-2 gap-3">
-                                        {{-- Month Selector --}}
-                                        <div class="relative">
-                                            <button type="button" @click="addBalanceMonthDropdownOpen = !addBalanceMonthDropdownOpen"
-                                                class="w-full flex justify-between items-center rounded-lg border-2 border-primary/40 bg-white px-4 py-2.5 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary transition-all hover:border-primary">
-                                                <span x-text="addSelectedMonthName || 'Select Month'"
-                                                    :class="!addSelectedMonthName ? 'text-gray-400' : 'text-gray-900'"></span>
-                                                <svg class="w-4 h-4 text-primary transition-transform" :class="addBalanceMonthDropdownOpen && 'rotate-180'" fill="none"
-                                                    stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-                                                </svg>
-                                            </button>
-                                            <div x-show="addBalanceMonthDropdownOpen" @click.away="addBalanceMonthDropdownOpen = false" x-cloak
-                                                x-transition:enter="transition ease-out duration-100"
-                                                x-transition:enter-start="opacity-0 scale-95" x-transition:enter-end="opacity-100 scale-100"
-                                                x-transition:leave="transition ease-in duration-75" x-transition:leave-start="opacity-100 scale-100"
-                                                x-transition:leave-end="opacity-0 scale-95"
-                                                class="fixed z-[100] mt-1 w-[200px] bg-white border-2 border-primary/30 rounded-lg shadow-2xl">
-                                                <ul class="max-h-60 overflow-y-auto py-1">
-                                                    <template x-for="m in [{v:1,n:'January'},{v:2,n:'February'},{v:3,n:'March'},{v:4,n:'April'},{v:5,n:'May'},{v:6,n:'June'},{v:7,n:'July'},{v:8,n:'August'},{v:9,n:'September'},{v:10,n:'October'},{v:11,n:'November'},{v:12,n:'December'}]" :key="m.v">
-                                                        <li @click="addSelectMonth(m.v)"
-                                                            class="px-4 py-2 cursor-pointer text-sm text-gray-700 hover:bg-primary/10 transition-colors"
-                                                            :class="{ 'bg-primary/20 font-semibold text-primary': addBalanceMonth === m.v }">
-                                                            <span x-text="m.n"></span>
-                                                        </li>
-                                                    </template>
-                                                </ul>
-                                            </div>
-                                        </div>
-
-                                        {{-- Year Selector --}}
-                                        <div class="relative">
-                                            <button type="button" @click="addBalanceYearDropdownOpen = !addBalanceYearDropdownOpen"
-                                                class="w-full flex justify-between items-center rounded-lg border-2 border-primary/40 bg-white px-4 py-2.5 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary transition-all hover:border-primary">
-                                                <span x-text="addBalanceYear || 'Select Year'"
-                                                    :class="!addBalanceYear ? 'text-gray-400' : 'text-gray-900'"></span>
-                                                <svg class="w-4 h-4 text-primary transition-transform" :class="addBalanceYearDropdownOpen && 'rotate-180'" fill="none"
-                                                    stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-                                                </svg>
-                                            </button>
-                                            <div x-show="addBalanceYearDropdownOpen" @click.away="addBalanceYearDropdownOpen = false" x-cloak
-                                                x-transition:enter="transition ease-out duration-100"
-                                                x-transition:enter-start="opacity-0 scale-95" x-transition:enter-end="opacity-100 scale-100"
-                                                x-transition:leave="transition ease-in duration-75" x-transition:leave-start="opacity-100 scale-100"
-                                                x-transition:leave-end="opacity-0 scale-95"
-                                                class="fixed z-[100] mt-1 w-[200px] bg-white border-2 border-primary/30 rounded-lg shadow-2xl">
-                                                <ul class="max-h-60 overflow-y-auto py-1">
-                                                    <template x-for="y in @js(range((int)date('Y'), (int)date('Y') + 9))" :key="y">
-                                                        <li @click="addSelectYear(y)"
-                                                            class="px-4 py-2 cursor-pointer text-sm text-gray-700 hover:bg-primary/10 transition-colors"
-                                                            :class="{ 'bg-primary/20 font-semibold text-primary': addBalanceYear === y }">
-                                                            <span x-text="y"></span>
-                                                        </li>
-                                                    </template>
-                                                </ul>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <p class="mt-2 text-xs text-primary font-medium" x-show="addHasBalancePeriod && !addPeriodError">
-                                        <span class="font-semibold">Selected:</span> <span x-text="addSelectedMonthName + ' ' + addBalanceYear"></span>
+                                    <input type="text"
+                                        :value="addSelectedMonthName + ' ' + addBalanceYear"
+                                        readonly
+                                        class="w-full rounded-md px-4 py-2 text-sm border border-gray-200 bg-gray-50 text-gray-600 cursor-not-allowed pointer-events-none">
+                                    <p class="mt-2 text-xs text-primary font-medium">
+                                        <svg class="w-3 h-3 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                        Auto-selected from current navigation period
                                     </p>
-
-                                    {{-- Period Error Message --}}
-                                    <template x-if="addPeriodError">
-                                        <div class="mt-3 p-3 bg-red-50 border border-red-200 rounded-lg">
-                                            <div class="flex items-start gap-2">
-                                                <svg class="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                                </svg>
-                                                <p class="text-sm text-red-700 font-medium" x-text="addPeriodError"></p>
-                                            </div>
-                                        </div>
-                                    </template>
-
-                                    <template x-if="addErrors.balance_period">
-                                        <p class="mt-1 text-xs text-red-600" x-text="addErrors.balance_period"></p>
-                                    </template>
                                 </div>
 
-                                {{-- Content shown only after Balance Period is validated --}}
-                                <div x-show="addHasBalancePeriod && addPeriodValidated && !addPeriodError"
-                                    x-transition:enter="transition ease-out duration-200"
-                                    x-transition:enter-start="opacity-0 transform scale-95"
-                                    x-transition:enter-end="opacity-100 transform scale-100">
-
-                                    <div class="space-y-4">
+                                <div class="space-y-4">
                                         {{-- Balance Cards --}}
                                         <div class="grid grid-cols-2 gap-3">
                                             <div class="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-3 border border-blue-200">
@@ -2080,7 +2739,7 @@
                                                 <label class="block text-sm font-medium text-gray-700 mb-1">
                                                     Operational Date <span class="text-red-600">*</span>
                                                 </label>
-                                                <input type="date" :value="new Date().toISOString().split('T')[0]" readonly
+                                                <input type="date" :value="new Date().toLocaleDateString('en-CA')" readonly
                                                     class="w-full rounded-md px-4 py-2 text-sm border border-gray-200 bg-gray-50 text-gray-600 cursor-not-allowed pointer-events-none">
                                             </div>
                                             <div>
@@ -2277,6 +2936,85 @@
                                             </template>
                                         </div>
 
+                                        {{-- Proof Image 2 (Optional) - Webcam --}}
+                                        <div>
+                                            <label class="block text-sm font-medium text-gray-700 mb-1">
+                                                Proof of Payment 2 <span class="text-gray-400 text-xs">(Optional — makes status Fixed)</span>
+                                            </label>
+
+                                            {{-- Webcam2 Section --}}
+                                            <div x-show="showWebcam2" class="mb-3">
+                                                <div class="relative bg-black rounded-xl overflow-hidden shadow-xl" style="height: 280px;">
+                                                    <video x-ref="addVideo2" autoplay playsinline
+                                                        :class="{ 'scale-x-[-1]': isMirrored2 }"
+                                                        class="w-full h-full object-cover"></video>
+                                                    <canvas x-ref="addCanvas2" class="hidden"></canvas>
+                                                </div>
+                                                <div class="flex gap-2 mt-3">
+                                                    <button type="button" @click="captureAddPhoto2('add_proof_image2')"
+                                                        class="flex-1 px-3 py-2 text-sm bg-primary text-white rounded-md hover:bg-primary-dark transition-colors flex items-center justify-center gap-2">
+                                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                                                        </svg>
+                                                        Capture
+                                                    </button>
+                                                    <button type="button" @click="toggleAddCamera2()"
+                                                        class="px-3 py-2 text-sm bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors">
+                                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7h12m0 0l-4-4m4 4l-4 4M16 17H4m0 0l4-4m-4 4l4 4" />
+                                                        </svg>
+                                                    </button>
+                                                    <button type="button" @click="stopAddWebcam2()"
+                                                        class="px-3 py-2 text-sm bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors flex items-center gap-1">
+                                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                                                        </svg>
+                                                        Close
+                                                    </button>
+                                                </div>
+                                            </div>
+
+                                            {{-- Image Preview 2 --}}
+                                            <div x-show="imagePreview2 && !showWebcam2" class="mb-3 border-2 border-dashed border-blue-400 rounded-lg p-3 bg-blue-50">
+                                                <div class="flex items-center gap-3">
+                                                    <img :src="imagePreview2" class="w-24 h-24 object-cover rounded-md border-2 border-blue-500">
+                                                    <div class="flex-1">
+                                                        <p class="text-sm font-medium text-gray-900" x-text="fileName2"></p>
+                                                        <p class="text-xs text-blue-600 mt-1">✓ Proof 2 ready — status will be Fixed</p>
+                                                    </div>
+                                                    <button type="button" @click="imagePreview2 = null; fileName2 = ''; document.querySelector('input[name=add_proof_image2]').value = ''; startAddWebcam2()"
+                                                        class="text-blue-600 hover:text-blue-700 p-1" title="Retake">
+                                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                                        </svg>
+                                                    </button>
+                                                    <button type="button" @click="imagePreview2 = null; fileName2 = ''; document.querySelector('input[name=add_proof_image2]').value = ''"
+                                                        class="text-red-600 hover:text-red-700 p-1" title="Remove">
+                                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                                        </svg>
+                                                    </button>
+                                                </div>
+                                            </div>
+
+                                            {{-- Open Camera2 Button --}}
+                                            <div x-show="!imagePreview2 && !showWebcam2">
+                                                <button type="button" @click="startAddWebcam2()"
+                                                    class="w-full px-4 py-3 text-sm border-2 border-dashed border-gray-300 rounded-md hover:border-blue-400 hover:bg-blue-50 transition-all flex items-center justify-center gap-2 text-gray-500">
+                                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                                                    </svg>
+                                                    Open Camera for Proof 2
+                                                </button>
+                                            </div>
+                                            <input type="file" name="add_proof_image2" accept="image/*" class="hidden">
+                                            <template x-if="addErrors.proof_image2">
+                                                <p class="mt-1 text-xs text-red-600" x-text="addErrors.proof_image2"></p>
+                                            </template>
+                                        </div>
+
                                         {{-- Notes --}}
                                         <div>
                                             <label class="block text-sm font-medium text-gray-700 mb-1">
@@ -2286,11 +3024,8 @@
                                                 class="w-full rounded-md border border-gray-200 px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:border-primary focus:ring-primary/20 transition-colors resize-none"
                                                 placeholder="Optional notes..."></textarea>
                                         </div>
-                                    </div>
-                                    {{-- End space-y-4 wrapper --}}
-
                                 </div>
-                                {{-- End: Content shown only after Balance Period is selected --}}
+                                {{-- End space-y-4 wrapper --}}
 
                             </div>
                         </form>
@@ -2557,6 +3292,115 @@
                                 </template>
                             </div>
 
+                            {{-- Proof Image 2 (Edit) --}}
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">
+                                    Proof 2 <span class="text-gray-400 text-xs">(Optional — makes status Fixed)</span>
+                                </label>
+
+                                {{-- Remove proof2 toggle --}}
+                                <div x-show="editProofImage2 && !imagePreview2 && !showWebcam2" class="mb-3 border-2 border-dashed border-blue-400 rounded-lg p-3 bg-blue-50">
+                                    <div class="flex items-center gap-3">
+                                        <img :src="editProofImage2" class="w-24 h-24 object-cover rounded-md border-2 border-blue-500">
+                                        <div class="flex-1">
+                                            <p class="text-sm font-medium text-gray-900">Foto Bukti 2 (existing)</p>
+                                            <p class="text-xs text-blue-600 mt-1">✓ Status: Fixed</p>
+                                        </div>
+                                        <button type="button" @click="editProofImage2 = null; startEditWebcam2()"
+                                            class="text-blue-600 hover:text-blue-700 p-1" title="Ganti">
+                                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                            </svg>
+                                        </button>
+                                        <button type="button" @click="editProofImage2 = null; removeProof2 = true"
+                                            class="text-red-600 hover:text-red-700 p-1" title="Hapus Proof 2">
+                                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                            </svg>
+                                        </button>
+                                    </div>
+                                </div>
+
+                                {{-- Remove Proof2 Confirmation --}}
+                                <div x-show="removeProof2 && !editProofImage2 && !imagePreview2 && !showWebcam2" class="mb-3 bg-red-50 border border-red-200 rounded-lg p-3">
+                                    <p class="text-sm text-red-700">Proof 2 akan dihapus saat disimpan.</p>
+                                    <button type="button" @click="removeProof2 = false"
+                                        class="mt-2 text-xs text-red-600 underline">Batal hapus</button>
+                                </div>
+
+                                {{-- Webcam2 Edit Section --}}
+                                <div x-show="showWebcam2" class="mb-3">
+                                    <div class="relative bg-black rounded-xl overflow-hidden shadow-xl" style="height: 280px;">
+                                        <video x-ref="editVideo2" autoplay playsinline
+                                            :class="{ 'scale-x-[-1]': isMirrored2 }"
+                                            class="w-full h-full object-cover"></video>
+                                        <canvas x-ref="editCanvas2" class="hidden"></canvas>
+                                    </div>
+                                    <div class="flex gap-2 mt-3">
+                                        <button type="button" @click="captureEditPhoto2()"
+                                            class="flex-1 px-3 py-2 text-sm bg-primary text-white rounded-md hover:bg-primary-dark transition-colors flex items-center justify-center gap-2">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                                            </svg>
+                                            Capture
+                                        </button>
+                                        <button type="button" @click="toggleEditCamera2()"
+                                            class="px-3 py-2 text-sm bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7h12m0 0l-4-4m4 4l-4 4M16 17H4m0 0l4-4m-4 4l4 4" />
+                                            </svg>
+                                        </button>
+                                        <button type="button" @click="stopEditWebcam2()"
+                                            class="px-3 py-2 text-sm bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors flex items-center gap-1">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                                            </svg>
+                                            Close
+                                        </button>
+                                    </div>
+                                </div>
+
+                                {{-- Captured Proof2 Preview (Edit) --}}
+                                <div x-show="imagePreview2 && !showWebcam2" class="mb-3 border-2 border-dashed border-blue-400 rounded-lg p-3 bg-blue-50">
+                                    <div class="flex items-center gap-3">
+                                        <img :src="imagePreview2" class="w-24 h-24 object-cover rounded-md border-2 border-blue-500">
+                                        <div class="flex-1">
+                                            <p class="text-sm font-medium text-gray-900" x-text="fileName2"></p>
+                                            <p class="text-xs text-blue-600 mt-1">✓ Proof 2 baru siap diupload</p>
+                                        </div>
+                                        <button type="button" @click="imagePreview2 = null; fileName2 = ''; document.querySelector('input[name=edit_proof_image2]').value = ''; startEditWebcam2()"
+                                            class="text-blue-600 hover:text-blue-700 p-1" title="Retake">
+                                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                            </svg>
+                                        </button>
+                                        <button type="button" @click="imagePreview2 = null; fileName2 = ''; document.querySelector('input[name=edit_proof_image2]').value = ''"
+                                            class="text-red-600 hover:text-red-700 p-1">
+                                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                            </svg>
+                                        </button>
+                                    </div>
+                                </div>
+
+                                {{-- Open Camera2 Button (Edit) --}}
+                                <div x-show="!editProofImage2 && !imagePreview2 && !showWebcam2 && !removeProof2">
+                                    <button type="button" @click="startEditWebcam2()"
+                                        class="w-full px-4 py-3 text-sm border-2 border-dashed border-gray-300 rounded-md hover:border-blue-400 hover:bg-blue-50 transition-all flex items-center justify-center gap-2 text-gray-500">
+                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                                        </svg>
+                                        Open Camera for Proof 2
+                                    </button>
+                                </div>
+                                <input type="file" name="edit_proof_image2" accept="image/*" class="hidden">
+                                <template x-if="editErrors.proof_image2">
+                                    <p class="mt-1 text-xs text-red-600" x-text="editErrors.proof_image2"></p>
+                                </template>
+                            </div>
+
                             {{-- Notes --}}
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-1">
@@ -2587,6 +3431,335 @@
                         </template>
                         <span x-text="editLoading ? 'Updating...' : 'Update Expense'"></span>
                     </button>
+                </div>
+            </div>
+        </div>
+
+        {{-- ==================== EXTRA EXPENSE MODAL ==================== --}}
+        <div x-show="showExtraModal" x-cloak
+            @keydown.escape.window="showExtraModal = false; stopExtraWebcam1(); stopExtraWebcam2()"
+            class="fixed inset-0 z-50 overflow-y-auto"
+            style="display: none;">
+
+            {{-- Background Overlay --}}
+            <div class="fixed inset-0 bg-black/50 backdrop-blur-sm transition-opacity"></div>
+
+            {{-- Modal Panel --}}
+            <div class="fixed inset-0 flex items-center justify-center p-4">
+                <div @click.away="showExtraModal = false; stopExtraWebcam1(); stopExtraWebcam2()"
+                    class="relative bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
+
+                    {{-- Modal Header - Sticky --}}
+                    <div class="sticky top-0 z-10 bg-white flex items-center justify-between px-6 py-4 border-b border-gray-200">
+                        <h3 class="text-lg font-semibold text-gray-900">
+                            Extra <span x-text="extraCategoryLabel"></span> Expense
+                        </h3>
+                        <button @click="showExtraModal = false; stopExtraWebcam1(); stopExtraWebcam2()" type="button"
+                            class="text-gray-400 hover:text-gray-600 cursor-pointer text-2xl leading-none">
+                            ✕
+                        </button>
+                    </div>
+
+                    {{-- Modal Body --}}
+                    <div class="flex-1 overflow-y-auto px-6 py-6">
+                        <form @submit.prevent="submitExtraForm()" id="extraExpenseForm">
+                            <div class="space-y-4">
+
+                                {{-- Balance Period (Auto from navigation) --}}
+                                <div class="p-4 bg-gradient-to-br from-primary/10 to-primary/20 rounded-xl border-2 border-primary/30">
+                                    <label class="block text-sm font-semibold text-gray-900 mb-2">Balance Period</label>
+                                    <div class="flex items-center gap-2">
+                                        <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white border border-primary/40 text-primary font-semibold text-sm">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                            </svg>
+                                            <span x-text="getMonthName(currentMonth) + ' ' + currentYear"></span>
+                                        </span>
+                                    </div>
+                                    <p class="mt-2 text-xs text-primary font-medium">
+                                        <svg class="w-3 h-3 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                        Auto-selected from current navigation period
+                                    </p>
+                                </div>
+
+                                {{-- Balance Cards --}}
+                                <div class="grid grid-cols-2 gap-3">
+                                    <div class="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-3 border border-blue-200">
+                                        <p class="text-xs text-blue-600 font-medium mb-1">Transfer Balance</p>
+                                        <p class="text-base font-bold text-blue-900" x-text="'Rp ' + parseInt(extraBalanceTransfer || 0).toLocaleString('id-ID')"></p>
+                                    </div>
+                                    <div class="bg-gradient-to-br from-green-50 to-green-100 rounded-xl p-3 border border-green-200">
+                                        <p class="text-xs text-green-600 font-medium mb-1">Cash Balance</p>
+                                        <p class="text-base font-bold text-green-900" x-text="'Rp ' + parseInt(extraBalanceCash || 0).toLocaleString('id-ID')"></p>
+                                    </div>
+                                </div>
+
+                                {{-- Parent Operational Name (readonly) --}}
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">
+                                        Operational Name <span class="text-red-600">*</span>
+                                    </label>
+                                    <input type="text" :value="extraParentName" readonly
+                                        class="w-full rounded-md px-4 py-2 text-sm border border-gray-200 bg-gray-50 text-gray-600 cursor-not-allowed pointer-events-none">
+                                </div>
+
+                                {{-- Date + Expense Type (2 cols, readonly) --}}
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">
+                                            Expense Date <span class="text-red-600">*</span>
+                                        </label>
+                                        <input type="date" :value="new Date().toLocaleDateString('en-CA')" readonly
+                                            class="w-full rounded-md px-4 py-2 text-sm border border-gray-200 bg-gray-50 text-gray-600 cursor-not-allowed pointer-events-none">
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">
+                                            Expense Type <span class="text-red-600">*</span>
+                                        </label>
+                                        <input type="text" value="Extra Expense" readonly
+                                            class="w-full rounded-md px-4 py-2 text-sm border border-gray-200 bg-gray-50 text-gray-600 cursor-not-allowed pointer-events-none">
+                                    </div>
+                                </div>
+
+                                {{-- Payment Method + Amount (2 cols) --}}
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    {{-- Payment Method --}}
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">
+                                            Payment Method <span class="text-red-600">*</span>
+                                        </label>
+                                        <div class="relative">
+                                            <button type="button" @click="extraPaymentDropdownOpen = !extraPaymentDropdownOpen"
+                                                :class="extraErrors.payment_method ? 'border-red-500 focus:border-red-500 focus:ring-red-200' : 'border-gray-200 focus:border-primary focus:ring-primary/20'"
+                                                class="w-full flex justify-between items-center rounded-md border px-4 py-2 text-sm bg-white focus:outline-none focus:ring-2 transition-colors">
+                                                <span x-text="extraForm.payment_method ? (extraForm.payment_method === 'cash' ? 'Cash' : 'Transfer') : 'Select Payment Method'"
+                                                    :class="!extraForm.payment_method ? 'text-gray-400' : 'text-gray-900'"></span>
+                                                <svg class="w-4 h-4 text-gray-400 transition-transform" :class="extraPaymentDropdownOpen && 'rotate-180'" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                                                </svg>
+                                            </button>
+                                            <div x-show="extraPaymentDropdownOpen" @click.away="extraPaymentDropdownOpen = false" x-cloak
+                                                x-transition:enter="transition ease-out duration-100"
+                                                x-transition:enter-start="opacity-0 scale-95" x-transition:enter-end="opacity-100 scale-100"
+                                                x-transition:leave="transition ease-in duration-75" x-transition:leave-start="opacity-100 scale-100"
+                                                x-transition:leave-end="opacity-0 scale-95"
+                                                class="absolute z-10 mt-1 w-full bg-white border border-gray-200 rounded-md shadow-lg">
+                                                <div class="py-1">
+                                                    <button type="button" @click="extraForm.payment_method = 'cash'; extraPaymentDropdownOpen = false"
+                                                        :class="extraForm.payment_method === 'cash' ? 'bg-primary/10 text-primary font-medium' : 'text-gray-700 hover:bg-gray-50'"
+                                                        class="w-full text-left px-4 py-2 text-sm transition-colors">Cash</button>
+                                                    <button type="button" @click="extraForm.payment_method = 'transfer'; extraPaymentDropdownOpen = false"
+                                                        :class="extraForm.payment_method === 'transfer' ? 'bg-primary/10 text-primary font-medium' : 'text-gray-700 hover:bg-gray-50'"
+                                                        class="w-full text-left px-4 py-2 text-sm transition-colors">Transfer</button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <template x-if="extraErrors.payment_method">
+                                            <p class="mt-1 text-xs text-red-600" x-text="extraErrors.payment_method"></p>
+                                        </template>
+                                    </div>
+
+                                    {{-- Amount --}}
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">
+                                            Amount <span class="text-red-600">*</span>
+                                        </label>
+                                        <div class="relative">
+                                            <span class="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-gray-500">Rp</span>
+                                            <input type="text" x-model="extraForm.amount"
+                                                @input="extraForm.amount = $event.target.value.replace(/[^0-9]/g,'').replace(/\B(?=(\d{3})+(?!\d))/g,'.')"
+                                                :class="extraErrors.amount ? 'border-red-500 focus:border-red-500 focus:ring-red-200' : 'border-gray-200 focus:border-primary focus:ring-primary/20'"
+                                                class="w-full rounded-md border pl-10 pr-4 py-2 text-sm focus:outline-none focus:ring-2 transition-colors"
+                                                placeholder="0">
+                                        </div>
+                                        <template x-if="extraErrors.amount">
+                                            <p class="mt-1 text-xs text-red-600" x-text="extraErrors.amount"></p>
+                                        </template>
+                                    </div>
+                                </div>
+
+                                {{-- Proof of Payment 1 (required) --}}
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">
+                                        Proof of Payment <span class="text-red-600">*</span>
+                                    </label>
+                                    {{-- Webcam --}}
+                                    <div x-show="showWebcam" class="mb-3">
+                                        <div class="relative bg-black rounded-xl overflow-hidden shadow-xl" style="height: 320px;">
+                                            <video x-ref="extraVideo1" autoplay playsinline
+                                                :class="{ 'scale-x-[-1]': isMirrored }"
+                                                class="w-full h-full object-cover"></video>
+                                            <canvas x-ref="extraCanvas1" class="hidden"></canvas>
+                                        </div>
+                                        <div class="flex gap-2 mt-3">
+                                            <button type="button" @click="captureExtraPhoto1()"
+                                                class="flex-1 px-3 py-2 text-sm bg-primary text-white rounded-md hover:bg-primary-dark transition-colors flex items-center justify-center gap-2">
+                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                                                </svg>
+                                                Capture
+                                            </button>
+                                            <button type="button" @click="toggleExtraCamera1()"
+                                                class="px-3 py-2 text-sm bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors">
+                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7h12m0 0l-4-4m4 4l-4 4M16 17H4m0 0l4-4m-4 4l4 4" />
+                                                </svg>
+                                            </button>
+                                            <button type="button" @click="stopExtraWebcam1()"
+                                                class="px-3 py-2 text-sm bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors flex items-center gap-1">
+                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                                                </svg>
+                                                Close
+                                            </button>
+                                        </div>
+                                    </div>
+                                    {{-- Image Preview --}}
+                                    <div x-show="imagePreview && !showWebcam" class="mb-3 border-2 border-dashed border-green-400 rounded-lg p-3 bg-green-50">
+                                        <div class="flex items-center gap-3">
+                                            <img :src="imagePreview" class="w-24 h-24 object-cover rounded-md border-2 border-green-500">
+                                            <div class="flex-1">
+                                                <p class="text-sm font-medium text-gray-900" x-text="fileName"></p>
+                                                <p class="text-xs text-green-600 mt-1">✓ Image ready to upload</p>
+                                            </div>
+                                            <button type="button" @click="imagePreview = null; fileName = ''; document.querySelector('input[name=extra_proof_image]').value = ''; startExtraWebcam1()"
+                                                class="text-blue-600 hover:text-blue-700 p-1" title="Retake photo">
+                                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                                </svg>
+                                            </button>
+                                            <button type="button" @click="imagePreview = null; fileName = ''; document.querySelector('input[name=extra_proof_image]').value = ''"
+                                                class="text-red-600 hover:text-red-700 p-1" title="Delete photo">
+                                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                                </svg>
+                                            </button>
+                                        </div>
+                                    </div>
+                                    {{-- Open Camera Button --}}
+                                    <div x-show="!imagePreview && !showWebcam">
+                                        <button type="button" @click="startExtraWebcam1()"
+                                            class="w-full px-4 py-3 text-sm border-2 border-dashed border-gray-300 rounded-md hover:border-primary hover:bg-primary/5 transition-all flex items-center justify-center gap-2 text-gray-700">
+                                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                                            </svg>
+                                            Open Camera
+                                        </button>
+                                    </div>
+                                    <input type="file" name="extra_proof_image" accept="image/*" class="hidden">
+                                    <template x-if="extraErrors.proof_image">
+                                        <p class="mt-1 text-xs text-red-600" x-text="extraErrors.proof_image"></p>
+                                    </template>
+                                </div>
+
+                                {{-- Proof of Payment 2 (optional — status → Fixed) --}}
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">
+                                        Proof of Payment 2 <span class="text-xs text-gray-400">(optional — status becomes Fixed)</span>
+                                    </label>
+                                    {{-- Webcam --}}
+                                    <div x-show="showWebcam2" class="mb-3">
+                                        <div class="relative bg-black rounded-xl overflow-hidden shadow-xl" style="height: 320px;">
+                                            <video x-ref="extraVideo2" autoplay playsinline
+                                                :class="{ 'scale-x-[-1]': isMirrored2 }"
+                                                class="w-full h-full object-cover"></video>
+                                            <canvas x-ref="extraCanvas2" class="hidden"></canvas>
+                                        </div>
+                                        <div class="flex gap-2 mt-3">
+                                            <button type="button" @click="captureExtraPhoto2()"
+                                                class="flex-1 px-3 py-2 text-sm bg-primary text-white rounded-md hover:bg-primary-dark transition-colors flex items-center justify-center gap-2">
+                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                                                </svg>
+                                                Capture
+                                            </button>
+                                            <button type="button" @click="toggleExtraCamera2()"
+                                                class="px-3 py-2 text-sm bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors">
+                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7h12m0 0l-4-4m4 4l-4 4M16 17H4m0 0l4-4m-4 4l4 4" />
+                                                </svg>
+                                            </button>
+                                            <button type="button" @click="stopExtraWebcam2()"
+                                                class="px-3 py-2 text-sm bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors flex items-center gap-1">
+                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                                                </svg>
+                                                Close
+                                            </button>
+                                        </div>
+                                    </div>
+                                    {{-- Image Preview --}}
+                                    <div x-show="imagePreview2 && !showWebcam2" class="mb-3 border-2 border-dashed border-green-400 rounded-lg p-3 bg-green-50">
+                                        <div class="flex items-center gap-3">
+                                            <img :src="imagePreview2" class="w-24 h-24 object-cover rounded-md border-2 border-green-500">
+                                            <div class="flex-1">
+                                                <p class="text-sm font-medium text-gray-900" x-text="fileName2"></p>
+                                                <p class="text-xs text-green-600 mt-1">✓ Image ready to upload</p>
+                                            </div>
+                                            <button type="button" @click="imagePreview2 = null; fileName2 = ''; document.querySelector('input[name=extra_proof_image2]').value = ''; startExtraWebcam2()"
+                                                class="text-blue-600 hover:text-blue-700 p-1" title="Retake photo">
+                                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                                </svg>
+                                            </button>
+                                            <button type="button" @click="imagePreview2 = null; fileName2 = ''; document.querySelector('input[name=extra_proof_image2]').value = ''"
+                                                class="text-red-600 hover:text-red-700 p-1" title="Delete photo">
+                                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                                </svg>
+                                            </button>
+                                        </div>
+                                    </div>
+                                    {{-- Open Camera Button --}}
+                                    <div x-show="!imagePreview2 && !showWebcam2">
+                                        <button type="button" @click="startExtraWebcam2()"
+                                            class="w-full px-4 py-3 text-sm border-2 border-dashed border-gray-300 rounded-md hover:border-primary hover:bg-primary/5 transition-all flex items-center justify-center gap-2 text-gray-700">
+                                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                                            </svg>
+                                            Open Camera for Proof 2
+                                        </button>
+                                    </div>
+                                    <input type="file" name="extra_proof_image2" accept="image/*" class="hidden">
+                                    <template x-if="extraErrors.proof_image2">
+                                        <p class="mt-1 text-xs text-red-600" x-text="extraErrors.proof_image2"></p>
+                                    </template>
+                                </div>
+
+                                {{-- Notes --}}
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Notes</label>
+                                    <textarea x-model="extraForm.notes" rows="3"
+                                        class="w-full rounded-md border border-gray-200 px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:border-primary focus:ring-primary/20 transition-colors resize-none"
+                                        placeholder="Optional notes..."></textarea>
+                                </div>
+
+                            </div>
+                        </form>
+                    </div>
+
+                    {{-- Modal Footer - Sticky --}}
+                    <div class="sticky bottom-0 bg-white border-t border-gray-200 px-6 py-4 flex gap-3">
+                        <button type="button" @click="showExtraModal = false; stopExtraWebcam1(); stopExtraWebcam2()"
+                            class="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium transition-colors cursor-pointer">
+                            Cancel
+                        </button>
+                        <button type="submit" form="extraExpenseForm" :disabled="extraLoading"
+                            :class="extraLoading ? 'opacity-50 cursor-not-allowed' : 'hover:bg-primary-dark'"
+                            class="flex-1 px-4 py-2 bg-primary text-white rounded-lg font-medium transition-colors cursor-pointer flex items-center justify-center gap-2">
+                            <template x-if="extraLoading">
+                                <svg class="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                </svg>
+                            </template>
+                            <span x-text="extraLoading ? 'Processing...' : 'Create Extra Expense'"></span>
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>

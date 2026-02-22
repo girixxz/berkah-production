@@ -15,13 +15,15 @@ return new class extends Migration
             $table->id();
             $table->foreignId('balance_id')->constrained('balances')->cascadeOnDelete();
             $table->date('operational_date');
+            $table->enum('operational_type', ['first_expense', 'extra_expense']);
             $table->enum('category', ['fix_cost_1', 'fix_cost_2', 'printing_supply', 'daily']);
             $table->string('operational_name', 100);
             $table->decimal('amount', 12, 2);
             $table->text('notes')->nullable();
-            $table->enum('payment_method', ['cash', 'transfer']);
-            $table->string('proof_img', 255)->nullable();
-            $table->enum('lock_status', ['draft', 'locked'])->default('draft');
+            $table->enum('payment_method', ['cash', 'transfer', 'null']);
+            $table->string('proof_img', 255);
+            $table->string('proof_img2', 255)->nullable();
+            $table->enum('report_status', ['draft', 'fixed'])->default('draft');
             $table->timestamps();
         });
     }
