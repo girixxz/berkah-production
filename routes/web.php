@@ -245,7 +245,11 @@ Route::middleware(['auth'])->group(function () {
             Route::get('operational/{operationalReport}/image', [\App\Http\Controllers\OperationalReportController::class, 'serveImage'])->name('operational.serve-image');
             Route::get('operational/{operationalReport}/image2', [\App\Http\Controllers\OperationalReportController::class, 'serveImage2'])->name('operational.serve-image2');
 
-            Route::get('salary', fn() => view('pages.finance.report.salary'))->name('salary');
+            Route::get('salary', [\App\Http\Controllers\SalaryReportController::class, 'index'])->name('salary');
+            Route::post('salary/extract', [\App\Http\Controllers\SalaryReportController::class, 'extract'])->name('salary.extract');
+            Route::post('salary/{salaryReport}', [\App\Http\Controllers\SalaryReportController::class, 'update'])->name('salary.update');
+            Route::delete('salary/{salaryReport}', [\App\Http\Controllers\SalaryReportController::class, 'destroy'])->name('salary.destroy');
+            Route::get('salary/{salaryReport}/image', [\App\Http\Controllers\SalaryReportController::class, 'serveProofImage'])->name('salary.serve-image');
         });
 
         // Internal Transfer
