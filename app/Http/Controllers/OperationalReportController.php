@@ -5,7 +5,6 @@ namespace App\Http\Controllers;
 use App\Http\Controllers\Controller;
 use App\Models\OperationalReport;
 use App\Models\OperationalList;
-use App\Models\OperationalExtract;
 use App\Models\Balance;
 use App\Models\ReportPeriod;
 use Illuminate\Http\Request;
@@ -51,12 +50,6 @@ class OperationalReportController extends Controller
             ->first();
         $periodLocked = $reportPeriod && $reportPeriod->lock_status === 'locked';
 
-        // Check if extract has been done for this period
-        $extractStatus = OperationalExtract::where('period_start', $periodStart->toDateString())
-            ->where('period_end', $periodEnd->toDateString())
-            ->first();
-        $hasExtracted = $extractStatus && $extractStatus->is_extracted;
-
         // Return JSON if AJAX request
         if ($request->wantsJson() || $request->header('X-Requested-With') === 'XMLHttpRequest') {
             return response()->json([
@@ -68,7 +61,6 @@ class OperationalReportController extends Controller
                     'daily'          => $daily,
                     'stats'          => $stats,
                     'periodLocked'   => $periodLocked,
-                    'hasExtracted'   => $hasExtracted,
                 ],
             ]);
         }
@@ -82,7 +74,6 @@ class OperationalReportController extends Controller
             'month',
             'year',
             'periodLocked',
-            'hasExtracted',
         ));
     }
 
@@ -168,6 +159,21 @@ class OperationalReportController extends Controller
             'notes'            => 'nullable|string',
             'proof_image'      => 'required|image|mimes:jpeg,jpg,png|max:5120',
             'proof_image2'     => 'nullable|image|mimes:jpeg,jpg,png|max:5120',
+        ], [
+            'operational_name.required' => 'Operational name is required.',
+            'payment_method.required'   => 'Payment method is required.',
+            'payment_method.in'         => 'Payment method must be Cash or Transfer.',
+            'amount.required'           => 'Amount is required.',
+            'amount.numeric'            => 'Amount must be a number.',
+            'amount.min'                => 'Amount must be at least 1.',
+            'operational_date.required' => 'Operational date is required.',
+            'proof_image.required'      => 'Proof of payment is required.',
+            'proof_image.image'         => 'Proof of payment must be an image.',
+            'proof_image.mimes'         => 'Proof of payment must be a JPEG, JPG, or PNG file.',
+            'proof_image.max'           => 'Proof of payment must not exceed 5MB.',
+            'proof_image2.image'        => 'Proof of payment 2 must be an image.',
+            'proof_image2.mimes'        => 'Proof of payment 2 must be a JPEG, JPG, or PNG file.',
+            'proof_image2.max'          => 'Proof of payment 2 must not exceed 5MB.',
         ]);
 
         if ($validator->fails()) {
@@ -275,6 +281,20 @@ class OperationalReportController extends Controller
             'proof_image'       => 'nullable|image|mimes:jpeg,jpg,png|max:5120',
             'proof_image2'      => 'nullable|image|mimes:jpeg,jpg,png|max:5120',
             'remove_proof_image2' => 'nullable|in:1,true',
+        ], [
+            'operational_name.required' => 'Operational name is required.',
+            'payment_method.required'   => 'Payment method is required.',
+            'payment_method.in'         => 'Payment method must be Cash or Transfer.',
+            'amount.required'           => 'Amount is required.',
+            'amount.numeric'            => 'Amount must be a number.',
+            'amount.min'                => 'Amount must be at least 1.',
+            'operational_date.required' => 'Operational date is required.',
+            'proof_image.image'         => 'Proof of payment must be an image.',
+            'proof_image.mimes'         => 'Proof of payment must be a JPEG, JPG, or PNG file.',
+            'proof_image.max'           => 'Proof of payment must not exceed 5MB.',
+            'proof_image2.image'        => 'Proof of payment 2 must be an image.',
+            'proof_image2.mimes'        => 'Proof of payment 2 must be a JPEG, JPG, or PNG file.',
+            'proof_image2.max'          => 'Proof of payment 2 must not exceed 5MB.',
         ]);
 
         if ($validator->fails()) {
@@ -456,6 +476,19 @@ class OperationalReportController extends Controller
             'notes'            => 'nullable|string',
             'proof_image'      => 'required|image|mimes:jpeg,jpg,png|max:5120',
             'proof_image2'     => 'nullable|image|mimes:jpeg,jpg,png|max:5120',
+        ], [
+            'payment_method.required' => 'Payment method is required.',
+            'payment_method.in'       => 'Payment method must be Cash or Transfer.',
+            'amount.required'         => 'Amount is required.',
+            'amount.numeric'          => 'Amount must be a number.',
+            'amount.min'              => 'Amount must be at least 1.',
+            'proof_image.required'    => 'Proof of payment is required.',
+            'proof_image.image'       => 'Proof of payment must be an image.',
+            'proof_image.mimes'       => 'Proof of payment must be a JPEG, JPG, or PNG file.',
+            'proof_image.max'         => 'Proof of payment must not exceed 5MB.',
+            'proof_image2.image'      => 'Proof of payment 2 must be an image.',
+            'proof_image2.mimes'      => 'Proof of payment 2 must be a JPEG, JPG, or PNG file.',
+            'proof_image2.max'        => 'Proof of payment 2 must not exceed 5MB.',
         ]);
 
         if ($validator->fails()) {
@@ -529,6 +562,7 @@ class OperationalReportController extends Controller
 
     /**
      * Extract operational list items into operational reports for FC1, FC2, Printing Supply.
+     * Works per-item: skips items that already exist in the period, only creates missing ones.
      */
     public function extractFromOperationLists(Request $request)
     {
@@ -543,19 +577,6 @@ class OperationalReportController extends Controller
 
         $month = (int) $request->balance_month;
         $year  = (int) $request->balance_year;
-
-        $periodStart = Carbon::create($year, $month, 1)->startOfDay();
-        $periodEnd   = Carbon::create($year, $month, 1)->endOfMonth()->endOfDay();
-
-        // Guard: already extracted
-        $alreadyExtracted = OperationalExtract::where('period_start', $periodStart->toDateString())
-            ->where('period_end', $periodEnd->toDateString())
-            ->where('is_extracted', true)
-            ->exists();
-
-        if ($alreadyExtracted) {
-            return response()->json(['success' => false, 'message' => 'Data for this period has already been extracted.'], 409);
-        }
 
         // Find balance for the period
         $balance = Balance::whereYear('period_start', $year)
@@ -573,9 +594,25 @@ class OperationalReportController extends Controller
                 ->orderBy('sort_order')
                 ->get();
 
+            // Get existing reports for this period, grouped by category => [operational_name, ...]
+            $existingReports = OperationalReport::where('balance_id', $balance->id)
+                ->whereIn('category', ['fix_cost_1', 'fix_cost_2', 'printing_supply'])
+                ->get()
+                ->groupBy('category')
+                ->map(fn($items) => $items->pluck('operational_name')->unique()->toArray());
+
             $now = Carbon::now()->toDateString();
+            $created = 0;
+            $skipped = 0;
 
             foreach ($lists as $list) {
+                // Check if this item already exists in the period for this category
+                $existingNames = $existingReports->get($list->category, []);
+                if (in_array($list->list_name, $existingNames)) {
+                    $skipped++;
+                    continue;
+                }
+
                 OperationalReport::create([
                     'balance_id'       => $balance->id,
                     'operational_date' => $now,
@@ -589,17 +626,19 @@ class OperationalReportController extends Controller
                     'proof_img2'       => null,
                     'report_status'    => 'draft',
                 ]);
+                $created++;
             }
 
-            // Mark period as extracted
-            OperationalExtract::updateOrCreate(
-                ['period_start' => $periodStart->toDateString(), 'period_end' => $periodEnd->toDateString()],
-                ['is_extracted' => true]
-            );
+            if ($created === 0) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'All items already exist in this period. No new items created.',
+                ]);
+            }
 
             return response()->json([
                 'success' => true,
-                'message' => 'Data extracted successfully! ' . $lists->count() . ' items created.',
+                'message' => 'Data extracted successfully! ' . $created . ' items created, ' . $skipped . ' already existed.',
             ]);
         } catch (\Exception $e) {
             return response()->json(['success' => false, 'message' => 'Failed to extract: ' . $e->getMessage()], 500);

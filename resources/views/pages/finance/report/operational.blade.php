@@ -15,7 +15,6 @@
         currentPeriodLocked: {{ $periodLocked ? 'true' : 'false' }},
 
         {{-- Extract state --}}
-        hasExtracted: {{ $hasExtracted ? 'true' : 'false' }},
         extractLoading: false,
 
         {{-- Data arrays from controller --}}
@@ -136,6 +135,11 @@
 
         {{-- Initialization --}}
         init() {
+            // Read URL params to restore month/year on page refresh
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.has('month')) this.currentMonth = parseInt(urlParams.get('month'));
+            if (urlParams.has('year')) this.currentYear = parseInt(urlParams.get('year'));
+
             const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
                                'July', 'August', 'September', 'October', 'November', 'December'];
             this.displayText = monthNames[this.currentMonth - 1] + ' ' + this.currentYear;
@@ -161,15 +165,31 @@
                 }, 300);
             @endif
 
+            // Restore per-page from localStorage
+            const savedPerPage = JSON.parse(localStorage.getItem('op_perPage') || '{}');
+            if (savedPerPage.fixCost1) this.perPageFixCost1 = savedPerPage.fixCost1;
+            if (savedPerPage.fixCost2) this.perPageFixCost2 = savedPerPage.fixCost2;
+            if (savedPerPage.printingSupply) this.perPagePrintingSupply = savedPerPage.printingSupply;
+            if (savedPerPage.daily) this.perPageDaily = savedPerPage.daily;
+
             {{-- Reset pagination when search or perPage changes --}}
             this.$watch('searchFixCost1', () => { this.currentPageFixCost1 = 1; });
-            this.$watch('perPageFixCost1', () => { this.currentPageFixCost1 = 1; });
+            this.$watch('perPageFixCost1', (v) => { this.currentPageFixCost1 = 1; this.savePerPage(); });
             this.$watch('searchFixCost2', () => { this.currentPageFixCost2 = 1; });
-            this.$watch('perPageFixCost2', () => { this.currentPageFixCost2 = 1; });
+            this.$watch('perPageFixCost2', (v) => { this.currentPageFixCost2 = 1; this.savePerPage(); });
             this.$watch('searchPrintingSupply', () => { this.currentPagePrintingSupply = 1; });
-            this.$watch('perPagePrintingSupply', () => { this.currentPagePrintingSupply = 1; });
+            this.$watch('perPagePrintingSupply', (v) => { this.currentPagePrintingSupply = 1; this.savePerPage(); });
             this.$watch('searchDaily', () => { this.currentPageDaily = 1; });
-            this.$watch('perPageDaily', () => { this.currentPageDaily = 1; });
+            this.$watch('perPageDaily', (v) => { this.currentPageDaily = 1; this.savePerPage(); });
+        },
+
+        savePerPage() {
+            localStorage.setItem('op_perPage', JSON.stringify({
+                fixCost1: this.perPageFixCost1,
+                fixCost2: this.perPageFixCost2,
+                printingSupply: this.perPagePrintingSupply,
+                daily: this.perPageDaily,
+            }));
         },
 
         {{-- Month Navigation --}}
@@ -196,6 +216,12 @@
                                'July', 'August', 'September', 'October', 'November', 'December'];
             this.displayText = monthNames[newMonth - 1] + ' ' + newYear;
 
+            // Update URL params so month persists on refresh
+            const url = new URL(window.location);
+            url.searchParams.set('month', newMonth);
+            url.searchParams.set('year', newYear);
+            window.history.pushState({}, '', url);
+
             // Fetch new data via AJAX
             await this.fetchData();
         },
@@ -217,7 +243,6 @@
                     this.dailyData = res.data.data.daily;
                     this.stats = res.data.data.stats;
                     this.currentPeriodLocked = res.data.data.periodLocked;
-                    this.hasExtracted = res.data.data.hasExtracted;
 
                     // Reset search and pagination
                     this.searchFixCost1 = '';
@@ -244,7 +269,6 @@
                     balance_year: this.currentYear,
                 });
                 if (res.data.success) {
-                    this.hasExtracted = true;
                     window.dispatchEvent(new CustomEvent('show-toast', {
                         detail: { message: res.data.message, type: 'success' }
                     }));
@@ -474,7 +498,15 @@
 
         toggleGroup(catKey, name) {
             if (!this.openGroups[catKey]) this.openGroups[catKey] = {};
-            this.openGroups[catKey][name] = !this.openGroups[catKey][name];
+            const isCurrentlyOpen = this.openGroups[catKey][name];
+
+            // Close all groups across all categories (accordion behavior)
+            this.openGroups = { fixCost1: {}, fixCost2: {}, printingSupply: {}, daily: {} };
+
+            // If it was closed, open it; if it was open, leave all closed
+            if (!isCurrentlyOpen) {
+                this.openGroups[catKey][name] = true;
+            }
         },
 
         {{-- Webcam functions for Add Modal --}}
@@ -685,17 +717,17 @@
             let hasError = false;
 
             if (!this.extraForm.payment_method) {
-                this.extraErrors.payment_method = 'Payment method wajib dipilih';
+                this.extraErrors.payment_method = 'Payment method is required';
                 hasError = true;
             }
             const amtClean = String(this.extraForm.amount || '').replace(/\./g, '').replace(/[^0-9]/g, '');
             if (!amtClean || parseInt(amtClean) < 1) {
-                this.extraErrors.amount = 'Jumlah wajib diisi';
+                this.extraErrors.amount = 'Amount must be at least 1';
                 hasError = true;
             }
             const fileInput1 = document.querySelector('input[name=extra_proof_image]');
             if (!fileInput1 || !fileInput1.files[0]) {
-                this.extraErrors.proof_image = 'Bukti foto 1 wajib diupload';
+                this.extraErrors.proof_image = 'Proof of payment is required';
                 hasError = true;
             }
 
@@ -733,7 +765,7 @@
                     };
                 } else {
                     window.dispatchEvent(new CustomEvent('show-toast', {
-                        detail: { message: err.response?.data?.message || 'Terjadi kesalahan', type: 'error' }
+                        detail: { message: err.response?.data?.message || 'Something went wrong', type: 'error' }
                     }));
                 }
             } finally {
@@ -1031,7 +1063,7 @@
             
             this.editForm = {
                 name: data.name,
-                payment_method: data.payment_method,
+                payment_method: (data.payment_method === 'null' || !data.payment_method) ? '' : data.payment_method,
                 amount: cleanAmount,
                 proof_image: null,
                 date: today, // Always use today's date
@@ -1048,14 +1080,14 @@
             this.editListOptions = [];
             
             // Load existing proof image
-            if (data.proof_img) {
+            if (data.proof_img && data.proof_img !== '-') {
                 this.editProofImage = `{{ url('finance/report/operational') }}/${id}/image?t=${Date.now()}`;
             } else {
                 this.editProofImage = '';
             }
 
             // Load existing proof image 2
-            if (data.proof_img2) {
+            if (data.proof_img2 && data.proof_img2 !== '-') {
                 this.editProofImage2 = `{{ url('finance/report/operational') }}/${id}/image2?t=${Date.now()}`;
             } else {
                 this.editProofImage2 = '';
@@ -1100,13 +1132,30 @@
         async submitEditForm() {
             this.editErrors = {};
             this.editLoading = true;
+            let hasError = false;
+
+            if (!this.editForm.payment_method) {
+                this.editErrors.payment_method = 'Payment method is required';
+                hasError = true;
+            }
+            const amtClean = String(this.editForm.amount || '').replace(/\./g, '').replace(/[^0-9]/g, '');
+            if (!amtClean || parseInt(amtClean) < 1) {
+                this.editErrors.amount = 'Amount must be at least 1';
+                hasError = true;
+            }
+            if (!this.editProofImage && !this.editForm.proof_image) {
+                this.editErrors.proof_image = 'Proof of payment is required';
+                hasError = true;
+            }
+
+            if (hasError) { this.editLoading = false; return; }
 
             const formData = new FormData();
             formData.append('_method', 'PUT');
             formData.append('operational_name', this.editForm.name);
             formData.append('payment_method', this.editForm.payment_method);
             // Remove separator from amount before submit
-            formData.append('amount', this.editForm.amount.toString().replace(/\./g, ''));
+            formData.append('amount', amtClean);
             formData.append('operational_date', this.editForm.date);
             if (this.editForm.notes) formData.append('notes', this.editForm.notes);
             if (this.editForm.proof_image) formData.append('proof_image', this.editForm.proof_image);
@@ -1389,7 +1438,7 @@
                 </div>
 
                 {{-- Extract Data Button --}}
-                <template x-if="!hasExtracted && !currentPeriodLocked">
+                <template x-if="!currentPeriodLocked">
                     <button type="button" @click="extractData()" :disabled="extractLoading"
                         class="flex items-center gap-2 px-3 py-2 rounded-lg border font-semibold text-sm flex-shrink-0 bg-violet-100 border-violet-300 text-violet-800 hover:bg-violet-200 transition-colors disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer">
                         <template x-if="!extractLoading">
@@ -1434,27 +1483,12 @@
 
         {{-- ==================== STATISTICS CARDS ==================== --}}
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-            {{-- Total Operational --}}
-            <div class="bg-white border border-gray-200 rounded-lg p-4">
-                <div class="flex items-center justify-between">
-                    <div>
-                        <p class="text-sm text-gray-500">Total Operational</p>
-                        <p class="text-2xl font-bold text-gray-900 mt-1" x-text="formatCurrency(stats.total_operational)"></p>
-                    </div>
-                    <div class="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                        <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
-                        </svg>
-                    </div>
-                </div>
-            </div>
 
             {{-- Fix Cost Total --}}
             <div class="bg-white border border-gray-200 rounded-lg p-4">
                 <div class="flex items-center justify-between">
                     <div>
-                        <p class="text-sm text-gray-500">Fix Cost Total</p>
+                        <p class="text-sm text-gray-500">Fix Cost Expense</p>
                         <p class="text-2xl font-bold text-gray-900 mt-1" x-text="formatCurrency(stats.fix_cost_total)"></p>
                     </div>
                     <div class="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
@@ -1470,7 +1504,7 @@
             <div class="bg-white border border-gray-200 rounded-lg p-4">
                 <div class="flex items-center justify-between">
                     <div>
-                        <p class="text-sm text-gray-500">Printing Supply</p>
+                        <p class="text-sm text-gray-500">Printing Expense</p>
                         <p class="text-2xl font-bold text-gray-900 mt-1" x-text="formatCurrency(stats.printing_supply)"></p>
                     </div>
                     <div class="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
@@ -1493,6 +1527,22 @@
                         <svg class="w-6 h-6 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                 d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                    </div>
+                </div>
+            </div>
+
+            {{-- Total Operational --}}
+            <div class="bg-white border border-gray-200 rounded-lg p-4">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm text-gray-500">Total Expense</p>
+                        <p class="text-2xl font-bold text-gray-900 mt-1" x-text="formatCurrency(stats.total_operational)"></p>
+                    </div>
+                    <div class="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                        <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
                         </svg>
                     </div>
                 </div>
@@ -1576,6 +1626,7 @@
                             <tbody>
                                 {{-- PRIMARY ROW --}}
                                 <tr class="hover:bg-gray-50 cursor-pointer"
+                                    :class="!isGroupOpen('fixCost1', group.name) && 'border-b border-gray-200'"
                                     @click="toggleGroup('fixCost1', group.name)">
                                     <td class="py-3 px-4 text-[12px] font-semibold text-gray-900" x-text="group.name"></td>
                                     <td class="py-3 px-4 text-[12px] font-semibold text-gray-800" x-text="formatCurrency(group.total)"></td>
@@ -1633,7 +1684,7 @@
                                 </tr>
 
                                 {{-- DETAIL EXPAND ROW --}}
-                                <tr x-show="isGroupOpen('fixCost1', group.name)" x-cloak>
+                                <tr class="border-b border-gray-200" x-show="isGroupOpen('fixCost1', group.name)" x-cloak>
                                     <td colspan="5" class="p-0">
                                         <div x-show="isGroupOpen('fixCost1', group.name)"
                                             x-transition:enter="transition ease-out duration-200"
@@ -1868,6 +1919,7 @@
                             <tbody>
                                 {{-- PRIMARY ROW --}}
                                 <tr class="hover:bg-gray-50 cursor-pointer"
+                                    :class="!isGroupOpen('fixCost2', group.name) && 'border-b border-gray-200'"
                                     @click="toggleGroup('fixCost2', group.name)">
                                     <td class="py-3 px-4 text-[12px] font-semibold text-gray-900" x-text="group.name"></td>
                                     <td class="py-3 px-4 text-[12px] font-semibold text-gray-800" x-text="formatCurrency(group.total)"></td>
@@ -1925,7 +1977,7 @@
                                 </tr>
 
                                 {{-- DETAIL EXPAND ROW --}}
-                                <tr x-show="isGroupOpen('fixCost2', group.name)" x-cloak>
+                                <tr class="border-b border-gray-200" x-show="isGroupOpen('fixCost2', group.name)" x-cloak>
                                     <td colspan="5" class="p-0">
                                         <div x-show="isGroupOpen('fixCost2', group.name)"
                                             x-transition:enter="transition ease-out duration-200"
@@ -2160,6 +2212,7 @@
                             <tbody>
                                 {{-- PRIMARY ROW --}}
                                 <tr class="hover:bg-gray-50 cursor-pointer"
+                                    :class="!isGroupOpen('printingSupply', group.name) && 'border-b border-gray-200'"
                                     @click="toggleGroup('printingSupply', group.name)">
                                     <td class="py-3 px-4 text-[12px] font-semibold text-gray-900" x-text="group.name"></td>
                                     <td class="py-3 px-4 text-[12px] font-semibold text-gray-800" x-text="formatCurrency(group.total)"></td>
@@ -2217,7 +2270,7 @@
                                 </tr>
 
                                 {{-- DETAIL EXPAND ROW --}}
-                                <tr x-show="isGroupOpen('printingSupply', group.name)" x-cloak>
+                                <tr class="border-b border-gray-200" x-show="isGroupOpen('printingSupply', group.name)" x-cloak>
                                     <td colspan="5" class="p-0">
                                         <div x-show="isGroupOpen('printingSupply', group.name)"
                                             x-transition:enter="transition ease-out duration-200"
@@ -2452,6 +2505,7 @@
                             <tbody>
                                 {{-- PRIMARY ROW --}}
                                 <tr class="hover:bg-gray-50 cursor-pointer"
+                                    :class="!isGroupOpen('daily', group.name) && 'border-b border-gray-200'"
                                     @click="toggleGroup('daily', group.name)">
                                     <td class="py-3 px-4 text-[12px] font-semibold text-gray-900" x-text="group.name"></td>
                                     <td class="py-3 px-4 text-[12px] font-semibold text-gray-800" x-text="formatCurrency(group.total)"></td>
@@ -2509,7 +2563,7 @@
                                 </tr>
 
                                 {{-- DETAIL EXPAND ROW --}}
-                                <tr x-show="isGroupOpen('daily', group.name)" x-cloak>
+                                <tr class="border-b border-gray-200" x-show="isGroupOpen('daily', group.name)" x-cloak>
                                     <td colspan="5" class="p-0">
                                         <div x-show="isGroupOpen('daily', group.name)"
                                             x-transition:enter="transition ease-out duration-200"
@@ -3121,42 +3175,13 @@
                                 </div>
                             </div>
 
-                            {{-- Operational Name --}}
+                            {{-- Operational Name (Locked / Readonly) --}}
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-1">
                                     Operational Name <span class="text-red-600">*</span>
                                 </label>
-                                <template x-if="editCategory !== 'daily'">
-                                    <div class="relative" x-data="{ editNameDropdownOpen: false }">
-                                        <button type="button" @click="editNameDropdownOpen = !editNameDropdownOpen"
-                                            :class="editErrors.name ? 'border-red-500 focus:border-red-500 focus:ring-red-200' : 'border-gray-200 focus:border-primary focus:ring-primary/20'"
-                                            class="w-full flex justify-between items-center rounded-md border px-4 py-2 text-sm bg-white focus:outline-none focus:ring-2 transition-colors">
-                                            <span x-text="editForm.name || 'Select Name'" :class="!editForm.name && 'text-gray-400'"></span>
-                                            <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-                                            </svg>
-                                        </button>
-                                        <div x-show="editNameDropdownOpen" @click.away="editNameDropdownOpen = false" x-cloak
-                                            class="absolute z-20 mt-1 w-full bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-y-auto">
-                                            <template x-for="opt in editListOptions" :key="opt.id">
-                                                <button type="button" @click="editForm.name = opt.list_name; editNameDropdownOpen = false"
-                                                    class="w-full text-left px-4 py-2 text-sm hover:bg-primary/5 transition-colors"
-                                                    :class="editForm.name === opt.list_name && 'bg-primary/10 font-medium text-primary'">
-                                                    <span x-text="opt.list_name"></span>
-                                                </button>
-                                            </template>
-                                        </div>
-                                    </div>
-                                </template>
-                                <template x-if="editCategory === 'daily'">
-                                    <input type="text" x-model="editForm.name"
-                                        :class="editErrors.name ? 'border-red-500 focus:border-red-500 focus:ring-red-200' : 'border-gray-200 focus:border-primary focus:ring-primary/20'"
-                                        class="w-full rounded-md border px-4 py-2 text-sm focus:outline-none focus:ring-2 transition-colors"
-                                        placeholder="e.g. Makan Siang">
-                                </template>
-                                <template x-if="editErrors.name">
-                                    <p class="mt-1 text-xs text-red-600" x-text="editErrors.name"></p>
-                                </template>
+                                <input type="text" :value="editForm.name" readonly
+                                    class="w-full rounded-md px-4 py-2 text-sm border border-gray-200 bg-gray-50 text-gray-600 cursor-not-allowed pointer-events-none">
                             </div>
 
                             {{-- Payment Method & Amount --}}
