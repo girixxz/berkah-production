@@ -67,6 +67,7 @@ class OrderReportController extends Controller
             'total_orders' => $allReports->count(),
             'total_qty' => $allReports->sum(fn($report) => $report->order->orderItems->sum('qty') ?? 0),
             'total_bill' => $allReports->sum(fn($report) => $report->order->invoice->total_bill ?? 0),
+            'total_paid' => $allReports->sum(fn($report) => $report->order->invoice->amount_paid ?? 0),
             'remaining_due' => $allReports->sum(fn($report) => $report->order->invoice->amount_due ?? 0),
             'tshirt_count' => $allReports->where('product_type', 't-shirt')->count(),
             'makloon_count' => $allReports->where('product_type', 'makloon')->count(),
