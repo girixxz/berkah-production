@@ -1078,7 +1078,7 @@
                     <div class="border-b border-gray-100 pb-3">
                         <label class="block text-xs font-medium text-gray-500 mb-1">Gender</label>
                         <p class="text-sm text-gray-900">
-                            <span x-text="viewEmployee.gender !== '-' ? viewEmployee.gender.charAt(0).toUpperCase() + viewEmployee.gender.slice(1) : '-'"></span>
+                            <span x-text="viewEmployee.gender && viewEmployee.gender !== '-' ? viewEmployee.gender.charAt(0).toUpperCase() + viewEmployee.gender.slice(1) : '-'"></span>
                         </p>
                     </div>
 

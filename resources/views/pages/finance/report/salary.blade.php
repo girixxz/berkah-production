@@ -198,7 +198,6 @@
                 'monthly_1x': 'Monthly 1x',
                 'monthly_2x': 'Monthly 2x',
                 'project_3x': 'Project 3x',
-                'freelance': 'Freelance',
             };
             return labels[typeName] || typeName || '-';
         },
@@ -904,7 +903,6 @@
                                 'monthly_1x': 'Monthly (1x)',
                                 'monthly_2x': 'Monthly (2x)',
                                 'project_3x': 'Project (3x)',
-                                'freelance': 'Freelance'
                             };
                             this.salaryType = typeMap[group.salary_type] || group.salary_type || '';
 

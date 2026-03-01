@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::create('salary_systems', function (Blueprint $table) {
             $table->id();
-            $table->enum('type_name', ['monthly_1x', 'monthly_2x', 'project_3x', 'freelance'])->unique();
+            $table->enum('type_name', ['monthly_1x', 'monthly_2x', 'project_3x'])->unique();
             $table->timestamps();
         });
     }

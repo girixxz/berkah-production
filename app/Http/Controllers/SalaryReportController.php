@@ -51,7 +51,7 @@ class SalaryReportController extends Controller
             ->get();
 
         // Group by employee_salary_id
-        $typeOrder = ['monthly_1x' => 1, 'monthly_2x' => 2, 'project_3x' => 3, 'freelance' => 4];
+        $typeOrder = ['monthly_1x' => 1, 'monthly_2x' => 2, 'project_3x' => 3];
 
         $grouped = $reports->groupBy('employee_salary_id')->map(function ($items) {
             $first = $items->first();
@@ -95,7 +95,7 @@ class SalaryReportController extends Controller
             ];
         })->values();
 
-        // Sort by salary type: monthly_1x → monthly_2x → project_3x → freelance
+        // Sort by salary type: monthly_1x → monthly_2x → project_3x
         $grouped = $grouped->sortBy(fn ($item) => $typeOrder[$item['salary_type']] ?? 99)->values();
 
         // Stats
@@ -219,7 +219,7 @@ class SalaryReportController extends Controller
         }
 
         // Get all active employees with salary, sorted by type
-        $typeOrder = ['monthly_1x' => 1, 'monthly_2x' => 2, 'project_3x' => 3, 'freelance' => 4];
+        $typeOrder = ['monthly_1x' => 1, 'monthly_2x' => 2, 'project_3x' => 3];
 
         $employees = EmployeeSalary::with('salarySystem')
             ->whereHas('user', fn($q) => $q->where('status', 'active'))

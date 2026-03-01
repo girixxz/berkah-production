@@ -16,7 +16,6 @@ class SalarySystemSeeder extends Seeder
             ['type_name' => 'monthly_1x'],
             ['type_name' => 'monthly_2x'],
             ['type_name' => 'project_3x'],
-            ['type_name' => 'freelance'],
         ];
 
         foreach ($systems as $system) {
