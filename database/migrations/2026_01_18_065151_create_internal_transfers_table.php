@@ -15,7 +15,7 @@ return new class extends Migration
             $table->id();
             $table->date('transfer_date');
             $table->foreignId('balance_id')->constrained('balances')->onDelete('cascade');
-            $table->enum('transfer_type', ['transfer_to_cash', 'cash_to_transfer']);
+            $table->enum('transfer_type', ['transfer_to_cash', 'cash_to_transfer', 'withdraw']);
             $table->decimal('amount', 15, 2);
             $table->text('notes')->nullable();
             $table->string('proof_img')->nullable();

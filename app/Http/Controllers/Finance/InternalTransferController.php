@@ -94,8 +94,8 @@ class InternalTransferController extends Controller
             'balance_month' => 'required|integer|min:1|max:12',
             'balance_year' => 'required|integer|min:2025',
             'transfer_date' => 'required|date',
-            'transfer_type' => 'required|in:transfer_to_cash,cash_to_transfer',
-            'amount' => 'required|numeric|min:0.01',
+            'transfer_type' => 'required|in:transfer_to_cash,cash_to_transfer,withdraw',
+            'amount' => 'required_unless:transfer_type,withdraw|numeric|min:0',
             'notes' => 'nullable|string|max:1000',
             'proof_image' => 'nullable|image|mimes:jpeg,jpg,png|max:2048'
         ], [
@@ -104,8 +104,8 @@ class InternalTransferController extends Controller
             'balance_year.min' => 'Year must be 2025 or later',
             'transfer_date.required' => 'Transfer date is required',
             'transfer_type.required' => 'Transfer type is required',
-            'amount.required' => 'Amount is required',
-            'amount.min' => 'Amount must be at least Rp 0.01',
+            'amount.required_unless' => 'Amount is required',
+            'amount.min' => 'Amount must be at least Rp 0',
             'proof_image.image' => 'File must be an image',
             'proof_image.mimes' => 'Image must be jpeg, jpg, or png',
             'proof_image.max' => 'Image size cannot exceed 2MB'
@@ -136,7 +136,20 @@ class InternalTransferController extends Controller
         );
 
         // Validate sufficient balance based on transfer type
-        if ($validated['transfer_type'] === 'transfer_to_cash') {
+        if ($validated['transfer_type'] === 'withdraw') {
+            // Withdraw: total balance must be > 0
+            $totalBalance = $balance->transfer_balance + $balance->cash_balance;
+            if ($totalBalance <= 0) {
+                return response()->json([
+                    'success' => false,
+                    'errors' => [
+                        'transfer_type' => ['Cannot withdraw: both Transfer and Cash balance are already 0.']
+                    ]
+                ], 422);
+            }
+            // Set amount to total balance for record keeping
+            $validated['amount'] = $totalBalance;
+        } elseif ($validated['transfer_type'] === 'transfer_to_cash') {
             // Source: Transfer Balance
             if ($validated['amount'] > $balance->transfer_balance) {
                 return response()->json([
@@ -188,7 +201,12 @@ class InternalTransferController extends Controller
             ]);
 
             // Update balance based on transfer type
-            if ($validated['transfer_type'] === 'transfer_to_cash') {
+            if ($validated['transfer_type'] === 'withdraw') {
+                // Withdraw: set both balances to 0
+                $balance->transfer_balance = 0;
+                $balance->cash_balance = 0;
+                $balance->total_balance = 0;
+            } elseif ($validated['transfer_type'] === 'transfer_to_cash') {
                 // Transfer → Cash
                 $balance->transfer_balance -= $validated['amount'];
                 $balance->cash_balance += $validated['amount'];

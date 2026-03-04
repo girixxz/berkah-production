@@ -39,6 +39,7 @@ class InternalTransfer extends Model
         return match($this->transfer_type) {
             'transfer_to_cash' => 'Transfer → Cash',
             'cash_to_transfer' => 'Cash → Transfer',
+            'withdraw' => 'Withdraw',
             default => $this->transfer_type,
         };
     }
