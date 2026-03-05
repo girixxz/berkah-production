@@ -965,7 +965,7 @@
                                                     {{-- Add Payment (Hidden if no invoice, fully paid, or cancelled) --}}
                                                     @if ($order->invoice && $order->invoice->amount_due > 0 && $order->production_status !== 'cancelled')
                                                         <button type="button"
-                                                            @click="selectedOrderForPayment = {{ json_encode(['id' => $order->id, 'invoice_no' => $order->invoice->invoice_no ?? 'N/A', 'invoice_id' => $order->invoice->id ?? null, 'remaining_due' => $order->invoice->amount_due ?? 0, 'pending_transaction' => $pendingCount, 'pending_amount' => $pendingAmount]) }}; showAddPaymentModal = true; paymentErrors = {}; open = false"
+                                                            @click="selectedOrderForPayment = {{ json_encode(['id' => $order->id, 'invoice_no' => $order->invoice->invoice_no ?? 'N/A', 'invoice_id' => $order->invoice->id ?? null, 'total_bill' => $order->invoice->total_bill ?? 0, 'remaining_due' => $order->invoice->amount_due ?? 0, 'pending_transaction' => $pendingCount, 'pending_amount' => $pendingAmount]) }}; showAddPaymentModal = true; paymentErrors = {}; open = false"
                                                             class="w-full text-left px-4 py-2 text-sm text-blue-600 hover:bg-blue-50 flex items-center gap-2">
                                                             <svg class="w-4 h-4" fill="none" stroke="currentColor"
                                                                 viewBox="0 0 24 24">
@@ -1302,7 +1302,7 @@
                                                     {{-- Add Payment (Hidden if no invoice, fully paid, or cancelled) --}}
                                                     @if ($order->invoice && $order->invoice->amount_due > 0 && $order->production_status !== 'cancelled')
                                                         <button type="button"
-                                                            @click="selectedOrderForPayment = {{ json_encode(['id' => $order->id, 'invoice_no' => $order->invoice->invoice_no ?? 'N/A', 'invoice_id' => $order->invoice->id ?? null, 'remaining_due' => $order->invoice->amount_due ?? 0, 'pending_transaction' => $pendingCount, 'pending_amount' => $pendingAmount]) }}; showAddPaymentModal = true; paymentErrors = {}; open = false"
+                                                            @click="selectedOrderForPayment = {{ json_encode(['id' => $order->id, 'invoice_no' => $order->invoice->invoice_no ?? 'N/A', 'invoice_id' => $order->invoice->id ?? null, 'total_bill' => $order->invoice->total_bill ?? 0, 'remaining_due' => $order->invoice->amount_due ?? 0, 'pending_transaction' => $pendingCount, 'pending_amount' => $pendingAmount]) }}; showAddPaymentModal = true; paymentErrors = {}; open = false"
                                                             class="w-full text-left px-4 py-2 text-sm text-blue-600 hover:bg-blue-50 flex items-center gap-2">
                                                             <svg class="w-4 h-4" fill="none" stroke="currentColor"
                                                                 viewBox="0 0 24 24">
@@ -1556,7 +1556,7 @@
                                                         $pendingCount = $pendingPayments->count();
                                                         $pendingAmount = $pendingPayments->sum('amount');
                                                     @endphp
-                                                    <button type="button" @click="selectedOrderForPayment = {{ json_encode(['id' => $order->id, 'invoice_no' => $order->invoice->invoice_no ?? 'N/A', 'invoice_id' => $order->invoice->id ?? null, 'remaining_due' => $order->invoice->amount_due ?? 0, 'pending_transaction' => $pendingCount, 'pending_amount' => $pendingAmount]) }}; showAddPaymentModal = true; paymentErrors = {}; open = false" class="w-full text-left px-4 py-2 text-sm text-blue-600 hover:bg-blue-50 flex items-center gap-2">
+                                                    <button type="button" @click="selectedOrderForPayment = {{ json_encode(['id' => $order->id, 'invoice_no' => $order->invoice->invoice_no ?? 'N/A', 'invoice_id' => $order->invoice->id ?? null, 'total_bill' => $order->invoice->total_bill ?? 0, 'remaining_due' => $order->invoice->amount_due ?? 0, 'pending_transaction' => $pendingCount, 'pending_amount' => $pendingAmount]) }}; showAddPaymentModal = true; paymentErrors = {}; open = false" class="w-full text-left px-4 py-2 text-sm text-blue-600 hover:bg-blue-50 flex items-center gap-2">
                                                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
                                                         Add Payment
                                                     </button>
@@ -1735,7 +1735,7 @@
                                                         $pendingCount = $pendingPayments->count();
                                                         $pendingAmount = $pendingPayments->sum('amount');
                                                     @endphp
-                                                    <button type="button" @click="selectedOrderForPayment = {{ json_encode(['id' => $order->id, 'invoice_no' => $order->invoice->invoice_no ?? 'N/A', 'invoice_id' => $order->invoice->id ?? null, 'remaining_due' => $order->invoice->amount_due ?? 0, 'pending_transaction' => $pendingCount, 'pending_amount' => $pendingAmount]) }}; showAddPaymentModal = true; paymentErrors = {}; open = false" class="w-full text-left px-4 py-2 text-sm text-blue-600 hover:bg-blue-50 flex items-center gap-2">
+                                                    <button type="button" @click="selectedOrderForPayment = {{ json_encode(['id' => $order->id, 'invoice_no' => $order->invoice->invoice_no ?? 'N/A', 'invoice_id' => $order->invoice->id ?? null, 'total_bill' => $order->invoice->total_bill ?? 0, 'remaining_due' => $order->invoice->amount_due ?? 0, 'pending_transaction' => $pendingCount, 'pending_amount' => $pendingAmount]) }}; showAddPaymentModal = true; paymentErrors = {}; open = false" class="w-full text-left px-4 py-2 text-sm text-blue-600 hover:bg-blue-50 flex items-center gap-2">
                                                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
                                                         Add Payment
                                                     </button>
@@ -1940,6 +1940,24 @@
                             if (!amount || amount === '0' || amount === '') {
                                 paymentErrors.amount = ['Amount is required'];
                                 hasValidationError = true;
+                            } else {
+                                const numAmount = parseInt(amount);
+                                const totalBill = Math.floor(selectedOrderForPayment?.total_bill || 0);
+                                const remainingDue = Math.floor(selectedOrderForPayment?.remaining_due || 0);
+                                const pendingAmount = Math.floor(selectedOrderForPayment?.pending_amount || 0);
+                                const availableAmount = remainingDue - pendingAmount;
+                                const fmt = (v) => 'Rp ' + v.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+                                
+                                if (numAmount > totalBill) {
+                                    paymentErrors.amount = ['Amount cannot exceed total bill (' + fmt(totalBill) + ')'];
+                                    hasValidationError = true;
+                                } else if (numAmount > remainingDue) {
+                                    paymentErrors.amount = ['Amount cannot exceed remaining due (' + fmt(remainingDue) + ')'];
+                                    hasValidationError = true;
+                                } else if (pendingAmount > 0 && numAmount > availableAmount) {
+                                    paymentErrors.amount = ['Amount cannot exceed remaining due after pending payments (' + fmt(availableAmount) + ')'];
+                                    hasValidationError = true;
+                                }
                             }
                             
                             // Validate image
@@ -2125,7 +2143,9 @@
                                         // Auto-fill amount untuk repayment atau full_payment
                                         if (option.value === 'repayment' || option.value === 'full_payment') {
                                             const remainingDue = selectedOrderForPayment?.remaining_due || 0;
-                                            paymentAmount = Math.floor(remainingDue).toLocaleString('id-ID');
+                                            const pendingAmt = selectedOrderForPayment?.pending_amount || 0;
+                                            const available = Math.floor(remainingDue - pendingAmt);
+                                            paymentAmount = (available > 0 ? available : 0).toLocaleString('id-ID');
                                         }
                                         
                                         if (paymentErrors.payment_type) {
