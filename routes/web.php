@@ -199,7 +199,7 @@ Route::middleware(['auth'])->group(function () {
     /* ---------- FINANCE ---------- */
     Route::prefix('finance')->name('finance.')->middleware('role:finance,owner')->group(function () {
         // Dashboard
-        Route::get('dashboard', fn() => view('pages.finance.dashboard'))->name('dashboard');
+        Route::get('dashboard', [Finance\DashboardController::class, 'index'])->name('dashboard');
 
         // Report Routes
         Route::prefix('report')->name('report.')->group(function () {
