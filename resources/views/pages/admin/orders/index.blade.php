@@ -655,6 +655,7 @@
                                 <th class="py-3 px-4 text-left font-bold">Total Bill</th>
                                 <th class="py-3 px-4 text-left font-bold">Remaining</th>
                                 <th class="py-3 px-4 text-left font-bold">Status</th>
+                                <th class="py-3 px-4 text-left font-bold">Report Status</th>
                                 <th class="py-3 px-4 text-left font-bold">Finished Date</th>
                                 <th class="py-3 px-4 text-left font-bold">Shipping Status</th>
                                 <th class="py-3 px-4 text-center font-bold rounded-r-lg">Action</th>
@@ -670,6 +671,7 @@
                                 <th class="py-3 px-4 text-left font-bold">Order Date</th>
                                 <th class="py-3 px-4 text-left font-bold">Deadline</th>
                                 <th class="py-3 px-4 text-left font-bold">Status</th>
+                                <th class="py-3 px-4 text-left font-bold">Report Status</th>
                                 <th class="py-3 px-4 text-center font-bold rounded-r-lg">Action</th>
                             </tr>
                         </thead>
@@ -841,16 +843,16 @@
                                                 $statusClasses[$order->production_status] ??
                                                 'bg-gray-100 text-gray-800';
                                         @endphp
-                                        <div class="flex items-center gap-2 flex-wrap">
-                                            <span class="px-2 py-1 rounded-full text-xs font-medium {{ $statusClass }}">
-                                                {{ strtoupper($order->production_status) }}
-                                            </span>
-                                            @if($order->report_status === 'reported')
-                                                <span class="px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
-                                                    REPORTED
-                                                </span>
-                                            @endif
-                                        </div>
+                                        <span class="px-2 py-1 rounded-full text-xs font-medium {{ $statusClass }}">
+                                            {{ strtoupper($order->production_status) }}
+                                        </span>
+                                    </td>
+
+                                    {{-- Report Status --}}
+                                    <td class="py-3 px-4">
+                                        <span class="text-gray-700 text-xs">
+                                            {{ $order->report_status === 'reported' && $order->report_date ? 'Reported at ' . \Carbon\Carbon::parse($order->report_date)->format('j M y') : '-' }}
+                                        </span>
                                     </td>
 
                                     {{-- Finished Date --}}
@@ -1004,8 +1006,8 @@
                                                         </button>
                                                     @endif
 
-                                                    {{-- Cancel (Hidden for cancelled and finished) --}}
-                                                    @if ($order->production_status !== 'cancelled' && $order->production_status !== 'finished')
+                                                    {{-- Cancel (Hidden for cancelled, finished, and reported) --}}
+                                                    @if ($order->production_status !== 'cancelled' && $order->production_status !== 'finished' && $order->report_status !== 'reported')
                                                         <button type="button"
                                                             @click="showCancelConfirm = {{ $order->id }}; open = false"
                                                             class="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2">
@@ -1186,16 +1188,16 @@
                                                 $statusClasses[$order->production_status] ??
                                                 'bg-gray-100 text-gray-800';
                                         @endphp
-                                        <div class="flex items-center gap-2 flex-wrap">
-                                            <span class="px-2 py-1 rounded-full text-xs font-medium {{ $statusClass }}">
-                                                {{ strtoupper($order->production_status) }}
-                                            </span>
-                                            @if($order->report_status === 'reported')
-                                                <span class="px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
-                                                    REPORTED
-                                                </span>
-                                            @endif
-                                        </div>
+                                        <span class="px-2 py-1 rounded-full text-xs font-medium {{ $statusClass }}">
+                                            {{ strtoupper($order->production_status) }}
+                                        </span>
+                                    </td>
+
+                                    {{-- Report Status --}}
+                                    <td class="py-3 px-4">
+                                        <span class="text-gray-700 text-xs">
+                                            {{ $order->report_status === 'reported' && $order->report_date ? 'Reported at ' . \Carbon\Carbon::parse($order->report_date)->format('j M y') : '-' }}
+                                        </span>
                                     </td>
 
                                     {{-- Action --}}
@@ -1341,8 +1343,8 @@
                                                         </button>
                                                     @endif
 
-                                                    {{-- Cancel (Hidden for cancelled and finished) --}}
-                                                    @if ($order->production_status !== 'cancelled' && $order->production_status !== 'finished')
+                                                    {{-- Cancel (Hidden for cancelled, finished, and reported) --}}
+                                                    @if ($order->production_status !== 'cancelled' && $order->production_status !== 'finished' && $order->report_status !== 'reported')
                                                         <button type="button"
                                                             @click="showCancelConfirm = {{ $order->id }}; open = false"
                                                             class="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2">
@@ -1364,7 +1366,7 @@
                             @empty
                                 {{-- Empty State for Finished Filter --}}
                                 <tr x-show="activeFilter === 'finished' && searchQuery.trim() === ''">
-                                    <td colspan="10" class="py-8 text-center text-gray-400">
+                                    <td colspan="11" class="py-8 text-center text-gray-400">
                                         <svg class="w-16 h-16 mx-auto mb-3 opacity-50" fill="none"
                                             stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -1375,7 +1377,7 @@
                                 </tr>
                                 {{-- Empty State for Other Filters --}}
                                 <tr x-show="activeFilter !== 'finished' && searchQuery.trim() === ''">
-                                    <td colspan="10" class="py-8 text-center text-gray-400">
+                                    <td colspan="11" class="py-8 text-center text-gray-400">
                                         <svg class="w-16 h-16 mx-auto mb-3 opacity-50" fill="none"
                                             stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -1520,6 +1522,9 @@
                                         <span class="px-2 py-1 rounded-full text-xs font-medium {{ $statusClass }}">{{ strtoupper($order->production_status) }}</span>
                                     </td>
                                     <td class="py-3 px-4">
+                                        <span class="text-gray-700 text-xs">{{ $order->report_status === 'reported' && $order->report_date ? 'Reported at ' . \Carbon\Carbon::parse($order->report_date)->format('j M y') : '-' }}</span>
+                                    </td>
+                                    <td class="py-3 px-4">
                                         <span class="text-gray-700">{{ $order->finished_date ? \Carbon\Carbon::parse($order->finished_date)->format('d M Y H:i') : '-' }}</span>
                                     </td>
                                     <td class="py-3 px-4">
@@ -1568,7 +1573,7 @@
                                                         @endif
                                                     </button>
                                                 @endif
-                                                @if ($order->production_status !== 'cancelled' && $order->production_status !== 'finished')
+                                                @if ($order->production_status !== 'cancelled' && $order->production_status !== 'finished' && $order->report_status !== 'reported')
                                                     <button type="button" @click="showCancelConfirm = {{ $order->id }}; open = false" class="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2">
                                                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                                                         Cancel Order
@@ -1705,6 +1710,9 @@
                                         @endphp
                                         <span class="px-2 py-1 rounded-full text-xs font-medium {{ $statusClass }}">{{ strtoupper($order->production_status) }}</span>
                                     </td>
+                                    <td class="py-3 px-4">
+                                        <span class="text-gray-700 text-xs">{{ $order->report_status === 'reported' && $order->report_date ? 'Reported at ' . \Carbon\Carbon::parse($order->report_date)->format('j M y') : '-' }}</span>
+                                    </td>
                                     <td class="py-3 px-4 text-center">
                                         <div class="relative inline-block text-left" x-data="{ open: false, dropdownStyle: {}, checkPosition() { const button = this.$refs.button; const rect = button.getBoundingClientRect(); const spaceBelow = window.innerHeight - rect.bottom; const spaceAbove = rect.top; const dropUp = spaceBelow < 200 && spaceAbove > spaceBelow; if (dropUp) { this.dropdownStyle = { position: 'fixed', top: (rect.top - 200) + 'px', left: (rect.right - 160) + 'px', width: '160px' }; } else { this.dropdownStyle = { position: 'fixed', top: (rect.bottom + 8) + 'px', left: (rect.right - 160) + 'px', width: '160px' }; } } }">
                                             <button x-ref="button" @click="checkPosition(); open = !open" type="button" class="inline-flex items-center justify-center w-8 h-8 rounded-md border border-gray-300 text-gray-600 hover:bg-gray-100 cursor-pointer">
@@ -1744,7 +1752,7 @@
                                                         @endif
                                                     </button>
                                                 @endif
-                                                @if ($order->production_status !== 'cancelled' && $order->production_status !== 'finished')
+                                                @if ($order->production_status !== 'cancelled' && $order->production_status !== 'finished' && $order->report_status !== 'reported')
                                                     <button type="button" @click="showCancelConfirm = {{ $order->id }}; open = false" class="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2">
                                                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                                                         Cancel Order
@@ -1758,7 +1766,7 @@
                             
                             {{-- No Search Results Message --}}
                             <tr x-show="searchQuery.trim() !== '' && !hasResults" x-cloak>
-                                <td colspan="10" class="py-8 text-center text-gray-400">
+                                <td colspan="11" class="py-8 text-center text-gray-400">
                                     <svg class="w-16 h-16 mx-auto mb-3 opacity-50" fill="none"
                                         stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
