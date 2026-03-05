@@ -322,7 +322,6 @@
                                         d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                                 </svg>
                                 <input type="text" x-model="searchQuery" x-ref="searchInput"
-                                    @input="applyFilter()"
                                     placeholder="Search invoice, customer..."
                                     class="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary">
                             </div>
@@ -721,9 +720,10 @@
                         @endforelse
 
                         @foreach ($allPayments as $payment)
-                            <tr class="hover:bg-gray-50" x-show="searchQuery.trim() !== '' && 
-                                {{ Js::from(strtolower(($payment->invoice->invoice_no ?? '') . ' ' . ($payment->invoice->order->customer->customer_name ?? '') . ' ' . ($payment->invoice->order->customer->phone ?? ''))) }}
-                                .includes(searchQuery.toLowerCase())">
+                            <tr class="hover:bg-gray-50"
+                                x-show="searchQuery.trim() !== '' && matchesSearch($el)"
+                                data-invoice="{{ $payment->invoice->invoice_no ?? '' }}"
+                                data-customer="{{ $payment->invoice->order->customer->customer_name ?? '' }} {{ $payment->invoice->order->customer->phone ?? '' }}">
                                 {{-- Paid At --}}
                                 <td class="py-3 px-4">
                                     <span class="text-gray-700">{{ \Carbon\Carbon::parse($payment->paid_at)->format('d M Y H:i') }}</span>

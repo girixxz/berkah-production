@@ -420,7 +420,7 @@
                                     d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                             </svg>
                             <input type="text" x-model="searchQuery" x-ref="searchInput"
-                                @input="applyFilter()" placeholder="Search invoice, customer..."
+                                placeholder="Search invoice, customer..."
                                 class="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary">
                         </div>
                     </div>
@@ -877,10 +877,7 @@
                                 data-order="true"
                                 data-invoice="{{ $order->invoice->invoice_no ?? '' }}"
                                 data-customer="{{ $order->customer->customer_name ?? '' }}"
-                                x-show="searchQuery.trim() !== '' && (
-                                    '{{ strtolower($order->invoice->invoice_no ?? '') }}'.includes(searchQuery.toLowerCase()) ||
-                                    '{{ strtolower($order->customer->customer_name ?? '') }}'.includes(searchQuery.toLowerCase())
-                                )">
+                                x-show="searchQuery.trim() !== '' && matchesSearch($el)">
                                 {{-- Customer --}}
                                 <td class="py-3 px-3">
                                     <div>

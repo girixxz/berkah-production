@@ -257,7 +257,6 @@
                                             d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                                     </svg>
                                     <input type="text" x-model="searchQuery" x-ref="searchInput"
-                                        @input="applyFilter()"
                                         placeholder="Search invoice, customer..."
                                         class="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary">
                                 </div>
@@ -693,12 +692,12 @@
                             @endforelse
 
                             @foreach ($allOrders as $order)
-                                @php
-                                    $designNames = $order->designVariants->pluck('design_name')->filter()->implode(' ');
-                                    $searchText = strtolower(($order->invoice->invoice_no ?? '') . ' ' . ($order->customer->customer_name ?? '') . ' ' . ($order->customer->phone ?? '') . ' ' . ($order->productCategory->product_name ?? '') . ' ' . $designNames);
-                                @endphp
-
-                                <tr class="hover:bg-gray-50" x-show="searchQuery.trim() !== '' && '{{ $searchText }}'.includes(searchQuery.toLowerCase())">
+                                <tr class="hover:bg-gray-50"
+                                    x-show="searchQuery.trim() !== '' && matchesSearch($el)"
+                                    data-invoice="{{ $order->invoice->invoice_no ?? '' }}"
+                                    data-customer="{{ $order->customer->customer_name ?? '' }} {{ $order->customer->phone ?? '' }}"
+                                    data-product="{{ $order->productCategory->product_name ?? '' }}"
+                                    data-designs="{{ $order->designVariants->pluck('design_name')->filter()->implode(' ') }}">
                                     {{-- Invoice No with Priority --}}
                                     <td class="py-3 px-4">
                                         <div class="flex items-center gap-1.5 flex-wrap">
