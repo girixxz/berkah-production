@@ -27,6 +27,7 @@
         selectedStageName: '',
         stageStartDate: '',
         stageDeadline: '',
+        orderDeadline: '',
         isSubmittingStage: false,
         stageErrors: {},
         editStageData: {
@@ -71,19 +72,27 @@
         resetStageForm() {
             this.stageStartDate = '';
             this.stageDeadline = '';
+            this.orderDeadline = '';
             this.stageErrors = {};
             this.selectedOrderId = null;
             this.selectedStageId = null;
             this.selectedStageName = '';
             this.isSubmittingStage = false;
         },
-        openStageModal(orderId, stageId, stageName, startDate = '', deadline = '') {
+        openStageModal(orderId, stageId, stageName, startDate = '', deadline = '', orderDeadline = '') {
             this.selectedOrderId = orderId;
             this.selectedStageId = stageId;
             this.selectedStageName = stageName;
             this.stageStartDate = startDate || '';
             this.stageDeadline = deadline || '';
+            this.orderDeadline = orderDeadline || '';
+            this.stageErrors = {};
             this.showStageModal = true;
+        },
+        openStageModalFromBtn(btn, orderId, stageId, stageName, startDate = '', deadline = '') {
+            const tr = btn.closest('tr');
+            const orderDeadline = tr ? (tr.getAttribute('data-deadline') || '') : '';
+            this.openStageModal(orderId, stageId, stageName, startDate, deadline, orderDeadline);
         },
         get hasChanges() {
             return Object.keys(this.pendingChanges).length > 0;
@@ -638,7 +647,8 @@
                             <tr class="hover:bg-gray-50"
                                 x-show="searchQuery.trim() === ''"
                                 data-invoice="{{ $order->invoice->invoice_no ?? '' }}"
-                                data-customer="{{ $order->customer->customer_name ?? '' }}">
+                                data-customer="{{ $order->customer->customer_name ?? '' }}"
+                                data-deadline="{{ $order->deadline ? \Carbon\Carbon::parse($order->deadline)->format('Y-m-d') : '' }}">
                                 {{-- Customer --}}
                                 <td class="py-3 px-3">
                                     <div>
@@ -707,7 +717,7 @@
                                         <div class="flex flex-col items-center gap-1">
                                             {{-- Date Button --}}
                                             <button type="button"
-                                                @click="openStageModal({{ $order->id }}, {{ $stage->id }}, '{{ $stage->stage_name }}', '{{ $orderStage?->start_date?->format('Y-m-d') ?? '' }}', '{{ $orderStage?->deadline?->format('Y-m-d') ?? '' }}')"
+                                                @click="openStageModalFromBtn($el, {{ $order->id }}, {{ $stage->id }}, '{{ $stage->stage_name }}', '{{ $orderStage?->start_date?->format('Y-m-d') ?? '' }}', '{{ $orderStage?->deadline?->format('Y-m-d') ?? '' }}')"
                                                 class="p-1 rounded hover:bg-gray-200 transition-colors" title="Set Date">
                                                 <svg class="w-4 h-4 text-gray-600" fill="none" stroke="currentColor"
                                                     viewBox="0 0 24 24">
@@ -877,6 +887,7 @@
                                 data-order="true"
                                 data-invoice="{{ $order->invoice->invoice_no ?? '' }}"
                                 data-customer="{{ $order->customer->customer_name ?? '' }}"
+                                data-deadline="{{ $order->deadline ? \Carbon\Carbon::parse($order->deadline)->format('Y-m-d') : '' }}"
                                 x-show="searchQuery.trim() !== '' && matchesSearch($el)">
                                 {{-- Customer --}}
                                 <td class="py-3 px-3">
@@ -946,7 +957,7 @@
                                         <div class="flex flex-col items-center gap-1">
                                             {{-- Date Button --}}
                                             <button type="button"
-                                                @click="openStageModal({{ $order->id }}, {{ $stage->id }}, '{{ $stage->stage_name }}', '{{ $orderStage?->start_date?->format('Y-m-d') ?? '' }}', '{{ $orderStage?->deadline?->format('Y-m-d') ?? '' }}')"
+                                                @click="openStageModalFromBtn($el, {{ $order->id }}, {{ $stage->id }}, '{{ $stage->stage_name }}', '{{ $orderStage?->start_date?->format('Y-m-d') ?? '' }}', '{{ $orderStage?->deadline?->format('Y-m-d') ?? '' }}')"
                                                 class="p-1 rounded hover:bg-gray-200 transition-colors" title="Set Date">
                                                 <svg class="w-4 h-4 text-gray-600" fill="none" stroke="currentColor"
                                                     viewBox="0 0 24 24">
@@ -1097,8 +1108,8 @@
             {{-- Modal Container --}}
             <div class="fixed inset-0 flex items-center justify-center p-4">
                 <div @click.away="showStageModal = false; resetStageForm()" x-transition
-                    class="relative bg-white rounded-xl shadow-2xl max-w-md w-full z-10"
-                    style="height: min(calc(100vh - 6rem), 325px); min-height: 0; display: flex; flex-direction: column;">
+                    class="relative bg-white rounded-xl shadow-2xl max-w-md w-full z-10 flex flex-col"
+                    style="max-height: calc(100vh - 6rem);">
                 {{-- Header --}}
                 <div class="flex items-center justify-between px-6 py-4 border-b border-gray-200 flex-shrink-0">
                     <h3 class="text-lg font-semibold text-gray-900">Set Stage Date - <span
@@ -1116,8 +1127,31 @@
                 <div class="flex-1">
                     <form id="stageDateForm" class="px-6 py-4 space-y-4"
                     @submit.prevent="
-                    isSubmittingStage = true;
                     stageErrors = {};
+                    let hasError = false;
+                    
+                    // Format order deadline for display
+                    let formattedDeadline = '';
+                    if (orderDeadline) {
+                        const dl = new Date(orderDeadline + 'T00:00:00');
+                        formattedDeadline = dl.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+                    }
+                    
+                    // Validate start date against order deadline
+                    if (orderDeadline && stageStartDate && stageStartDate > orderDeadline) {
+                        stageErrors.start_date = 'Cannot exceed order deadline (' + formattedDeadline + ')';
+                        hasError = true;
+                    }
+                    
+                    // Validate stage deadline against order deadline
+                    if (orderDeadline && stageDeadline && stageDeadline > orderDeadline) {
+                        stageErrors.deadline = 'Cannot exceed order deadline (' + formattedDeadline + ')';
+                        hasError = true;
+                    }
+                    
+                    if (hasError) return;
+                    
+                    isSubmittingStage = true;
                     
                     // Save current scroll position
                     const scrollPosition = window.scrollY || document.documentElement.scrollTop;
