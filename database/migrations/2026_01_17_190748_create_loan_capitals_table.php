@@ -13,13 +13,14 @@ return new class extends Migration
     {
         Schema::create('loan_capitals', function (Blueprint $table) {
             $table->id();
+            $table->timestamp('loan_date')->useCurrent();
             $table->foreignId('balance_id')->constrained('balances')->onDelete('cascade');
-            $table->date('loan_date');
-            $table->decimal('amount', 12, 2);
-            $table->decimal('remaining_amount', 12, 2);
-            $table->enum('payment_method', ['cash', 'transfer']);
+
+            $table->enum('payment_method', ['transfer', 'cash']);
+            $table->decimal('loan_amount', 12, 2);
+
             $table->string('proof_img', 255);
-            $table->enum('status', ['outstanding', 'done'])->default('outstanding');
+            $table->enum('status', ['outstanding', 'paid_off'])->default('outstanding');
             $table->text('notes')->nullable();
             $table->timestamps();
         });

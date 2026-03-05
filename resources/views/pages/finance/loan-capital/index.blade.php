@@ -7,17 +7,42 @@
 
     {{-- Root Alpine State --}}
     <div x-data="{
-        searchQuery: '{{ request('search') }}',
-        statusFilter: '{{ $statusFilter }}',
         currentMonth: {{ $currentDate->month }},
         currentYear: {{ $currentDate->year }},
         displayText: '{{ $currentDate->format('F Y') }}',
-        showAddLoanModal: false,
-        loanAmount: '',
-        loanErrors: {},
+        searchQuery: '{{ request('search', '') }}',
+        statusFilter: '{{ $statusFilter }}',
+        showCreateModal: false,
+        createErrors: {},
         isSubmittingLoan: false,
+        showRepaymentModal: false,
+        repaymentErrors: {},
+        isSubmittingRepayment: false,
+        repaymentLoanId: null,
+        repaymentLoanAmount: 0,
+        repaymentRemaining: 0,
+        repaymentLoanPeriod: '',
+        showDetailModal: false,
+        detailLoan: null,
+        stream: null,
+        showWebcam: false,
+        imagePreview: null,
+        fileName: '',
+        isMirrored: false,
+        facingMode: 'environment',
+
         init() {
-            // Check for toast message from sessionStorage
+            @if(session('toast_message'))
+                setTimeout(() => {
+                    window.dispatchEvent(new CustomEvent('show-toast', {
+                        detail: { 
+                            message: '{{ session('toast_message') }}',
+                            type: '{{ session('toast_type', 'success') }}'
+                        }
+                    }));
+                }, 300);
+            @endif
+
             const message = sessionStorage.getItem('toast_message');
             const type = sessionStorage.getItem('toast_type');
             if (message) {
@@ -30,140 +55,193 @@
                 sessionStorage.removeItem('toast_type');
             }
         },
-        matchesSearch(row) {
-            if (!this.searchQuery || this.searchQuery.trim() === '') return true;
-            const query = this.searchQuery.toLowerCase();
-            const trxNo = (row.getAttribute('data-trx') || '').toLowerCase();
-            const note = (row.getAttribute('data-note') || '').toLowerCase();
-            return trxNo.includes(query) || note.includes(query);
-        },
-        get hasVisibleRows() {
-            if (!this.searchQuery || this.searchQuery.trim() === '') return true;
-            const tbody = document.querySelector('tbody');
-            if (!tbody) return true;
-            const rows = tbody.querySelectorAll('tr[data-trx]');
-            for (let row of rows) {
-                if (this.matchesSearch(row)) return true;
-            }
-            return false;
-        },
+
         navigateMonth(direction) {
             let newMonth = this.currentMonth;
             let newYear = this.currentYear;
-            
+
             if (direction === 'prev') {
                 newMonth--;
-                if (newMonth < 1) {
-                    newMonth = 12;
-                    newYear--;
-                }
+                if (newMonth < 1) { newMonth = 12; newYear--; }
             } else if (direction === 'next') {
                 newMonth++;
-                if (newMonth > 12) {
-                    newMonth = 1;
-                    newYear++;
-                }
+                if (newMonth > 12) { newMonth = 1; newYear++; }
             } else if (direction === 'reset') {
                 const now = new Date();
                 newMonth = now.getMonth() + 1;
                 newYear = now.getFullYear();
             }
-            
-            this.loadCalendar(newMonth, newYear);
+
+            this.loadMonth(newMonth, newYear);
         },
-        loadCalendar(month, year) {
+
+        loadMonth(month, year) {
             this.currentMonth = month;
             this.currentYear = year;
-            
+
             const params = new URLSearchParams(window.location.search);
             params.set('month', month);
             params.set('year', year);
-            
+            params.delete('page');
+
             const url = '{{ route('finance.loan-capital') }}?' + params.toString();
             window.history.pushState({}, '', url);
-            
-            // Update display text
-            const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 
-                               'July', 'August', 'September', 'October', 'November', 'December'];
+
+            const monthNames = ['January','February','March','April','May','June',
+                               'July','August','September','October','November','December'];
             this.displayText = monthNames[month - 1] + ' ' + year;
-            
+
             NProgress.start();
-            fetch(url, {
-                headers: { 'X-Requested-With': 'XMLHttpRequest' }
-            })
+            fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
             .then(response => response.text())
             .then(html => {
                 const parser = new DOMParser();
                 const doc = parser.parseFromString(html, 'text/html');
-                
-                // Update stats cards section
-                const newStatsSection = doc.getElementById('stats-section');
-                if (newStatsSection) {
-                    document.getElementById('stats-section').innerHTML = newStatsSection.innerHTML;
-                }
-                
-                // Update table section
-                const newLoanSection = doc.getElementById('loan-section');
-                if (newLoanSection) {
-                    document.getElementById('loan-section').innerHTML = newLoanSection.innerHTML;
-                    setupPagination('loan-pagination-container', 'loan-section');
-                }
-                
+
+                const newStats = doc.getElementById('stats-section');
+                const newTable = doc.getElementById('table-section');
+
+                if (newStats) document.getElementById('stats-section').innerHTML = newStats.innerHTML;
+                if (newTable) document.getElementById('table-section').innerHTML = newTable.innerHTML;
+
+                this.reinitPagination();
                 NProgress.done();
             })
-            .catch(error => {
-                console.error('Error:', error);
-                NProgress.done();
-            });
+            .catch(error => { console.error('Error:', error); NProgress.done(); });
         },
-        applyFilter() {
-            const params = new URLSearchParams();
+
+        loadStatus(status) {
+            this.statusFilter = status;
+
+            const params = new URLSearchParams(window.location.search);
+            params.set('status', status);
             params.set('month', this.currentMonth);
             params.set('year', this.currentYear);
-            params.set('status', this.statusFilter);
-            if (this.searchQuery) params.set('search', this.searchQuery);
-            
-            const perPageValue = this.getPerPageValue();
-            if (perPageValue) params.set('per_page', perPageValue);
-            
+            params.delete('page');
+
             const url = '{{ route('finance.loan-capital') }}?' + params.toString();
             window.history.pushState({}, '', url);
-            
+
             NProgress.start();
-            fetch(url, {
-                headers: { 'X-Requested-With': 'XMLHttpRequest' }
-            })
+            fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
             .then(response => response.text())
             .then(html => {
                 const parser = new DOMParser();
                 const doc = parser.parseFromString(html, 'text/html');
-                const newSection = doc.getElementById('loan-section');
-                if (newSection) {
-                    document.getElementById('loan-section').innerHTML = newSection.innerHTML;
-                    setupPagination('loan-pagination-container', 'loan-section');
-                }
+
+                const newTable = doc.getElementById('table-section');
+                if (newTable) document.getElementById('table-section').innerHTML = newTable.innerHTML;
+
+                this.reinitPagination();
                 NProgress.done();
             })
-            .catch(error => {
-                console.error('Error:', error);
-                NProgress.done();
-            });
+            .catch(error => { console.error('Error:', error); NProgress.done(); });
         },
-        getPerPageValue() {
-            const urlParams = new URLSearchParams(window.location.search);
-            return urlParams.get('per_page') || '10';
-        }
-    }" class="space-y-6">
 
-        {{-- ================= SECTION 1: DATE NAVIGATION (RIGHT ALIGNED) ================= --}}
-        <div class="flex items-center justify-end gap-3">
+        matchesSearch(row) {
+            const query = this.searchQuery.toLowerCase();
+            if (!query || query.trim() === '') return true;
+            const period = (row.getAttribute('data-period') || '').toLowerCase();
+            const notes = (row.getAttribute('data-notes') || '').toLowerCase();
+            const method = (row.getAttribute('data-method') || '').toLowerCase();
+            const amount = (row.getAttribute('data-amount') || '').toLowerCase();
+            return period.includes(query) || notes.includes(query) || method.includes(query) || amount.includes(query);
+        },
+
+        get hasVisibleRows() {
+            if (!this.searchQuery || this.searchQuery.trim() === '') return true;
+            const tbody = document.querySelector('#table-section tbody');
+            if (!tbody) return true;
+            const rows = tbody.querySelectorAll('tr[data-period]');
+            for (let row of rows) {
+                if (this.matchesSearch(row)) return true;
+            }
+            return false;
+        },
+
+        // Webcam functions
+        async startLoanWebcam() {
+            if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                alert('Webcam tidak didukung di browser ini.');
+                return;
+            }
+            const isSecure = window.location.protocol === 'https:' || 
+                           window.location.hostname === 'localhost' || 
+                           window.location.hostname === '127.0.0.1';
+            if (!isSecure) {
+                alert('WEBCAM HARUS PAKAI HTTPS!');
+                return;
+            }
+            try {
+                this.stream = await navigator.mediaDevices.getUserMedia({ 
+                    video: { facingMode: this.facingMode, width: { ideal: 1280 }, height: { ideal: 720 } } 
+                });
+                this.$refs.loanVideo.srcObject = this.stream;
+                this.showWebcam = true;
+            } catch (err) {
+                console.error('Webcam error:', err);
+                alert('Tidak dapat mengakses webcam. ' + err.message);
+            }
+        },
+
+        async toggleLoanCamera() {
+            this.facingMode = this.facingMode === 'user' ? 'environment' : 'user';
+            this.isMirrored = this.facingMode === 'user';
+            if (this.stream) this.stream.getTracks().forEach(track => track.stop());
+            try {
+                this.stream = await navigator.mediaDevices.getUserMedia({ 
+                    video: { facingMode: this.facingMode, width: { ideal: 1280 }, height: { ideal: 720 } } 
+                });
+                this.$refs.loanVideo.srcObject = this.stream;
+            } catch (err) {
+                alert('Gagal mengganti kamera. ' + err.message);
+            }
+        },
+
+        stopLoanWebcam() {
+            if (this.stream) {
+                this.stream.getTracks().forEach(track => track.stop());
+                this.stream = null;
+            }
+            this.showWebcam = false;
+        },
+
+        captureLoanPhoto() {
+            const video = this.$refs.loanVideo;
+            const canvas = this.$refs.loanCanvas;
+            const context = canvas.getContext('2d');
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            if (this.isMirrored) { context.translate(canvas.width, 0); context.scale(-1, 1); }
+            context.drawImage(video, 0, 0, canvas.width, canvas.height);
+            canvas.toBlob((blob) => {
+                const file = new File([blob], 'webcam_' + Date.now() + '.jpg', { type: 'image/jpeg' });
+                const dataTransfer = new DataTransfer();
+                dataTransfer.items.add(file);
+                const fileInput = document.querySelector('input[name=loan_proof_image]');
+                if (fileInput) { fileInput.value = ''; fileInput.files = dataTransfer.files; }
+                this.imagePreview = canvas.toDataURL('image/jpeg');
+                this.fileName = file.name;
+                this.stopLoanWebcam();
+            }, 'image/jpeg', 0.95);
+        },
+
+reinitPagination() {
+            this.$nextTick(() => {
+                setupLoanPagination('loans-pagination-container', 'table-section', this);
+            });
+        }
+    }">
+
+        {{-- Date Navigation --}}
+        <div class="flex items-center justify-end gap-2 mb-6">
             <button type="button" @click="navigateMonth('prev')" 
                 class="p-2 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer flex-shrink-0">
                 <svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
                 </svg>
             </button>
-            <div class="px-4 py-2 text-center min-w-[150px]">
+            <div class="px-3 py-2 text-center min-w-[140px]">
                 <span class="text-base font-semibold text-gray-900 whitespace-nowrap" x-text="displayText">
                     {{ $currentDate->format('F Y') }}
                 </span>
@@ -180,8 +258,8 @@
             </button>
         </div>
 
-        {{-- ================= SECTION 2: STATS CARDS ================= --}}
-        <div id="stats-section" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {{-- Statistics Cards --}}
+        <div id="stats-section" class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
             {{-- Total Balance --}}
             <div class="bg-white border border-gray-200 rounded-lg p-4">
                 <div class="flex items-center justify-between">
@@ -191,523 +269,383 @@
                     </div>
                     <div class="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
                         <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                         </svg>
                     </div>
                 </div>
             </div>
 
-            {{-- Outstanding --}}
+            {{-- Total Outstanding (All Time) --}}
             <div class="bg-white border border-gray-200 rounded-lg p-4">
                 <div class="flex items-center justify-between">
                     <div>
-                        <p class="text-sm text-gray-500">Outstanding <span class="text-xs font-medium text-orange-600">(All Time)</span></p>
-                        <p class="text-2xl font-bold text-gray-900 mt-1">Rp {{ number_format($outstanding, 0, ',', '.') }}</p>
+                        <p class="text-sm text-gray-500">Total Outstanding <span class="text-[10px] text-gray-400">(All Time)</span></p>
+                        <p class="text-2xl font-bold text-red-600 mt-1">Rp {{ number_format($totalOutstanding, 0, ',', '.') }}</p>
                     </div>
-                    <div class="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
-                        <svg class="w-6 h-6 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    <div class="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center">
+                        <svg class="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
                         </svg>
                     </div>
                 </div>
             </div>
         </div>
 
-        {{-- ================= SECTION 3: TABLE ================= --}}
-        <div class="bg-white border border-gray-200 rounded-lg" id="loan-section">
-            {{-- Header: Filters & Actions --}}
-            <div class="p-5 border-b border-gray-200">
-                <div class="flex flex-col xl:flex-row xl:items-center gap-4">
-                    {{-- Status Filter Buttons - Full width on mobile (3 buttons) --}}
-                    <div class="grid grid-cols-3 gap-2">
-                        <button type="button" @click="statusFilter = 'all'; applyFilter();"
-                            :class="statusFilter === 'all' ? 'bg-primary text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'"
-                            class="px-4 py-2 rounded-md text-sm font-medium transition-colors text-center">
-                            All
-                        </button>
-                        <button type="button" @click="statusFilter = 'outstanding'; applyFilter();"
-                            :class="statusFilter === 'outstanding' ? 'bg-orange-500 text-white' : 'bg-gray-100 text-gray-700 hover:bg-orange-50'"
-                            class="px-4 py-2 rounded-md text-sm font-medium transition-colors text-center">
-                            Outstanding
-                        </button>
-                        <button type="button" @click="statusFilter = 'done'; applyFilter();"
-                            :class="statusFilter === 'done' ? 'bg-green-500 text-white' : 'bg-gray-100 text-gray-700 hover:bg-green-50'"
-                            class="px-4 py-2 rounded-md text-sm font-medium transition-colors text-center">
-                            Done
-                        </button>
-                    </div>
+        {{-- Data Table Section --}}
+        <div id="table-section" class="bg-white border border-gray-200 rounded-lg p-5 mb-6">
+            {{-- Header --}}
+            <div class="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-4 mb-4">
+                {{-- Left: Filter Buttons --}}
+                <div class="flex items-center gap-2">
+                    <button type="button" @click="loadStatus('all')"
+                        :class="statusFilter === 'all' ? 'bg-primary text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'"
+                        class="px-3 py-1.5 text-sm font-medium rounded-md transition-colors cursor-pointer">
+                        All
+                    </button>
+                    <button type="button" @click="loadStatus('outstanding')"
+                        :class="statusFilter === 'outstanding' ? 'bg-yellow-500 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'"
+                        class="px-3 py-1.5 text-sm font-medium rounded-md transition-colors cursor-pointer">
+                        Outstanding
+                    </button>
+                    <button type="button" @click="loadStatus('paid_off')"
+                        :class="statusFilter === 'paid_off' ? 'bg-green-500 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'"
+                        class="px-3 py-1.5 text-sm font-medium rounded-md transition-colors cursor-pointer">
+                        Paid Off
+                    </button>
+                </div>
 
-                    {{-- Right: Search, Show Per Page, History Icon --}}
-                    <div class="flex flex-col gap-2 xl:flex-row xl:items-center xl:flex-1 xl:ml-auto xl:gap-2 xl:min-w-0">
-                        {{-- Search, Show Per Page & History Icon - Same row --}}
-                        <div class="flex gap-2 items-center xl:flex-1 xl:min-w-0">
-                            {{-- Search --}}
-                            <div class="flex-1 xl:min-w-[180px]">
-                                <div class="relative">
-                                    <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400"
-                                        fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                            d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                                    </svg>
-                                    <input type="text" x-model="searchQuery" @input.debounce.300ms="applyFilter()"
-                                        placeholder="Search..."
-                                        class="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary">
-                                </div>
-                            </div>
-
-                            {{-- Show Per Page --}}
-                            <div x-data="{
-                                open: false,
-                                perPage: {{ $perPage }},
-                                options: [
-                                    { value: 5, label: '5' },
-                                    { value: 10, label: '10' },
-                                    { value: 15, label: '15' },
-                                    { value: 20, label: '20' },
-                                    { value: 25, label: '25' },
-                                    { value: 50, label: '50' },
-                                    { value: 100, label: '100' }
-                                ],
-                                get selected() {
-                                    return this.options.find(o => o.value === this.perPage) || this.options[1];
-                                },
-                                selectOption(option) {
-                                    this.perPage = option.value;
-                                    this.open = false;
-                                    this.applyPerPageFilter();
-                                },
-                                applyPerPageFilter() {
-                                    const params = new URLSearchParams(window.location.search);
-                                    params.set('per_page', this.perPage);
-                                    params.delete('page');
-                                    
-                                    const url = '{{ route('finance.loan-capital') }}?' + params.toString();
-                                    window.history.pushState({}, '', url);
-                                    
-                                    NProgress.start();
-                                    fetch(url, {
-                                        headers: { 'X-Requested-With': 'XMLHttpRequest' }
-                                    })
-                                    .then(response => response.text())
-                                    .then(html => {
-                                        const parser = new DOMParser();
-                                        const doc = parser.parseFromString(html, 'text/html');
-                                        const newSection = doc.getElementById('loan-section');
-                                        if (newSection) {
-                                            document.getElementById('loan-section').innerHTML = newSection.innerHTML;
-                                            setupPagination('loan-pagination-container', 'loan-section');
-                                        }
-                                        NProgress.done();
-                                    })
-                                    .catch(error => {
-                                        console.error('Error:', error);
-                                        NProgress.done();
-                                    });
-                                }
-                            }" class="relative flex-shrink-0">
-                                <button type="button" @click="open = !open"
-                                    class="w-15 flex justify-between items-center rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors">
-                                    <span x-text="selected.label"></span>
-                                    <svg class="w-3 h-3 text-gray-400 transition-transform" :class="open && 'rotate-180'"
-                                        fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-                                    </svg>
-                                </button>
-                                <div x-show="open" @click.away="open = false" x-cloak
-                                    x-transition:enter="transition ease-out duration-100"
-                                    x-transition:enter-start="opacity-0 scale-95"
-                                    x-transition:enter-end="opacity-100 scale-100"
-                                    x-transition:leave="transition ease-in duration-75"
-                                    x-transition:leave-start="opacity-100 scale-100"
-                                    x-transition:leave-end="opacity-0 scale-95"
-                                    class="absolute z-20 mt-1 w-18 bg-white border border-gray-200 rounded-md shadow-lg">
-                                    <ul class="max-h-60 overflow-y-auto py-1">
-                                        <template x-for="option in options" :key="option.value">
-                                            <li @click="selectOption(option)"
-                                                class="px-4 py-2 cursor-pointer text-sm hover:bg-primary/5 transition-colors"
-                                                :class="{ 'bg-primary/10 font-medium text-primary': perPage === option.value }">
-                                                <span x-text="option.label"></span>
-                                            </li>
-                                        </template>
-                                    </ul>
-                                </div>
-                            </div>
-
-                            {{-- History Icon Button - Icon only on mobile, with text on desktop --}}
-                            <a href="{{ route('finance.loan-capital.repayment-history') }}"
-                                class="px-3 xl:px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-blue-600 hover:text-white transition flex items-center gap-2 flex-shrink-0">
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                </svg>
-                                <span class="hidden xl:inline">History</span>
-                            </a>
-                        </div>
-
-                        {{-- Add Loan Button - Separate row on mobile, same row on desktop --}}
-                        <button type="button" @click="showAddLoanModal = true; loanErrors = {};"
-                            class="w-full xl:w-auto px-4 py-2 text-sm font-medium text-white bg-primary rounded-md hover:bg-primary-dark transition flex items-center justify-center gap-2 flex-shrink-0">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                {{-- Right: Search + Per Page + Button --}}
+                <div class="flex gap-2 items-center xl:min-w-0">
+                    {{-- Search Box --}}
+                    <div class="flex-1 xl:min-w-[240px]">
+                        <div class="relative">
+                            <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none"
+                                stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                             </svg>
-                            Add Loan
-                        </button>
+                            <input type="text" x-model="searchQuery" placeholder="Search notes, method..."
+                                class="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary">
+                        </div>
                     </div>
+
+                    {{-- Show Per Page --}}
+                    <div x-data="{
+                        open: false,
+                        perPage: {{ $perPage }},
+                        options: [
+                            { value: 5, label: '5' },
+                            { value: 10, label: '10' },
+                            { value: 15, label: '15' },
+                            { value: 20, label: '20' },
+                            { value: 25, label: '25' },
+                            { value: 50, label: '50' },
+                            { value: 100, label: '100' }
+                        ],
+                        get selected() {
+                            return this.options.find(o => o.value === this.perPage) || this.options[1];
+                        },
+                        selectOption(option) {
+                            this.perPage = option.value;
+                            this.open = false;
+                            this.applyPerPageFilter();
+                        },
+                        applyPerPageFilter() {
+                            const params = new URLSearchParams(window.location.search);
+                            params.set('per_page', this.perPage);
+                            params.delete('page');
+
+                            const url = '{{ route('finance.loan-capital') }}?' + params.toString();
+                            window.history.pushState({}, '', url);
+
+                            NProgress.start();
+                            fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+                            .then(response => response.text())
+                            .then(html => {
+                                const parser = new DOMParser();
+                                const doc = parser.parseFromString(html, 'text/html');
+                                const newSection = doc.getElementById('table-section');
+                                if (newSection) document.getElementById('table-section').innerHTML = newSection.innerHTML;
+                                NProgress.done();
+                            })
+                            .catch(error => { console.error('Error:', error); NProgress.done(); });
+                        }
+                    }" class="relative flex-shrink-0">
+                        <button type="button" @click="open = !open"
+                            class="w-15 flex justify-between items-center rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 bg-white
+                                focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors cursor-pointer">
+                            <span x-text="selected.label"></span>
+                            <svg class="w-3 h-3 text-gray-400 transition-transform" :class="open && 'rotate-180'" fill="none"
+                                stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                            </svg>
+                        </button>
+                        <div x-show="open" @click.away="open = false" x-cloak 
+                            x-transition:enter="transition ease-out duration-100"
+                            x-transition:enter-start="opacity-0 scale-95" 
+                            x-transition:enter-end="opacity-100 scale-100"
+                            x-transition:leave="transition ease-in duration-75" 
+                            x-transition:leave-start="opacity-100 scale-100"
+                            x-transition:leave-end="opacity-0 scale-95"
+                            class="absolute z-20 mt-1 w-18 bg-white border border-gray-200 rounded-md shadow-lg">
+                            <ul class="max-h-60 overflow-y-auto py-1">
+                                <template x-for="option in options" :key="option.value">
+                                    <li @click="selectOption(option)"
+                                        class="px-4 py-2 cursor-pointer text-sm hover:bg-primary/5 transition-colors"
+                                        :class="{ 'bg-primary/10 font-medium text-primary': perPage === option.value }">
+                                        <span x-text="option.label"></span>
+                                    </li>
+                                </template>
+                            </ul>
+                        </div>
+                    </div>
+
+                    {{-- Button + New Loan --}}
+                    <button type="button" @click="showCreateModal = true; createErrors = {};"
+                        class="flex-shrink-0 inline-flex items-center gap-1.5 px-3 py-2 bg-primary hover:bg-primary-dark text-white text-sm font-medium rounded-md transition-colors cursor-pointer">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                        </svg>
+                        New Loan
+                    </button>
                 </div>
             </div>
 
             {{-- Table --}}
-            <div class="overflow-x-auto px-5 pb-5">
-                <table class="w-full text-sm">
+            <div class="overflow-x-auto">
+                <table class="min-w-full text-sm">
                     <thead class="bg-primary-light text-gray-600">
                         <tr>
-                            <th class="py-3 px-4 text-left font-bold rounded-l-lg">Date</th>
-                            <th class="py-3 px-4 text-left font-bold">Balance Period</th>
+                            <th class="py-3 px-4 text-left font-bold rounded-l-lg">Balance Period</th>
                             <th class="py-3 px-4 text-left font-bold">Payment Method</th>
-                            <th class="py-3 px-4 text-left font-bold">Amount</th>
-                            <th class="py-3 px-4 text-left font-bold">Note</th>
+                            <th class="py-3 px-4 text-left font-bold">Loan Amount</th>
+                            <th class="py-3 px-4 text-left font-bold">Paid</th>
+                            <th class="py-3 px-4 text-left font-bold">Remaining</th>
                             <th class="py-3 px-4 text-left font-bold">Attachment</th>
                             <th class="py-3 px-4 text-left font-bold">Status</th>
+                            <th class="py-3 px-4 text-left font-bold">Date</th>
                             <th class="py-3 px-4 text-center font-bold rounded-r-lg">Action</th>
                         </tr>
                     </thead>
-                    <tbody class="bg-white divide-y divide-gray-200" x-data="{
-                        get hasResults() {
-                            if (!searchQuery || searchQuery.trim() === '') return true;
-                            const search = searchQuery.toLowerCase();
-                            return {{ Js::from($allLoans->map(fn($l) => strtolower(($l->balance ? $l->balance->period_start->format('F Y') : '') . ' ' . ($l->notes ?? '')))) }}
-                                .some(text => text.includes(search));
-                        }
-                    }">
-                        @forelse ($loans as $loan)
-                            <tr data-trx="{{ $loan->balance ? $loan->balance->period_start->format('F Y') : '' }}" data-note="{{ $loan->notes }}"
-                                x-show="searchQuery.trim() === ''">
-                                <td class="py-3 px-4 whitespace-nowrap text-gray-500">
-                                    {{ $loan->loan_date->format('d M Y') }}
+                    <tbody x-data="{ openPrimaryMenu: null }">
+                        @forelse($loans as $loan)
+                            @php
+                                $balancePeriod = $loan->balance ? $loan->balance->period_start->format('F Y') : '-';
+                                $repayments = $loan->repayments;
+                                $totalRepaid = $repayments->sum('amount');
+                                $remaining = $loan->loan_amount - $totalRepaid;
+                                $rowId = $loan->id;
+                            @endphp
+                            <tr data-period="{{ $balancePeriod }}"
+                                data-notes="{{ $loan->notes }}"
+                                data-method="{{ $loan->payment_method }}"
+                                data-amount="{{ $loan->loan_amount }}"
+                                x-show="matchesSearch($el)"
+                                class="hover:bg-gray-50 border-b border-gray-100">
+
+                                {{-- Balance Period --}}
+                                <td class="py-3 px-4 text-[12px] font-medium text-gray-900">
+                                    {{ $balancePeriod }}
                                 </td>
-                                <td class="py-3 px-4 whitespace-nowrap font-medium text-gray-900">
-                                    @if($loan->balance)
-                                        {{ $loan->balance->period_start->format('F Y') }}
+
+                                {{-- Payment Method --}}
+                                <td class="py-3 px-4 text-[12px]">
+                                    <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold 
+                                        {{ $loan->payment_method === 'cash' ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700' }}">
+                                        {{ strtoupper($loan->payment_method) }}
+                                    </span>
+                                </td>
+
+                                {{-- Loan Amount --}}
+                                <td class="py-3 px-4 text-[12px] text-gray-900 font-semibold">
+                                    Rp {{ number_format($loan->loan_amount, 0, ',', '.') }}
+                                </td>
+
+                                {{-- Paid --}}
+                                <td class="py-3 px-4 text-[12px] text-green-600 font-semibold">
+                                    Rp {{ number_format($totalRepaid, 0, ',', '.') }}
+                                </td>
+
+                                {{-- Remaining --}}
+                                <td class="py-3 px-4 text-[12px] font-semibold {{ $remaining > 0 ? 'text-red-600' : 'text-green-600' }}">
+                                    Rp {{ number_format($remaining, 0, ',', '.') }}
+                                </td>
+
+                                {{-- Attachment --}}
+                                <td class="py-3 px-4 text-[12px]" @click.stop>
+                                    @if($loan->proof_img)
+                                        <button @click="$dispatch('open-image-modal', { url: '{{ route('finance.loan-capital.serve-image', $loan->id) }}?t={{ $loan->updated_at->timestamp }}' })"
+                                            class="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-100 text-blue-700 rounded-md hover:bg-blue-200 text-[10px] font-medium cursor-pointer">
+                                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                    d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                            </svg>
+                                            View
+                                        </button>
                                     @else
                                         <span class="text-gray-400">-</span>
                                     @endif
                                 </td>
-                                <td class="py-3 px-4 whitespace-nowrap">
-                                    <span class="inline-flex px-2 py-1 text-xs font-medium rounded-full 
-                                        {{ $loan->payment_method === 'transfer' ? 'bg-blue-100 text-blue-700' : 'bg-green-100 text-green-700' }}">
-                                        {{ ucfirst($loan->payment_method) }}
-                                    </span>
-                                </td>
-                                <td class="py-3 px-4 whitespace-nowrap text-gray-900">
-                                    Rp {{ number_format($loan->amount, 0, ',', '.') }}
-                                </td>
-                                <td class="py-3 px-4 text-gray-500">
-                                    {{ Str::limit($loan->notes ?? '-', 30) }}
-                                </td>
-                                <td class="py-3 px-4 whitespace-nowrap text-left">
-                                    @if ($loan->proof_img)
-                                        <button @click="$dispatch('open-image-modal', { url: '{{ route('finance.loan-capital.serve-image', $loan->id) }}' })"
-                                            class="inline-flex items-center gap-1 px-3 py-1 bg-blue-100 text-blue-700 rounded-md hover:bg-blue-200 text-xs font-medium cursor-pointer">
-                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                    d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                                            </svg>
-                                            View
-                                        </button>
-                                    @else
-                                        <span class="text-gray-400 text-xs">-</span>
-                                    @endif
-                                </td>
-                                <td class="py-3 px-4 whitespace-nowrap">
-                                    @if ($loan->status === 'outstanding')
-                                        <span class="px-2 py-1 text-xs font-semibold rounded-full bg-orange-100 text-orange-800">
-                                            Outstanding
-                                        </span>
-                                    @else
-                                        <span class="px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
-                                            Done
-                                        </span>
-                                    @endif
-                                </td>
+
+                                {{-- Status --}}
                                 <td class="py-3 px-4">
-                                    <div class="flex justify-center">
-                                        <div class="relative inline-block text-left" x-data="{
-                                            open: false,
-                                            dropdownStyle: {},
-                                            checkPosition() {
-                                                const button = this.$refs.button;
-                                                const rect = button.getBoundingClientRect();
-                                                const spaceBelow = window.innerHeight - rect.bottom;
-                                                const spaceAbove = rect.top;
-                                                const dropUp = spaceBelow < 200 && spaceAbove > spaceBelow;
-                                        
-                                                if (dropUp) {
-                                                    this.dropdownStyle = {
-                                                        position: 'fixed',
-                                                        top: (rect.top - 160) + 'px',
-                                                        left: (rect.right - 180) + 'px',
-                                                        width: '180px'
-                                                    };
-                                                } else {
-                                                    this.dropdownStyle = {
-                                                        position: 'fixed',
-                                                        top: (rect.bottom + 8) + 'px',
-                                                        left: (rect.right - 180) + 'px',
-                                                        width: '180px'
-                                                    };
-                                                }
+                                    @if($loan->status === 'outstanding')
+                                        <span class="px-2 py-1 rounded-full text-[10px] font-semibold bg-yellow-100 text-yellow-800">OUTSTANDING</span>
+                                    @else
+                                        <span class="px-2 py-1 rounded-full text-[10px] font-semibold bg-green-100 text-green-800">PAID OFF</span>
+                                    @endif
+                                </td>
+
+                                {{-- Date --}}
+                                <td class="py-3 px-4 text-[12px] text-gray-700">
+                                    {{ $loan->loan_date->format('d M Y') }}
+                                </td>
+
+                                {{-- Action --}}
+                                <td class="py-3 px-4 text-center relative" @click.stop>
+                                    {{-- Dropdown Menu --}}
+                                    <div class="relative inline-block text-left" x-data="{ 
+                                        open: false,
+                                        menuId: {{ $rowId }},
+                                        dropdownStyle: {}, 
+                                        checkPosition() { 
+                                            const button = this.$refs.button; 
+                                            const rect = button.getBoundingClientRect(); 
+                                            const spaceBelow = window.innerHeight - rect.bottom; 
+                                            const spaceAbove = rect.top; 
+                                            const dropUp = spaceBelow < 200 && spaceAbove > spaceBelow; 
+                                            if (dropUp) { 
+                                                this.dropdownStyle = { position: 'fixed', top: (rect.top - 120) + 'px', left: (rect.right - 160) + 'px', width: '180px' }; 
+                                            } else { 
+                                                this.dropdownStyle = { position: 'fixed', top: (rect.bottom + 8) + 'px', left: (rect.right - 160) + 'px', width: '180px' }; 
+                                            } 
+                                        } 
+                                    }" 
+                                    @scroll.window="open = false"
+                                    @close-all-primary-menus.window="if (menuId !== openPrimaryMenu) open = false"
+                                    x-init="$watch('open', value => {
+                                        if (value) {
+                                            openPrimaryMenu = menuId;
+                                            window.dispatchEvent(new CustomEvent('close-all-primary-menus'));
+                                            const closeOnScroll = () => { open = false; };
+                                            const scrollableContainer = document.querySelector('.overflow-x-auto');
+                                            if (scrollableContainer) {
+                                                scrollableContainer.addEventListener('scroll', closeOnScroll, { once: true, passive: true });
                                             }
-                                        }"
-                                            x-init="$watch('open', value => {
-                                                if (value) {
-                                                    const scrollContainer = $el.closest('.overflow-x-auto');
-                                                    const mainContent = document.querySelector('main');
-                                                    const closeOnScroll = () => { open = false; };
-                                            
-                                                    scrollContainer?.addEventListener('scroll', closeOnScroll);
-                                                    mainContent?.addEventListener('scroll', closeOnScroll);
-                                                    window.addEventListener('resize', closeOnScroll);
-                                                }
-                                            })">
-                                            {{-- Three Dot Button --}}
-                                            <button x-ref="button" @click="checkPosition(); open = !open"
-                                                type="button"
-                                                class="cursor-pointer inline-flex items-center justify-center w-8 h-8 rounded-md border border-gray-300 text-gray-600 hover:bg-gray-100"
-                                                title="Actions">
-                                                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                                                    <path d="M6 10a2 2 0 11-4 0 2 2 0 014 0zM12 10a2 2 0 11-4 0 2 2 0 014 0zM16 12a2 2 0 100-4 2 2 0 000 4z" />
+                                            const mainContent = document.querySelector('main');
+                                            if (mainContent) {
+                                                mainContent.addEventListener('scroll', closeOnScroll, { once: true, passive: true });
+                                            }
+                                            window.addEventListener('scroll', closeOnScroll, { once: true, passive: true });
+                                            window.addEventListener('resize', closeOnScroll, { once: true, passive: true });
+                                        } else {
+                                            if (openPrimaryMenu === menuId) {
+                                                openPrimaryMenu = null;
+                                            }
+                                        }
+                                    })">
+                                        <button x-ref="button" @click="checkPosition(); open = !open" type="button" class="inline-flex items-center justify-center w-8 h-8 rounded-md border border-gray-300 text-gray-600 hover:bg-gray-100 cursor-pointer">
+                                            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                                <path d="M6 10a2 2 0 11-4 0 2 2 0 014 0zM12 10a2 2 0 11-4 0 2 2 0 014 0zM16 12a2 2 0 100-4 2 2 0 000 4z" />
+                                            </svg>
+                                        </button>
+                                        <div x-show="open" @click.away="open = false" x-cloak :style="dropdownStyle" class="bg-white border border-gray-200 rounded-md shadow-lg z-50 py-1">
+                                            {{-- Show Detail --}}
+                                            <button type="button" @click="open = false; showDetailModal = true; detailLoan = {
+                                                id: {{ $loan->id }},
+                                                balance_period: '{{ $balancePeriod }}',
+                                                payment_method: '{{ $loan->payment_method }}',
+                                                loan_amount: {{ $loan->loan_amount }},
+                                                total_repaid: {{ $totalRepaid }},
+                                                remaining: {{ $remaining }},
+                                                status: '{{ $loan->status }}',
+                                                loan_date: '{{ $loan->loan_date->format('d M Y') }}',
+                                                notes: {{ json_encode($loan->notes ?: '-') }},
+                                                proof_img: {{ $loan->proof_img ? "'" . route('finance.loan-capital.serve-image', $loan->id) . '?t=' . $loan->updated_at->timestamp . "'" : 'null' }},
+                                                repayments: [
+                                                    @foreach($repayments as $rep)
+                                                    {
+                                                        balance_period: '{{ $rep->balance ? $rep->balance->period_start->format('F Y') : '-' }}',
+                                                        payment_method: '{{ $rep->payment_method }}',
+                                                        amount: {{ $rep->amount }},
+                                                        paid_date: '{{ $rep->paid_date->format('d M Y') }}',
+                                                        proof_img: {{ $rep->proof_img ? "'" . route('finance.loan-capital.serve-repayment-image', $rep->id) . '?t=' . $rep->updated_at->timestamp . "'" : 'null' }},
+                                                        notes: {{ json_encode($rep->notes ?: '-') }}
+                                                    },
+                                                    @endforeach
+                                                ]
+                                            }"
+                                                class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2 cursor-pointer">
+                                                <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                                                 </svg>
+                                                Show Detail
                                             </button>
-
-                                            {{-- Dropdown Menu --}}
-                                            <div x-show="open" @click.away="open = false" x-cloak x-ref="dropdown"
-                                                :style="dropdownStyle"
-                                                class="bg-white border border-gray-200 rounded-md shadow-lg z-50 py-1">
-                                                {{-- Edit --}}
-                                                <button type="button"
-                                                    @click="
-                                                        $dispatch('open-edit-modal', {
-                                                            id: {{ $loan->id }},
-                                                            balance_period: '{{ $loan->balance ? $loan->balance->period_start->format('F Y') : '-' }}',
-                                                            date: '{{ $loan->loan_date->format('d M Y') }}',
-                                                            method: '{{ $loan->payment_method }}',
-                                                            amount: '{{ number_format($loan->amount, 0, ',', '.') }}',
-                                                            notes: '{{ addslashes($loan->notes ?? '') }}',
-                                                            image: '{{ $loan->proof_img ? route('finance.loan-capital.serve-image', $loan->id) : '' }}'
-                                                        });
-                                                        open = false;
-                                                    "
-                                                    class="w-full text-left px-4 py-2 text-sm text-blue-600 hover:bg-blue-50 flex items-center gap-2">
-                                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                            d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                                                    </svg>
-                                                    Edit
-                                                </button>
-
-                                                {{-- Repayment (only if outstanding) --}}
-                                                @if ($loan->status === 'outstanding')
-                                                    <button type="button"
-                                                        @click="$dispatch('open-repayment-modal', { id: {{ $loan->id }}, loan_balance_period: '{{ $loan->balance ? $loan->balance->period_start->format('F Y') : '-' }}', amount: {{ $loan->amount }}, remaining_amount: {{ $loan->remaining_amount }}, payment_method: '{{ $loan->payment_method }}' })"
-                                                        class="w-full text-left px-4 py-2 text-sm text-green-600 hover:bg-green-50 flex items-center gap-2">
-                                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                                d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                                        </svg>
-                                                        Repayment
-                                                    </button>
-                                                @endif
-                                            </div>
+                                            {{-- Repayment (only if outstanding) --}}
+                                            @if($loan->status === 'outstanding')
+                                            <button type="button" @click="open = false; repaymentLoanId = {{ $loan->id }}; repaymentLoanAmount = {{ $loan->loan_amount }}; repaymentRemaining = {{ $remaining }}; repaymentLoanPeriod = '{{ $balancePeriod }}'; showRepaymentModal = true;"
+                                                class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2 cursor-pointer">
+                                                <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
+                                                </svg>
+                                                Repayment
+                                            </button>
+                                            @endif
                                         </div>
                                     </div>
+
                                 </td>
                             </tr>
                         @empty
-                            <tr x-show="searchQuery.trim() === ''">
-                                <td colspan="8" class="px-6 py-12 text-center text-gray-500">
-                                    <div class="flex flex-col items-center">
-                                        <svg class="w-12 h-12 text-gray-300 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+                            <tr>
+                                <td colspan="9" class="py-12 text-center">
+                                    <div class="flex flex-col items-center gap-2">
+                                        <svg class="w-12 h-12 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                                                d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                                         </svg>
-                                        <p>No loan capital records for this month</p>
+                                        <p class="text-sm text-gray-500">No loan data found for this period</p>
                                     </div>
                                 </td>
                             </tr>
                         @endforelse
-
-                        {{-- Search Results for All Loans --}}
-                        @foreach ($allLoans as $loan)
-                            <tr data-trx="{{ $loan->loan_code }}" data-note="{{ $loan->notes }}"
-                                x-show="searchQuery.trim() !== '' && matchesSearch($el)">
-                                <td class="py-3 px-4 whitespace-nowrap font-medium text-gray-900">
-                                    {{ $loan->loan_code }}
-                                </td>
-                                <td class="py-3 px-4 whitespace-nowrap text-gray-500">
-                                    {{ $loan->loan_date->format('d M Y') }}
-                                </td>
-                                <td class="py-3 px-4 whitespace-nowrap">
-                                    <span class="inline-flex px-2 py-1 text-xs font-medium rounded-full 
-                                        {{ $loan->payment_method === 'transfer' ? 'bg-blue-100 text-blue-700' : 'bg-green-100 text-green-700' }}">
-                                        {{ ucfirst($loan->payment_method) }}
-                                    </span>
-                                </td>
-                                <td class="py-3 px-4 whitespace-nowrap text-gray-900">
-                                    Rp {{ number_format($loan->amount, 0, ',', '.') }}
-                                </td>
-                                <td class="py-3 px-4 text-gray-500">
-                                    {{ Str::limit($loan->notes ?? '-', 30) }}
-                                </td>
-                                <td class="py-3 px-4 whitespace-nowrap text-center">
-                                    @if ($loan->proof_img)
-                                        <button @click="$dispatch('open-image-modal', { url: '{{ route('finance.loan-capital.serve-image', $loan->id) }}' })"
-                                            class="inline-flex items-center gap-1 px-3 py-1 bg-blue-100 text-blue-700 rounded-md hover:bg-blue-200 text-xs font-medium cursor-pointer">
-                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                    d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                                            </svg>
-                                            View
-                                        </button>
-                                    @else
-                                        <span class="text-gray-400 text-xs">-</span>
-                                    @endif
-                                </td>
-                                <td class="py-3 px-4 whitespace-nowrap">
-                                    @if ($loan->status === 'outstanding')
-                                        <span class="px-2 py-1 text-xs font-semibold rounded-full bg-orange-100 text-orange-800">
-                                            Outstanding
-                                        </span>
-                                    @else
-                                        <span class="px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
-                                            Done
-                                        </span>
-                                    @endif
-                                </td>
-                                <td class="py-3 px-4">
-                                    <div class="flex justify-center">
-                                        <div class="relative inline-block text-left" x-data="{
-                                            open: false,
-                                            dropdownStyle: {},
-                                            checkPosition() {
-                                                const button = this.$refs.button;
-                                                const rect = button.getBoundingClientRect();
-                                                const spaceBelow = window.innerHeight - rect.bottom;
-                                                const spaceAbove = rect.top;
-                                                const dropUp = spaceBelow < 200 && spaceAbove > spaceBelow;
-                                        
-                                                if (dropUp) {
-                                                    this.dropdownStyle = {
-                                                        position: 'fixed',
-                                                        top: (rect.top - 160) + 'px',
-                                                        left: (rect.right - 180) + 'px',
-                                                        width: '180px'
-                                                    };
-                                                } else {
-                                                    this.dropdownStyle = {
-                                                        position: 'fixed',
-                                                        top: (rect.bottom + 8) + 'px',
-                                                        left: (rect.right - 180) + 'px',
-                                                        width: '180px'
-                                                    };
-                                                }
-                                            }
-                                        }"
-                                            x-init="$watch('open', value => {
-                                                if (value) {
-                                                    const scrollContainer = $el.closest('.overflow-x-auto');
-                                                    const mainContent = document.querySelector('main');
-                                                    const closeOnScroll = () => { open = false; };
-                                            
-                                                    scrollContainer?.addEventListener('scroll', closeOnScroll);
-                                                    mainContent?.addEventListener('scroll', closeOnScroll);
-                                                    window.addEventListener('resize', closeOnScroll);
-                                                }
-                                            })">
-                                            {{-- Three Dot Button --}}
-                                            <button x-ref="button" @click="checkPosition(); open = !open"
-                                                type="button"
-                                                class="cursor-pointer inline-flex items-center justify-center w-8 h-8 rounded-md border border-gray-300 text-gray-600 hover:bg-gray-100"
-                                                title="Actions">
-                                                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                                                    <path d="M6 10a2 2 0 11-4 0 2 2 0 014 0zM12 10a2 2 0 11-4 0 2 2 0 014 0zM16 12a2 2 0 100-4 2 2 0 000 4z" />
-                                                </svg>
-                                            </button>
-
-                                            {{-- Dropdown Menu --}}
-                                            <div x-show="open" @click.away="open = false" x-cloak x-ref="dropdown"
-                                                :style="dropdownStyle"
-                                                class="bg-white border border-gray-200 rounded-md shadow-lg z-50 py-1">
-                                                {{-- Edit --}}
-                                                <button type="button"
-                                                    @click="
-                                                        $dispatch('open-edit-modal', {
-                                                            id: {{ $loan->id }},
-                                                            balance_period: '{{ $loan->balance ? $loan->balance->period_start->format('F Y') : '-' }}',
-                                                            date: '{{ $loan->loan_date->format('d M Y') }}',
-                                                            method: '{{ $loan->payment_method }}',
-                                                            amount: '{{ number_format($loan->amount, 0, ',', '.') }}',
-                                                            notes: '{{ addslashes($loan->notes ?? '') }}',
-                                                            image: '{{ $loan->proof_img ? route('finance.loan-capital.serve-image', $loan->id) : '' }}'
-                                                        });
-                                                        open = false;
-                                                    "
-                                                    class="w-full text-left px-4 py-2 text-sm text-blue-600 hover:bg-blue-50 flex items-center gap-2">
-                                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                            d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                                                    </svg>
-                                                    Edit
-                                                </button>
-
-                                                {{-- Repayment (only if outstanding) --}}
-                                                @if ($loan->status === 'outstanding')
-                                                    <button type="button"
-                                                        @click="$dispatch('open-repayment-modal', { id: {{ $loan->id }}, loan_balance_period: '{{ $loan->balance ? $loan->balance->period_start->format('F Y') : '-' }}', amount: {{ $loan->amount }}, remaining_amount: {{ $loan->remaining_amount }}, payment_method: '{{ $loan->payment_method }}' })"
-                                                        class="w-full text-left px-4 py-2 text-sm text-green-600 hover:bg-green-50 flex items-center gap-2">
-                                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                                d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                                        </svg>
-                                                        Repayment
-                                                    </button>
-                                                @endif
-                                            </div>
-                                        </div>
-                                    </div>
-                                </td>
-                            </tr>
-                        @endforeach
-                        
-                        {{-- Client-side No Results Message --}}
-                        <tr x-show="searchQuery.trim() !== '' && !hasResults" x-cloak>
-                            <td colspan="8" class="px-6 py-12 text-center text-gray-500">
-                                <div class="flex flex-col items-center">
-                                    <svg class="w-12 h-12 text-gray-300 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                                    </svg>
-                                    <p>No results found for "<span x-text="searchQuery"></span>"</p>
-                                    <p class="text-sm text-gray-400 mt-1">Try searching with different keywords</p>
-                                </div>
-                            </td>
-                        </tr>
                     </tbody>
                 </table>
             </div>
 
-            {{-- Pagination --}}
-            <div x-show="searchQuery.trim() === ''" id="loan-pagination-container" class="px-6 py-4 border-gray-200">
+            {{-- No Results (search) --}}
+            <div x-show="searchQuery && !hasVisibleRows" x-cloak class="py-12 text-center">
+                <p class="text-sm text-gray-500">No results found for "<span x-text="searchQuery" class="font-medium"></span>"</p>
+            </div>
+
+            {{-- Pagination Component (always visible like Material Report) --}}
+            <div id="loans-pagination-container" class="mt-4">
                 <x-custom-pagination :paginator="$loans" />
             </div>
         </div>
 
-        {{-- ================= ADD LOAN MODAL ================= --}}
-        <div x-show="showAddLoanModal" x-cloak
+        {{-- ==================== NEW LOAN MODAL ==================== --}}
+        <div x-show="showCreateModal" x-cloak
+            @keydown.escape.window="showCreateModal = false; stopLoanWebcam()"
             x-data="{
                 balanceMonth: null,
                 balanceYear: null,
                 balanceId: null,
                 balanceTransfer: 0,
                 balanceCash: 0,
-                balanceMonthDropdownOpen: false,
-                balanceYearDropdownOpen: false,
+                periodValidated: false,
+                periodError: '',
+                isValidatingPeriod: false,
+                loanDate: '',
+                loanPaymentMethod: '',
+                loanAmount: '',
+                loanNotes: '',
+                monthDropdownOpen: false,
+                yearDropdownOpen: false,
+                paymentMethodDropdownOpen: false,
                 balanceMonthOptions: [
                     { value: 1, name: 'January' },
                     { value: 2, name: 'February' },
@@ -722,37 +660,31 @@
                     { value: 11, name: 'November' },
                     { value: 12, name: 'December' }
                 ],
-                balanceYearOptions: [],
-                init() {
-                    // Generate year options (current year onwards)
-                    const currentYear = new Date().getFullYear();
-                    for (let i = 0; i < 10; i++) {
-                        this.balanceYearOptions.push({ value: currentYear + i, name: (currentYear + i).toString() });
-                    }
-                },
+                yearOptions: Array.from({length: 5}, (_, i) => new Date().getFullYear() - 2 + i),
+                paymentMethodOptions: [
+                    { value: 'cash', name: 'Cash' },
+                    { value: 'transfer', name: 'Transfer' }
+                ],
                 get selectedMonthName() {
                     const month = this.balanceMonthOptions.find(m => m.value === this.balanceMonth);
                     return month ? month.name : null;
                 },
-                get hasBalancePeriod() {
-                    return this.balanceMonth !== null && this.balanceYear !== null;
+                get selectedPaymentMethod() {
+                    return this.paymentMethodOptions.find(o => o.value === this.loanPaymentMethod) || null;
                 },
-                async selectMonth(month) {
-                    this.balanceMonth = month;
-                    this.balanceMonthDropdownOpen = false;
-                    if (this.balanceYear) {
-                        await this.fetchBalanceData();
-                    }
+                setToday() {
+                    const now = new Date();
+                    this.balanceMonth = now.getMonth() + 1;
+                    this.balanceYear = now.getFullYear();
                 },
-                async selectYear(year) {
-                    this.balanceYear = year;
-                    this.balanceYearDropdownOpen = false;
-                    if (this.balanceMonth) {
-                        await this.fetchBalanceData();
-                    }
-                },
-                async fetchBalanceData() {
+                async validatePeriod() {
                     if (!this.balanceMonth || !this.balanceYear) return;
+                    
+                    this.isValidatingPeriod = true;
+                    this.periodError = '';
+                    this.balanceId = null;
+                    this.balanceTransfer = 0;
+                    this.balanceCash = 0;
                     
                     try {
                         const response = await fetch(`/finance/balance/find-by-period?month=${this.balanceMonth}&year=${this.balanceYear}`, {
@@ -768,31 +700,54 @@
                             this.balanceTransfer = data.balance.transfer_balance;
                             this.balanceCash = data.balance.cash_balance;
                         } else {
-                            // Balance not found - set to 0, no error
                             this.balanceId = null;
                             this.balanceTransfer = 0;
                             this.balanceCash = 0;
                         }
+                        
+                        this.periodValidated = true;
+                        this.isValidatingPeriod = false;
                     } catch (error) {
                         console.error('Error fetching balance:', error);
-                        this.balanceId = null;
-                        this.balanceTransfer = 0;
-                        this.balanceCash = 0;
+                        this.periodError = 'Failed to fetch balance data. Please try again.';
+                        this.isValidatingPeriod = false;
                     }
+                },
+                goBackToStep1() {
+                    this.periodValidated = false;
+                    this.periodError = '';
+                },
+                selectPaymentMethod(option) {
+                    this.loanPaymentMethod = option.value;
+                    this.paymentMethodDropdownOpen = false;
                 }
             }"
-            x-init="$watch('showAddLoanModal', value => {
-                if (value) {
-                    $refs.loanDate.value = new Date().toISOString().split('T')[0];
-                    
-                    // Reset balance period
-                    balanceMonth = null;
-                    balanceYear = null;
-                    balanceId = null;
-                    balanceTransfer = 0;
-                    balanceCash = 0;
-                }
-            })"
+            x-init="
+                $watch('showCreateModal', value => {
+                    if (value) {
+                        balanceMonth = null;
+                        balanceYear = null;
+                        balanceId = null;
+                        balanceTransfer = 0;
+                        balanceCash = 0;
+                        periodValidated = false;
+                        periodError = '';
+                        isValidatingPeriod = false;
+                        loanDate = new Date().toISOString().slice(0, 10);
+                        loanPaymentMethod = '';
+                        loanAmount = '';
+                        loanNotes = '';
+                        createErrors = {};
+                        isSubmittingLoan = false;
+                        imagePreview = null;
+                        fileName = '';
+                        showWebcam = false;
+                        stopLoanWebcam();
+                        const fileInput = document.querySelector('input[name=loan_proof_image]');
+                        if (fileInput) fileInput.value = '';
+                    }
+                })
+            "
             class="fixed inset-0 z-50 overflow-y-auto"
             style="display: none;">
             
@@ -801,91 +756,172 @@
             
             {{-- Modal Panel --}}
             <div class="fixed inset-0 flex items-center justify-center p-4">
-                <div @click.away="showAddLoanModal = false; loanAmount = ''; loanErrors = {};"
-                    class="relative bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
-                
-                {{-- Modal Header --}}
-                <div class="flex items-center justify-between px-6 py-4 border-b border-gray-200">
-                    <h3 class="text-lg font-semibold text-gray-900">Add Loan</h3>
-                    <button @click="showAddLoanModal = false; loanAmount = ''; loanErrors = {};" type="button"
-                        class="text-gray-400 hover:text-gray-600 cursor-pointer text-2xl leading-none">
-                        ✕
-                    </button>
-                </div>
+                <div @click.away="showCreateModal = false; stopLoanWebcam()" 
+                     class="relative bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
+                    
+                    {{-- Modal Header - Sticky --}}
+                    <div class="sticky top-0 z-10 bg-white flex items-center justify-between px-6 py-4 border-b border-gray-200">
+                        <h3 class="text-lg font-semibold text-gray-900">New Loan Capital</h3>
+                        <button @click="showCreateModal = false; stopLoanWebcam()" type="button"
+                            class="text-gray-400 hover:text-gray-600 cursor-pointer text-2xl leading-none">
+                            ✕
+                        </button>
+                    </div>
 
-                {{-- Modal Body --}}
-                <div class="flex-1 overflow-y-auto px-6 py-6">
-                    <form id="addLoanForm"
-                        @submit.prevent="
-                            loanErrors = {};
-                            let hasValidationError = false;
-                            const formData = new FormData($event.target);
-                            
-                            // Validate balance_month
-                            if (!formData.get('balance_month')) {
-                                loanErrors.balance_month = ['Month is required'];
-                                hasValidationError = true;
+                    {{-- Step 1: Period Selection (non-scrollable, above modal body) --}}
+                    <div x-show="!periodValidated" class="px-6 py-5 border-b border-gray-200 flex-shrink-0">
+                        <div class="text-center mb-5">
+                            <div class="w-14 h-14 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-3">
+                                <svg class="w-7 h-7 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                </svg>
+                            </div>
+                            <h4 class="text-base font-semibold text-gray-900">Select Balance Period</h4>
+                            <p class="text-sm text-gray-500 mt-1">Choose the balance period for this loan</p>
+                        </div>
+
+                        <div class="space-y-4">
+                            {{-- Month & Year Select --}}
+                            <div class="grid grid-cols-2 gap-3">
+                                {{-- Month --}}
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Month</label>
+                                    <div class="relative">
+                                        <button type="button" @click="monthDropdownOpen = !monthDropdownOpen"
+                                            class="w-full flex justify-between items-center rounded-md border border-gray-200 px-4 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:border-primary focus:ring-primary/20 transition-colors cursor-pointer">
+                                            <span x-text="selectedMonthName || 'Select Month'"
+                                                :class="!selectedMonthName ? 'text-gray-400' : 'text-gray-900'"></span>
+                                            <svg class="w-4 h-4 text-gray-400 transition-transform" :class="monthDropdownOpen && 'rotate-180'" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                                            </svg>
+                                        </button>
+                                        <div x-show="monthDropdownOpen" @click.away="monthDropdownOpen = false" x-cloak
+                                            x-transition
+                                            class="absolute z-20 mt-1 w-full bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-y-auto">
+                                            <div class="py-1">
+                                                <template x-for="m in balanceMonthOptions" :key="m.value">
+                                                    <button type="button" @click="balanceMonth = m.value; monthDropdownOpen = false"
+                                                        :class="balanceMonth === m.value ? 'bg-primary/10 text-primary font-medium' : 'text-gray-700 hover:bg-gray-50'"
+                                                        class="w-full text-left px-4 py-2 text-sm transition-colors cursor-pointer"
+                                                        x-text="m.name">
+                                                    </button>
+                                                </template>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {{-- Year --}}
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Year</label>
+                                    <div class="relative">
+                                        <button type="button" @click="yearDropdownOpen = !yearDropdownOpen"
+                                            class="w-full flex justify-between items-center rounded-md border border-gray-200 px-4 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:border-primary focus:ring-primary/20 transition-colors cursor-pointer">
+                                            <span x-text="balanceYear || 'Select Year'"
+                                                :class="!balanceYear ? 'text-gray-400' : 'text-gray-900'"></span>
+                                            <svg class="w-4 h-4 text-gray-400 transition-transform" :class="yearDropdownOpen && 'rotate-180'" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                                            </svg>
+                                        </button>
+                                        <div x-show="yearDropdownOpen" @click.away="yearDropdownOpen = false" x-cloak
+                                            x-transition
+                                            class="absolute z-20 mt-1 w-full bg-white border border-gray-200 rounded-md shadow-lg max-h-48 overflow-y-auto">
+                                            <div class="py-1">
+                                                <template x-for="y in yearOptions" :key="y">
+                                                    <button type="button" @click="balanceYear = y; yearDropdownOpen = false"
+                                                        :class="balanceYear === y ? 'bg-primary/10 text-primary font-medium' : 'text-gray-700 hover:bg-gray-50'"
+                                                        class="w-full text-left px-4 py-2 text-sm transition-colors cursor-pointer"
+                                                        x-text="y">
+                                                    </button>
+                                                </template>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {{-- Today Button --}}
+                            <button type="button" @click="setToday()"
+                                class="w-full flex items-center justify-center gap-2 px-4 py-2 border border-primary text-primary hover:bg-primary/5 rounded-lg text-sm font-medium transition-colors cursor-pointer">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                </svg>
+                                Today
+                            </button>
+
+                            {{-- Period Error --}}
+                            <template x-if="periodError">
+                                <div class="p-3 bg-red-50 border border-red-200 rounded-lg">
+                                    <div class="flex items-start gap-2">
+                                        <svg class="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                        </svg>
+                                        <p class="text-sm text-red-700 font-medium" x-text="periodError"></p>
+                                    </div>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+
+                    {{-- Modal Body (only visible in Step 2) --}}
+                    <div x-show="periodValidated" class="flex-1 overflow-y-auto px-6 py-6">
+                        <form id="addLoanForm" x-ref="addLoanForm" @submit.prevent="
+                            createErrors = {};
+                            let hasError = false;
+
+                            if (!loanPaymentMethod) {
+                                createErrors.payment_method = ['Payment method is required'];
+                                hasError = true;
                             }
-                            
-                            // Validate balance_year
-                            if (!formData.get('balance_year')) {
-                                loanErrors.balance_year = ['Year is required'];
-                                hasValidationError = true;
+
+                            const amountValue = loanAmount.replace(/[^0-9]/g, '');
+                            if (!amountValue || parseInt(amountValue) < 1) {
+                                createErrors.amount = ['Amount is required and must be at least Rp 1'];
+                                hasError = true;
                             }
-                            
-                            // Validate payment_method
-                            if (!formData.get('payment_method')) {
-                                loanErrors.payment_method = ['Payment method is required'];
-                                hasValidationError = true;
+
+                            if (!imagePreview || !fileName) {
+                                createErrors.proof_image = ['Proof image is required'];
+                                hasError = true;
                             }
-                            
-                            // Validate amount
-                            const amount = formData.get('amount');
-                            if (!amount || amount === '0' || amount === '') {
-                                loanErrors.amount = ['Amount is required'];
-                                hasValidationError = true;
-                            }
-                            
-                            // Validate image
-                            const imageFile = formData.get('image');
-                            if (!imageFile || imageFile.size === 0) {
-                                loanErrors.image = ['Payment proof image is required'];
-                                hasValidationError = true;
-                            }
-                            
-                            if (hasValidationError) {
-                                return;
-                            }
-                            
+
+                            if (hasError) return;
+
                             isSubmittingLoan = true;
+                            const formData = new FormData();
+                            formData.append('_token', '{{ csrf_token() }}');
+                            formData.append('balance_month', balanceMonth);
+                            formData.append('balance_year', balanceYear);
+                            formData.append('loan_date', loanDate);
+                            formData.append('payment_method', loanPaymentMethod);
+                            formData.append('amount', amountValue);
+                            formData.append('notes', loanNotes || '');
+
+                            const fileInput = document.querySelector('input[name=loan_proof_image]');
+                            if (fileInput && fileInput.files[0]) {
+                                formData.append('image', fileInput.files[0]);
+                            }
+
                             fetch('{{ route('finance.loan-capital.store') }}', {
                                 method: 'POST',
-                                headers: {
-                                    'X-CSRF-TOKEN': '{{ csrf_token() }}',
-                                    'Accept': 'application/json',
-                                    'X-Requested-With': 'XMLHttpRequest'
-                                },
                                 body: formData,
-                                redirect: 'manual'
+                                headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' }
                             })
                             .then(async res => {
-                                if (!res.ok && res.type === 'opaqueredirect') {
-                                    throw new Error('Redirect detected');
-                                }
                                 const data = await res.json();
                                 return { status: res.status, ok: res.ok, data };
                             })
                             .then(({ status, ok, data }) => {
                                 if (ok && data.success) {
-                                    sessionStorage.setItem('toast_message', 'Loan capital added successfully');
+                                    sessionStorage.setItem('toast_message', data.message || 'Loan added successfully');
                                     sessionStorage.setItem('toast_type', 'success');
                                     window.location.reload();
                                 } else if (status === 422) {
                                     isSubmittingLoan = false;
-                                    loanErrors = data.errors || {};
+                                    createErrors = data.errors || {};
                                 } else {
                                     isSubmittingLoan = false;
-                                    loanErrors = data.errors || {};
+                                    createErrors = data.errors || {};
                                     if (data.message) {
                                         window.dispatchEvent(new CustomEvent('show-toast', {
                                             detail: { message: data.message, type: 'error' }
@@ -895,1298 +931,574 @@
                             })
                             .catch(err => {
                                 isSubmittingLoan = false;
-                                if (err.message !== 'Redirect detected') {
-                                    console.error('Loan error:', err);
-                                }
-                                window.dispatchEvent(new CustomEvent('show-toast', {
-                                    detail: { message: 'Failed to add loan. Please try again.', type: 'error' }
-                                }));
+                                createErrors = { amount: ['Network error. Please try again.'] };
                             });
                         ">
-                        <div class="space-y-4">
-                            {{-- Balance Period Selector (Always visible) --}}
-                            <div class="mb-6 p-4 bg-gradient-to-br from-primary/10 to-primary/20 rounded-xl border-2 border-primary/30">
-                                <label class="block text-sm font-semibold text-gray-900 mb-3">
-                                    Select Balance Period <span class="text-red-600">*</span>
-                                </label>
-                                <div class="grid grid-cols-2 gap-3">
-                                    {{-- Month Selector --}}
-                                    <div class="relative">
-                                        <button type="button" @click="balanceMonthDropdownOpen = !balanceMonthDropdownOpen"
-                                            class="w-full flex justify-between items-center rounded-lg border-2 border-primary/40 bg-white px-4 py-2.5 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary transition-all hover:border-primary">
-                                            <span x-text="selectedMonthName || 'Select Month'"
-                                                :class="!selectedMonthName ? 'text-gray-400' : 'text-gray-900'"></span>
-                                            <svg class="w-4 h-4 text-primary transition-transform" :class="balanceMonthDropdownOpen && 'rotate-180'" fill="none"
-                                                stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-                                            </svg>
-                                        </button>
-                                        <div x-show="balanceMonthDropdownOpen" @click.away="balanceMonthDropdownOpen = false" x-cloak
-                                            x-transition:enter="transition ease-out duration-100"
-                                            x-transition:enter-start="opacity-0 scale-95" x-transition:enter-end="opacity-100 scale-100"
-                                            x-transition:leave="transition ease-in duration-75" x-transition:leave-start="opacity-100 scale-100"
-                                            x-transition:leave-end="opacity-0 scale-95"
-                                            class="fixed z-[100] mt-1 w-[200px] bg-white border-2 border-primary/30 rounded-lg shadow-2xl">
-                                            <ul class="max-h-60 overflow-y-auto py-1">
-                                                <template x-for="month in balanceMonthOptions" :key="month.value">
-                                                    <li @click="selectMonth(month.value)"
-                                                        class="px-4 py-2 cursor-pointer text-sm text-gray-700 hover:bg-primary/10 transition-colors"
-                                                        :class="{ 'bg-primary/20 font-semibold text-primary': balanceMonth === month.value }">
-                                                        <span x-text="month.name"></span>
-                                                    </li>
-                                                </template>
-                                            </ul>
-                                        </div>
-                                    </div>
+                            <div class="space-y-5">
 
-                                    {{-- Year Selector --}}
-                                    <div class="relative">
-                                        <button type="button" @click="balanceYearDropdownOpen = !balanceYearDropdownOpen"
-                                            class="w-full flex justify-between items-center rounded-lg border-2 border-primary/40 bg-white px-4 py-2.5 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary transition-all hover:border-primary">
-                                            <span x-text="balanceYear || 'Select Year'"
-                                                :class="!balanceYear ? 'text-gray-400' : 'text-gray-900'"></span>
-                                            <svg class="w-4 h-4 text-primary transition-transform" :class="balanceYearDropdownOpen && 'rotate-180'" fill="none"
-                                                stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-                                            </svg>
-                                        </button>
-                                        <div x-show="balanceYearDropdownOpen" @click.away="balanceYearDropdownOpen = false" x-cloak
-                                            x-transition:enter="transition ease-out duration-100"
-                                            x-transition:enter-start="opacity-0 scale-95" x-transition:enter-end="opacity-100 scale-100"
-                                            x-transition:leave="transition ease-in duration-75" x-transition:leave-start="opacity-100 scale-100"
-                                            x-transition:leave-end="opacity-0 scale-95"
-                                            class="fixed z-[100] mt-1 w-[200px] bg-white border-2 border-primary/30 rounded-lg shadow-2xl">
-                                            <ul class="max-h-60 overflow-y-auto py-1">
-                                                <template x-for="year in balanceYearOptions" :key="year.value">
-                                                    <li @click="selectYear(year.value)"
-                                                        class="px-4 py-2 cursor-pointer text-sm text-gray-700 hover:bg-primary/10 transition-colors"
-                                                        :class="{ 'bg-primary/20 font-semibold text-primary': balanceYear === year.value }">
-                                                        <span x-text="year.name"></span>
-                                                    </li>
-                                                </template>
-                                            </ul>
-                                        </div>
-                                    </div>
-                                </div>
-                                <p class="mt-2 text-xs text-primary font-medium" x-show="hasBalancePeriod">
-                                    <span class="font-semibold">Selected:</span> <span x-text="selectedMonthName + ' ' + balanceYear"></span>
-                                </p>
-                            </div>
-
-                            {{-- Content shown only after Balance Period is selected --}}
-                            <div x-show="hasBalancePeriod" x-transition:enter="transition ease-out duration-200"
-                                x-transition:enter-start="opacity-0 transform scale-95"
-                                x-transition:enter-end="opacity-100 transform scale-100">
-                                
-                                {{-- 2 Cards: Transfer Balance, Cash Balance --}}
-                                <div class="grid grid-cols-2 gap-3 mb-4">
-                                    {{-- Transfer Balance --}}
-                                    <div class="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-3 border border-blue-200">
-                                        <p class="text-xs text-blue-600 font-medium mb-1">Transfer Balance</p>
-                                        <p class="text-base font-bold text-blue-900" x-text="'Rp ' + parseInt(balanceTransfer).toLocaleString('id-ID')"></p>
-                                    </div>
-                                    {{-- Cash Balance --}}
-                                    <div class="bg-gradient-to-br from-green-50 to-green-100 rounded-xl p-3 border border-green-200">
-                                        <p class="text-xs text-green-600 font-medium mb-1">Cash Balance</p>
-                                        <p class="text-base font-bold text-green-900" x-text="'Rp ' + parseInt(balanceCash).toLocaleString('id-ID')"></p>
-                                    </div>
-                                </div>
-
-                            {{-- Date (Auto-filled, readonly) --}}
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-1">
-                                    Loan Date
-                                </label>
-                                <input type="date" x-ref="loanDate" readonly
-                                    class="w-full rounded-md px-4 py-2 text-sm border border-gray-200 bg-gray-50 text-gray-600 cursor-not-allowed pointer-events-none">
-                            </div>
-
-                            {{-- Hidden inputs for balance period --}}
-                            <input type="hidden" name="balance_month" x-model="balanceMonth">
-                            <input type="hidden" name="balance_year" x-model="balanceYear">
-
-                            {{-- Payment Method & Amount (Row) --}}
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                                {{-- Payment Method --}}
-                                <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-1">
-                                    Payment Method <span class="text-red-600">*</span>
-                                </label>
-                                <div x-data="{
-                                    open: false,
-                                    options: [
-                                        { value: 'transfer', name: 'Transfer' },
-                                        { value: 'cash', name: 'Cash' }
-                                    ],
-                                    selected: null,
-                                    selectedValue: '',
+                                {{-- ====== STEP 2: Full Form (after period validated) ====== --}}
+                                <div x-transition:enter="transition ease-out duration-200"
+                                    x-transition:enter-start="opacity-0 transform scale-95"
+                                    x-transition:enter-end="opacity-100 transform scale-100">
                                     
-                                    select(option) {
-                                        this.selected = option;
-                                        this.selectedValue = option.value;
-                                        this.open = false;
-                                        if (loanErrors.payment_method) {
-                                            delete loanErrors.payment_method;
-                                        }
-                                    }
-                                }" class="relative w-full">
-                                    <button type="button" @click="open = !open"
-                                        :class="loanErrors.payment_method ? 'border-red-500 focus:border-red-500 focus:ring-red-200' : 'border-gray-200 focus:border-primary focus:ring-primary/20'"
-                                        class="w-full flex justify-between items-center rounded-md border px-4 py-2 text-sm bg-white
-                                               focus:outline-none focus:ring-2 transition-colors">
-                                        <span x-text="selected ? selected.name : 'Select Method'"
-                                            :class="!selected ? 'text-gray-400' : 'text-gray-500'"></span>
-                                        <svg class="w-4 h-4 text-gray-400 transition-transform" :class="open && 'rotate-180'" fill="none"
-                                            stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-                                        </svg>
-                                    </button>
-                                    <input type="hidden" name="payment_method" x-model="selectedValue">
-                                    <div x-show="open" @click.away="open = false" x-cloak x-transition:enter="transition ease-out duration-100"
-                                        x-transition:enter-start="opacity-0 scale-95" x-transition:enter-end="opacity-100 scale-100"
-                                        x-transition:leave="transition ease-in duration-75" x-transition:leave-start="opacity-100 scale-100"
-                                        x-transition:leave-end="opacity-0 scale-95"
-                                        class="absolute z-20 mt-1 w-full bg-white border border-gray-200 rounded-md shadow-lg">
-                                        <ul class="max-h-60 overflow-y-auto py-1">
-                                            <template x-for="option in options" :key="option.value">
-                                                <li @click="select(option)"
-                                                    class="px-4 py-2 cursor-pointer text-sm text-gray-700 hover:bg-primary/5 transition-colors"
-                                                    :class="{ 'bg-primary/10 font-medium text-primary': selected && selected.value === option.value }">
-                                                    <span x-text="option.name"></span>
-                                                </li>
+                                    <div class="space-y-4">
+                                        {{-- Balance Period Card --}}
+                                        <div class="p-4 bg-gradient-to-br from-primary/10 to-primary/20 rounded-xl border-2 border-primary/30">
+                                            <div class="flex items-center justify-between">
+                                                <div>
+                                                    <label class="block text-sm font-semibold text-gray-900 mb-2">Balance Period</label>
+                                                    <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white border border-primary/40 text-primary font-semibold text-sm">
+                                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                                        </svg>
+                                                        <span x-text="selectedMonthName + ' ' + balanceYear"></span>
+                                                    </span>
+                                                </div>
+                                                <button type="button" @click="goBackToStep1()"
+                                                    class="text-sm text-primary hover:text-primary-dark font-medium flex items-center gap-1 cursor-pointer">
+                                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+                                                    </svg>
+                                                    Change
+                                                </button>
+                                            </div>
+                                        </div>
+
+                                        {{-- Balance Cards --}}
+                                        <div class="grid grid-cols-2 gap-3">
+                                            <div class="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-3 border border-blue-200">
+                                                <p class="text-xs text-blue-600 font-medium mb-1">Transfer Balance</p>
+                                                <p class="text-base font-bold text-blue-900" x-text="'Rp ' + parseInt(balanceTransfer).toLocaleString('id-ID')"></p>
+                                            </div>
+                                            <div class="bg-gradient-to-br from-green-50 to-green-100 rounded-xl p-3 border border-green-200">
+                                                <p class="text-xs text-green-600 font-medium mb-1">Cash Balance</p>
+                                                <p class="text-base font-bold text-green-900" x-text="'Rp ' + parseInt(balanceCash).toLocaleString('id-ID')"></p>
+                                            </div>
+                                        </div>
+
+                                        {{-- Loan Date --}}
+                                        <div>
+                                            <label class="block text-sm font-medium text-gray-700 mb-1">
+                                                Loan Date <span class="text-red-600">*</span>
+                                            </label>
+                                            <input type="date" x-model="loanDate"
+                                                class="w-full rounded-md border border-gray-200 px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:border-primary focus:ring-primary/20 transition-colors">
+                                        </div>
+
+                                        {{-- Payment Method --}}
+                                        <div>
+                                            <label class="block text-sm font-medium text-gray-700 mb-1">
+                                                Payment Method <span class="text-red-600">*</span>
+                                            </label>
+                                            <div class="relative">
+                                                <button type="button" @click="paymentMethodDropdownOpen = !paymentMethodDropdownOpen"
+                                                    :class="createErrors.payment_method ? 'border-red-500 focus:border-red-500 focus:ring-red-200' : 'border-gray-200 focus:border-primary focus:ring-primary/20'"
+                                                    class="w-full flex justify-between items-center rounded-md border px-4 py-2 text-sm bg-white focus:outline-none focus:ring-2 transition-colors cursor-pointer">
+                                                    <span x-text="selectedPaymentMethod ? selectedPaymentMethod.name : 'Select Payment Method'"
+                                                        :class="!selectedPaymentMethod ? 'text-gray-400' : 'text-gray-900'"></span>
+                                                    <svg class="w-4 h-4 text-gray-400 transition-transform" :class="paymentMethodDropdownOpen && 'rotate-180'" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                                                    </svg>
+                                                </button>
+                                                <div x-show="paymentMethodDropdownOpen" @click.away="paymentMethodDropdownOpen = false" x-cloak
+                                                    x-transition:enter="transition ease-out duration-100"
+                                                    x-transition:enter-start="opacity-0 scale-95"
+                                                    x-transition:enter-end="opacity-100 scale-100"
+                                                    x-transition:leave="transition ease-in duration-75"
+                                                    x-transition:leave-start="opacity-100 scale-100"
+                                                    x-transition:leave-end="opacity-0 scale-95"
+                                                    class="absolute z-10 mt-1 w-full bg-white border border-gray-200 rounded-md shadow-lg">
+                                                    <div class="py-1">
+                                                        <template x-for="method in paymentMethodOptions" :key="method.value">
+                                                            <button type="button" @click="selectPaymentMethod(method)"
+                                                                :class="loanPaymentMethod === method.value ? 'bg-primary/10 text-primary font-medium' : 'text-gray-700 hover:bg-gray-50'"
+                                                                class="w-full text-left px-4 py-2 text-sm transition-colors cursor-pointer"
+                                                                x-text="method.name">
+                                                            </button>
+                                                        </template>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <template x-if="createErrors.payment_method">
+                                                <p class="mt-1 text-xs text-red-600" x-text="createErrors.payment_method[0]"></p>
                                             </template>
-                                        </ul>
-                                    </div>
-                                </div>
-                                <p x-show="loanErrors.payment_method" x-cloak
-                                    x-text="loanErrors.payment_method?.[0]" class="mt-1 text-sm text-red-600"></p>
-                            </div>
-
-                            {{-- Amount --}}
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-1">
-                                    Amount <span class="text-red-600">*</span>
-                                </label>
-                                <div class="relative">
-                                    <span class="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-gray-500">Rp</span>
-                                    <input type="text" x-model="loanAmount"
-                                        @input="
-                                            let value = $event.target.value.replace(/[^\d]/g, '');
-                                            loanAmount = parseInt(value || 0).toLocaleString('id-ID');
-                                            $event.target.nextElementSibling.value = value;
-                                        "
-                                        placeholder="0"
-                                        :class="loanErrors.amount ?
-                                            'border-red-500 focus:border-red-500 focus:ring-red-200' :
-                                            'border-gray-200 focus:border-primary focus:ring-primary/20'"
-                                        class="w-full rounded-md pl-10 pr-4 py-2 text-sm border focus:outline-none focus:ring-2 text-gray-700">
-                                    <input type="hidden" name="amount" :value="loanAmount.replace(/[^\d]/g, '')">
-                                </div>
-                                <p x-show="loanErrors.amount" x-cloak x-text="loanErrors.amount?.[0]"
-                                    class="mt-1 text-sm text-red-600"></p>
-                            </div>
-                            </div>
-
-                            {{-- Payment Proof Image with Webcam --}}
-                            <div x-data="{
-                                imagePreview: null,
-                                fileName: '',
-                                showWebcam: false,
-                                stream: null,
-                                facingMode: 'environment',
-                                isMirrored: true,
-                                async startWebcam() {
-                                    console.log('Attempting to start webcam...');
-                                    console.log('Current URL:', window.location.href);
-                                    console.log('Protocol:', window.location.protocol);
-                                    
-                                    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-                                        alert('Webcam tidak didukung di browser ini. Gunakan browser modern seperti Chrome atau Firefox.');
-                                        this.$refs.fileInput.click();
-                                        return;
-                                    }
-                                    
-                                    const isSecure = window.location.protocol === 'https:' || 
-                                                   window.location.hostname === 'localhost' || 
-                                                   window.location.hostname === '127.0.0.1';
-                                    
-                                    if (!isSecure) {
-                                        alert('WEBCAM HARUS PAKAI HTTPS! Akses dengan: https://berkah-production.test atau gunakan Upload File.');
-                                        this.$refs.fileInput.click();
-                                        return;
-                                    }
-                                    
-                                    try {
-                                        console.log('Requesting camera permission...');
-                                        this.stream = await navigator.mediaDevices.getUserMedia({ 
-                                            video: { 
-                                                facingMode: this.facingMode,
-                                                width: { ideal: 1280 },
-                                                height: { ideal: 720 }
-                                            } 
-                                        });
-                                        console.log('Camera access granted!');
-                                        this.$refs.video.srcObject = this.stream;
-                                        this.showWebcam = true;
-                                    } catch (err) {
-                                        console.error('Webcam error:', err);
-                                        console.error('Error name:', err.name);
-                                        console.error('Error message:', err.message);
-                                        
-                                        let errorMsg = 'Tidak dapat mengakses webcam. ';
-                                        
-                                        if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
-                                            errorMsg += 'Permission ditolak! Klik icon gembok/kamera di address bar, pilih Allow untuk Camera, lalu refresh halaman.';
-                                        } else if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
-                                            errorMsg += 'Kamera tidak ditemukan! Pastikan laptop/HP punya kamera dan tidak digunakan aplikasi lain.';
-                                        } else if (err.name === 'NotReadableError' || err.name === 'TrackStartError') {
-                                            errorMsg += 'Kamera sedang digunakan aplikasi lain! Tutup aplikasi tersebut lalu coba lagi.';
-                                        } else {
-                                            errorMsg += 'Error: ' + err.message;
-                                        }
-                                        
-                                        errorMsg += ' Atau gunakan Upload File sebagai alternatif.';
-                                        alert(errorMsg);
-                                        this.$refs.fileInput.click();
-                                    }
-                                },
-                                async toggleCamera() {
-                                    this.facingMode = this.facingMode === 'user' ? 'environment' : 'user';
-                                    this.isMirrored = this.facingMode === 'user';
-                                    
-                                    if (this.stream) {
-                                        this.stream.getTracks().forEach(track => track.stop());
-                                    }
-                                    
-                                    try {
-                                        this.stream = await navigator.mediaDevices.getUserMedia({ 
-                                            video: { 
-                                                facingMode: this.facingMode,
-                                                width: { ideal: 1280 },
-                                                height: { ideal: 720 }
-                                            } 
-                                        });
-                                        this.$refs.video.srcObject = this.stream;
-                                    } catch (err) {
-                                        console.error('Toggle camera error:', err);
-                                        alert('Gagal mengganti kamera. Error: ' + err.message);
-                                    }
-                                },
-                                handleFileChange(event) {
-                                    const file = event.target.files[0];
-                                    if (file && file.type.startsWith('image/')) {
-                                        this.fileName = file.name;
-                                        const reader = new FileReader();
-                                        reader.onload = (e) => {
-                                            this.imagePreview = e.target.result;
-                                        };
-                                        reader.readAsDataURL(file);
-                                        if (loanErrors.image) {
-                                            delete loanErrors.image;
-                                        }
-                                    }
-                                },
-                                stopWebcam() {
-                                    if (this.stream) {
-                                        this.stream.getTracks().forEach(track => track.stop());
-                                        this.stream = null;
-                                    }
-                                    this.showWebcam = false;
-                                },
-                                capturePhoto() {
-                                    const video = this.$refs.video;
-                                    const canvas = this.$refs.canvas;
-                                    const context = canvas.getContext('2d');
-                                    
-                                    canvas.width = video.videoWidth;
-                                    canvas.height = video.videoHeight;
-                                    
-                                    // Mirror the image if using front camera
-                                    if (this.isMirrored) {
-                                        context.translate(canvas.width, 0);
-                                        context.scale(-1, 1);
-                                    }
-                                    
-                                    context.drawImage(video, 0, 0, canvas.width, canvas.height);
-                                    
-                                    canvas.toBlob((blob) => {
-                                        this.fileName = 'webcam_capture_' + Date.now() + '.jpg';
-                                        this.imagePreview = canvas.toDataURL('image/jpeg');
-                                        
-                                        // Create file from blob
-                                        const file = new File([blob], this.fileName, { type: 'image/jpeg' });
-                                        const dataTransfer = new DataTransfer();
-                                        dataTransfer.items.add(file);
-                                        this.$refs.fileInput.files = dataTransfer.files;
-                                        
-                                        if (loanErrors.image) {
-                                            delete loanErrors.image;
-                                        }
-                                        
-                                        this.stopWebcam();
-                                    }, 'image/jpeg', 0.9);
-                                }
-                            }">
-                                <label class="block text-sm font-medium text-gray-700 mb-1">
-                                    Payment Proof <span class="text-red-600">*</span>
-                                </label>
-
-                                {{-- Webcam View --}}
-                                <div x-show="showWebcam" x-cloak class="mb-3">
-                                    {{-- Video Container --}}
-                                    <div class="relative rounded-xl overflow-hidden shadow-xl">
-                                        <video x-ref="video" autoplay playsinline 
-                                            class="w-full h-auto block bg-black"
-                                            style="min-height: 320px; max-height: 480px; object-fit: cover;"
-                                            :style="isMirrored ? 'transform: scaleX(-1);' : ''"></video>
-                                        <canvas x-ref="canvas" class="hidden"></canvas>
-                                    </div>
-                                    <div class="flex gap-2 mt-3">
-                                        <button type="button" @click="capturePhoto()"
-                                        class="flex-1 px-3 py-2 text-sm bg-primary text-white rounded-md hover:bg-primary-dark transition-colors flex items-center justify-center gap-2">
-                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
-                                            </svg>
-                                            Capture
-                                        </button>
-                                        <button type="button" @click="toggleCamera()"
-                                        class="px-3 py-2 text-sm bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors">
-                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7h12m0 0l-4-4m4 4l-4 4M16 17H4m0 0l4-4m-4 4l4 4" />
-                                            </svg>
-                                        </button>
-                                        <button type="button" @click="stopWebcam()"
-                                        class="px-3 py-2 text-sm bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors flex items-center gap-1">
-                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                                            </svg>
-                                            Close
-                                        </button>
-                                    </div>
-                                </div>
-
-                                {{-- Image Preview --}}
-                                <div x-show="imagePreview && !showWebcam" class="mb-3 border-2 border-dashed border-green-400 rounded-lg p-3 bg-green-50">
-                                    <div class="flex items-center gap-3">
-                                        <img :src="imagePreview" class="w-24 h-24 object-cover rounded-md border-2 border-green-500">
-                                        <div class="flex-1">
-                                            <p class="text-sm font-medium text-gray-900" x-text="fileName"></p>
-                                            <p class="text-xs text-green-600 mt-1">✓ Image ready to upload</p>
                                         </div>
-                                        <button type="button" @click="imagePreview = null; fileName = ''; $refs.fileInput.value = ''; startWebcam()"
-                                            class="text-blue-600 hover:text-blue-700 p-1" title="Retake photo">
-                                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                                            </svg>
-                                        </button>
-                                        <button type="button" @click="imagePreview = null; fileName = ''; $refs.fileInput.value = ''"
-                                            class="text-red-600 hover:text-red-700 p-1" title="Delete photo">
-                                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                            </svg>
-                                        </button>
+
+                                        {{-- Loan Amount --}}
+                                        <div>
+                                            <label class="block text-sm font-medium text-gray-700 mb-1">
+                                                Loan Amount <span class="text-red-600">*</span>
+                                            </label>
+                                            <div class="relative">
+                                                <span class="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-gray-500">Rp</span>
+                                                <input type="text" x-model="loanAmount"
+                                                    @input="loanAmount = loanAmount.replace(/[^0-9]/g, '').replace(/\B(?=(\d{3})+(?!\d))/g, '.')"
+                                                    :class="createErrors.amount ? 'border-red-500 focus:border-red-500 focus:ring-red-200' : 'border-gray-200 focus:border-primary focus:ring-primary/20'"
+                                                    class="w-full rounded-md border pl-10 pr-4 py-2 text-sm focus:outline-none focus:ring-2 transition-colors"
+                                                    placeholder="0">
+                                            </div>
+                                            <template x-if="createErrors.amount">
+                                                <p class="mt-1 text-xs text-red-600" x-text="createErrors.amount[0]"></p>
+                                            </template>
+                                        </div>
+
+                                        {{-- Proof of Payment - Webcam (Material Report style) --}}
+                                        <div>
+                                            <label class="block text-sm font-medium text-gray-700 mb-1">
+                                                Proof of Payment <span class="text-red-600">*</span>
+                                            </label>
+                                            
+                                            {{-- Webcam Section --}}
+                                            <div x-show="showWebcam" class="mb-3">
+                                                <div class="relative bg-black rounded-xl overflow-hidden shadow-xl" style="height: 320px;">
+                                                    <video x-ref="loanVideo" autoplay playsinline 
+                                                        :class="{ 'scale-x-[-1]': isMirrored }"
+                                                        class="w-full h-full object-cover"></video>
+                                                    <canvas x-ref="loanCanvas" class="hidden"></canvas>
+                                                </div>
+                                                <div class="flex gap-2 mt-3">
+                                                    <button type="button" @click="captureLoanPhoto()"
+                                                    class="flex-1 px-3 py-2 text-sm bg-primary text-white rounded-md hover:bg-primary-dark transition-colors flex items-center justify-center gap-2 cursor-pointer">
+                                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                                                        </svg>
+                                                        Capture
+                                                    </button>
+                                                    <button type="button" @click="toggleLoanCamera()"
+                                                    class="px-3 py-2 text-sm bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors cursor-pointer">
+                                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7h12m0 0l-4-4m4 4l-4 4M16 17H4m0 0l4-4m-4 4l4 4" />
+                                                        </svg>
+                                                    </button>
+                                                    <button type="button" @click="stopLoanWebcam()"
+                                                    class="px-3 py-2 text-sm bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors flex items-center gap-1 cursor-pointer">
+                                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                                                        </svg>
+                                                        Close
+                                                    </button>
+                                                </div>
+                                            </div>
+
+                                            {{-- Image Preview --}}
+                                            <div x-show="imagePreview && !showWebcam" class="mb-3 border-2 border-dashed border-green-400 rounded-lg p-3 bg-green-50">
+                                                <div class="flex items-center gap-3">
+                                                    <img :src="imagePreview" class="w-24 h-24 object-cover rounded-md border-2 border-green-500">
+                                                    <div class="flex-1">
+                                                        <p class="text-sm font-medium text-gray-900" x-text="fileName"></p>
+                                                        <p class="text-xs text-green-600 mt-1">✓ Image ready to upload</p>
+                                                    </div>
+                                                    <button type="button" @click="imagePreview = null; fileName = ''; document.querySelector('input[name=loan_proof_image]').value = ''; startLoanWebcam()"
+                                                        class="text-blue-600 hover:text-blue-700 p-1 cursor-pointer" title="Retake photo">
+                                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                                        </svg>
+                                                    </button>
+                                                    <button type="button" @click="imagePreview = null; fileName = ''; document.querySelector('input[name=loan_proof_image]').value = ''"
+                                                        class="text-red-600 hover:text-red-700 p-1 cursor-pointer" title="Delete photo">
+                                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                                        </svg>
+                                                    </button>
+                                                </div>
+                                            </div>
+
+                                            {{-- Open Camera Button --}}
+                                            <div x-show="!imagePreview && !showWebcam">
+                                                <button type="button" @click="startLoanWebcam()"
+                                                class="w-full px-4 py-3 text-sm border-2 border-dashed border-gray-300 rounded-md hover:border-primary hover:bg-primary/5 transition-all flex items-center justify-center gap-2 text-gray-700 cursor-pointer">
+                                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                                                    </svg>
+                                                    Open Camera
+                                                </button>
+                                            </div>
+                                            <input type="file" name="loan_proof_image" accept="image/*" class="hidden">
+                                            <template x-if="createErrors.proof_image">
+                                                <p class="mt-1 text-xs text-red-600" x-text="createErrors.proof_image[0]"></p>
+                                            </template>
+                                        </div>
+
+                                        {{-- Notes --}}
+                                        <div>
+                                            <label class="block text-sm font-medium text-gray-700 mb-1">Notes</label>
+                                            <textarea x-model="loanNotes" rows="3"
+                                                class="w-full rounded-md border border-gray-200 px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:border-primary focus:ring-primary/20 transition-colors resize-none"
+                                                placeholder="Optional notes..."></textarea>
+                                        </div>
                                     </div>
                                 </div>
-
-                                {{-- Open Camera Button --}}
-                                <div x-show="!imagePreview && !showWebcam">
-                                    <button type="button" @click="startWebcam()"
-                                    class="w-full px-4 py-3 text-sm border-2 border-dashed border-gray-300 rounded-md hover:border-primary hover:bg-primary/5 transition-all flex items-center justify-center gap-2 text-gray-700">
-                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
-                                        </svg>
-                                        Open Camera
-                                    </button>
-                                </div>
-
-                                <input type="file" x-ref="fileInput" name="image" accept="image/jpeg,image/png,image/jpg" class="hidden">
-                                
-                                <p class="mt-1 text-xs text-gray-500">Click to open camera and capture payment proof</p>
-                                <p x-show="loanErrors.image" x-cloak x-text="loanErrors.image?.[0]"
-                                    class="mt-1 text-sm text-red-600"></p>
+                                {{-- End Step 2 --}}
                             </div>
-
-                            {{-- Notes --}}
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-1">Notes</label>
-                                <textarea name="notes" rows="3"
-                                    :class="loanErrors.notes ?
-                                        'border-red-500 focus:border-red-500 focus:ring-red-200' :
-                                        'border-gray-200 focus:border-primary focus:ring-primary/20'"
-                                    class="w-full rounded-md px-4 py-2 text-sm border focus:outline-none focus:ring-2 resize-none"
-                                    placeholder="Optional notes..."></textarea>
-                                <p x-show="loanErrors.notes" x-cloak x-text="loanErrors.notes?.[0]"
-                                    class="mt-1 text-sm text-red-600"></p>
-                            </div>
-                            </div> {{-- END: Content shown only after Balance Period is selected --}}
-                        </div>
-                    </form>
-                </div>
-
-                {{-- Modal Footer --}}
-                <div class="flex items-center justify-end gap-3 px-6 py-4 border-t border-gray-200 bg-gray-50">
-                    <button type="button" @click="showAddLoanModal = false; loanAmount = ''; loanErrors = {};"
-                        class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
-                        Cancel
-                    </button>
-                    <button type="submit" form="addLoanForm"
-                        :disabled="isSubmittingLoan || !hasBalancePeriod"
-                        class="px-4 py-2 text-sm font-medium text-white bg-primary rounded-lg hover:bg-primary-dark disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2">
-                        <template x-if="isSubmittingLoan">
-                            <svg class="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                            </svg>
-                        </template>
-                        <span x-text="isSubmittingLoan ? 'Processing...' : 'Add Loan'"></span>
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    {{-- ================= EDIT LOAN MODAL ================= --}}
-    <div x-data="{
-        showEditLoanModal: false,
-        editLoanId: null,
-        editBalancePeriod: '',
-        editLoanDate: '',
-        editPaymentMethod: '',
-        editLoanAmount: '',
-        editNotes: '',
-        editExistingImage: '',
-        editRemoveImage: false,
-        editErrors: {},
-        isSubmittingEdit: false,
-        showWebcam: false,
-        stream: null,
-        facingMode: 'environment',
-        isMirrored: true,
-        imagePreview: null,
-        fileName: '',
-        editPaymentDropdownOpen: false,
-        editPaymentOptions: [
-            { value: 'transfer', name: 'Transfer' },
-            { value: 'cash', name: 'Cash' }
-        ],
-        get editSelectedPaymentOption() {
-            return this.editPaymentOptions.find(opt => opt.value === this.editPaymentMethod);
-        },
-        selectEditPayment(option) {
-            this.editPaymentMethod = option.value;
-            this.editPaymentDropdownOpen = false;
-            if (this.editErrors.payment_method) {
-                delete this.editErrors.payment_method;
-            }
-        },
-        async startWebcam() {
-            if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-                alert('Webcam tidak didukung di browser ini. Gunakan browser modern seperti Chrome atau Firefox.');
-                return;
-            }
-            
-            const isSecure = window.location.protocol === 'https:' || 
-                           window.location.hostname === 'localhost' || 
-                           window.location.hostname === '127.0.0.1';
-            
-            if (!isSecure) {
-                alert('WEBCAM HARUS PAKAI HTTPS! Akses dengan: https://berkah-production.test atau gunakan Upload File.');
-                return;
-            }
-            
-            try {
-                this.stream = await navigator.mediaDevices.getUserMedia({ 
-                    video: {
-                        facingMode: this.facingMode,
-                        width: { ideal: 1280 },
-                        height: { ideal: 720 }
-                    } 
-                });
-                this.$refs.editVideo.srcObject = this.stream;
-                this.showWebcam = true;
-            } catch (err) {
-                console.error('Webcam error:', err);
-                let errorMsg = 'Tidak dapat mengakses webcam. ';
-                if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
-                    errorMsg += 'Permission ditolak!';
-                } else if (err.name === 'NotFoundError') {
-                    errorMsg += 'Kamera tidak ditemukan!';
-                } else {
-                    errorMsg += err.message;
-                }
-                alert(errorMsg);
-            }
-        },
-        async toggleCamera() {
-            this.facingMode = this.facingMode === 'user' ? 'environment' : 'user';
-            this.isMirrored = this.facingMode === 'user';
-            
-            if (this.stream) {
-                this.stream.getTracks().forEach(track => track.stop());
-            }
-            
-            try {
-                this.stream = await navigator.mediaDevices.getUserMedia({ 
-                    video: { 
-                        facingMode: this.facingMode,
-                        width: { ideal: 1280 },
-                        height: { ideal: 720 }
-                    } 
-                });
-                this.$refs.editVideo.srcObject = this.stream;
-            } catch (err) {
-                alert('Gagal mengganti kamera. Error: ' + err.message);
-            }
-        },
-        stopWebcam() {
-            if (this.stream) {
-                this.stream.getTracks().forEach(track => track.stop());
-                this.stream = null;
-            }
-            this.showWebcam = false;
-        },
-        capturePhoto() {
-            const video = this.$refs.editVideo;
-            const canvas = this.$refs.editCanvas;
-            const context = canvas.getContext('2d');
-            
-            canvas.width = video.videoWidth;
-            canvas.height = video.videoHeight;
-            
-            if (this.isMirrored) {
-                context.translate(canvas.width, 0);
-                context.scale(-1, 1);
-            }
-            
-            context.drawImage(video, 0, 0, canvas.width, canvas.height);
-            
-            canvas.toBlob((blob) => {
-                this.fileName = 'webcam_edit_' + Date.now() + '.jpg';
-                this.imagePreview = canvas.toDataURL('image/jpeg');
-                
-                const file = new File([blob], this.fileName, { type: 'image/jpeg' });
-                const dataTransfer = new DataTransfer();
-                dataTransfer.items.add(file);
-                this.$refs.editFileInput.files = dataTransfer.files;
-                
-                if (this.editErrors.image) {
-                    delete this.editErrors.image;
-                }
-                
-                this.stopWebcam();
-            }, 'image/jpeg', 0.9);
-        }
-    }"
-    @open-edit-modal.window="
-        showEditLoanModal = true;
-        editLoanId = $event.detail.id;
-        editBalancePeriod = $event.detail.balance_period;
-        editLoanDate = $event.detail.date;
-        editPaymentMethod = $event.detail.method;
-        editLoanAmount = $event.detail.amount;
-        editNotes = $event.detail.notes;
-        editExistingImage = $event.detail.image;
-        editRemoveImage = false;
-        editErrors = {};
-        showWebcam = false;
-        imagePreview = null;
-        fileName = '';
-        if (stream) {
-            stream.getTracks().forEach(track => track.stop());
-            stream = null;
-        }
-    "
-    x-show="showEditLoanModal"
-    x-cloak
-    class="fixed inset-0 z-50">
-        
-        {{-- Background Overlay --}}
-        <div x-show="showEditLoanModal" x-transition.opacity class="fixed inset-0 bg-black/50 bg-opacity-50 backdrop-blur-xs transition-opacity"></div>
-        
-        {{-- Modal Panel --}}
-        <div class="fixed inset-0 flex items-center justify-center p-4">
-            <div @click.away="showEditLoanModal = false; editErrors = {}; editRemoveImage = false;"
-                class="relative bg-white rounded-xl shadow-lg w-full max-w-2xl"
-                style="height: min(calc(100vh - 6rem), 800px); min-height: 0; display: flex; flex-direction: column;">
-            {{-- Fixed Header --}}
-            <div class="flex items-center justify-between px-6 py-4 border-b border-gray-200 flex-shrink-0">
-                <h3 class="text-lg font-semibold text-gray-900">Edit Loan</h3>
-                <button @click="showEditLoanModal = false; editErrors = {}; editRemoveImage = false;"
-                    class="text-gray-400 hover:text-gray-600 cursor-pointer text-2xl leading-none">
-                    ✕
-                </button>
-            </div>
-
-            {{-- Scrollable Form Content --}}
-            <div class="flex-1 overflow-y-auto px-6 py-4">
-                <form @submit.prevent="
-                    editErrors = {};
-                    isSubmittingEdit = true;
-                    
-                    const formData = new FormData($event.target);
-                    formData.append('_method', 'PUT');
-                    if (editRemoveImage) {
-                        formData.append('remove_image', '1');
-                    }
-                    
-                    fetch(`/finance/loan-capital/${editLoanId}`, {
-                        method: 'POST',
-                        body: formData,
-                        headers: {
-                            'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content
-                        }
-                    })
-                    .then(res => res.json())
-                    .then(data => {
-                        if (data.success) {
-                            sessionStorage.setItem('toast_message', 'Loan capital updated successfully');
-                            sessionStorage.setItem('toast_type', 'success');
-                            window.location.reload();
-                        } else if (data.errors) {
-                            isSubmittingEdit = false;
-                            editErrors = data.errors;
-                        }
-                    })
-                    .catch(err => {
-                        isSubmittingEdit = false;
-                        console.error(err);
-                        window.dispatchEvent(new CustomEvent('show-toast', {
-                            detail: { message: 'Failed to update loan. Please try again.', type: 'error' }
-                        }));
-                    })
-                    .finally(() => {
-                        isSubmittingEdit = false;
-                    });
-                " id="editLoanForm" class="space-y-4">
-                    @csrf
-
-                    {{-- Balance Period & Date (Readonly) --}}
-                    <div class="grid grid-cols-2 gap-3">
-                        {{-- Balance Period (Readonly) --}}
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">
-                                Balance Period
-                            </label>
-                            <input type="text" x-model="editBalancePeriod" readonly
-                                class="w-full rounded-md px-4 py-2 text-sm border border-gray-200 bg-gray-50 text-gray-600 cursor-not-allowed pointer-events-none">
-                        </div>
-
-                        {{-- Date (Readonly) --}}
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">
-                                Loan Date
-                            </label>
-                            <input type="text" x-model="editLoanDate" readonly
-                                class="w-full rounded-md px-4 py-2 text-sm border border-gray-200 bg-gray-50 text-gray-600 cursor-not-allowed pointer-events-none">
-                        </div>
+                        </form>
                     </div>
 
-                    {{-- Payment Method & Amount (Row) --}}
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                        {{-- Payment Method --}}
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">
-                                Payment Method <span class="text-red-600">*</span>
-                            </label>
-                            <div class="relative w-full">
-                                <button type="button" @click="editPaymentDropdownOpen = !editPaymentDropdownOpen"
-                                    :class="editErrors.payment_method ? 'border-red-500 focus:border-red-500 focus:ring-red-200' : 'border-gray-200 focus:border-primary focus:ring-primary/20'"
-                                    class="w-full flex justify-between items-center rounded-md border px-4 py-2 text-sm bg-white
-                                           focus:outline-none focus:ring-2 transition-colors">
-                                    <span x-text="editSelectedPaymentOption ? editSelectedPaymentOption.name : 'Select Method'"
-                                        :class="!editSelectedPaymentOption ? 'text-gray-400' : 'text-gray-500'"></span>
-                                    <svg class="w-4 h-4 text-gray-400 transition-transform" :class="editPaymentDropdownOpen && 'rotate-180'" fill="none"
-                                        stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-                                    </svg>
-                                </button>
-                                <input type="hidden" name="payment_method" :value="editPaymentMethod">
-                                <div x-show="editPaymentDropdownOpen" @click.away="editPaymentDropdownOpen = false" x-cloak x-transition:enter="transition ease-out duration-100"
-                                    x-transition:enter-start="opacity-0 scale-95" x-transition:enter-end="opacity-100 scale-100"
-                                    x-transition:leave="transition ease-in duration-75" x-transition:leave-start="opacity-100 scale-100"
-                                    x-transition:leave-end="opacity-0 scale-95"
-                                    class="absolute z-20 mt-1 w-full bg-white border border-gray-200 rounded-md shadow-lg">
-                                    <ul class="max-h-60 overflow-y-auto py-1">
-                                        <template x-for="option in editPaymentOptions" :key="option.value">
-                                            <li @click="selectEditPayment(option)"
-                                                class="px-4 py-2 cursor-pointer text-sm text-gray-700 hover:bg-primary/5 transition-colors"
-                                                :class="{ 'bg-primary/10 font-medium text-primary': editPaymentMethod === option.value }">
-                                                <span x-text="option.name"></span>
-                                            </li>
-                                        </template>
-                                    </ul>
-                                </div>
-                            </div>
-                            <p x-show="editErrors.payment_method" x-cloak
-                                x-text="editErrors.payment_method?.[0]" class="mt-1 text-sm text-red-600"></p>
-                        </div>
-
-                        {{-- Amount --}}
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">
-                                Amount <span class="text-red-600">*</span>
-                            </label>
-                            <div class="relative">
-                                <span class="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-gray-500">Rp</span>
-                                <input type="text" x-model="editLoanAmount"
-                                    @input="
-                                        let value = $event.target.value.replace(/[^\d]/g, '');
-                                        editLoanAmount = parseInt(value || 0).toLocaleString('id-ID');
-                                        $event.target.nextElementSibling.value = value;
-                                    "
-                                    placeholder="0"
-                                    :class="editErrors.amount ?
-                                        'border-red-500 focus:border-red-500 focus:ring-red-200' :
-                                        'border-gray-200 focus:border-primary focus:ring-primary/20'"
-                                    class="w-full rounded-md pl-10 pr-4 py-2 text-sm border focus:outline-none focus:ring-2 text-gray-700">
-                                <input type="hidden" name="amount" :value="editLoanAmount.replace(/[^\d]/g, '')">
-                            </div>
-                            <p x-show="editErrors.amount" x-cloak x-text="editErrors.amount?.[0]"
-                                class="mt-1 text-sm text-red-600"></p>
-                        </div>
-                    </div>
-
-                    {{-- Notes --}}
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">
-                            Notes (Optional)
-                        </label>
-                        <textarea name="notes" rows="3" x-model="editNotes"
-                            placeholder="Additional notes..."
-                            class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary resize-none"></textarea>
-                    </div>
-
-                    {{-- Payment Proof Image with Webcam --}}
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">
-                            Payment Proof <span class="text-red-600">*</span>
-                        </label>
-
-                        {{-- Existing Image (if exists and not removed) --}}
-                        <div x-show="editExistingImage && !editRemoveImage && !imagePreview" class="mb-3 border-2 border-dashed border-blue-400 rounded-lg p-3 bg-blue-50">
-                            <div class="flex items-center gap-3">
-                                <img :src="editExistingImage" class="w-24 h-24 object-cover rounded-md border-2 border-blue-500">
-                                <div class="flex-1">
-                                    <p class="text-sm font-medium text-gray-900">Current payment proof</p>
-                                    <p class="text-xs text-blue-600 mt-1">✓ Existing image</p>
-                                </div>
-                                <button type="button" @click="editExistingImage = ''; editRemoveImage = false; startWebcam()"
-                                    class="text-blue-600 hover:text-blue-700 p-1" title="Retake photo">
-                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                                    </svg>
-                                </button>
-                                <button type="button" @click="editRemoveImage = true; editExistingImage = ''"
-                                    class="text-red-600 hover:text-red-700 p-1" title="Delete photo">
-                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                    </svg>
-                                </button>
-                            </div>
-                        </div>
-
-                        {{-- Webcam View --}}
-                        <div x-show="showWebcam" x-cloak class="mb-3">
-                            <div class="relative rounded-xl overflow-hidden shadow-xl">
-                                <video x-ref="editVideo" autoplay playsinline 
-                                    class="w-full h-auto block bg-black"
-                                    style="min-height: 320px; max-height: 480px; object-fit: cover;"
-                                    :style="isMirrored ? 'transform: scaleX(-1);' : ''"></video>
-                                <canvas x-ref="editCanvas" class="hidden"></canvas>
-                            </div>
-                            <div class="flex gap-2 mt-3">
-                                <button type="button" @click="capturePhoto()"
-                                class="flex-1 px-3 py-2 text-sm bg-primary text-white rounded-md hover:bg-primary-dark transition-colors flex items-center justify-center gap-2">
-                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
-                                    </svg>
-                                    Capture
-                                </button>
-                                <button type="button" @click="toggleCamera()"
-                                class="px-3 py-2 text-sm bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors">
-                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7h12m0 0l-4-4m4 4l-4 4M16 17H4m0 0l4-4m-4 4l4 4" />
-                                    </svg>
-                                </button>
-                                <button type="button" @click="stopWebcam()"
-                                class="px-3 py-2 text-sm bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors flex items-center gap-1">
-                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                                    </svg>
-                                    Close
-                                </button>
-                            </div>
-                        </div>
-
-                        {{-- Image Preview (after capture) --}}
-                        <div x-show="imagePreview && !showWebcam" class="mb-3 border-2 border-dashed border-green-400 rounded-lg p-3 bg-green-50">
-                            <div class="flex items-center gap-3">
-                                <img :src="imagePreview" class="w-24 h-24 object-cover rounded-md border-2 border-green-500">
-                                <div class="flex-1">
-                                    <p class="text-sm font-medium text-gray-900" x-text="fileName"></p>
-                                    <p class="text-xs text-green-600 mt-1">✓ Image ready to upload</p>
-                                </div>
-                                <button type="button" @click="imagePreview = null; fileName = ''; $refs.editFileInput.value = ''; startWebcam()"
-                                    class="text-blue-600 hover:text-blue-700 p-1" title="Retake photo">
-                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                                    </svg>
-                                </button>
-                                <button type="button" @click="imagePreview = null; fileName = ''; $refs.editFileInput.value = ''"
-                                    class="text-red-600 hover:text-red-700 p-1" title="Delete photo">
-                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                    </svg>
-                                </button>
-                            </div>
-                        </div>
-
-                        {{-- Open Camera Button --}}
-                        <div x-show="!editExistingImage && !imagePreview && !showWebcam">
-                            <button type="button" @click="startWebcam()"
-                            class="w-full px-4 py-3 text-sm border-2 border-dashed border-gray-300 rounded-md hover:border-primary hover:bg-primary/5 transition-all flex items-center justify-center gap-2 text-gray-700">
-                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                    {{-- Modal Footer - Sticky --}}
+                    <div class="sticky bottom-0 bg-white border-t border-gray-200 px-6 py-4 flex gap-3">
+                        <button type="button" @click="showCreateModal = false; stopLoanWebcam()"
+                            class="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium transition-colors cursor-pointer">
+                            Cancel
+                        </button>
+                        {{-- Step 1: Continue Button --}}
+                        <button x-show="!periodValidated" type="button" @click="validatePeriod()"
+                            :disabled="!balanceMonth || !balanceYear || isValidatingPeriod"
+                            :class="(!balanceMonth || !balanceYear || isValidatingPeriod) ? 'opacity-50 cursor-not-allowed' : 'hover:bg-primary-dark cursor-pointer'"
+                            class="flex-1 px-4 py-2 bg-primary text-white rounded-lg font-medium transition-colors flex items-center justify-center gap-2">
+                            <template x-if="isValidatingPeriod">
+                                <svg class="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                                 </svg>
-                                Open Camera
-                            </button>
-                        </div>
-
-                        <input type="file" x-ref="editFileInput" name="image" accept="image/jpeg,image/png,image/jpg" class="hidden">
-                        
-                        <p class="mt-1 text-xs text-gray-500">Click to open camera and capture payment proof</p>
-                        <p x-show="editErrors.image" x-cloak x-text="editErrors.image?.[0]"
-                            class="mt-1 text-sm text-red-600"></p>
+                            </template>
+                            <span x-text="isValidatingPeriod ? 'Loading...' : 'Continue'"></span>
+                        </button>
+                        {{-- Step 2: Save Button --}}
+                        <button x-show="periodValidated" type="submit" form="addLoanForm" :disabled="isSubmittingLoan"
+                            :class="isSubmittingLoan ? 'opacity-50 cursor-not-allowed' : 'hover:bg-primary-dark cursor-pointer'"
+                            class="flex-1 px-4 py-2 bg-primary text-white rounded-lg font-medium transition-colors flex items-center justify-center gap-2">
+                            <template x-if="isSubmittingLoan">
+                                <svg class="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                </svg>
+                            </template>
+                            <span x-text="isSubmittingLoan ? 'Processing...' : 'Save Loan'"></span>
+                        </button>
                     </div>
-                </form>
-            </div>
-
-            {{-- Fixed Footer --}}
-            <div class="flex items-center justify-end gap-3 px-6 py-4 border-t border-gray-200 bg-gray-50 flex-shrink-0">
-                <button type="button" @click="showEditLoanModal = false; editErrors = {}; editRemoveImage = false;"
-                    :disabled="isSubmittingEdit"
-                    class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed">
-                    Cancel
-                </button>
-                <button type="submit" form="editLoanForm"
-                    :disabled="isSubmittingEdit"
-                    class="px-4 py-2 text-sm font-medium text-white bg-primary rounded-lg hover:bg-primary-dark disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2">
-                    <template x-if="isSubmittingEdit">
-                        <svg class="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                        </svg>
-                    </template>
-                    <span x-text="isSubmittingEdit ? 'Updating...' : 'Update Loan'"></span>
-                </button>
-            </div>
+                </div>
             </div>
         </div>
-    </div>
 
-    {{-- ================= REPAYMENT MODAL ================= --}}
-    <div x-data="{
-        showRepaymentModal: false,
-        repaymentLoanId: null,
-        repaymentLoanCode: '',
-        repaymentLoanAmount: '',
-        repaymentRemainingAmount: '',
-        repaymentPaidDate: '',
-        repaymentPaymentMethod: '',
-        repaymentAmount: '',
-        repaymentNotes: '',
-        repaymentErrors: {},
-        isSubmittingRepayment: false,
-        showWebcam: false,
-        stream: null,
-        facingMode: 'environment',
-        isMirrored: true,
-        imagePreview: null,
-        fileName: '',
-        repaymentDropdownOpen: false,
-        repaymentPaymentOptions: [
-            { value: 'transfer', name: 'Transfer' },
-            { value: 'cash', name: 'Cash' }
-        ],
-        get repaymentSelectedPaymentOption() {
-            return this.repaymentPaymentOptions.find(opt => opt.value === this.repaymentPaymentMethod);
-        },
-        selectRepaymentPayment(option) {
-            this.repaymentPaymentMethod = option.value;
-            this.repaymentDropdownOpen = false;
-            if (this.repaymentErrors.payment_method) {
-                delete this.repaymentErrors.payment_method;
-            }
-        },
-        
-        // Balance Period Selection
-        repaymentSelectedBalanceId: null,
-        repaymentSelectedMonth: null,
-        repaymentSelectedYear: null,
-        repaymentBalanceTransfer: 0,
-        repaymentBalanceCash: 0,
-        repaymentMonthDropdownOpen: false,
-        repaymentYearDropdownOpen: false,
-        repaymentMonths: [
-            { value: 1, name: 'January' },
-            { value: 2, name: 'February' },
-            { value: 3, name: 'March' },
-            { value: 4, name: 'April' },
-            { value: 5, name: 'May' },
-            { value: 6, name: 'June' },
-            { value: 7, name: 'July' },
-            { value: 8, name: 'August' },
-            { value: 9, name: 'September' },
-            { value: 10, name: 'October' },
-            { value: 11, name: 'November' },
-            { value: 12, name: 'December' }
-        ],
-        repaymentYears: Array.from({ length: 10 }, (_, i) => new Date().getFullYear() + i),
-        get repaymentSelectedMonthName() {
-            const month = this.repaymentMonths.find(m => m.value === this.repaymentSelectedMonth);
-            return month ? month.name : null;
-        },
-        get repaymentHasBalancePeriod() {
-            return this.repaymentSelectedMonth !== null && this.repaymentSelectedYear !== null;
-        },
-        async selectRepaymentMonth(month) {
-            this.repaymentSelectedMonth = month;
-            this.repaymentMonthDropdownOpen = false;
-            if (this.repaymentSelectedYear) {
-                await this.fetchRepaymentBalanceId();
-            }
-        },
-        async selectRepaymentYear(year) {
-            this.repaymentSelectedYear = year;
-            this.repaymentYearDropdownOpen = false;
-            if (this.repaymentSelectedMonth) {
-                await this.fetchRepaymentBalanceId();
-            }
-        },
-        async fetchRepaymentBalanceId() {
-            if (!this.repaymentSelectedMonth || !this.repaymentSelectedYear) return;
-            
-            try {
-                const response = await fetch(`/finance/balance/find-by-period?month=${this.repaymentSelectedMonth}&year=${this.repaymentSelectedYear}`, {
-                    headers: {
-                        'X-Requested-With': 'XMLHttpRequest',
-                        'Accept': 'application/json'
-                    }
-                });
-                const data = await response.json();
+        {{-- ==================== REPAYMENT MODAL (2-Step like New Loan) ==================== --}}
+    <div x-show="showRepaymentModal" x-cloak
+        @keydown.escape.window="showRepaymentModal = false; stopRpWebcam()"
+        x-data="{
+            rpBalanceMonth: null,
+            rpBalanceYear: null,
+            rpBalanceId: null,
+            rpBalanceTransfer: 0,
+            rpBalanceCash: 0,
+            rpPeriodValidated: false,
+            rpPeriodError: '',
+            rpIsValidating: false,
+            rpPaidDate: '',
+            rpPaymentMethod: '',
+            rpAmount: '',
+            rpNotes: '',
+            rpMonthDropdownOpen: false,
+            rpYearDropdownOpen: false,
+            rpPaymentMethodDropdownOpen: false,
+            rpBalanceMonthOptions: [
+                { value: 1, name: 'January' },
+                { value: 2, name: 'February' },
+                { value: 3, name: 'March' },
+                { value: 4, name: 'April' },
+                { value: 5, name: 'May' },
+                { value: 6, name: 'June' },
+                { value: 7, name: 'July' },
+                { value: 8, name: 'August' },
+                { value: 9, name: 'September' },
+                { value: 10, name: 'October' },
+                { value: 11, name: 'November' },
+                { value: 12, name: 'December' }
+            ],
+            rpYearOptions: Array.from({length: 5}, (_, i) => new Date().getFullYear() - 2 + i),
+            rpPaymentMethodOptions: [
+                { value: 'cash', name: 'Cash' },
+                { value: 'transfer', name: 'Transfer' }
+            ],
+            get rpSelectedMonthName() {
+                const month = this.rpBalanceMonthOptions.find(m => m.value === this.rpBalanceMonth);
+                return month ? month.name : null;
+            },
+            get rpSelectedPaymentMethod() {
+                return this.rpPaymentMethodOptions.find(o => o.value === this.rpPaymentMethod) || null;
+            },
+            rpSetToday() {
+                const now = new Date();
+                this.rpBalanceMonth = now.getMonth() + 1;
+                this.rpBalanceYear = now.getFullYear();
+            },
+            async rpValidatePeriod() {
+                if (!this.rpBalanceMonth || !this.rpBalanceYear) return;
                 
-                if (data.success && data.balance) {
-                    this.repaymentSelectedBalanceId = data.balance.id;
-                    this.repaymentBalanceTransfer = data.balance.transfer_balance;
-                    this.repaymentBalanceCash = data.balance.cash_balance;
-                } else {
-                    // Balance not found - set to 0, no error message
-                    this.repaymentSelectedBalanceId = null;
-                    this.repaymentBalanceTransfer = 0;
-                    this.repaymentBalanceCash = 0;
+                this.rpIsValidating = true;
+                this.rpPeriodError = '';
+                this.rpBalanceId = null;
+                this.rpBalanceTransfer = 0;
+                this.rpBalanceCash = 0;
+                
+                try {
+                    const response = await fetch(`/finance/balance/find-by-period?month=${this.rpBalanceMonth}&year=${this.rpBalanceYear}`, {
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest',
+                            'Accept': 'application/json'
+                        }
+                    });
+                    const data = await response.json();
+                    
+                    if (data.success && data.balance) {
+                        this.rpBalanceId = data.balance.id;
+                        this.rpBalanceTransfer = data.balance.transfer_balance;
+                        this.rpBalanceCash = data.balance.cash_balance;
+                    } else {
+                        this.rpBalanceId = null;
+                        this.rpBalanceTransfer = 0;
+                        this.rpBalanceCash = 0;
+                    }
+                    
+                    this.rpPeriodValidated = true;
+                    this.rpIsValidating = false;
+                } catch (error) {
+                    console.error('Error fetching balance:', error);
+                    this.rpPeriodError = 'Failed to fetch balance data. Please try again.';
+                    this.rpIsValidating = false;
                 }
-            } catch (error) {
-                console.error('Error fetching balance:', error);
-                this.repaymentSelectedBalanceId = null;
-                this.repaymentBalanceTransfer = 0;
-                this.repaymentBalanceCash = 0;
-            }
-        },
-        async startRepaymentWebcam() {
-            if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-                alert('Webcam tidak didukung di browser ini. Gunakan browser modern seperti Chrome atau Firefox.');
-                return;
-            }
-            
-            const isSecure = window.location.protocol === 'https:' || 
-                           window.location.hostname === 'localhost' || 
-                           window.location.hostname === '127.0.0.1';
-            
-            if (!isSecure) {
-                alert('WEBCAM HARUS PAKAI HTTPS! Akses dengan: https://berkah-production.test');
-                return;
-            }
-            
-            try {
-                this.stream = await navigator.mediaDevices.getUserMedia({ 
-                    video: {
-                        facingMode: this.facingMode,
-                        width: { ideal: 1280 },
-                        height: { ideal: 720 }
-                    } 
-                });
-                this.$refs.repaymentVideo.srcObject = this.stream;
-                this.showWebcam = true;
-            } catch (err) {
-                console.error('Webcam error:', err);
-                let errorMsg = 'Tidak dapat mengakses webcam. ';
-                if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
-                    errorMsg += 'Permission ditolak!';
-                } else if (err.name === 'NotFoundError') {
-                    errorMsg += 'Kamera tidak ditemukan!';
-                } else {
-                    errorMsg += err.message;
+            },
+            rpGoBackToStep1() {
+                this.rpPeriodValidated = false;
+                this.rpPeriodError = '';
+            },
+            rpSelectPaymentMethod(option) {
+                this.rpPaymentMethod = option.value;
+                this.rpPaymentMethodDropdownOpen = false;
+            },
+            rpStream: null,
+            rpShowWebcam: false,
+            rpImagePreview: null,
+            rpFileName: '',
+            rpIsMirrored: false,
+            rpFacingMode: 'environment',
+            async startRpWebcam() {
+                if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                    alert('Webcam tidak didukung di browser ini.');
+                    return;
                 }
-                alert(errorMsg);
+                const isSecure = window.location.protocol === 'https:' || window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+                if (!isSecure) { alert('WEBCAM HARUS PAKAI HTTPS!'); return; }
+                try {
+                    this.rpStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: this.rpFacingMode, width: { ideal: 1280 }, height: { ideal: 720 } } });
+                    this.$refs.rpVideo.srcObject = this.rpStream;
+                    this.rpShowWebcam = true;
+                } catch (err) { console.error('Webcam error:', err); alert('Tidak dapat mengakses webcam. ' + err.message); }
+            },
+            async toggleRpCamera() {
+                this.rpFacingMode = this.rpFacingMode === 'user' ? 'environment' : 'user';
+                this.rpIsMirrored = this.rpFacingMode === 'user';
+                if (this.rpStream) this.rpStream.getTracks().forEach(track => track.stop());
+                try {
+                    this.rpStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: this.rpFacingMode, width: { ideal: 1280 }, height: { ideal: 720 } } });
+                    this.$refs.rpVideo.srcObject = this.rpStream;
+                } catch (err) { alert('Gagal mengganti kamera. ' + err.message); }
+            },
+            stopRpWebcam() {
+                if (this.rpStream) { this.rpStream.getTracks().forEach(track => track.stop()); this.rpStream = null; }
+                this.rpShowWebcam = false;
+            },
+            captureRpPhoto() {
+                const video = this.$refs.rpVideo;
+                const canvas = this.$refs.rpCanvas;
+                const context = canvas.getContext('2d');
+                canvas.width = video.videoWidth;
+                canvas.height = video.videoHeight;
+                if (this.rpIsMirrored) { context.translate(canvas.width, 0); context.scale(-1, 1); }
+                context.drawImage(video, 0, 0, canvas.width, canvas.height);
+                canvas.toBlob((blob) => {
+                    const file = new File([blob], 'webcam_' + Date.now() + '.jpg', { type: 'image/jpeg' });
+                    const dataTransfer = new DataTransfer();
+                    dataTransfer.items.add(file);
+                    const fileInput = document.querySelector('input[name=repayment_proof_image]');
+                    if (fileInput) { fileInput.value = ''; fileInput.files = dataTransfer.files; }
+                    this.rpImagePreview = canvas.toDataURL('image/jpeg');
+                    this.rpFileName = file.name;
+                    this.stopRpWebcam();
+                }, 'image/jpeg', 0.95);
             }
-        },
-        async toggleRepaymentCamera() {
-            this.facingMode = this.facingMode === 'user' ? 'environment' : 'user';
-            this.isMirrored = this.facingMode === 'user';
-            
-            if (this.stream) {
-                this.stream.getTracks().forEach(track => track.stop());
-            }
-            
-            try {
-                this.stream = await navigator.mediaDevices.getUserMedia({ 
-                    video: { 
-                        facingMode: this.facingMode,
-                        width: { ideal: 1280 },
-                        height: { ideal: 720 }
-                    } 
-                });
-                this.$refs.repaymentVideo.srcObject = this.stream;
-            } catch (err) {
-                alert('Gagal mengganti kamera. Error: ' + err.message);
-            }
-        },
-        stopRepaymentWebcam() {
-            if (this.stream) {
-                this.stream.getTracks().forEach(track => track.stop());
-                this.stream = null;
-            }
-            this.showWebcam = false;
-        },
-        captureRepaymentPhoto() {
-            const video = this.$refs.repaymentVideo;
-            const canvas = this.$refs.repaymentCanvas;
-            const context = canvas.getContext('2d');
-            
-            canvas.width = video.videoWidth;
-            canvas.height = video.videoHeight;
-            
-            if (this.isMirrored) {
-                context.translate(canvas.width, 0);
-                context.scale(-1, 1);
-            }
-            
-            context.drawImage(video, 0, 0, canvas.width, canvas.height);
-            
-            canvas.toBlob((blob) => {
-                const file = new File([blob], 'webcam_' + Date.now() + '.jpg', { type: 'image/jpeg' });
-                const dataTransfer = new DataTransfer();
-                dataTransfer.items.add(file);
-                const fileInput = document.querySelector('input[name=repayment_proof_image]');
-                fileInput.files = dataTransfer.files;
-                this.imagePreview = canvas.toDataURL('image/jpeg');
-                this.fileName = file.name;
-                this.stopRepaymentWebcam();
-            }, 'image/jpeg', 0.95);
-        }
-    }"
-    @open-repayment-modal.window="
-        showRepaymentModal = true;
-        repaymentLoanId = $event.detail.id;
-        repaymentLoanCode = $event.detail.loan_balance_period;
-        repaymentLoanAmount = $event.detail.amount;
-        repaymentRemainingAmount = $event.detail.remaining_amount;
-        repaymentPaidDate = new Date().toISOString().split('T')[0];
-        repaymentPaymentMethod = '';
-        repaymentAmount = '';
-        repaymentNotes = '';
-        repaymentErrors = {};
-        imagePreview = null;
-        fileName = '';
-        repaymentSelectedBalanceId = null;
-        repaymentSelectedMonth = null;
-        repaymentSelectedYear = null;
-        repaymentBalanceTransfer = 0;
-        repaymentBalanceCash = 0;
-    "
-    x-show="showRepaymentModal"
-    @keydown.escape.window="showRepaymentModal = false; stopRepaymentWebcam()"
-    class="fixed inset-0 z-50 overflow-y-auto"
-    style="display: none;">
+        }"
+        x-init="
+            $watch('showRepaymentModal', value => {
+                if (value) {
+                    rpBalanceMonth = null;
+                    rpBalanceYear = null;
+                    rpBalanceId = null;
+                    rpBalanceTransfer = 0;
+                    rpBalanceCash = 0;
+                    rpPeriodValidated = false;
+                    rpPeriodError = '';
+                    rpIsValidating = false;
+                    rpPaidDate = new Date().toISOString().slice(0, 10);
+                    rpPaymentMethod = '';
+                    rpAmount = '';
+                    rpNotes = '';
+                    repaymentErrors = {};
+                    isSubmittingRepayment = false;
+                    rpImagePreview = null;
+                    rpFileName = '';
+                    rpShowWebcam = false;
+                    stopRpWebcam();
+                    const fileInput = document.querySelector('input[name=repayment_proof_image]');
+                    if (fileInput) fileInput.value = '';
+                }
+            })
+        "
+        class="fixed inset-0 z-50 overflow-y-auto"
+        style="display: none;">
         
         {{-- Background Overlay --}}
         <div class="fixed inset-0 bg-black/50 backdrop-blur-sm transition-opacity"></div>
         
         {{-- Modal Panel --}}
         <div class="fixed inset-0 flex items-center justify-center p-4">
-            <div @click.away="showRepaymentModal = false; stopRepaymentWebcam()" 
+            <div @click.away="showRepaymentModal = false; stopRpWebcam()" 
                  class="relative bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
                 
                 {{-- Modal Header --}}
-                <div class="flex items-center justify-between px-6 py-4 border-b border-gray-200">
-                    <h3 class="text-lg font-semibold text-gray-900">Loan Repayment</h3>
-                    <button @click="showRepaymentModal = false; stopRepaymentWebcam()" type="button"
+                <div class="sticky top-0 z-10 bg-white flex items-center justify-between px-6 py-4 border-b border-gray-200">
+                    <div>
+                        <h3 class="text-lg font-semibold text-gray-900">Loan Repayment</h3>
+                        <p class="text-xs text-gray-500 mt-0.5">Loan: <span x-text="repaymentLoanPeriod" class="font-medium"></span> &mdash; Remaining: <span class="text-red-600 font-semibold" x-text="'Rp ' + parseInt(repaymentRemaining).toLocaleString('id-ID')"></span></p>
+                    </div>
+                    <button @click="showRepaymentModal = false; stopRpWebcam()" type="button"
                         class="text-gray-400 hover:text-gray-600 cursor-pointer text-2xl leading-none">
                         ✕
                     </button>
                 </div>
 
-                {{-- Modal Body --}}
-                <div class="flex-1 overflow-y-auto px-6 py-6">
-                    {{-- Balance Period Selector (Always visible) --}}
-                    <div class="mb-6 p-4 bg-gradient-to-br from-primary/10 to-primary/20 rounded-xl border-2 border-primary/30">
-                        <label class="block text-sm font-semibold text-gray-900 mb-3">
-                            Select Balance Period <span class="text-red-600">*</span>
-                        </label>
-                        <div class="grid grid-cols-2 gap-3">
-                            {{-- Month Selector --}}
-                            <div class="relative">
-                                <button type="button" @click="repaymentMonthDropdownOpen = !repaymentMonthDropdownOpen"
-                                    class="w-full flex justify-between items-center rounded-lg border-2 border-primary/40 bg-white px-4 py-2.5 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary transition-all hover:border-primary">
-                                    <span x-text="repaymentSelectedMonthName || 'Select Month'"
-                                        :class="!repaymentSelectedMonthName ? 'text-gray-400' : 'text-gray-900'"></span>
-                                    <svg class="w-4 h-4 text-primary transition-transform" :class="repaymentMonthDropdownOpen && 'rotate-180'" fill="none"
-                                        stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-                                    </svg>
-                                </button>
-                                <div x-show="repaymentMonthDropdownOpen" @click.away="repaymentMonthDropdownOpen = false" x-cloak
-                                    x-transition:enter="transition ease-out duration-100"
-                                    x-transition:enter-start="opacity-0 scale-95" x-transition:enter-end="opacity-100 scale-100"
-                                    x-transition:leave="transition ease-in duration-75" x-transition:leave-start="opacity-100 scale-100"
-                                    x-transition:leave-end="opacity-0 scale-95"
-                                    class="fixed z-[100] mt-1 w-[200px] bg-white border-2 border-primary/30 rounded-lg shadow-2xl"
-                                    style="left: auto; top: auto;">
-                                    <ul class="max-h-60 overflow-y-auto py-1">
-                                        <template x-for="month in repaymentMonths" :key="month.value">
-                                            <li @click="selectRepaymentMonth(month.value)"
-                                                class="px-4 py-2 cursor-pointer text-sm text-gray-700 hover:bg-primary/10 transition-colors"
-                                                :class="{ 'bg-primary/20 font-semibold text-primary': repaymentSelectedMonth === month.value }">
-                                                <span x-text="month.name"></span>
-                                            </li>
-                                        </template>
-                                    </ul>
-                                </div>
-                            </div>
-
-                            {{-- Year Selector --}}
-                            <div class="relative">
-                                <button type="button" @click="repaymentYearDropdownOpen = !repaymentYearDropdownOpen"
-                                    class="w-full flex justify-between items-center rounded-lg border-2 border-primary/40 bg-white px-4 py-2.5 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary transition-all hover:border-primary">
-                                    <span x-text="repaymentSelectedYear || 'Select Year'"
-                                        :class="!repaymentSelectedYear ? 'text-gray-400' : 'text-gray-900'"></span>
-                                    <svg class="w-4 h-4 text-primary transition-transform" :class="repaymentYearDropdownOpen && 'rotate-180'" fill="none"
-                                        stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-                                    </svg>
-                                </button>
-                                <div x-show="repaymentYearDropdownOpen" @click.away="repaymentYearDropdownOpen = false" x-cloak
-                                    x-transition:enter="transition ease-out duration-100"
-                                    x-transition:enter-start="opacity-0 scale-95" x-transition:enter-end="opacity-100 scale-100"
-                                    x-transition:leave="transition ease-in duration-75" x-transition:leave-start="opacity-100 scale-100"
-                                    x-transition:leave-end="opacity-0 scale-95"
-                                    class="fixed z-[100] mt-1 w-[200px] bg-white border-2 border-primary/30 rounded-lg shadow-2xl"
-                                    style="left: auto; top: auto;">
-                                    <ul class="max-h-60 overflow-y-auto py-1">
-                                        <template x-for="year in repaymentYears" :key="year">
-                                            <li @click="selectRepaymentYear(year)"
-                                                class="px-4 py-2 cursor-pointer text-sm text-gray-700 hover:bg-primary/10 transition-colors"
-                                                :class="{ 'bg-primary/20 font-semibold text-primary': repaymentSelectedYear === year }">
-                                                <span x-text="year"></span>
-                                            </li>
-                                        </template>
-                                    </ul>
-                                </div>
-                            </div>
+                {{-- Step 1: Period Selection (non-scrollable) --}}
+                <div x-show="!rpPeriodValidated" class="px-6 py-5 border-b border-gray-200 flex-shrink-0">
+                    <div class="text-center mb-5">
+                        <div class="w-14 h-14 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-3">
+                            <svg class="w-7 h-7 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                            </svg>
                         </div>
-                        <p class="mt-2 text-xs text-primary font-medium" x-show="repaymentHasBalancePeriod">
-                            <span class="font-semibold">Selected:</span> <span x-text="repaymentSelectedMonthName + ' ' + repaymentSelectedYear"></span>
-                        </p>
+                        <h4 class="text-base font-semibold text-gray-900">Select Balance Period</h4>
+                        <p class="text-sm text-gray-500 mt-1">Choose which balance to use for repayment</p>
                     </div>
 
-                    {{-- Content shown only after Balance Period is selected --}}
-                    <div x-show="repaymentHasBalancePeriod" x-transition:enter="transition ease-out duration-200"
-                        x-transition:enter-start="opacity-0 transform scale-95"
-                        x-transition:enter-end="opacity-100 transform scale-100">
-                        
-                        {{-- 4 Cards: Transfer, Cash, Loan Amount, Remaining --}}
-                        <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
-                            {{-- Transfer Balance --}}
-                            <div class="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-3 border border-blue-200">
-                                <p class="text-xs text-blue-600 font-medium mb-1">Transfer Balance</p>
-                                <p class="text-base font-bold text-blue-900" x-text="'Rp ' + parseInt(repaymentBalanceTransfer).toLocaleString('id-ID')"></p>
+                    <div class="space-y-4">
+                        <div class="grid grid-cols-2 gap-3">
+                            {{-- Month --}}
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Month</label>
+                                <div class="relative">
+                                    <button type="button" @click="rpMonthDropdownOpen = !rpMonthDropdownOpen"
+                                        class="w-full flex justify-between items-center rounded-md border border-gray-200 px-4 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:border-primary focus:ring-primary/20 transition-colors cursor-pointer">
+                                        <span x-text="rpSelectedMonthName || 'Select Month'"
+                                            :class="!rpSelectedMonthName ? 'text-gray-400' : 'text-gray-900'"></span>
+                                        <svg class="w-4 h-4 text-gray-400 transition-transform" :class="rpMonthDropdownOpen && 'rotate-180'" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                                        </svg>
+                                    </button>
+                                    <div x-show="rpMonthDropdownOpen" @click.away="rpMonthDropdownOpen = false" x-cloak
+                                        x-transition
+                                        class="absolute z-20 mt-1 w-full bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-y-auto">
+                                        <div class="py-1">
+                                            <template x-for="m in rpBalanceMonthOptions" :key="m.value">
+                                                <button type="button" @click="rpBalanceMonth = m.value; rpMonthDropdownOpen = false"
+                                                    :class="rpBalanceMonth === m.value ? 'bg-primary/10 text-primary font-medium' : 'text-gray-700 hover:bg-gray-50'"
+                                                    class="w-full text-left px-4 py-2 text-sm transition-colors cursor-pointer"
+                                                    x-text="m.name">
+                                                </button>
+                                            </template>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
-                            {{-- Cash Balance --}}
-                            <div class="bg-gradient-to-br from-green-50 to-green-100 rounded-xl p-3 border border-green-200">
-                                <p class="text-xs text-green-600 font-medium mb-1">Cash Balance</p>
-                                <p class="text-base font-bold text-green-900" x-text="'Rp ' + parseInt(repaymentBalanceCash).toLocaleString('id-ID')"></p>
-                            </div>
-                            {{-- Loan Amount --}}
-                            <div class="bg-gradient-to-br from-indigo-50 to-indigo-100 rounded-xl p-3 border border-indigo-200">
-                                <p class="text-xs text-indigo-600 font-medium mb-1">Loan Amount</p>
-                                <p class="text-base font-bold text-indigo-900" x-text="'Rp ' + parseInt(repaymentLoanAmount).toLocaleString('id-ID')"></p>
-                            </div>
-                            {{-- Remaining --}}
-                            <div class="bg-gradient-to-br from-orange-50 to-orange-100 rounded-xl p-3 border border-orange-200">
-                                <p class="text-xs text-orange-600 font-medium mb-1">Remaining</p>
-                                <p class="text-base font-bold text-orange-900" x-text="'Rp ' + parseInt(repaymentRemainingAmount).toLocaleString('id-ID')"></p>
+
+                            {{-- Year --}}
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Year</label>
+                                <div class="relative">
+                                    <button type="button" @click="rpYearDropdownOpen = !rpYearDropdownOpen"
+                                        class="w-full flex justify-between items-center rounded-md border border-gray-200 px-4 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:border-primary focus:ring-primary/20 transition-colors cursor-pointer">
+                                        <span x-text="rpBalanceYear || 'Select Year'"
+                                            :class="!rpBalanceYear ? 'text-gray-400' : 'text-gray-900'"></span>
+                                        <svg class="w-4 h-4 text-gray-400 transition-transform" :class="rpYearDropdownOpen && 'rotate-180'" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                                        </svg>
+                                    </button>
+                                    <div x-show="rpYearDropdownOpen" @click.away="rpYearDropdownOpen = false" x-cloak
+                                        x-transition
+                                        class="absolute z-20 mt-1 w-full bg-white border border-gray-200 rounded-md shadow-lg max-h-48 overflow-y-auto">
+                                        <div class="py-1">
+                                            <template x-for="y in rpYearOptions" :key="y">
+                                                <button type="button" @click="rpBalanceYear = y; rpYearDropdownOpen = false"
+                                                    :class="rpBalanceYear === y ? 'bg-primary/10 text-primary font-medium' : 'text-gray-700 hover:bg-gray-50'"
+                                                    class="w-full text-left px-4 py-2 text-sm transition-colors cursor-pointer"
+                                                    x-text="y">
+                                                </button>
+                                            </template>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
 
-                    <form id="repaymentLoanForm" @submit.prevent="
+                        {{-- Today Button --}}
+                        <button type="button" @click="rpSetToday()"
+                            class="w-full flex items-center justify-center gap-2 px-4 py-2 border border-primary text-primary hover:bg-primary/5 rounded-lg text-sm font-medium transition-colors cursor-pointer">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                            </svg>
+                            Today
+                        </button>
+
+                        <template x-if="rpPeriodError">
+                            <div class="p-3 bg-red-50 border border-red-200 rounded-lg">
+                                <div class="flex items-start gap-2">
+                                    <svg class="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                    </svg>
+                                    <p class="text-sm text-red-700 font-medium" x-text="rpPeriodError"></p>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+
+                {{-- Step 2: Repayment Form (scrollable) --}}
+                <div x-show="rpPeriodValidated" class="flex-1 overflow-y-auto px-6 py-6">
+                    <form id="addRepaymentForm" x-ref="addRepaymentForm" @submit.prevent="
                         repaymentErrors = {};
-                        let hasValidationError = false;
+                        let hasError = false;
 
-                        // Validate balance period
-                        if (!repaymentSelectedBalanceId) {
-                            window.dispatchEvent(new CustomEvent('show-toast', {
-                                detail: { message: 'Please select a valid balance period first', type: 'error' }
-                            }));
-                            return;
-                        }
-
-                        // Validate payment method
-                        if (!repaymentPaymentMethod) {
+                        if (!rpPaymentMethod) {
                             repaymentErrors.payment_method = ['Payment method is required'];
-                            hasValidationError = true;
+                            hasError = true;
                         }
 
-                        // Validate amount
-                        const amountValue = repaymentAmount.replace(/[^0-9]/g, '');
+                        const amountValue = rpAmount.replace(/[^0-9]/g, '');
                         if (!amountValue || parseInt(amountValue) < 1) {
                             repaymentErrors.amount = ['Amount is required and must be at least Rp 1'];
-                            hasValidationError = true;
-                        } else if (parseInt(amountValue) > parseInt(repaymentRemainingAmount)) {
-                            repaymentErrors.amount = ['Amount cannot exceed remaining amount (Rp ' + parseInt(repaymentRemainingAmount).toLocaleString('id-ID') + ')'];
-                            hasValidationError = true;
+                            hasError = true;
+                        } else if (parseInt(amountValue) > repaymentRemaining) {
+                            repaymentErrors.amount = ['Amount cannot exceed remaining: Rp ' + parseInt(repaymentRemaining).toLocaleString('id-ID')];
+                            hasError = true;
                         }
 
-                        if (hasValidationError) {
-                            return;
-                        }
+                        if (hasError) return;
 
                         isSubmittingRepayment = true;
                         const formData = new FormData();
-                        formData.append('balance_id', repaymentSelectedBalanceId);
-                        formData.append('paid_date', repaymentPaidDate);
-                        formData.append('payment_method', repaymentPaymentMethod);
+                        formData.append('_token', '{{ csrf_token() }}');
+                        formData.append('balance_id', rpBalanceId);
+                        formData.append('paid_date', rpPaidDate);
+                        formData.append('payment_method', rpPaymentMethod);
                         formData.append('amount', amountValue);
-                        formData.append('notes', repaymentNotes);
-                        
-                        if (imagePreview && fileName) {
-                            const fileInput = document.querySelector('input[name=repayment_proof_image]');
-                            if (fileInput && fileInput.files[0]) {
-                                formData.append('proof_image', fileInput.files[0]);
-                            }
+                        formData.append('notes', rpNotes || '');
+
+                        const fileInput = document.querySelector('input[name=repayment_proof_image]');
+                        if (fileInput && fileInput.files[0]) {
+                            formData.append('proof_image', fileInput.files[0]);
                         }
-                        
-                        fetch(`/finance/loan-capital/${repaymentLoanId}/repayment`, {
+
+                        fetch('/finance/loan-capital/' + repaymentLoanId + '/repayment', {
                             method: 'POST',
-                            headers: {
-                                'X-CSRF-TOKEN': '{{ csrf_token() }}',
-                                'Accept': 'application/json',
-                                'X-Requested-With': 'XMLHttpRequest'
-                            },
-                            body: formData
+                            body: formData,
+                            headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' }
                         })
                         .then(async res => {
                             const data = await res.json();
@@ -2194,7 +1506,7 @@
                         })
                         .then(({ status, ok, data }) => {
                             if (ok && data.success) {
-                                sessionStorage.setItem('toast_message', data.message || 'Repayment recorded successfully!');
+                                sessionStorage.setItem('toast_message', data.message || 'Repayment recorded successfully');
                                 sessionStorage.setItem('toast_type', 'success');
                                 window.location.reload();
                             } else if (status === 422) {
@@ -2212,219 +1524,427 @@
                         })
                         .catch(err => {
                             isSubmittingRepayment = false;
-                            console.error('Repayment error:', err);
-                            window.dispatchEvent(new CustomEvent('show-toast', {
-                                detail: { message: 'Failed to record repayment. Please try again.', type: 'error' }
-                            }));
+                            repaymentErrors = { amount: ['Network error. Please try again.'] };
                         });
                     ">
-                        <div class="space-y-4">
-                            {{-- Paid Date & Payment Method (Row) --}}
-                            <div class="grid grid-cols-2 gap-3">
-                                {{-- Paid Date (Locked) --}}
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700 mb-1">
-                                        Paid Date <span class="text-red-600">*</span>
-                                    </label>
-                                    <input type="date" x-model="repaymentPaidDate" readonly
-                                        class="w-full rounded-md px-4 py-2 text-sm border border-gray-200 bg-gray-50 text-gray-600 cursor-not-allowed pointer-events-none">
-                                </div>
-
-                                {{-- Payment Method Dropdown --}}
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700 mb-1">
-                                        Payment Method <span class="text-red-600">*</span>
-                                    </label>
-                                    <div class="relative">
-                                        <button type="button" @click="repaymentDropdownOpen = !repaymentDropdownOpen"
-                                            :class="repaymentErrors.payment_method ? 'border-red-500 focus:border-red-500 focus:ring-red-200' : 'border-gray-200 focus:border-primary focus:ring-primary/20'"
-                                            class="w-full flex justify-between items-center rounded-md border px-4 py-2 text-sm bg-white focus:outline-none focus:ring-2 transition-colors">
-                                            <span x-text="repaymentSelectedPaymentOption ? repaymentSelectedPaymentOption.name : 'Select Method'"
-                                                :class="!repaymentSelectedPaymentOption ? 'text-gray-400' : 'text-gray-500'"></span>
-                                            <svg class="w-4 h-4 text-gray-400 transition-transform" :class="repaymentDropdownOpen && 'rotate-180'" fill="none"
-                                                stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-                                            </svg>
-                                        </button>
-                                        <div x-show="repaymentDropdownOpen" @click.away="repaymentDropdownOpen = false" x-cloak
-                                            x-transition:enter="transition ease-out duration-100"
-                                            x-transition:enter-start="opacity-0 scale-95" x-transition:enter-end="opacity-100 scale-100"
-                                            x-transition:leave="transition ease-in duration-75" x-transition:leave-start="opacity-100 scale-100"
-                                            x-transition:leave-end="opacity-0 scale-95"
-                                            class="absolute z-20 mt-1 w-full bg-white border border-gray-200 rounded-md shadow-lg">
-                                            <ul class="max-h-60 overflow-y-auto py-1">
-                                                <template x-for="option in repaymentPaymentOptions" :key="option.value">
-                                                    <li @click="selectRepaymentPayment(option)"
-                                                        class="px-4 py-2 cursor-pointer text-sm text-gray-700 hover:bg-primary/5 transition-colors"
-                                                        :class="{ 'bg-primary/10 font-medium text-primary': repaymentPaymentMethod === option.value }">
-                                                        <span x-text="option.name"></span>
-                                                    </li>
-                                                </template>
-                                            </ul>
-                                        </div>
-                                    </div>
-                                    <template x-if="repaymentErrors.payment_method">
-                                        <p class="mt-1 text-xs text-red-600" x-text="repaymentErrors.payment_method[0]"></p>
-                                    </template>
-                                </div>
-                            </div>
-
-                            {{-- Amount --}}
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-1">
-                                    Amount <span class="text-red-600">*</span>
-                                </label>
-                                <div class="relative">
-                                    <span class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 font-medium text-sm">Rp</span>
-                                    <input type="text" x-model="repaymentAmount"
-                                        @input="repaymentAmount = $event.target.value.replace(/[^0-9]/g, '').replace(/\B(?=(\d{3})+(?!\d))/g, '.'); delete repaymentErrors.amount"
-                                        placeholder="0"
-                                        :class="repaymentErrors.amount ? 'border-red-500 focus:border-red-500 focus:ring-red-200' : 'border-gray-200 focus:border-primary focus:ring-primary/20'"
-                                        class="w-full pl-12 pr-4 py-2 text-sm rounded-md border focus:outline-none focus:ring-2 transition-all">
-                                </div>
-                                <template x-if="repaymentErrors.amount">
-                                    <p class="mt-1 text-xs text-red-600" x-text="repaymentErrors.amount[0]"></p>
-                                </template>
-                            </div>
-
-                            {{-- Notes --}}
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-1">Notes</label>
-                                <textarea x-model="repaymentNotes" rows="3"
-                                    placeholder="Optional notes about this repayment..."
-                                    class="w-full px-4 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all resize-none"></textarea>
-                            </div>
-
-                            {{-- Proof Image - OPEN CAM ONLY --}}
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-1">Proof of Payment</label>
+                        <div class="space-y-5">
+                            <div x-transition:enter="transition ease-out duration-200"
+                                x-transition:enter-start="opacity-0 transform scale-95"
+                                x-transition:enter-end="opacity-100 transform scale-100">
                                 
-                                {{-- Webcam Section --}}
-                                <div x-show="showWebcam" class="mb-3">
-                                    <div class="relative bg-black rounded-xl overflow-hidden shadow-xl" style="height: 320px;">
-                                        <video x-ref="repaymentVideo" autoplay playsinline 
-                                            :class="{ 'scale-x-[-1]': isMirrored }"
-                                            class="w-full h-full object-cover"></video>
-                                        <canvas x-ref="repaymentCanvas" class="hidden"></canvas>
-                                    </div>
-                                    <div class="flex gap-2 mt-3">
-                                        <button type="button" @click="captureRepaymentPhoto()"
-                                        class="flex-1 px-3 py-2 text-sm bg-primary text-white rounded-md hover:bg-primary-dark transition-colors flex items-center justify-center gap-2">
-                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
-                                            </svg>
-                                            Capture
-                                        </button>
-                                        <button type="button" @click="toggleRepaymentCamera()"
-                                        class="px-3 py-2 text-sm bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors">
-                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7h12m0 0l-4-4m4 4l-4 4M16 17H4m0 0l4-4m-4 4l4 4" />
-                                            </svg>
-                                        </button>
-                                        <button type="button" @click="stopRepaymentWebcam()"
-                                        class="px-3 py-2 text-sm bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors flex items-center gap-1">
-                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                                            </svg>
-                                            Close
-                                        </button>
-                                    </div>
-                                </div>
-
-                                {{-- Image Preview --}}
-                                <div x-show="imagePreview && !showWebcam" class="mb-3 border-2 border-dashed border-green-400 rounded-lg p-3 bg-green-50">
-                                    <div class="flex items-center gap-3">
-                                        <img :src="imagePreview" class="w-24 h-24 object-cover rounded-md border-2 border-green-500">
-                                        <div class="flex-1">
-                                            <p class="text-sm font-medium text-gray-900" x-text="fileName"></p>
-                                            <p class="text-xs text-green-600 mt-1">✓ Image ready to upload</p>
+                                <div class="space-y-4">
+                                    {{-- Balance Period Card --}}
+                                    <div class="p-4 bg-gradient-to-br from-primary/10 to-primary/20 rounded-xl border-2 border-primary/30">
+                                        <div class="flex items-center justify-between">
+                                            <div>
+                                                <label class="block text-sm font-semibold text-gray-900 mb-2">Balance Period</label>
+                                                <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white border border-primary/40 text-primary font-semibold text-sm">
+                                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                                    </svg>
+                                                    <span x-text="rpSelectedMonthName + ' ' + rpBalanceYear"></span>
+                                                </span>
+                                            </div>
+                                            <button type="button" @click="rpGoBackToStep1()"
+                                                class="text-sm text-primary hover:text-primary-dark font-medium flex items-center gap-1 cursor-pointer">
+                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+                                                </svg>
+                                                Change
+                                            </button>
                                         </div>
-                                        <button type="button" @click="imagePreview = null; fileName = ''; document.querySelector('input[name=repayment_proof_image]').value = ''; startRepaymentWebcam()"
-                                            class="text-blue-600 hover:text-blue-700 p-1" title="Retake photo">
-                                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                                            </svg>
-                                        </button>
-                                        <button type="button" @click="imagePreview = null; fileName = ''; document.querySelector('input[name=repayment_proof_image]').value = ''"
-                                            class="text-red-600 hover:text-red-700 p-1" title="Delete photo">
-                                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                            </svg>
-                                        </button>
+                                    </div>
+
+                                    {{-- Balance Cards --}}
+                                    <div class="grid grid-cols-2 gap-3">
+                                        <div class="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-3 border border-blue-200">
+                                            <p class="text-xs text-blue-600 font-medium mb-1">Transfer Balance</p>
+                                            <p class="text-base font-bold text-blue-900" x-text="'Rp ' + parseInt(rpBalanceTransfer).toLocaleString('id-ID')"></p>
+                                        </div>
+                                        <div class="bg-gradient-to-br from-green-50 to-green-100 rounded-xl p-3 border border-green-200">
+                                            <p class="text-xs text-green-600 font-medium mb-1">Cash Balance</p>
+                                            <p class="text-base font-bold text-green-900" x-text="'Rp ' + parseInt(rpBalanceCash).toLocaleString('id-ID')"></p>
+                                        </div>
+                                    </div>
+
+                                    {{-- Paid Date --}}
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">
+                                            Paid Date <span class="text-red-600">*</span>
+                                        </label>
+                                        <input type="date" x-model="rpPaidDate"
+                                            class="w-full rounded-md border border-gray-200 px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:border-primary focus:ring-primary/20 transition-colors">
+                                    </div>
+
+                                    {{-- Payment Method --}}
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">
+                                            Payment Method <span class="text-red-600">*</span>
+                                        </label>
+                                        <div class="relative">
+                                            <button type="button" @click="rpPaymentMethodDropdownOpen = !rpPaymentMethodDropdownOpen"
+                                                :class="repaymentErrors.payment_method ? 'border-red-500 focus:border-red-500 focus:ring-red-200' : 'border-gray-200 focus:border-primary focus:ring-primary/20'"
+                                                class="w-full flex justify-between items-center rounded-md border px-4 py-2 text-sm bg-white focus:outline-none focus:ring-2 transition-colors cursor-pointer">
+                                                <span x-text="rpSelectedPaymentMethod ? rpSelectedPaymentMethod.name : 'Select Payment Method'"
+                                                    :class="!rpSelectedPaymentMethod ? 'text-gray-400' : 'text-gray-900'"></span>
+                                                <svg class="w-4 h-4 text-gray-400 transition-transform" :class="rpPaymentMethodDropdownOpen && 'rotate-180'" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                                                </svg>
+                                            </button>
+                                            <div x-show="rpPaymentMethodDropdownOpen" @click.away="rpPaymentMethodDropdownOpen = false" x-cloak
+                                                x-transition:enter="transition ease-out duration-100"
+                                                x-transition:enter-start="opacity-0 scale-95"
+                                                x-transition:enter-end="opacity-100 scale-100"
+                                                x-transition:leave="transition ease-in duration-75"
+                                                x-transition:leave-start="opacity-100 scale-100"
+                                                x-transition:leave-end="opacity-0 scale-95"
+                                                class="absolute z-10 mt-1 w-full bg-white border border-gray-200 rounded-md shadow-lg">
+                                                <div class="py-1">
+                                                    <template x-for="method in rpPaymentMethodOptions" :key="method.value">
+                                                        <button type="button" @click="rpSelectPaymentMethod(method)"
+                                                            :class="rpPaymentMethod === method.value ? 'bg-primary/10 text-primary font-medium' : 'text-gray-700 hover:bg-gray-50'"
+                                                            class="w-full text-left px-4 py-2 text-sm transition-colors cursor-pointer"
+                                                            x-text="method.name">
+                                                        </button>
+                                                    </template>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <template x-if="repaymentErrors.payment_method">
+                                            <p class="mt-1 text-xs text-red-600" x-text="repaymentErrors.payment_method[0]"></p>
+                                        </template>
+                                    </div>
+
+                                    {{-- Amount --}}
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">
+                                            Repayment Amount <span class="text-red-600">*</span>
+                                        </label>
+                                        <div class="relative">
+                                            <span class="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-gray-500">Rp</span>
+                                            <input type="text" x-model="rpAmount"
+                                                @input="rpAmount = rpAmount.replace(/[^0-9]/g, '').replace(/\B(?=(\d{3})+(?!\d))/g, '.')"
+                                                :class="repaymentErrors.amount ? 'border-red-500 focus:border-red-500 focus:ring-red-200' : 'border-gray-200 focus:border-primary focus:ring-primary/20'"
+                                                class="w-full rounded-md border pl-10 pr-4 py-2 text-sm focus:outline-none focus:ring-2 transition-colors"
+                                                placeholder="0">
+                                        </div>
+                                        <p class="mt-1 text-xs text-gray-500">Max: <span class="font-medium text-red-600" x-text="'Rp ' + parseInt(repaymentRemaining).toLocaleString('id-ID')"></span></p>
+                                        <template x-if="repaymentErrors.amount">
+                                            <p class="mt-1 text-xs text-red-600" x-text="repaymentErrors.amount[0]"></p>
+                                        </template>
+                                    </div>
+
+                                    {{-- Proof of Payment - Webcam --}}
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">
+                                            Proof of Payment <span class="text-xs text-gray-400">(optional)</span>
+                                        </label>
+                                        
+                                        {{-- Webcam Section --}}
+                                        <div x-show="rpShowWebcam" class="mb-3">
+                                            <div class="relative bg-black rounded-xl overflow-hidden shadow-xl" style="height: 320px;">
+                                                <video x-ref="rpVideo" autoplay playsinline 
+                                                    :class="{ 'scale-x-[-1]': rpIsMirrored }"
+                                                    class="w-full h-full object-cover"></video>
+                                                <canvas x-ref="rpCanvas" class="hidden"></canvas>
+                                            </div>
+                                            <div class="flex gap-2 mt-3">
+                                                <button type="button" @click="captureRpPhoto()"
+                                                class="flex-1 px-3 py-2 text-sm bg-primary text-white rounded-md hover:bg-primary-dark transition-colors flex items-center justify-center gap-2 cursor-pointer">
+                                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                                                    </svg>
+                                                    Capture
+                                                </button>
+                                                <button type="button" @click="toggleRpCamera()"
+                                                class="px-3 py-2 text-sm bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors cursor-pointer">
+                                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7h12m0 0l-4-4m4 4l-4 4M16 17H4m0 0l4-4m-4 4l4 4" />
+                                                    </svg>
+                                                </button>
+                                                <button type="button" @click="stopRpWebcam()"
+                                                class="px-3 py-2 text-sm bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors flex items-center gap-1 cursor-pointer">
+                                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                                                    </svg>
+                                                    Close
+                                                </button>
+                                            </div>
+                                        </div>
+
+                                        {{-- Image Preview --}}
+                                        <div x-show="rpImagePreview && !rpShowWebcam" class="mb-3 border-2 border-dashed border-green-400 rounded-lg p-3 bg-green-50">
+                                            <div class="flex items-center gap-3">
+                                                <img :src="rpImagePreview" class="w-24 h-24 object-cover rounded-md border-2 border-green-500">
+                                                <div class="flex-1">
+                                                    <p class="text-sm font-medium text-gray-900" x-text="rpFileName"></p>
+                                                    <p class="text-xs text-green-600 mt-1">✓ Image ready to upload</p>
+                                                </div>
+                                                <button type="button" @click="rpImagePreview = null; rpFileName = ''; document.querySelector('input[name=repayment_proof_image]').value = ''; startRpWebcam()"
+                                                    class="text-blue-600 hover:text-blue-700 p-1 cursor-pointer" title="Retake photo">
+                                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                                    </svg>
+                                                </button>
+                                                <button type="button" @click="rpImagePreview = null; rpFileName = ''; document.querySelector('input[name=repayment_proof_image]').value = ''"
+                                                    class="text-red-600 hover:text-red-700 p-1 cursor-pointer" title="Delete photo">
+                                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                                    </svg>
+                                                </button>
+                                            </div>
+                                        </div>
+
+                                        {{-- Open Camera Button --}}
+                                        <div x-show="!rpImagePreview && !rpShowWebcam">
+                                            <button type="button" @click="startRpWebcam()"
+                                            class="w-full px-4 py-3 text-sm border-2 border-dashed border-gray-300 rounded-md hover:border-primary hover:bg-primary/5 transition-all flex items-center justify-center gap-2 text-gray-700 cursor-pointer">
+                                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                                                </svg>
+                                                Open Camera
+                                            </button>
+                                        </div>
+                                        <input type="file" name="repayment_proof_image" accept="image/*" class="hidden">
+                                        <template x-if="repaymentErrors.proof_image">
+                                            <p class="mt-1 text-xs text-red-600" x-text="repaymentErrors.proof_image[0]"></p>
+                                        </template>
+                                    </div>
+
+                                    {{-- Notes --}}
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">Notes</label>
+                                        <textarea x-model="rpNotes" rows="3"
+                                            class="w-full rounded-md border border-gray-200 px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:border-primary focus:ring-primary/20 transition-colors resize-none"
+                                            placeholder="Optional notes..."></textarea>
                                     </div>
                                 </div>
-
-                                {{-- Open Camera Button --}}
-                                <div x-show="!imagePreview && !showWebcam">
-                                    <button type="button" @click="startRepaymentWebcam()"
-                                    class="w-full px-4 py-3 text-sm border-2 border-dashed border-gray-300 rounded-md hover:border-primary hover:bg-primary/5 transition-all flex items-center justify-center gap-2 text-gray-700">
-                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
-                                        </svg>
-                                        Open Camera
-                                    </button>
-                                </div>
-                                <input type="file" name="repayment_proof_image" accept="image/*" class="hidden">
                             </div>
                         </div>
                     </form>
-                    </div>
                 </div>
 
                 {{-- Modal Footer --}}
-                <div class="flex items-center justify-end gap-3 px-6 py-4 border-t border-gray-200 bg-gray-50">
-                    <button @click="showRepaymentModal = false; stopRepaymentWebcam()" type="button"
-                        class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
+                <div class="sticky bottom-0 bg-white border-t border-gray-200 px-6 py-4 flex gap-3">
+                    <button type="button" @click="showRepaymentModal = false; stopRpWebcam()"
+                        class="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium transition-colors cursor-pointer">
                         Cancel
                     </button>
-                    <button type="submit" form="repaymentLoanForm"
-                        :disabled="isSubmittingRepayment || !repaymentHasBalancePeriod"
-                        class="px-4 py-2 text-sm font-medium text-white bg-primary rounded-lg hover:bg-primary-dark disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2">
-                        <template x-if="isSubmittingRepayment">
-                            <svg class="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    {{-- Step 1: Continue --}}
+                    <button x-show="!rpPeriodValidated" type="button" @click="rpValidatePeriod()"
+                        :disabled="!rpBalanceMonth || !rpBalanceYear || rpIsValidating"
+                        :class="(!rpBalanceMonth || !rpBalanceYear || rpIsValidating) ? 'opacity-50 cursor-not-allowed' : 'hover:bg-primary-dark cursor-pointer'"
+                        class="flex-1 px-4 py-2 bg-primary text-white rounded-lg font-medium transition-colors flex items-center justify-center gap-2">
+                        <template x-if="rpIsValidating">
+                            <svg class="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
                                 <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                                 <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                             </svg>
                         </template>
-                        <span x-text="isSubmittingRepayment ? 'Recording...' : 'Record Repayment'"></span>
+                        <span x-text="rpIsValidating ? 'Loading...' : 'Continue'"></span>
+                    </button>
+                    {{-- Step 2: Save --}}
+                    <button x-show="rpPeriodValidated" type="submit" form="addRepaymentForm" :disabled="isSubmittingRepayment"
+                        :class="isSubmittingRepayment ? 'opacity-50 cursor-not-allowed' : 'hover:bg-primary-dark cursor-pointer'"
+                        class="flex-1 px-4 py-2 bg-primary text-white rounded-lg font-medium transition-colors flex items-center justify-center gap-2">
+                        <template x-if="isSubmittingRepayment">
+                            <svg class="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                        </template>
+                        <span x-text="isSubmittingRepayment ? 'Processing...' : 'Save Repayment'"></span>
                     </button>
                 </div>
             </div>
         </div>
     </div>
 
-    {{-- ================= IMAGE MODAL (OUTSIDE ROOT DIV) ================= --}}
-    <div x-data="{ showImageModal: false, selectedImage: '' }"
-         @open-image-modal.window="showImageModal = true; selectedImage = $event.detail.url"
-         x-show="showImageModal"
-         class="fixed inset-0 z-[60]">
+    {{-- ==================== SHOW DETAIL MODAL ==================== --}}
+    <div x-show="showDetailModal" x-cloak
+        @keydown.escape.window="showDetailModal = false"
+        class="fixed inset-0 z-50 overflow-y-auto"
+        style="display: none;">
         
-        {{-- Background Overlay --}}
-        <div @click="showImageModal = false; selectedImage = ''" class="fixed inset-0 bg-black/50 backdrop-blur-sm transition-opacity"></div>
+        <div class="fixed inset-0 bg-black/50 backdrop-blur-sm transition-opacity"></div>
         
-        {{-- Modal Panel --}}
         <div class="fixed inset-0 flex items-center justify-center p-4">
-            <div @click.stop class="relative max-w-3xl w-full flex justify-center items-center" style="max-height: calc(100vh - 6rem);">
-                <button @click="showImageModal = false; selectedImage = ''" class="absolute -top-10 right-0 text-white hover:text-gray-300 z-10">
-                    <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                </button>
-                <img :src="selectedImage" class="max-w-full max-h-full rounded-lg shadow-2xl object-contain" style="max-height: calc(100vh - 10rem);" alt="Loan proof">
+            <div @click.away="showDetailModal = false" 
+                 class="relative bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
+                
+                {{-- Header --}}
+                <div class="sticky top-0 z-10 bg-white flex items-center justify-between px-6 py-4 border-b border-gray-200">
+                    <h3 class="text-lg font-semibold text-gray-900">Loan Detail</h3>
+                    <button @click="showDetailModal = false" type="button"
+                        class="text-gray-400 hover:text-gray-600 cursor-pointer text-2xl leading-none">
+                        ✕
+                    </button>
+                </div>
+
+                {{-- Body --}}
+                <div class="flex-1 overflow-y-auto px-6 py-6" x-show="detailLoan">
+                    <div class="space-y-5">
+                        {{-- Loan Info Grid --}}
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <p class="text-xs text-gray-500 mb-1">Balance Period</p>
+                                <p class="text-sm font-semibold text-gray-900" x-text="detailLoan?.balance_period"></p>
+                            </div>
+                            <div>
+                                <p class="text-xs text-gray-500 mb-1">Loan Date</p>
+                                <p class="text-sm font-semibold text-gray-900" x-text="detailLoan?.loan_date"></p>
+                            </div>
+                            <div>
+                                <p class="text-xs text-gray-500 mb-1">Payment Method</p>
+                                <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold"
+                                    :class="detailLoan?.payment_method === 'cash' ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'"
+                                    x-text="detailLoan?.payment_method?.toUpperCase()"></span>
+                            </div>
+                            <div>
+                                <p class="text-xs text-gray-500 mb-1">Status</p>
+                                <span class="px-2 py-1 rounded-full text-[10px] font-semibold"
+                                    :class="detailLoan?.status === 'outstanding' ? 'bg-yellow-100 text-yellow-800' : 'bg-green-100 text-green-800'"
+                                    x-text="detailLoan?.status === 'outstanding' ? 'OUTSTANDING' : 'PAID OFF'"></span>
+                            </div>
+                        </div>
+
+                        {{-- Amount Cards --}}
+                        <div class="grid grid-cols-3 gap-3">
+                            <div class="bg-gray-50 rounded-xl p-3 border border-gray-200 text-center">
+                                <p class="text-xs text-gray-500 mb-1">Loan Amount</p>
+                                <p class="text-sm font-bold text-gray-900" x-text="'Rp ' + parseInt(detailLoan?.loan_amount || 0).toLocaleString('id-ID')"></p>
+                            </div>
+                            <div class="bg-green-50 rounded-xl p-3 border border-green-200 text-center">
+                                <p class="text-xs text-green-600 mb-1">Total Paid</p>
+                                <p class="text-sm font-bold text-green-700" x-text="'Rp ' + parseInt(detailLoan?.total_repaid || 0).toLocaleString('id-ID')"></p>
+                            </div>
+                            <div class="bg-red-50 rounded-xl p-3 border border-red-200 text-center">
+                                <p class="text-xs text-red-600 mb-1">Remaining</p>
+                                <p class="text-sm font-bold text-red-700" x-text="'Rp ' + parseInt(detailLoan?.remaining || 0).toLocaleString('id-ID')"></p>
+                            </div>
+                        </div>
+
+                        {{-- Proof Image --}}
+                        <template x-if="detailLoan?.proof_img">
+                            <div>
+                                <p class="text-xs text-gray-500 mb-2">Proof Image</p>
+                                <img :src="detailLoan.proof_img" class="w-full max-h-48 object-contain rounded-lg border border-gray-200 cursor-pointer"
+                                    @click="$dispatch('open-image-modal', { url: detailLoan.proof_img })">
+                            </div>
+                        </template>
+
+                        {{-- Notes --}}
+                        <div>
+                            <p class="text-xs text-gray-500 mb-1">Notes</p>
+                            <p class="text-sm text-gray-700" x-text="detailLoan?.notes"></p>
+                        </div>
+
+                        {{-- Repayment History --}}
+                        <template x-if="detailLoan?.repayments?.length > 0">
+                            <div>
+                                <p class="text-sm font-semibold text-gray-900 mb-3">Repayment History</p>
+                                <div class="overflow-x-auto border border-gray-200 rounded-lg">
+                                    <table class="min-w-full text-sm">
+                                        <thead class="bg-gray-50">
+                                            <tr>
+                                                <th class="py-2 px-3 text-left text-[10px] font-semibold text-gray-600">No</th>
+                                                <th class="py-2 px-3 text-left text-[10px] font-semibold text-gray-600">From Balance</th>
+                                                <th class="py-2 px-3 text-left text-[10px] font-semibold text-gray-600">Method</th>
+                                                <th class="py-2 px-3 text-left text-[10px] font-semibold text-gray-600">Amount</th>
+                                                <th class="py-2 px-3 text-left text-[10px] font-semibold text-gray-600">Date</th>
+                                                <th class="py-2 px-3 text-left text-[10px] font-semibold text-gray-600">Proof</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <template x-for="(rep, idx) in detailLoan.repayments" :key="idx">
+                                                <tr class="border-t border-gray-100 hover:bg-gray-50">
+                                                    <td class="py-2 px-3 text-[11px] text-gray-600" x-text="idx + 1"></td>
+                                                    <td class="py-2 px-3 text-[11px] text-gray-900" x-text="rep.balance_period"></td>
+                                                    <td class="py-2 px-3 text-[11px]">
+                                                        <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-semibold"
+                                                            :class="rep.payment_method === 'cash' ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'"
+                                                            x-text="rep.payment_method.toUpperCase()"></span>
+                                                    </td>
+                                                    <td class="py-2 px-3 text-[11px] text-gray-900 font-semibold" x-text="'Rp ' + parseInt(rep.amount).toLocaleString('id-ID')"></td>
+                                                    <td class="py-2 px-3 text-[11px] text-gray-700" x-text="rep.paid_date"></td>
+                                                    <td class="py-2 px-3 text-[11px]">
+                                                        <template x-if="rep.proof_img">
+                                                            <button @click="$dispatch('open-image-modal', { url: rep.proof_img })"
+                                                                class="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-100 text-blue-700 rounded-md hover:bg-blue-200 text-[10px] font-medium cursor-pointer">
+                                                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                                        d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                                                </svg>
+                                                                View
+                                                            </button>
+                                                        </template>
+                                                        <template x-if="!rep.proof_img">
+                                                            <span class="text-gray-400">-</span>
+                                                        </template>
+                                                    </td>
+                                                </tr>
+                                            </template>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </template>
+
+                        <template x-if="!detailLoan?.repayments?.length">
+                            <div class="text-center py-4">
+                                <p class="text-sm text-gray-400">No repayment history yet</p>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+
+                {{-- Footer --}}
+                <div class="sticky bottom-0 bg-white border-t border-gray-200 px-6 py-4 flex gap-3">
+                    <button type="button" @click="showDetailModal = false"
+                        class="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium transition-colors cursor-pointer">
+                        Close
+                    </button>
+                    <button x-show="detailLoan?.status === 'outstanding'" type="button"
+                        @click="showDetailModal = false; repaymentLoanId = detailLoan.id; repaymentLoanAmount = detailLoan.loan_amount; repaymentRemaining = detailLoan.remaining; repaymentLoanPeriod = detailLoan.balance_period; showRepaymentModal = true;"
+                        class="flex-1 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark font-medium transition-colors cursor-pointer flex items-center justify-center gap-2">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
+                        </svg>
+                        Make Repayment
+                    </button>
+                </div>
             </div>
         </div>
     </div>
-@endsection
+    </div>
 
-@push('scripts')
+    {{-- ==================== IMAGE VIEW MODAL (outside root div) ==================== --}}
+    <div x-data="{ showImageModal: false, imageUrl: '' }"
+        @open-image-modal.window="imageUrl = $event.detail.url; showImageModal = true"
+        x-show="showImageModal" x-cloak
+        class="fixed inset-0 z-[60] flex items-center justify-center p-4">
+        <div class="absolute inset-0 bg-black/70 backdrop-blur-sm" @click="showImageModal = false"></div>
+        <div class="relative max-w-3xl w-full" @click.stop>
+            <button @click="showImageModal = false"
+                class="absolute -top-10 right-0 text-white hover:text-gray-300 transition-colors cursor-pointer">
+                <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+            </button>
+            <img :src="imageUrl" class="w-full rounded-lg shadow-2xl" alt="Proof Image">
+        </div>
+    </div>
+
+    {{-- Pagination AJAX Script --}}
+    @push('scripts')
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            setupPagination('loan-pagination-container', 'loan-section');
+            setupLoanPagination('loans-pagination-container', 'table-section');
         });
 
-        function setupPagination(containerId, sectionId) {
+        function setupLoanPagination(containerId, sectionId, alpineComponent = null) {
             const container = document.getElementById(containerId);
             if (!container) return;
 
@@ -2433,9 +1953,17 @@
                 if (!link) return;
 
                 e.preventDefault();
-                const url = link.getAttribute('href');
+                const url = new URL(link.getAttribute('href'), window.location.origin);
 
-                fetch(url, {
+                // Preserve month/year/status filters if Alpine component available
+                if (alpineComponent) {
+                    url.searchParams.set('month', alpineComponent.currentMonth);
+                    url.searchParams.set('year', alpineComponent.currentYear);
+                    url.searchParams.set('status', alpineComponent.statusFilter);
+                }
+
+                NProgress.start();
+                fetch(url.toString(), {
                         headers: {
                             'X-Requested-With': 'XMLHttpRequest'
                         }
@@ -2450,9 +1978,9 @@
                             document.getElementById(sectionId).innerHTML = newSection.innerHTML;
 
                             // Re-setup pagination after content update
-                            setupPagination(containerId, sectionId);
-                            
-                            // Scroll to pagination area (bottom)
+                            setupLoanPagination(containerId, sectionId, alpineComponent);
+
+                            // Scroll to pagination area (center)
                             setTimeout(() => {
                                 const paginationContainer = document.getElementById(containerId);
                                 if (paginationContainer) {
@@ -2460,9 +1988,15 @@
                                 }
                             }, 100);
                         }
+                        NProgress.done();
+                        window.history.pushState({}, '', url.toString());
                     })
-                    .catch(error => console.error('Error:', error));
+                    .catch(error => {
+                        console.error('Error:', error);
+                        NProgress.done();
+                    });
             });
         }
     </script>
-@endpush
+    @endpush
+@endsection

@@ -14,82 +14,63 @@ class LoanCapitalController extends Controller
 {
     public function index(Request $request)
     {
-        // Get month and year from request
         $month = $request->input('month', now()->month);
         $year = $request->input('year', now()->year);
-        
-        // Parse to Carbon
         $currentDate = Carbon::create($year, $month, 1);
-        
-        // Get status filter
+
         $statusFilter = $request->input('status', 'all');
-        
-        // Get per_page
         $perPage = $request->input('per_page', 10);
         $perPage = in_array($perPage, [5, 10, 15, 20, 25, 50, 100]) ? $perPage : 10;
-        
-        // Get balance for selected period
+
+        // Balance for selected period
         $balance = Balance::whereYear('period_start', $year)
             ->whereMonth('period_start', $month)
             ->first();
-        
-        // Query loans - FILTER BY LOAN_DATE (bukan balance_id)
-        $query = LoanCapital::with('balance')
+
+        $totalBalance = $balance ? $balance->total_balance : 0;
+
+        // Outstanding ALL TIME
+        $outstandingLoans = LoanCapital::where('status', 'outstanding')->with('repayments')->get();
+        $totalOutstanding = $outstandingLoans->sum(function ($loan) {
+            return $loan->loan_amount - $loan->repayments->sum('amount');
+        });
+
+        // Loans for this month
+        $query = LoanCapital::with(['balance', 'repayments.balance'])
             ->whereYear('loan_date', $year)
             ->whereMonth('loan_date', $month);
-        
-        // Apply status filter
+
         if ($statusFilter !== 'all') {
             $query->where('status', $statusFilter);
         }
-        
-        // Apply search
-        if ($request->has('search') && $request->search) {
+
+        if ($request->filled('search')) {
             $search = $request->search;
-            $query->where(function($q) use ($search) {
-                $q->where('notes', 'like', "%{$search}%");
+            $query->where(function ($q) use ($search) {
+                $q->where('notes', 'like', "%{$search}%")
+                  ->orWhere('payment_method', 'like', "%{$search}%");
             });
         }
-        
-        // Paginate - ORDER BY id DESC (terbaru di atas, berdasarkan urutan insert)
+
         $loans = $query->orderBy('id', 'desc')->paginate($perPage);
-        
-        // Get all loans for search (by loan_date)
-        $allLoans = LoanCapital::with('balance')
+
+        // All loans for search matching (unpaginated)
+        $allLoans = LoanCapital::with(['balance', 'repayments.balance'])
             ->whereYear('loan_date', $year)
             ->whereMonth('loan_date', $month)
             ->orderBy('id', 'desc')
             ->get();
-        
-        $totalBalance = $balance ? $balance->total_balance : 0;
-        
-        // Calculate stats
-        // Outstanding = ALL TIME (total keseluruhan yang belum lunas)
-        $outstanding = LoanCapital::where('status', 'outstanding')
-            ->sum('remaining_amount');
-        
-        // Transfer & Cash Total = per bulan yang dipilih
-        $transferTotal = LoanCapital::where('payment_method', 'transfer')
-            ->whereYear('loan_date', $year)
-            ->whereMonth('loan_date', $month)
-            ->sum('amount');
-            
-        $cashTotal = LoanCapital::where('payment_method', 'cash')
-            ->whereYear('loan_date', $year)
-            ->whereMonth('loan_date', $month)
-            ->sum('amount');
-        
+
+        if ($request->ajax()) {
+            return view('pages.finance.loan-capital.index', compact(
+                'loans', 'allLoans', 'currentDate', 'balance', 'totalBalance',
+                'totalOutstanding', 'statusFilter', 'perPage'
+            ))->render();
+        }
+
         return view('pages.finance.loan-capital.index', compact(
-            'loans',
-            'allLoans',
-            'currentDate',
-            'balance',
-            'totalBalance',
-            'outstanding',
-            'transferTotal',
-            'cashTotal',
-            'statusFilter',
-            'perPage'
+            'loans', 'allLoans', 'currentDate', 'balance', 'totalBalance',
+            'totalOutstanding', 'statusFilter', 'perPage'
         ));
     }
 
@@ -98,6 +79,7 @@ class LoanCapitalController extends Controller
         $request->validate([
             'balance_month' => 'required|integer|min:1|max:12',
             'balance_year' => 'required|integer|min:2020|max:2100',
+            'loan_date' => 'required|date',
             'payment_method' => 'required|in:transfer,cash',
             'amount' => 'required|numeric|min:1',
             'image' => 'required|image|mimes:jpeg,png,jpg|max:10240', // Max 10MB
@@ -148,9 +130,8 @@ class LoanCapitalController extends Controller
             // Create loan capital
             $loan = LoanCapital::create([
                 'balance_id' => $balance->id,
-                'loan_date' => now(),
-                'amount' => $request->amount,
-                'remaining_amount' => $request->amount,
+                'loan_date' => $request->loan_date,
+                'loan_amount' => $request->amount,
                 'payment_method' => $request->payment_method,
                 'proof_img' => $imagePath,
                 'status' => 'outstanding',
@@ -247,7 +228,7 @@ class LoanCapitalController extends Controller
         try {
             DB::beginTransaction();
 
-            $oldAmount = $loanCapital->amount;
+            $oldAmount = $loanCapital->loan_amount;
             $oldMethod = $loanCapital->payment_method;
             $oldImagePath = $loanCapital->proof_img;
 
@@ -284,8 +265,7 @@ class LoanCapitalController extends Controller
 
             // Update loan capital
             $loanCapital->update([
-                'amount' => $validated['amount'],
-                'remaining_amount' => $loanCapital->remaining_amount + ($validated['amount'] - $oldAmount),
+                'loan_amount' => $validated['amount'],
                 'payment_method' => $validated['payment_method'],
                 'proof_img' => $imagePath,
                 'notes' => $validated['notes'],
@@ -401,12 +381,11 @@ class LoanCapitalController extends Controller
                 'notes' => $validated['notes'] ?? null,
             ]);
 
-            // Update loan capital
-            $newRemaining = $loanCapital->remaining_amount - $validated['amount'];
-            $newStatus = $newRemaining <= 0 ? 'done' : 'outstanding';
+            // Update loan capital status
+            $newRemaining = $loanCapital->loan_amount - $loanCapital->repayments()->sum('amount');
+            $newStatus = $newRemaining <= 0 ? 'paid_off' : 'outstanding';
 
             $loanCapital->update([
-                'remaining_amount' => $newRemaining,
                 'status' => $newStatus
             ]);
 

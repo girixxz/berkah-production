@@ -13,8 +13,7 @@ class LoanCapital extends Model
     protected $fillable = [
         'balance_id',
         'loan_date',
-        'amount',
-        'remaining_amount',
+        'loan_amount',
         'payment_method',
         'proof_img',
         'status',
@@ -23,8 +22,7 @@ class LoanCapital extends Model
 
     protected $casts = [
         'loan_date' => 'date',
-        'amount' => 'decimal:2',
-        'remaining_amount' => 'decimal:2',
+        'loan_amount' => 'decimal:2',
     ];
 
     /**
@@ -41,5 +39,13 @@ class LoanCapital extends Model
     public function repayments(): HasMany
     {
         return $this->hasMany(LoanRepayment::class, 'loan_id');
+    }
+
+    /**
+     * Get the remaining amount (loan_amount - total repayments).
+     */
+    public function getRemainingAmountAttribute(): float
+    {
+        return $this->loan_amount - $this->repayments()->sum('amount');
     }
 }
