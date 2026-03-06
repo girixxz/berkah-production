@@ -176,15 +176,13 @@
                 @endif
 
                 <ul class="space-y-2">
-                    @if ($role === 'finance')
-                        <!-- Dashboard -->
-                        <li>
-                            <x-sidebar-menu.main-menu href="{{ route('finance.dashboard') }}" :pattern="'finance.dashboard'">
-                                <x-icons.dashboard class="text-current" />
-                                <span class="ml-2">Dashboard</span>
-                            </x-sidebar-menu.main-menu>
-                        </li>
-                    @endif
+                    <!-- Dashboard Finance -->
+                    <li>
+                        <x-sidebar-menu.main-menu href="{{ route('finance.dashboard') }}" :pattern="'finance.dashboard'">
+                            <x-icons.dashboard class="text-current" />
+                            <span class="ml-2">Dashboard</span>
+                        </x-sidebar-menu.main-menu>
+                    </li>
 
                     <!-- Report -->
                     <li x-data="{
