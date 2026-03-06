@@ -1639,7 +1639,7 @@
                                         {{-- Balance Cards --}}
                                         <div class="grid grid-cols-2 gap-3">
                                         <div class="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-3 border border-blue-200">
-                                            <p class="text-xs text-blue-600 font-medium mb-1">Transfer Balance</p>
+                                            <p class="text-xs text-blue-600 font-medium mb-1">BCA Balance</p>
                                             <p class="text-base font-bold text-blue-900" x-text="'Rp ' + parseInt(balanceTransfer).toLocaleString('id-ID')"></p>
                                         </div>
                                         <div class="bg-gradient-to-br from-green-50 to-green-100 rounded-xl p-3 border border-green-200">
@@ -2368,7 +2368,7 @@
                                 {{-- Balance Cards --}}
                                 <div class="grid grid-cols-2 gap-3 mb-4">
                                     <div class="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-3 border border-blue-200">
-                                        <p class="text-xs text-blue-600 font-medium mb-1">Transfer Balance</p>
+                                        <p class="text-xs text-blue-600 font-medium mb-1">BCA Balance</p>
                                         <p class="text-base font-bold text-blue-900" x-text="'Rp ' + parseInt(extraPurchaseBalanceTransfer || 0).toLocaleString('id-ID')"></p>
                                     </div>
                                     <div class="bg-gradient-to-br from-green-50 to-green-100 rounded-xl p-3 border border-green-200">
@@ -2820,7 +2820,7 @@
                             {{-- Balance Cards --}}
                             <div class="grid grid-cols-2 gap-3 mb-4">
                                 <div class="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-3 border border-blue-200">
-                                    <p class="text-xs text-blue-600 font-medium mb-1">Transfer Balance</p>
+                                    <p class="text-xs text-blue-600 font-medium mb-1">BCA Balance</p>
                                     <p class="text-base font-bold text-blue-900" x-text="'Rp ' + parseInt(editBalanceTransfer || 0).toLocaleString('id-ID')"></p>
                                 </div>
                                 <div class="bg-gradient-to-br from-green-50 to-green-100 rounded-xl p-3 border border-green-200">

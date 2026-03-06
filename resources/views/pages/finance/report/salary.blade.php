@@ -345,7 +345,7 @@
             <div class="bg-white border border-gray-200 rounded-lg p-4">
                 <div class="flex items-center justify-between">
                     <div>
-                        <p class="text-sm text-gray-500">Transfer Balance</p>
+                        <p class="text-sm text-gray-500">BCA Balance</p>
                         <p class="text-2xl font-bold text-gray-900 mt-1" x-text="formatCurrency(stats.balance_transfer)"></p>
                     </div>
                     <div class="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
@@ -1037,7 +1037,7 @@
                             {{-- Balance Cards --}}
                             <div class="grid grid-cols-2 gap-3 mb-2">
                                 <div class="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-3 border border-blue-200">
-                                    <p class="text-xs text-blue-600 font-medium mb-1">Transfer Balance</p>
+                                    <p class="text-xs text-blue-600 font-medium mb-1">BCA Balance</p>
                                     <p class="text-base font-bold text-blue-900" x-text="'Rp ' + parseInt(balanceTransfer || 0).toLocaleString('id-ID')"></p>
                                 </div>
                                 <div class="bg-gradient-to-br from-green-50 to-green-100 rounded-xl p-3 border border-green-200">

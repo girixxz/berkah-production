@@ -297,7 +297,7 @@
             <div class="bg-white border border-gray-200 rounded-lg p-4">
                 <div class="flex items-center justify-between">
                     <div>
-                        <p class="text-sm text-gray-500">Transfer Balance</p>
+                        <p class="text-sm text-gray-500">BCA Balance</p>
                         <p class="text-2xl font-bold text-green-700 mt-1">Rp {{ number_format($balance->transfer_balance ?? 0, 0, ',', '.') }}</p>
                     </div>
                     <div class="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
@@ -537,8 +537,8 @@
                 transferNotes: '',
                 transferTypeDropdownOpen: false,
                 transferTypeOptions: [
-                    { value: 'transfer_to_cash', name: 'Transfer → Cash', desc: 'Move from transfer balance to cash balance' },
-                    { value: 'cash_to_transfer', name: 'Cash → Transfer', desc: 'Move from cash balance to transfer balance' },
+                    { value: 'transfer_to_cash', name: 'Transfer → Cash', desc: 'Move from BCA balance to cash balance' },
+                    { value: 'cash_to_transfer', name: 'Cash → Transfer', desc: 'Move from cash balance to BCA balance' },
                     { value: 'withdraw', name: 'Withdraw', desc: 'Withdraw all balances (set to 0)' }
                 ],
                 get selectedTransferType() {
@@ -699,7 +699,7 @@
                                 {{-- Balance Cards --}}
                                 <div class="grid grid-cols-2 gap-3">
                                     <div class="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-3 border border-blue-200">
-                                        <p class="text-xs text-blue-600 font-medium mb-1">Transfer Balance</p>
+                                        <p class="text-xs text-blue-600 font-medium mb-1">BCA Balance</p>
                                         <p class="text-base font-bold text-blue-900" x-text="'Rp ' + parseInt(balanceTransfer).toLocaleString('id-ID')"></p>
                                     </div>
                                     <div class="bg-gradient-to-br from-green-50 to-green-100 rounded-xl p-3 border border-green-200">
@@ -776,7 +776,7 @@
                                         </svg>
                                         <div>
                                             <p class="text-sm font-medium text-red-700">Warning: Withdraw Mode</p>
-                                            <p class="text-xs text-red-600 mt-1">This will set <strong>both Transfer Balance and Cash Balance to 0</strong> for the current period. This action records the total balance as the withdrawn amount.</p>
+                                            <p class="text-xs text-red-600 mt-1">This will set <strong>both BCA Balance and Cash Balance to 0</strong> for the current period. This action records the total balance as the withdrawn amount.</p>
                                         </div>
                                     </div>
                                 </div>

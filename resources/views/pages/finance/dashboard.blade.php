@@ -227,7 +227,7 @@
                 <div class="bg-white border border-gray-200 rounded-lg p-4">
                     <div class="flex items-center justify-between">
                         <div>
-                            <p class="text-sm text-gray-500">Transfer Balance</p>
+                            <p class="text-sm text-gray-500">BCA Balance</p>
                             <p class="text-2xl font-bold text-blue-600 mt-1">Rp {{ number_format($transferBalance, 0, ',', '.') }}</p>
                         </div>
                         <div class="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
