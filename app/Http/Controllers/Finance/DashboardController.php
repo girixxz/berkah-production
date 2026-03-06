@@ -42,16 +42,27 @@ class DashboardController extends Controller
         // Remaining: unpaid from reported invoices
         $remaining = Invoice::whereIn('id', $reportedInvoiceIds)->sum('amount_due');
 
-        // Total Expense breakdown (filter by period date range)
-        $materialExpense = OrderMaterialReport::whereBetween('purchase_date', [$periodStart, $periodEnd])->sum('amount');
-        $partnerExpense = OrderPartnerReport::whereBetween('service_date', [$periodStart, $periodEnd])->sum('amount');
-        $operationalExpense = OperationalReport::whereBetween('operational_date', [$periodStart, $periodEnd])->sum('amount');
-        $salaryExpense = SalaryReport::whereBetween('salary_date', [$periodStart, $periodEnd])->sum('amount');
+        // Total Expense breakdown (filter by report period, not by transaction date)
+        $materialExpense = OrderMaterialReport::whereHas('orderReport', function ($q) use ($periodStart) {
+            $q->where('period_start', $periodStart);
+        })->sum('amount');
+
+        $partnerExpense = OrderPartnerReport::whereHas('orderReport', function ($q) use ($periodStart) {
+            $q->where('period_start', $periodStart);
+        })->sum('amount');
+
+        $operationalExpense = OperationalReport::whereHas('balance', function ($q) use ($periodStart) {
+            $q->where('period_start', $periodStart);
+        })->sum('amount');
+
+        $salaryExpense = SalaryReport::whereHas('balance', function ($q) use ($periodStart) {
+            $q->where('period_start', $periodStart);
+        })->sum('amount');
 
         $totalExpense = $materialExpense + $partnerExpense + $operationalExpense + $salaryExpense;
 
-        // Net Income
-        $netIncome = $totalIncome - $totalExpense;
+        // Net Profit: Total Bill - Total Expense
+        $netIncome = $totalBill - $totalExpense;
 
         // Saving Rate: (Net Income / Total Bill) * 100%
         $savingRate = $totalBill > 0 ? ($netIncome / $totalBill) * 100 : 0;

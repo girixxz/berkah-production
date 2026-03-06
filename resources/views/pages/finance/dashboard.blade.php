@@ -144,7 +144,7 @@
                         <div>
                             <p class="text-sm text-gray-500">Net Profit</p>
                             <p class="text-2xl font-bold {{ $netIncome >= 0 ? 'text-green-600' : 'text-red-600' }} mt-1">Rp {{ number_format($netIncome, 0, ',', '.') }}</p>
-                            <p class="text-[10px] text-gray-400 mt-1">Income - Expense</p>
+                            <p class="text-[10px] text-gray-400 mt-1">Bill - Expense</p>
                         </div>
                         <div class="w-12 h-12 {{ $netIncome >= 0 ? 'bg-green-100' : 'bg-red-100' }} rounded-lg flex items-center justify-center">
                             <svg class="w-6 h-6 {{ $netIncome >= 0 ? 'text-green-600' : 'text-red-600' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -195,7 +195,7 @@
                         <div>
                             <p class="text-sm text-gray-500">Saving Rate</p>
                             <p class="text-2xl font-bold {{ $savingRate >= 0 ? 'text-primary' : 'text-red-600' }} mt-1">{{ number_format($savingRate, 1) }}%</p>
-                            <p class="text-[10px] text-gray-400 mt-1">(Net Income / Total Bill) × 100%</p>
+                            <p class="text-[10px] text-gray-400 mt-1">(Net Profit / Total Bill) × 100%</p>
                         </div>
                         <div class="w-12 h-12 {{ $savingRate >= 0 ? 'bg-primary/10' : 'bg-red-100' }} rounded-lg flex items-center justify-center">
                             <svg class="w-6 h-6 {{ $savingRate >= 0 ? 'text-primary' : 'text-red-600' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
