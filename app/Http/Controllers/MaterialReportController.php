@@ -272,7 +272,7 @@ class MaterialReportController extends Controller
      */
     public function getSuppliers()
     {
-        $suppliers = MaterialSupplier::orderBy('supplier_name', 'asc')->get(['id', 'supplier_name']);
+        $suppliers = MaterialSupplier::orderBy('sort_order', 'asc')->get(['id', 'supplier_name']);
 
         return response()->json([
             'success' => true,

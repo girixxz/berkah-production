@@ -1716,7 +1716,7 @@
                                     </div>
 
                                     {{-- Purchase Date & Purchase Type (Locked) --}}
-                                    <div class="grid grid-cols-2 gap-3">
+                                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                         <div>
                                             <label class="block text-sm font-medium text-gray-700 mb-1">
                                                 Purchase Date <span class="text-red-600">*</span>
@@ -2389,7 +2389,7 @@
                                 </div>
 
                                 {{-- Purchase Date & Purchase Type (Locked) --}}
-                                <div class="grid grid-cols-2 gap-3">
+                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                     <div>
                                         <label class="block text-sm font-medium text-gray-700 mb-1">
                                             Purchase Date <span class="text-red-600">*</span>
@@ -2841,7 +2841,7 @@
                             </div>
 
                             {{-- Purchase Date & Purchase Type (Locked) --}}
-                            <div class="grid grid-cols-2 gap-3">
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                 <div>
                                     <label class="block text-sm font-medium text-gray-700 mb-1">
                                         Purchase Date <span class="text-red-600">*</span>
