@@ -150,14 +150,14 @@
     {{-- Script --}}
     @stack('scripts')
     
-    {{-- Payment Notification Bell (Owner Only) --}}
-    @if(auth()->check() && auth()->user()->role === 'owner')
+    {{-- Payment Notification Bell (Owner & Finance) --}}
+    @if(auth()->check() && in_array(auth()->user()->role, ['owner', 'finance']))
         <script>
             // Function to update notification bell badge
             function updateNotificationBell() {
                 const badge = document.getElementById('notification-badge-count');
                 
-                fetch('{{ route("owner.payments.pending-count") }}', {
+                fetch('{{ route(auth()->user()->role === "owner" ? "owner.payments.pending-count" : "admin.payments.pending-count") }}', {
                     headers: {
                         'X-Requested-With': 'XMLHttpRequest',
                         'Accept': 'application/json'
@@ -185,7 +185,7 @@
                 const emptyState = document.getElementById('notification-empty');
                 if (!listContainer || !emptyState) return;
                 
-                fetch('{{ route("owner.payments.pending-list") }}', {
+                fetch('{{ route(auth()->user()->role === "owner" ? "owner.payments.pending-list" : "admin.payments.pending-list") }}', {
                     headers: {
                         'X-Requested-With': 'XMLHttpRequest',
                         'Accept': 'application/json'
@@ -203,7 +203,7 @@
                         // Add each payment as notification item
                         data.payments.forEach(payment => {
                             const item = document.createElement('a');
-                            item.href = '{{ route("owner.payment-history") }}';
+                            item.href = '{{ route(auth()->user()->role === "owner" ? "owner.payment-history" : "admin.payment-history") }}';
                             item.className = 'notification-item block px-4 py-3 hover:bg-gray-50 border-b border-gray-100 transition-colors';
                             
                             item.innerHTML = `

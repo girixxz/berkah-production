@@ -644,7 +644,7 @@
 
                                 {{-- Action Date --}}
                                 <td class="py-3 px-4">
-                                    @if ($role === 'owner')
+                                    @if (in_array($role, ['owner', 'finance']))
                                         <div class="flex justify-center gap-2">
                                             @if ($payment->status === 'pending')
                                                 {{-- Approve Button --}}
@@ -807,7 +807,7 @@
 
                                 {{-- Action Date --}}
                                 <td class="py-3 px-4">
-                                    @if ($role === 'owner')
+                                    @if (in_array($role, ['owner', 'finance']))
                                         <div class="flex justify-center gap-2">
                                             @if ($payment->status === 'pending')
                                                 <button type="button" @click="showActionConfirm = {{ $payment->id }}; actionType = 'approve'"
@@ -904,8 +904,8 @@
                 </div>
             </div>
 
-            {{-- ================= ACTION CONFIRMATION MODAL (OWNER ONLY) ================= --}}
-            @if ($role === 'owner')
+            {{-- ================= ACTION CONFIRMATION MODAL (OWNER & FINANCE) ================= --}}
+            @if (in_array($role, ['owner', 'finance']))
                 <div x-show="showActionConfirm !== null" x-cloak
                     class="fixed inset-0 z-50 overflow-y-auto flex items-center justify-center"
                     style="background-color: rgba(0, 0, 0, 0.5);">
@@ -947,8 +947,8 @@
                                 Cancel
                             </button>
                             <form
-                                :action="actionType === 'approve' ? '{{ url('owner/payments') }}/' + showActionConfirm +
-                                    '/approve' : '{{ url('owner/payments') }}/' + showActionConfirm + '/reject'"
+                                :action="actionType === 'approve' ? '{{ url($role === 'owner' ? 'owner' : 'admin') }}/payments/' + showActionConfirm +
+                                    '/approve' : '{{ url($role === 'owner' ? 'owner' : 'admin') }}/payments/' + showActionConfirm + '/reject'"
                                 method="POST" class="flex-1">
                                 @csrf
                                 @method('PATCH')

@@ -40,23 +40,16 @@
         <!-- Right: Notification Bell (Owner Only) + User -->
         <div class="flex items-center gap-3 flex-shrink-0">
             @php
-                $profile_name = auth()->user()?->fullname;
-                $user_role = auth()->user()?->role;
+                $user = auth()->user();
+                $profile_name = $user?->profile?->fullname ?? $user?->username;
+                $user_role = $user?->role;
 
-                // Ganti 'photo_url' dengan nama kolom avatar di tabel users milikmu
-                $raw = auth()->user()?->img_url;
-
-                // Jika path lokal, konversi ke URL publik; jika sudah http(s), pakai apa adanya
-                $avatarUrl = !empty($raw)
-                    ? (\Illuminate\Support\Str::startsWith($raw, ['http://', 'https://'])
-                        ? $raw
-                        : \Illuminate\Support\Facades\Storage::url($raw))
-                    : 'https://i.pravatar.cc/40?u=' . urlencode(auth()->user()->id ?? auth()->user()->username);
+                $avatarUrl = 'https://i.pravatar.cc/40?u=' . urlencode($user->id ?? $user->username);
             @endphp
             <div class="flex items-center sm:space-x-4">
                 
-                {{-- Notification Bell (Owner Only) --}}
-                @if($user_role === 'owner')
+                {{-- Notification Bell (Owner & Finance) --}}
+                @if(in_array($user_role, ['owner', 'finance']))
                     <div x-data="{ open: false }" class="relative">
                         <button @click="open = !open" @keydown.escape.window="open = false"
                             class="relative p-2 rounded-full hover:bg-gray-100 focus:outline-none"

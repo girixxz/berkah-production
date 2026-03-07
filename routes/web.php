@@ -188,6 +188,12 @@ Route::middleware(['auth'])->group(function () {
         
         // Payment History
         Route::get('payment-history', [\App\Http\Controllers\PaymentHistoryController::class, 'index'])->name('payment-history');
+
+        // Payment Approval (for notification bell & approve/reject)
+        Route::patch('payments/{payment}/approve', [\App\Http\Controllers\PaymentController::class, 'approve'])->name('payments.approve');
+        Route::patch('payments/{payment}/reject', [\App\Http\Controllers\PaymentController::class, 'reject'])->name('payments.reject');
+        Route::get('payments/pending-count', [\App\Http\Controllers\PaymentController::class, 'getPendingCount'])->name('payments.pending-count');
+        Route::get('payments/pending-list', [\App\Http\Controllers\PaymentController::class, 'getPendingList'])->name('payments.pending-list');
         
         // API for cascading dropdowns
         Route::get('customers/api/provinces', [CustomerController::class, 'getProvinces'])->name('customers.api.provinces');
