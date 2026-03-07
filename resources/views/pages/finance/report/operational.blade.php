@@ -454,7 +454,7 @@
         },
 
         {{-- Group helpers for 2-level table --}}
-        groupData(dataArray) {
+        groupData(dataArray, sortByDate = false) {
             const map = {};
             dataArray.forEach(item => {
                 const key = item.operational_name;
@@ -468,28 +468,33 @@
                 if (!map[key].latestDate || d > map[key].latestDate) map[key].latestDate = d;
                 if (map[key].firstId === null || item.operational_type === 'first_expense') map[key].firstId = item.id;
             });
-            return Object.values(map);
+            const groups = Object.values(map);
+            // For daily category: sort groups by latest date ascending (newest at bottom)
+            if (sortByDate) {
+                groups.sort((a, b) => (a.latestDate || '').localeCompare(b.latestDate || ''));
+            }
+            return groups;
         },
 
-        getFilteredGroups(dataArray, searchKey) {
+        getFilteredGroups(dataArray, searchKey, sortByDate = false) {
             const q = (this[searchKey] || '').toLowerCase().trim();
-            const groups = this.groupData(dataArray);
+            const groups = this.groupData(dataArray, sortByDate);
             if (!q) return groups;
             return groups.filter(g => g.name.toLowerCase().includes(q));
         },
 
-        getGroupedPaginated(dataArray, searchKey, perPage, currentPage) {
-            const filtered = this.getFilteredGroups(dataArray, searchKey);
+        getGroupedPaginated(dataArray, searchKey, perPage, currentPage, sortByDate = false) {
+            const filtered = this.getFilteredGroups(dataArray, searchKey, sortByDate);
             const start = (currentPage - 1) * perPage;
             return filtered.slice(start, start + perPage);
         },
 
-        getTotalGroupPages(dataArray, searchKey, perPage) {
-            return Math.max(1, Math.ceil(this.getFilteredGroups(dataArray, searchKey).length / perPage));
+        getTotalGroupPages(dataArray, searchKey, perPage, sortByDate = false) {
+            return Math.max(1, Math.ceil(this.getFilteredGroups(dataArray, searchKey, sortByDate).length / perPage));
         },
 
-        getTotalGroupFiltered(dataArray, searchKey) {
-            return this.getFilteredGroups(dataArray, searchKey).length;
+        getTotalGroupFiltered(dataArray, searchKey, sortByDate = false) {
+            return this.getFilteredGroups(dataArray, searchKey, sortByDate).length;
         },
 
         isGroupOpen(catKey, name) {
@@ -2501,7 +2506,7 @@
                         </thead>
 
                         {{-- Each group: one <tbody> containing primary row + collapsible detail row --}}
-                        <template x-for="(group, gIdx) in getGroupedPaginated(dailyData, 'searchDaily', perPageDaily, currentPageDaily)" :key="group.name + '_' + gIdx">
+                        <template x-for="(group, gIdx) in getGroupedPaginated(dailyData, 'searchDaily', perPageDaily, currentPageDaily, true)" :key="group.name + '_' + gIdx">
                             <tbody>
                                 {{-- PRIMARY ROW --}}
                                 <tr class="hover:bg-gray-50 cursor-pointer"
@@ -2690,9 +2695,9 @@
                 <div class="mt-4 flex flex-col items-center gap-3">
                     {{-- Info Text --}}
                     <div class="text-sm text-gray-600">
-                        Showing <span x-text="getTotalGroupFiltered(dailyData, 'searchDaily') === 0 ? 0 : getStartIndex(currentPageDaily, perPageDaily)"></span>
-                        to <span x-text="Math.min(currentPageDaily * perPageDaily, getTotalGroupFiltered(dailyData, 'searchDaily'))"></span>
-                        of <span x-text="getTotalGroupFiltered(dailyData, 'searchDaily')"></span> groups
+                        Showing <span x-text="getTotalGroupFiltered(dailyData, 'searchDaily', true) === 0 ? 0 : getStartIndex(currentPageDaily, perPageDaily)"></span>
+                        to <span x-text="Math.min(currentPageDaily * perPageDaily, getTotalGroupFiltered(dailyData, 'searchDaily', true))"></span>
+                        of <span x-text="getTotalGroupFiltered(dailyData, 'searchDaily', true)"></span> groups
                     </div>
 
                     {{-- Pagination Navigation --}}
@@ -2707,7 +2712,7 @@
                         </button>
 
                         {{-- Page numbers --}}
-                        <template x-for="page in Array.from({length: getTotalGroupPages(dailyData, 'searchDaily', perPageDaily)}, (_,i) => i+1)" :key="page">
+                        <template x-for="page in Array.from({length: getTotalGroupPages(dailyData, 'searchDaily', perPageDaily, true)}, (_,i) => i+1)" :key="page">
                             <button @click="goToPage('daily', page)"
                                 class="w-9 h-9 flex items-center justify-center rounded-md transition text-sm"
                                 :class="page === currentPageDaily ? 'bg-primary text-white font-medium' : 'bg-white text-gray-600 hover:bg-gray-100'"
@@ -2716,9 +2721,9 @@
 
                         {{-- Next --}}
                         <button @click="changePage('daily', 'next')"
-                            :disabled="currentPageDaily >= getTotalGroupPages(dailyData, 'searchDaily', perPageDaily)"
+                            :disabled="currentPageDaily >= getTotalGroupPages(dailyData, 'searchDaily', perPageDaily, true)"
                             class="w-9 h-9 flex items-center justify-center rounded-md transition"
-                            :class="currentPageDaily >= getTotalGroupPages(dailyData, 'searchDaily', perPageDaily) ? 'text-gray-400 cursor-not-allowed' : 'bg-white text-gray-600 hover:bg-gray-100'">
+                            :class="currentPageDaily >= getTotalGroupPages(dailyData, 'searchDaily', perPageDaily, true) ? 'text-gray-400 cursor-not-allowed' : 'bg-white text-gray-600 hover:bg-gray-100'">
                             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="3">
                                 <path d="M12 24H36M28 16L36 24L28 32" stroke-linecap="round" stroke-linejoin="round" />
                             </svg>

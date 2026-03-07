@@ -25,14 +25,19 @@ class OperationalReportController extends Controller
         // Fetch all operational reports for the period
         $reports = OperationalReport::whereYear('operational_date', $year)
             ->whereMonth('operational_date', $month)
-            ->orderBy('operational_date', 'desc')
+            ->orderBy('id', 'asc')
             ->get();
 
+        // Build sort_order lookup from operational_lists for FC1/FC2/PS
+        $sortOrderMap = OperationalList::whereIn('category', ['fix_cost_1', 'fix_cost_2', 'printing_supply'])
+            ->pluck('sort_order', 'list_name')
+            ->toArray();
+
         // Group by category
-        $fixCost1       = $reports->where('category', 'fix_cost_1')->values();
-        $fixCost2       = $reports->where('category', 'fix_cost_2')->values();
-        $printingSupply = $reports->where('category', 'printing_supply')->values();
-        $daily          = $reports->where('category', 'daily')->values();
+        $fixCost1       = $reports->where('category', 'fix_cost_1')->sortBy(fn($r) => $sortOrderMap[$r->operational_name] ?? 999)->values();
+        $fixCost2       = $reports->where('category', 'fix_cost_2')->sortBy(fn($r) => $sortOrderMap[$r->operational_name] ?? 999)->values();
+        $printingSupply = $reports->where('category', 'printing_supply')->sortBy(fn($r) => $sortOrderMap[$r->operational_name] ?? 999)->values();
+        $daily          = $reports->where('category', 'daily')->sortBy([['operational_date', 'asc'], ['id', 'asc']])->values();
 
         // Stats
         $stats = [
