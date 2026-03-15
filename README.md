@@ -99,10 +99,11 @@ Access: `http://localhost:8000`
 
 | Role | Access |
 |------|--------|
-| **Owner** | Full access semua fitur |
-| **Admin** | Manage orders, work orders, customers |
-| **PM (Project Manager)** | View & update work orders |
-| **Employee** | View work orders assigned |
+| **Owner** | Full access semua fitur + approve/reject payment + analytics dashboard |
+| **Admin** | Manage orders, work orders, customers, payment history, shipping & report orders |
+| **Finance** | Manage laporan keuangan (order, material, partner, operasional, gaji), kas & pinjaman modal |
+| **PM (Project Manager)** | View & update progress tahapan work orders |
+| **Employee** | View & mark-done task/work orders yang ditugaskan |
 
 ## 📱 Responsive Design
 
